@@ -1,0 +1,47 @@
+{
+  "name": "bigal",
+  "version": "1.0.0",
+  "description": "A fast and lightweight alternative to waterline",
+  "main": "index.js",
+  "scripts": {
+    "test": "node ./node_modules/mocha/bin/_mocha -- -R spec ./test/**/*.js",
+    "lint": "./node_modules/.bin/grunt jsbeautifier && ./node_modules/.bin/grunt eslint",
+    "postinstall": "if [ -d \"git-hooks\" ]; then mkdir -p .git/hooks && cp -f git-hooks/pre-commit .git/hooks/ && chmod 755 .git/hooks/pre-commit; fi"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mpirik/bigal.git"
+  },
+  "keywords": [
+    "orm",
+    "postgres",
+    "postgresql",
+    "sails",
+    "sailsjs",
+    "sails.js",
+    "waterline",
+    "waterline.js"
+  ],
+  "author": "Jim Geurts <jim@biacreations.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mpirik/bigal/issues"
+  },
+  "homepage": "https://github.com/mpirik/bigal#readme",
+  "dependencies": {
+    "bluebird": "3.5.1",
+    "lodash": "4.17.4",
+    "pg": "7.4.0"
+  },
+  "devDependencies": {
+    "chai": "4.1.2",
+    "eslint": "4.11.0",
+    "eslint-config-airbnb-base": "12.1.0",
+    "eslint-plugin-import": "2.8.0",
+    "faker": "4.1.0",
+    "grunt": "1.0.1",
+    "grunt-eslint": "20.1.0",
+    "grunt-jsbeautifier": "0.2.13",
+    "mocha": "4.0.1"
+  }
+}

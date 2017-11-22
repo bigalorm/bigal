@@ -1,0 +1,69 @@
+{
+  "root": true,
+  "extends": "airbnb-base",
+  "env": {
+    "node": true
+  },
+  "parserOptions": {
+    "sourceType": "script"
+  },
+  // Note:
+  //  0 = ignore rule
+  //  1 = warn
+  //  2 = error
+  "rules": {
+    "array-bracket-spacing": [2, "never"],
+    "brace-style": [2, "1tbs"],
+    "comma-dangle": [2, "always-multiline"],
+    "consistent-return": 0,
+    "computed-property-spacing": [2, "never"],
+    "handle-callback-err": [2, "^.*err" ],
+    "max-len": 0,
+    "new-cap": 0,
+    "no-console": 0,
+    "no-else-return": 2,
+    "no-eq-null": 0,
+    "no-extra-semi": 2,
+    "no-loop-func": 0,
+    "no-lone-blocks": 2,
+    "no-negated-condition": 2,
+    "no-shadow": 0,
+    "no-undef": 2,
+    "no-underscore-dangle": 0,
+    "no-use-before-define": [2, "nofunc"],
+    "no-useless-rename": 2,
+    "object-curly-spacing": [2, "never"],
+    "quotes": 0,
+    "quote-props": [2, "as-needed"],
+    "keyword-spacing": 2,
+    "space-before-blocks": 2,
+    "space-before-function-paren": [2, {"anonymous": "always", "named": "never"}],
+    "space-in-parens": 0,
+    "strict": 2,
+    "no-empty": 2,
+    "no-empty-function": 2,
+    "yoda": 2,
+
+    // Override airbnb
+    "padded-blocks": 0,
+    "eqeqeq": [2, "smart"],
+    "func-names": 2,
+    "id-length": [2, {"exceptions": ["_", "$", "e", "i", "j", "k", "q", "x", "y"]}],
+    "indent": [0, 2, {"SwitchCase": 1}],
+    "no-param-reassign": 0, // Work toward enforcing this rule
+    "radix": 0,
+    "spaced-comment": 0,
+    "generator-star-spacing": [2, {"before": false, "after": true}],
+    "arrow-body-style": 0,
+    "newline-per-chained-call": 0,
+    "no-restricted-syntax": [
+      2,
+      "DebuggerStatement",
+      "LabeledStatement",
+      "WithStatement",
+    ],
+    "arrow-parens": 2,
+    "prefer-arrow-callback": [2, { "allowNamedFunctions": true }],
+    "prefer-spread": 2
+  }
+}

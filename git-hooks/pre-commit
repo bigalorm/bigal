@@ -1,0 +1,12 @@
+#!/bin/sh
+#
+# Pre-commit hooks
+
+# Add node to the path since Tower runs in a different environment
+export PATH=/usr/local/bin:$PATH
+
+# Beautify code before committing
+./node_modules/.bin/grunt jsbeautifier
+
+# ESLint stuff before committing
+./node_modules/.bin/grunt eslint
