@@ -86,7 +86,195 @@ describe('sqlHelper', () => {
     return schema.globalId.toLowerCase();
   });
 
-  describe("#getPrimaryKeyPropertyName()", () => {
+  describe('#getSelectQueryAndParams()', () => {
+    describe('select', () => {
+      it('should include all columns if select is null', () => {
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          modelSchemasByGlobalId,
+          schema: productSchema,
+          select: null,
+        });
+
+        query.should.equal(`SELECT "id","name","store_id" AS "store" FROM "${productSchema.tableName}"`);
+        params.should.deep.equal([]);
+      });
+      it('should include all columns if select is undefined', () => {
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          modelSchemasByGlobalId,
+          schema: productSchema,
+        });
+
+        query.should.equal(`SELECT "id","name","store_id" AS "store" FROM "${productSchema.tableName}"`);
+        params.should.deep.equal([]);
+      });
+      it('should include primaryKey column if select is empty', () => {
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          modelSchemasByGlobalId,
+          schema: productSchema,
+          select: [],
+        });
+
+        query.should.equal(`SELECT "id" FROM "${productSchema.tableName}"`);
+        params.should.deep.equal([]);
+      });
+      it('should include primaryKey column if select does not include it', () => {
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          modelSchemasByGlobalId,
+          schema: productSchema,
+          select: ['name'],
+        });
+
+        query.should.equal(`SELECT "name","id" FROM "${productSchema.tableName}"`);
+        params.should.deep.equal([]);
+      });
+    });
+    describe('where', () => {
+      it('should include where statement if defined', () => {
+        const name = faker.random.uuid();
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          modelSchemasByGlobalId,
+          schema: productSchema,
+          where: {
+            name,
+          },
+        });
+
+        query.should.equal(`SELECT "id","name","store_id" AS "store" FROM "${productSchema.tableName}" WHERE "name"=$1`);
+        params.should.deep.equal([name]);
+      });
+    });
+    describe('sorts', () => {
+      it('should include order by statement if defined', () => {
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          modelSchemasByGlobalId,
+          schema: productSchema,
+          sorts: ['name'],
+        });
+
+        query.should.equal(`SELECT "id","name","store_id" AS "store" FROM "${productSchema.tableName}" ORDER BY "name"`);
+        params.should.deep.equal([]);
+      });
+    });
+    describe('skip', () => {
+      it('should not include OFFSET statement if skip is a null', () => {
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          modelSchemasByGlobalId,
+          schema: productSchema,
+          skip: null,
+        });
+
+        query.should.equal(`SELECT "id","name","store_id" AS "store" FROM "${productSchema.tableName}"`);
+        params.should.deep.equal([]);
+      });
+      it('should include OFFSET statement if skip is a number', () => {
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          modelSchemasByGlobalId,
+          schema: productSchema,
+          skip: 100,
+        });
+
+        query.should.equal(`SELECT "id","name","store_id" AS "store" FROM "${productSchema.tableName}" OFFSET 100`);
+        params.should.deep.equal([]);
+      });
+      it('should include OFFSET statement if skip is a string number', () => {
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          modelSchemasByGlobalId,
+          schema: productSchema,
+          skip: '100',
+        });
+
+        query.should.equal(`SELECT "id","name","store_id" AS "store" FROM "${productSchema.tableName}" OFFSET 100`);
+        params.should.deep.equal([]);
+      });
+      it('should should throw if skip is not a valid number', () => {
+        (() => {
+          sqlHelper.getSelectQueryAndParams({
+            modelSchemasByGlobalId,
+            schema: productSchema,
+            skip: 'a',
+          });
+        }).should.throw(Error, 'Skip should be a number');
+      });
+    });
+    describe('limit', () => {
+      it('should not include LIMIT statement if limit is null', () => {
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          modelSchemasByGlobalId,
+          schema: productSchema,
+          limit: null,
+        });
+
+        query.should.equal(`SELECT "id","name","store_id" AS "store" FROM "${productSchema.tableName}"`);
+        params.should.deep.equal([]);
+      });
+      it('should include LIMIT statement if limit is a number', () => {
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          modelSchemasByGlobalId,
+          schema: productSchema,
+          limit: 100,
+        });
+
+        query.should.equal(`SELECT "id","name","store_id" AS "store" FROM "${productSchema.tableName}" LIMIT 100`);
+        params.should.deep.equal([]);
+      });
+      it('should include OFFSET statement if limit is a string number', () => {
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          modelSchemasByGlobalId,
+          schema: productSchema,
+          limit: '100',
+        });
+
+        query.should.equal(`SELECT "id","name","store_id" AS "store" FROM "${productSchema.tableName}" LIMIT 100`);
+        params.should.deep.equal([]);
+      });
+      it('should should throw if limit is not a valid number', () => {
+        (() => {
+          sqlHelper.getSelectQueryAndParams({
+            modelSchemasByGlobalId,
+            schema: productSchema,
+            limit: 'a',
+          });
+        }).should.throw(Error, 'Limit should be a number');
+      });
+    });
+  });
+  describe('#getPrimaryKeyPropertyName()', () => {
     it('should return the first attribute with primaryKey=true', () => {
       const value = sqlHelper.getPrimaryKeyPropertyName({
         schema: {
@@ -204,7 +392,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('where "store_id"=$1');
+      whereStatement.should.equal('WHERE "store_id"=$1');
       params.should.deep.equal([storeId]);
     });
     it('should use property name if columnName is not defined', () => {
@@ -220,7 +408,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('where "name"=$1');
+      whereStatement.should.equal('WHERE "name"=$1');
       params.should.deep.equal([name]);
     });
     it('should handle startsWith', () => {
@@ -238,7 +426,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('where "name" ILIKE $1');
+      whereStatement.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`${name}%`]);
     });
     it('should handle endsWith', () => {
@@ -256,7 +444,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('where "name" ILIKE $1');
+      whereStatement.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`%${name}`]);
     });
     it('should handle contains', () => {
@@ -274,7 +462,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('where "name" ILIKE $1');
+      whereStatement.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`%${name}%`]);
     });
     it('should handle like', () => {
@@ -292,7 +480,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('where "name" ILIKE $1');
+      whereStatement.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([name]);
     });
     it('should handle or', () => {
@@ -316,7 +504,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('where (("name"=$1) OR ("name"<>$2 AND "store_id"=$3))');
+      whereStatement.should.equal('WHERE (("name"=$1) OR ("name"<>$2 AND "store_id"=$3))');
       params.should.deep.equal([name, name, store]);
     });
     it('should treat arrays as an =ANY() statement', () => {
@@ -332,7 +520,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('where "name"=ANY($1)');
+      whereStatement.should.equal('WHERE "name"=ANY($1)');
       params.should.deep.equal([name]);
     });
     it('should handle single value array', () => {
@@ -348,7 +536,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('where "name"=$1');
+      whereStatement.should.equal('WHERE "name"=$1');
       params.should.deep.equal([name]);
     });
     it('should handle an array with NULL explicitly', () => {
@@ -363,7 +551,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('where ("name" IS NULL OR "name"=$1)');
+      whereStatement.should.equal('WHERE ("name" IS NULL OR "name"=$1)');
       params.should.deep.equal(['']);
     });
     it('should treat negation of array as an <>ALL() statement', () => {
@@ -381,7 +569,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('where "name"<>ALL($1)');
+      whereStatement.should.equal('WHERE "name"<>ALL($1)');
       params.should.deep.equal([name]);
     });
     it('should treat negation of array with NULL explicitly as AND statements', () => {
@@ -398,7 +586,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('where "name" IS NOT NULL AND "name"<>$1');
+      whereStatement.should.equal('WHERE "name" IS NOT NULL AND "name"<>$1');
       params.should.deep.equal(['']);
     });
     it('should a hydrated query value', () => {
@@ -417,7 +605,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('where "store_id"=$1');
+      whereStatement.should.equal('WHERE "store_id"=$1');
       params.should.deep.equal([store.id]);
     });
   });
