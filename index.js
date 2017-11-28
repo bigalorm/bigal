@@ -17,17 +17,19 @@ module.exports = {
     readonlyPool = pool,
     expose,
              }) {
-    const modelsByGlobalId = {};
+    const modelClassesByGlobalId = {};
+    const modelSchemasByGlobalId = _.keyBy(modelSchemas, 'globalId');
 
     for (const modelSchema of modelSchemas) {
       const model = new Model({
         modelSchema,
-        modelsByGlobalId,
+        modelSchemasByGlobalId,
+        modelClassesByGlobalId,
         pool,
         readonlyPool,
       });
 
-      modelsByGlobalId[modelSchema.globalId.toLowerCase()] = model;
+      modelClassesByGlobalId[modelSchema.globalId.toLowerCase()] = model;
 
       expose(model, modelSchema);
     }
