@@ -678,4 +678,74 @@ describe('model', () => {
       params.should.deep.equal([store.id]);
     });
   });
+  describe('#create()', () => {
+    it('should return single object result if single value collection is specified', async () => {
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      };
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [product],
+      });
+
+      const result = await Product.create({
+        name: product.name,
+        store: product.store,
+      });
+
+      queryStub.restore();
+      queryStub.calledOnce.should.equal(true);
+      result.should.deep.equal(product);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$2) RETURNING "id","name","store_id" AS "store"');
+      params.should.deep.equal([
+        product.name,
+        product.store,
+      ]);
+    });
+    it('should return object array results if multiple value collections are specified', async () => {
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+
+      const result = await Product.create(products.map((product) => {
+        return {
+          name: product.name,
+          store: product.store,
+        };
+      }));
+
+      queryStub.restore();
+      queryStub.calledOnce.should.equal(true);
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$3),($2,$4) RETURNING "id","name","store_id" AS "store"');
+      params.should.deep.equal([
+        products[0].name,
+        products[1].name,
+        products[0].store,
+        products[1].store,
+      ]);
+    });
+  });
 });

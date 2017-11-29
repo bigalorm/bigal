@@ -34,6 +34,7 @@ describe('sqlHelper', () => {
       },
       name: {
         type: 'string',
+        required: true,
       },
       store: {
         model: 'store',
@@ -272,6 +273,425 @@ describe('sqlHelper', () => {
           });
         }).should.throw(Error, 'Limit should be a number');
       });
+    });
+  });
+  describe('#getInsertQueryAndParams', () => {
+    it('should throw if a required property has an undefined value', () => {
+      (() => {
+        sqlHelper.getInsertQueryAndParams({
+          modelSchemasByGlobalId,
+          schema: productSchema,
+          values: {
+            store: faker.random.uuid(),
+          },
+        });
+      }).should.throw(Error, 'Required field "name" does not have a value specified.');
+    });
+    it('should not throw if a required property has a defaultValue and an undefined initial value', () => {
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+            required: true,
+            defaultsTo: 'foobar',
+          },
+          bar: {
+            type: 'string',
+          },
+        },
+      };
+
+      (() => {
+        sqlHelper.getInsertQueryAndParams({
+          modelSchemasByGlobalId,
+          schema,
+          values: {
+            bar: faker.random.uuid(),
+          },
+        });
+      }).should.not.throw();
+    });
+    it('should not override properties with defaultValue if value is defined', () => {
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+            defaultsTo: 'foobar',
+          },
+        },
+      };
+
+      const name = faker.random.uuid();
+      const {
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          name,
+        },
+      });
+
+      params.should.deep.equal([name]);
+    });
+    it('should set undefined properties to defaultValue if defined on schema', () => {
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+            defaultsTo: 'foobar',
+          },
+          bar: {
+            type: 'string',
+          },
+        },
+      };
+
+      const bar = faker.random.uuid();
+      const {
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          bar,
+        },
+      });
+
+      params.should.deep.equal([
+        'foobar',
+        bar,
+      ]);
+    });
+    it('should set undefined properties to result of defaultValue function if defined on schema', () => {
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+            defaultsTo: () => {
+              return 'foobar';
+            },
+          },
+          bar: {
+            type: 'string',
+          },
+        },
+      };
+
+      const bar = faker.random.uuid();
+      const {
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          bar,
+        },
+      });
+
+      params.should.deep.equal([
+        'foobar',
+        bar,
+      ]);
+    });
+    it('should set createdAt if schema.autoCreatedAt and value is undefined', () => {
+      const beforeTime = new Date();
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        autoCreatedAt: true,
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+          },
+          createdAt: {
+            type: 'datetime',
+            columnName: 'created_at',
+          },
+        },
+      };
+
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          name,
+        },
+      });
+
+      query.should.equal(`INSERT INTO "${schema.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
+      params.should.have.length(2);
+      const afterTime = new Date();
+      for (const [index, value] of params.entries()) {
+        if (index === 0) {
+          value.should.equal(name);
+        } else if (index === 1) {
+          (beforeTime <= value && value <= afterTime).should.equal(true);
+        }
+      }
+    });
+    it('should not override createdAt if schema.autoCreatedAt and value is defined', () => {
+      const createdAt = faker.date.past();
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        autoCreatedAt: true,
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+          },
+          createdAt: {
+            type: 'datetime',
+            columnName: 'created_at',
+          },
+        },
+      };
+
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          name,
+          createdAt,
+        },
+      });
+
+      query.should.equal(`INSERT INTO "${schema.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
+      params.should.deep.equal([
+        name,
+        createdAt,
+      ]);
+    });
+    it('should set updatedAt if schema.autoUpdatedAt and value is undefined', () => {
+      const beforeTime = new Date();
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        autoUpdatedAt: true,
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+          },
+          updatedAt: {
+            type: 'datetime',
+            columnName: 'updated_at',
+          },
+        },
+      };
+
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          name,
+        },
+      });
+
+      query.should.equal(`INSERT INTO "${schema.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
+      params.should.have.length(2);
+      const afterTime = new Date();
+      for (const [index, value] of params.entries()) {
+        if (index === 0) {
+          value.should.equal(name);
+        } else if (index === 1) {
+          (beforeTime <= value && value <= afterTime).should.equal(true);
+        }
+      }
+    });
+    it('should not override updatedAt if schema.autoUpdatedAt and value is defined', () => {
+      const updatedAt = faker.date.past();
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        autoUpdatedAt: true,
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+          },
+          updatedAt: {
+            type: 'datetime',
+            columnName: 'updated_at',
+          },
+        },
+      };
+
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          name,
+          updatedAt,
+        },
+      });
+
+      query.should.equal(`INSERT INTO "${schema.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
+      params.should.deep.equal([
+        name,
+        updatedAt,
+      ]);
+    });
+    it('should ignore collection properties', () => {
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        autoUpdatedAt: true,
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+          },
+          bars: {
+            collection: 'bar',
+            via: 'foo',
+          },
+          bats: {
+            collection: 'bats',
+            through: 'foo__bats',
+            via: 'foo',
+          },
+        },
+      };
+
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          name,
+        },
+      });
+
+      query.should.equal(`INSERT INTO "${schema.tableName}" ("name") VALUES ($1) RETURNING "id","name"`);
+      params.should.deep.equal([
+        name,
+      ]);
+    });
+    it('should use primaryKey value if hydrated object is passed as a value', () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        values: {
+          name,
+          store,
+        },
+      });
+
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$2) RETURNING "id","name","store_id" AS "store"`);
+      params.should.deep.equal([
+        name,
+        store.id,
+      ]);
+    });
+    it('should support inserting a single record', () => {
+      const storeId = faker.random.uuid();
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        values: {
+          name,
+          store: storeId,
+        },
+      });
+
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$2) RETURNING "id","name","store_id" AS "store"`);
+      params.should.deep.equal([
+        name,
+        storeId,
+      ]);
+    });
+    it('should support inserting multiple records', () => {
+      const storeId1 = faker.random.uuid();
+      const name1 = faker.random.uuid();
+      const storeId2 = faker.random.uuid();
+      const name2 = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        values: [{
+          name: name1,
+          store: storeId1,
+        }, {
+          name: name2,
+          store: storeId2,
+        }],
+      });
+
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$3),($2,$4) RETURNING "id","name","store_id" AS "store"`);
+      params.should.deep.equal([
+        name1,
+        name2,
+        storeId1,
+        storeId2,
+      ]);
     });
   });
   describe('#getPrimaryKeyPropertyName()', () => {
@@ -589,7 +1009,7 @@ describe('sqlHelper', () => {
       whereStatement.should.equal('WHERE "name" IS NOT NULL AND "name"<>$1');
       params.should.deep.equal(['']);
     });
-    it('should a hydrated query value', () => {
+    it('should use primaryKey if hydrated object is passed as a query value', () => {
       const store = {
         id: faker.random.uuid(),
       };
