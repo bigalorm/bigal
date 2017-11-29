@@ -139,7 +139,33 @@ describe('model', () => {
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 1');
       params.should.deep.equal([]);
     });
-    it('should support call with where constraints', async () => {
+    it('should support call with constraints as a parameter', async () => {
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      };
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [product],
+      });
+      const result = await Product.findOne({
+        select: ['name'],
+        where: {
+          id: product.id,
+        },
+        sort: 'name asc',
+      });
+      queryStub.restore();
+      result.should.deep.equal(product);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT "name","id" FROM "product" WHERE "id"=$1 ORDER BY "name" LIMIT 1');
+      params.should.deep.equal([product.id]);
+    });
+    it('should support call with chained where constraints', async () => {
       const product = {
         id: faker.random.uuid(),
         name: `product - ${faker.random.uuid()}`,
@@ -161,7 +187,7 @@ describe('model', () => {
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
       params.should.deep.equal([product.id]);
     });
-    it('should support call with sorting', async () => {
+    it('should support call with chained sort', async () => {
       const product = {
         id: faker.random.uuid(),
         name: `product - ${faker.random.uuid()}`,
@@ -180,31 +206,6 @@ describe('model', () => {
       ] = queryStub.firstCall.args;
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" ORDER BY "name" LIMIT 1');
       params.should.deep.equal([]);
-    });
-    it('should support call with where and sort as a parameter', async () => {
-      const product = {
-        id: faker.random.uuid(),
-        name: `product - ${faker.random.uuid()}`,
-      };
-
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [product],
-      });
-      const result = await Product.findOne({
-        where: {
-          id: product.id,
-        },
-        sort: 'name asc',
-      });
-      queryStub.restore();
-      result.should.deep.equal(product);
-
-      const [
-        query,
-        params,
-      ] = queryStub.firstCall.args;
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=$1 ORDER BY "name" LIMIT 1');
-      params.should.deep.equal([product.id]);
     });
     it('should support populating a single relation', async () => {
       const store = {
@@ -452,6 +453,229 @@ describe('model', () => {
         [category1.id, category2.id],
         'category%',
       ]);
+    });
+  });
+  describe('#find()', () => {
+    it('should support call without constraints', async () => {
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+      const result = await Product.find();
+      queryStub.restore();
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product"');
+      params.should.deep.equal([]);
+    });
+    it('should support call constraints as a parameter', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+      const result = await Product.find({
+        select: ['name'],
+        where: {
+          id: _.map(products, 'id'),
+          store,
+        },
+        sort: 'name asc',
+        skip: 5,
+        limit: 24,
+      });
+      queryStub.restore();
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT "name","id" FROM "product" WHERE "id"=ANY($1) AND "store_id"=$2 ORDER BY "name" LIMIT 24 OFFSET 5');
+      params.should.deep.equal([
+        _.map(products, 'id'),
+        store.id,
+      ]);
+    });
+    it('should support call with chained where constraints', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+      const result = await Product.find().where({
+        store: store.id,
+      });
+      queryStub.restore();
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
+      params.should.deep.equal([store.id]);
+    });
+    it('should support call with chained sort', async () => {
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+      const result = await Product.find().sort('name asc');
+      queryStub.restore();
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" ORDER BY "name"');
+      params.should.deep.equal([]);
+    });
+    it('should support call with chained limit', async () => {
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+      const result = await Product.find().limit(42);
+      queryStub.restore();
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 42');
+      params.should.deep.equal([]);
+    });
+    it('should support call with chained skip', async () => {
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+      const result = await Product.find().skip(24);
+      queryStub.restore();
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" OFFSET 24');
+      params.should.deep.equal([]);
+    });
+    it('should support call with chained paginate', async () => {
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+      const result = await Product.find().paginate({
+        page: 3,
+        limit: 100,
+      });
+      queryStub.restore();
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 100 OFFSET 200');
+      params.should.deep.equal([]);
+    });
+    it('should support complex query with multiple chained modifiers', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+
+      const result = await Product.find()
+        .where({
+          store: store.id,
+        })
+        .skip(24)
+        .limit(42)
+        .sort('store desc');
+      queryStub.restore();
+      queryStub.calledOnce.should.equal(true);
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 42 OFFSET 24');
+      params.should.deep.equal([store.id]);
     });
   });
 });
