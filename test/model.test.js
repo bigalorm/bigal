@@ -820,4 +820,74 @@ describe('model', () => {
       ]);
     });
   });
+  describe('#update()', () => {
+    it('should return array of updated objects if second parameter is not defined', async () => {
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      };
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [product],
+      });
+
+      const result = await Product.update({
+        id: product.id,
+      }, {
+        name: product.name,
+        store: product.store,
+      });
+
+      queryStub.restore();
+      queryStub.calledOnce.should.equal(true);
+      result.should.deep.equal([product]);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('UPDATE "product" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","store_id" AS "store"');
+      params.should.deep.equal([
+        product.name,
+        product.store,
+        product.id,
+      ]);
+    });
+    it('should return true if returnRecords=false', async () => {
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      };
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [product],
+      });
+
+      const result = await Product.update({
+        id: product.id,
+      }, {
+        name: product.name,
+        store: product.store,
+      }, {
+        returnRecords: false,
+      });
+
+      queryStub.restore();
+      queryStub.calledOnce.should.equal(true);
+      result.should.equal(true);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('UPDATE "product" SET "name"=$1,"store_id"=$2 WHERE "id"=$3');
+      params.should.deep.equal([
+        product.name,
+        product.store,
+        product.id,
+      ]);
+    });
+  });
 });

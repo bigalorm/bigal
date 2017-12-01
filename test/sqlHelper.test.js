@@ -275,7 +275,7 @@ describe('sqlHelper', () => {
       });
     });
   });
-  describe('#getInsertQueryAndParams', () => {
+  describe('#getInsertQueryAndParams()', () => {
     it('should throw if a required property has an undefined value', () => {
       (() => {
         sqlHelper.getInsertQueryAndParams({
@@ -611,6 +611,8 @@ describe('sqlHelper', () => {
         schema,
         values: {
           name,
+          bars: [faker.random.uuid()],
+          bats: [faker.random.uuid()],
         },
       });
 
@@ -796,6 +798,302 @@ describe('sqlHelper', () => {
         name2,
         storeId1,
         storeId2,
+      ]);
+    });
+  });
+  describe('#getUpdateQueryAndParams()', () => {
+    it('should not set createdAt if schema.autoCreatedAt and value is undefined', () => {
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        autoCreatedAt: true,
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+          },
+          createdAt: {
+            type: 'datetime',
+            columnName: 'created_at',
+          },
+        },
+      };
+
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getUpdateQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          name,
+        },
+      });
+
+      query.should.equal(`UPDATE "${schema.tableName}" SET "name"=$1 RETURNING "id","name","created_at" AS "createdAt"`);
+      params.should.deep.equal([
+        name,
+      ]);
+    });
+    it('should set updatedAt if schema.autoUpdatedAt and value is undefined', () => {
+      const beforeTime = new Date();
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        autoUpdatedAt: true,
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+          },
+          updatedAt: {
+            type: 'datetime',
+            columnName: 'updated_at',
+          },
+        },
+      };
+
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getUpdateQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          name,
+        },
+      });
+
+      query.should.equal(`UPDATE "${schema.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
+      params.should.have.length(2);
+      const afterTime = new Date();
+      for (const [index, value] of params.entries()) {
+        if (index === 0) {
+          value.should.equal(name);
+        } else if (index === 1) {
+          (beforeTime <= value && value <= afterTime).should.equal(true);
+        }
+      }
+    });
+    it('should not override updatedAt if schema.autoUpdatedAt and value is defined', () => {
+      const updatedAt = faker.date.past();
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        autoUpdatedAt: true,
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+          },
+          updatedAt: {
+            type: 'datetime',
+            columnName: 'updated_at',
+          },
+        },
+      };
+
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getUpdateQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          name,
+          updatedAt,
+        },
+      });
+
+      query.should.equal(`UPDATE "${schema.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
+      params.should.deep.equal([
+        name,
+        updatedAt,
+      ]);
+    });
+    it('should ignore collection properties', () => {
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+          },
+          bars: {
+            collection: 'bar',
+            via: 'foo',
+          },
+          bats: {
+            collection: 'bats',
+            through: 'foo__bats',
+            via: 'foo',
+          },
+        },
+      };
+
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getUpdateQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          name,
+          bars: [faker.random.uuid()],
+          bats: [faker.random.uuid()],
+        },
+      });
+
+      query.should.equal(`UPDATE "${schema.tableName}" SET "name"=$1 RETURNING "id","name"`);
+      params.should.deep.equal([
+        name,
+      ]);
+    });
+    it('should use primaryKey value if hydrated object is passed as a value', () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getUpdateQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        values: {
+          name,
+          store,
+        },
+      });
+
+      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1,"store_id"=$2 RETURNING "id","name","store_id" AS "store"`);
+      params.should.deep.equal([
+        name,
+        store.id,
+      ]);
+    });
+    it('should include where statement if defined', () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getUpdateQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          store,
+        },
+        values: {
+          name,
+        },
+      });
+
+      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1 WHERE "store_id"=$2 RETURNING "id","name","store_id" AS "store"`);
+      params.should.deep.equal([
+        name,
+        store.id,
+      ]);
+    });
+    it('should return records if returnRecords=true', () => {
+      const productId = faker.random.uuid();
+      const storeId = faker.random.uuid();
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getUpdateQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          id: productId,
+        },
+        values: {
+          name,
+          store: storeId,
+        },
+        returnRecords: true,
+      });
+
+      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","store_id" AS "store"`);
+      params.should.deep.equal([
+        name,
+        storeId,
+        productId,
+      ]);
+    });
+    it('should return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
+      const productId = faker.random.uuid();
+      const storeId = faker.random.uuid();
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getUpdateQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          id: productId,
+        },
+        values: {
+          name,
+          store: storeId,
+        },
+        returnRecords: true,
+        returnSelect: ['name'],
+      });
+
+      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "name","id"`);
+      params.should.deep.equal([
+        name,
+        storeId,
+        productId,
+      ]);
+    });
+    it('should not return records if returnRecords=false', () => {
+      const productId = faker.random.uuid();
+      const storeId = faker.random.uuid();
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getUpdateQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          id: productId,
+        },
+        values: {
+          name,
+          store: storeId,
+        },
+        returnRecords: false,
+      });
+
+      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3`);
+      params.should.deep.equal([
+        name,
+        storeId,
+        productId,
       ]);
     });
   });
