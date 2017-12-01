@@ -679,7 +679,7 @@ describe('model', () => {
     });
   });
   describe('#create()', () => {
-    it('should return single object result if single value collection is specified', async () => {
+    it('should return single object result if single value is specified', async () => {
       const product = {
         id: faker.random.uuid(),
         name: `product - ${faker.random.uuid()}`,
@@ -709,7 +709,39 @@ describe('model', () => {
         product.store,
       ]);
     });
-    it('should return object array results if multiple value collections are specified', async () => {
+    it('should return true if single value is specified and returnRecords=false', async () => {
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      };
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [product],
+      });
+
+      const result = await Product.create({
+        name: product.name,
+        store: product.store,
+      }, {
+        returnRecords: false,
+      });
+
+      queryStub.restore();
+      queryStub.calledOnce.should.equal(true);
+      result.should.equal(true);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$2)');
+      params.should.deep.equal([
+        product.name,
+        product.store,
+      ]);
+    });
+    it('should return object array results if multiple values are specified', async () => {
       const products = [{
         id: faker.random.uuid(),
         name: `product - ${faker.random.uuid()}`,
@@ -740,6 +772,46 @@ describe('model', () => {
         params,
       ] = queryStub.firstCall.args;
       query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$3),($2,$4) RETURNING "id","name","store_id" AS "store"');
+      params.should.deep.equal([
+        products[0].name,
+        products[1].name,
+        products[0].store,
+        products[1].store,
+      ]);
+    });
+    it('should return true if multiple values are specified and returnRecords=false', async () => {
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+
+      const result = await Product.create(products.map((product) => {
+        return {
+          name: product.name,
+          store: product.store,
+        };
+      }), {
+        returnRecords: false,
+      });
+
+      queryStub.restore();
+      queryStub.calledOnce.should.equal(true);
+      result.should.equal(true);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$3),($2,$4)');
       params.should.deep.equal([
         products[0].name,
         products[1].name,

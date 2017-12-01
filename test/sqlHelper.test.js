@@ -644,7 +644,7 @@ describe('sqlHelper', () => {
         store.id,
       ]);
     });
-    it('should support inserting a single record', () => {
+    it('should support inserting a single record and return records if returnRecords=true', () => {
       const storeId = faker.random.uuid();
       const name = faker.random.uuid();
       const {
@@ -657,6 +657,7 @@ describe('sqlHelper', () => {
           name,
           store: storeId,
         },
+        returnRecords: true,
       });
 
       query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$2) RETURNING "id","name","store_id" AS "store"`);
@@ -665,7 +666,82 @@ describe('sqlHelper', () => {
         storeId,
       ]);
     });
-    it('should support inserting multiple records', () => {
+    it('should support inserting a single record and return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
+      const storeId = faker.random.uuid();
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        values: {
+          name,
+          store: storeId,
+        },
+        returnRecords: true,
+        returnSelect: ['name'],
+      });
+
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$2) RETURNING "name","id"`);
+      params.should.deep.equal([
+        name,
+        storeId,
+      ]);
+    });
+    it('should support inserting a single record and not return records if returnRecords=false', () => {
+      const storeId = faker.random.uuid();
+      const name = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        values: {
+          name,
+          store: storeId,
+        },
+        returnRecords: false,
+      });
+
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$2)`);
+      params.should.deep.equal([
+        name,
+        storeId,
+      ]);
+    });
+    it('should support inserting multiple records and return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
+      const storeId1 = faker.random.uuid();
+      const name1 = faker.random.uuid();
+      const storeId2 = faker.random.uuid();
+      const name2 = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        values: [{
+          name: name1,
+          store: storeId1,
+        }, {
+          name: name2,
+          store: storeId2,
+        }],
+        returnRecords: true,
+        returnSelect: ['store'],
+      });
+
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$3),($2,$4) RETURNING "store_id" AS "store","id"`);
+      params.should.deep.equal([
+        name1,
+        name2,
+        storeId1,
+        storeId2,
+      ]);
+    });
+    it('should support inserting multiple records and return records if returnRecords=true', () => {
       const storeId1 = faker.random.uuid();
       const name1 = faker.random.uuid();
       const storeId2 = faker.random.uuid();
@@ -686,6 +762,35 @@ describe('sqlHelper', () => {
       });
 
       query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$3),($2,$4) RETURNING "id","name","store_id" AS "store"`);
+      params.should.deep.equal([
+        name1,
+        name2,
+        storeId1,
+        storeId2,
+      ]);
+    });
+    it('should support inserting multiple records and not return records if returnRecords=false', () => {
+      const storeId1 = faker.random.uuid();
+      const name1 = faker.random.uuid();
+      const storeId2 = faker.random.uuid();
+      const name2 = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        values: [{
+          name: name1,
+          store: storeId1,
+        }, {
+          name: name2,
+          store: storeId2,
+        }],
+        returnRecords: false,
+      });
+
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$3),($2,$4)`);
       params.should.deep.equal([
         name1,
         name2,
@@ -760,6 +865,39 @@ describe('sqlHelper', () => {
           propertyName,
         });
       }).should.throw(Error, `Property (${propertyName}) not found in model (${schema.globalId}).`);
+    });
+  });
+  describe('#_getColumnsToSelect()', () => {
+    it('should include all columns if select is null', () => {
+      const query = sqlHelper._getColumnsToSelect({
+        schema: productSchema,
+        select: null,
+      });
+
+      query.should.equal(`"id","name","store_id" AS "store"`);
+    });
+    it('should include all columns if select is undefined', () => {
+      const query = sqlHelper._getColumnsToSelect({
+        schema: productSchema,
+      });
+
+      query.should.equal(`"id","name","store_id" AS "store"`);
+    });
+    it('should include primaryKey column if select is empty', () => {
+      const query = sqlHelper._getColumnsToSelect({
+        schema: productSchema,
+        select: [],
+      });
+
+      query.should.equal(`"id"`);
+    });
+    it('should include primaryKey column if select does not include it', () => {
+      const query = sqlHelper._getColumnsToSelect({
+        schema: productSchema,
+        select: ['name'],
+      });
+
+      query.should.equal(`"name","id"`);
     });
   });
   describe('#_buildWhereStatement()', () => {
