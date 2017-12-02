@@ -679,6 +679,74 @@ describe('model', () => {
     });
   });
   describe('#create()', () => {
+    it('should execute beforeCreate if defined as a schema method', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {},
+          bar: {},
+        },
+        async beforeCreate(values) {
+          return _.merge(values, {
+            called: true,
+            bar: true,
+          });
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const values = {
+        foo: faker.random.uuid(),
+      };
+      await Model.create(values);
+
+      values.called.should.equal(true);
+    });
+    it('should execute beforeCreate if defined as a schema attribute method', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {},
+          bar: {},
+          async beforeCreate(values) {
+            return _.merge(values, {
+              called: true,
+              bar: true,
+            });
+          },
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const values = {
+        foo: faker.random.uuid(),
+      };
+      await Model.create(values);
+
+      values.called.should.equal(true);
+    });
     it('should return single object result if single value is specified', async () => {
       const product = {
         id: faker.random.uuid(),
@@ -821,6 +889,78 @@ describe('model', () => {
     });
   });
   describe('#update()', () => {
+    it('should execute beforeUpdate if defined as a schema method', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {},
+          bar: {},
+        },
+        async beforeUpdate(values) {
+          return _.merge(values, {
+            called: true,
+            bar: true,
+          });
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const values = {
+        foo: faker.random.uuid(),
+      };
+      await Model.update({
+        id: faker.random.uuid(),
+      }, values);
+
+      values.called.should.equal(true);
+    });
+    it('should execute beforeUpdate if defined as a schema attribute method', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {},
+          bar: {},
+          async beforeUpdate(values) {
+            return _.merge(values, {
+              called: true,
+              bar: true,
+            });
+          },
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const values = {
+        foo: faker.random.uuid(),
+      };
+      await Model.update({
+        id: faker.random.uuid(),
+      }, values);
+
+      values.called.should.equal(true);
+    });
     it('should return array of updated objects if second parameter is not defined', async () => {
       const product = {
         id: faker.random.uuid(),
