@@ -21,8 +21,9 @@ $ npm install bigal
 
 ```js
 // config/hooks.js
-module.exports.hooks = {
-  orm: false
+module.exports = {
+  orm: false,
+  pubsub: false,
 };
 ```
 
@@ -30,6 +31,8 @@ module.exports.hooks = {
 
 ```js
 const _ = require('lodash');
+const fs = require('mz/fs');
+const path = require('path');
 const { Pool } = require('pg');
 const bigal = require('bigal');
 
@@ -43,6 +46,7 @@ module.exports = (sails) => {
         const readonlyPool = new Pool(sails.config.connections.readonlyPostgres);
 
         const modelsPath = path.join(__dirname, '../../models');
+        // eslint-disable-next-line security/detect-non-literal-fs-filename
         const files = await fs.readdir(modelsPath);
         const modelSchemas = files.filter((file) => /.js$/ig.test(file)).map((file) => {
           const fileBasename = path.basename(file, '.js');
@@ -56,12 +60,13 @@ module.exports = (sails) => {
           }, schema);
         });
 
+        sails.models = sails.models || {};
         await bigal.initialize({
           modelSchemas,
           pool,
           readonlyPool,
           expose: (model, modelSchema) => {
-            if (sails.globals.models) {
+            if (sails.config.globals.models) {
               global[modelSchema.globalId] = model;
             }
 
