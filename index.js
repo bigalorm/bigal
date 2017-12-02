@@ -18,7 +18,9 @@ module.exports = {
     expose,
              }) {
     const modelClassesByGlobalId = {};
-    const modelSchemasByGlobalId = _.keyBy(modelSchemas, 'globalId');
+    const modelSchemasByGlobalId = _.keyBy(modelSchemas, (schema) => {
+      return schema.globalId.toLowerCase();
+    });
 
     for (const modelSchema of modelSchemas) {
       const model = new Model({
