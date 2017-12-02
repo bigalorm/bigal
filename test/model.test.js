@@ -890,4 +890,139 @@ describe('model', () => {
       ]);
     });
   });
+  describe('#destroy()', () => {
+    it('should support call without constraints', async () => {
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+      const result = await Product.destroy();
+      queryStub.restore();
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('DELETE FROM "product" RETURNING "id","name","store_id" AS "store"');
+      params.should.deep.equal([]);
+    });
+    it('should support call constraints as a parameter', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+      const result = await Product.destroy({
+        id: _.map(products, 'id'),
+        store,
+      });
+      queryStub.restore();
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('DELETE FROM "product" WHERE "id"=ANY($1) AND "store_id"=$2 RETURNING "id","name","store_id" AS "store"');
+      params.should.deep.equal([
+        _.map(products, 'id'),
+        store.id,
+      ]);
+    });
+    it('should support call with chained where constraints', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+      const result = await Product.destroy().where({
+        store: store.id,
+      });
+      queryStub.restore();
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('DELETE FROM "product" WHERE "store_id"=$1 RETURNING "id","name","store_id" AS "store"');
+      params.should.deep.equal([store.id]);
+    });
+    it('should return true if returnRecords=false', async () => {
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      };
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [product],
+      });
+
+      const result = await Product.destroy({
+        id: product.id,
+      }, {
+        returnRecords: false,
+      });
+
+      queryStub.restore();
+      queryStub.calledOnce.should.equal(true);
+      result.should.equal(true);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('DELETE FROM "product" WHERE "id"=$1');
+      params.should.deep.equal([
+        product.id,
+      ]);
+    });
+    it('should return true if where object is null and returnRecords=false', async () => {
+      const queryStub = sinon.stub(pool, 'query').returns({});
+
+      const result = await Product.destroy(null, {
+        returnRecords: false,
+      });
+
+      queryStub.restore();
+      queryStub.calledOnce.should.equal(true);
+      result.should.equal(true);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('DELETE FROM "product"');
+      params.should.deep.equal([]);
+    });
+  });
 });

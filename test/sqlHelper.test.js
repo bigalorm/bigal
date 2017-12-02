@@ -1097,6 +1097,100 @@ describe('sqlHelper', () => {
       ]);
     });
   });
+  describe('#getDeleteQueryAndParams()', () => {
+    it('should delete all records if no where statement is defined', () => {
+      const {
+        query,
+        params,
+      } = sqlHelper.getDeleteQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+      });
+
+      query.should.equal(`DELETE FROM "${productSchema.tableName}" RETURNING "id","name","store_id" AS "store"`);
+      params.should.deep.equal([]);
+    });
+    it('should include where statement if defined', () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+
+      const {
+        query,
+        params,
+      } = sqlHelper.getDeleteQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          store,
+        },
+      });
+
+      query.should.equal(`DELETE FROM "${productSchema.tableName}" WHERE "store_id"=$1 RETURNING "id","name","store_id" AS "store"`);
+      params.should.deep.equal([
+        store.id,
+      ]);
+    });
+    it('should return records if returnRecords=true', () => {
+      const productId = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getDeleteQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          id: productId,
+        },
+        returnRecords: true,
+      });
+
+      query.should.equal(`DELETE FROM "${productSchema.tableName}" WHERE "id"=$1 RETURNING "id","name","store_id" AS "store"`);
+      params.should.deep.equal([
+        productId,
+      ]);
+    });
+    it('should return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
+      const productId = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getDeleteQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          id: productId,
+        },
+        returnRecords: true,
+        returnSelect: ['name'],
+      });
+
+      query.should.equal(`DELETE FROM "${productSchema.tableName}" WHERE "id"=$1 RETURNING "name","id"`);
+      params.should.deep.equal([
+        productId,
+      ]);
+    });
+    it('should not return records if returnRecords=false', () => {
+      const productId = faker.random.uuid();
+      const {
+        query,
+        params,
+      } = sqlHelper.getDeleteQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          id: productId,
+        },
+        returnRecords: false,
+      });
+
+      query.should.equal(`DELETE FROM "${productSchema.tableName}" WHERE "id"=$1`);
+      params.should.deep.equal([
+        productId,
+      ]);
+    });
+  });
   describe('#getPrimaryKeyPropertyName()', () => {
     it('should return the first attribute with primaryKey=true', () => {
       const value = sqlHelper.getPrimaryKeyPropertyName({
