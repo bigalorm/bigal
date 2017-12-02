@@ -165,6 +165,28 @@ describe('model', () => {
       query.should.equal('SELECT "name","id" FROM "product" WHERE "id"=$1 ORDER BY "name" LIMIT 1');
       params.should.deep.equal([product.id]);
     });
+    it('should support call with where constraint as a parameter', async () => {
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      };
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [product],
+      });
+      const result = await Product.findOne({
+        id: product.id,
+      });
+      queryStub.restore();
+      result.should.deep.equal(product);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
+      params.should.deep.equal([product.id]);
+    });
     it('should support call with chained where constraints', async () => {
       const product = {
         id: faker.random.uuid(),
@@ -479,7 +501,7 @@ describe('model', () => {
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product"');
       params.should.deep.equal([]);
     });
-    it('should support call constraints as a parameter', async () => {
+    it('should support call with constraints as a parameter', async () => {
       const store = {
         id: faker.random.uuid(),
         name: `store - ${faker.random.uuid()}`,
@@ -513,6 +535,39 @@ describe('model', () => {
         params,
       ] = queryStub.firstCall.args;
       query.should.equal('SELECT "name","id" FROM "product" WHERE "id"=ANY($1) AND "store_id"=$2 ORDER BY "name" LIMIT 24 OFFSET 5');
+      params.should.deep.equal([
+        _.map(products, 'id'),
+        store.id,
+      ]);
+    });
+    it('should support call with where constraint as a parameter', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: products,
+      });
+      const result = await Product.find({
+        id: _.map(products, 'id'),
+        store,
+      });
+      queryStub.restore();
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=ANY($1) AND "store_id"=$2');
       params.should.deep.equal([
         _.map(products, 'id'),
         store.id,
