@@ -199,6 +199,19 @@ const items = await MyModel.find().where({
 
 -------------------------------------------------
 
+### `.count()` - Get the number of records matching the where criteria
+
+```js
+const count = await MyModel.count().where({
+  name: {
+    like: 'Karl',
+  },
+});
+// count = 3
+```
+
+-------------------------------------------------
+
 ### `.create()` - Insert one or multiple objects
 
 #### Insert a single object

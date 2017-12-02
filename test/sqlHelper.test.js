@@ -275,6 +275,42 @@ describe('sqlHelper', () => {
       });
     });
   });
+  describe('#getCountQueryAndParams()', () => {
+    it('should count all records if no where statement is defined', () => {
+      const {
+        query,
+        params,
+      } = sqlHelper.getCountQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+      });
+
+      query.should.equal(`SELECT count(*) AS "count" FROM "${productSchema.tableName}"`);
+      params.should.deep.equal([]);
+    });
+    it('should include where statement if defined', () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+
+      const {
+        query,
+        params,
+      } = sqlHelper.getCountQueryAndParams({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          store,
+        },
+      });
+
+      query.should.equal(`SELECT count(*) AS "count" FROM "${productSchema.tableName}" WHERE "store_id"=$1`);
+      params.should.deep.equal([
+        store.id,
+      ]);
+    });
+  });
   describe('#getInsertQueryAndParams()', () => {
     it('should throw if a required property has an undefined value', () => {
       (() => {

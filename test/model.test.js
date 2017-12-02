@@ -733,6 +733,99 @@ describe('model', () => {
       params.should.deep.equal([store.id]);
     });
   });
+  describe('#count()', () => {
+    it('should support call without constraints', async () => {
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [{
+          count: products.length,
+        }],
+      });
+      const result = await Product.count();
+      queryStub.restore();
+      result.should.equal(products.length);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT count(*) AS "count" FROM "product"');
+      params.should.deep.equal([]);
+    });
+    it('should support call constraints as a parameter', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [{
+          count: products.length,
+        }],
+      });
+      const result = await Product.count({
+        id: _.map(products, 'id'),
+        store,
+      });
+      queryStub.restore();
+      result.should.equal(products.length);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT count(*) AS "count" FROM "product" WHERE "id"=ANY($1) AND "store_id"=$2');
+      params.should.deep.equal([
+        _.map(products, 'id'),
+        store.id,
+      ]);
+    });
+    it('should support call with chained where constraints', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [{
+          count: products.length,
+        }],
+      });
+      const result = await Product.count().where({
+        store: store.id,
+      });
+      queryStub.restore();
+      result.should.equal(products.length);
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal('SELECT count(*) AS "count" FROM "product" WHERE "store_id"=$1');
+      params.should.deep.equal([store.id]);
+    });
+  });
   describe('#create()', () => {
     it('should execute beforeCreate if defined as a schema method', async () => {
       const schema = {
