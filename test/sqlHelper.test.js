@@ -321,7 +321,7 @@ describe('sqlHelper', () => {
             store: faker.random.uuid(),
           },
         });
-      }).should.throw(Error, 'Required field "name" does not have a value specified.');
+      }).should.throw(Error, `Create statement for "${productSchema.globalId}" is missing value for required field: name`);
     });
     it('should not throw if a required property has a defaultValue and an undefined initial value', () => {
       const schema = {
@@ -1509,6 +1509,21 @@ describe('sqlHelper', () => {
       whereStatement.should.equal('WHERE "name"=ANY($1)');
       params.should.deep.equal([name]);
     });
+    it('should treat empty array as "true"', () => {
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: [],
+        },
+      });
+
+      whereStatement.should.equal('WHERE 1=1');
+      params.should.deep.equal([]);
+    });
     it('should handle single value array', () => {
       const name = faker.random.uuid();
       const {
@@ -1557,6 +1572,23 @@ describe('sqlHelper', () => {
 
       whereStatement.should.equal('WHERE "name"<>ALL($1)');
       params.should.deep.equal([name]);
+    });
+    it('should treat negation of empty array as "true"', () => {
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            '!': [],
+          },
+        },
+      });
+
+      whereStatement.should.equal('WHERE 1=1');
+      params.should.deep.equal([]);
     });
     it('should treat negation of array with NULL explicitly as AND statements', () => {
       const {
