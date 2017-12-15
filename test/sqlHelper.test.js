@@ -1509,7 +1509,7 @@ describe('sqlHelper', () => {
       whereStatement.should.equal('WHERE "name"=ANY($1)');
       params.should.deep.equal([name]);
     });
-    it('should treat empty array as "true"', () => {
+    it('should treat empty array as "false"', () => {
       const {
         whereStatement,
         params,
@@ -1518,6 +1518,23 @@ describe('sqlHelper', () => {
         schema: productSchema,
         where: {
           name: [],
+        },
+      });
+
+      whereStatement.should.equal('WHERE 1<>1');
+      params.should.deep.equal([]);
+    });
+    it('should treat negated empty array as "true"', () => {
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            '!': [],
+          },
         },
       });
 
