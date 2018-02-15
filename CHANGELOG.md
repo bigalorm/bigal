@@ -1,3 +1,8 @@
+### 1.0.4
+
+  * Fix: Querying date values was not working
+  * Fix: Querying a property with columnName that is the same as the property name would result in unnecessary sql syntax
+
 ### 1.0.3
 
   * Fix: A query with an empty array should return 0 records. Negated queries with empty arrays will return all records.
