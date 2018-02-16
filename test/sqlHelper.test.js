@@ -690,6 +690,49 @@ describe('sqlHelper', () => {
         store.id,
       ]);
     });
+    it('should cast value to jsonb if type=json and value is an array', () => {
+      // Please see https://github.com/brianc/node-postgres/issues/442 for details of why this is needed
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+            required: true,
+            defaultsTo: 'foobar',
+          },
+          bar: {
+            type: 'json',
+          },
+        },
+      };
+
+      const name = faker.random.uuid();
+      const bar = [{
+        foo: faker.random.uuid(),
+      }];
+
+      const {
+        query,
+        params,
+      } = sqlHelper.getInsertQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          name,
+          bar,
+        },
+      });
+
+      query.should.equal(`INSERT INTO "${schema.tableName}" ("name","bar") VALUES ($1,$2::jsonb) RETURNING "id","name","bar"`);
+      params.should.deep.equal([
+        name,
+        JSON.stringify(bar),
+      ]);
+    });
     it('should support inserting a single record and return records if returnRecords=true', () => {
       const storeId = faker.random.uuid();
       const name = faker.random.uuid();
@@ -1029,6 +1072,49 @@ describe('sqlHelper', () => {
       params.should.deep.equal([
         name,
         store.id,
+      ]);
+    });
+    it('should cast value to jsonb if type=json and value is an array', () => {
+      // Please see https://github.com/brianc/node-postgres/issues/442 for details of why this is needed
+      const schema = {
+        globalId: 'foo',
+        tableName: 'foo',
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          name: {
+            type: 'string',
+            required: true,
+            defaultsTo: 'foobar',
+          },
+          bar: {
+            type: 'json',
+          },
+        },
+      };
+
+      const name = faker.random.uuid();
+      const bar = [{
+        foo: faker.random.uuid(),
+      }];
+
+      const {
+        query,
+        params,
+      } = sqlHelper.getUpdateQueryAndParams({
+        modelSchemasByGlobalId,
+        schema,
+        values: {
+          name,
+          bar,
+        },
+      });
+
+      query.should.equal(`UPDATE "${schema.tableName}" SET "name"=$1,"bar"=$2::jsonb RETURNING "id","name","bar"`);
+      params.should.deep.equal([
+        name,
+        JSON.stringify(bar),
       ]);
     });
     it('should include where statement if defined', () => {

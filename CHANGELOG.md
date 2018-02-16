@@ -1,3 +1,8 @@
+### 1.0.6
+
+  * Fix: "invalid input syntax for type json" error when setting jsonb column value to an array. See https://github.com/brianc/node-postgres/issues/442
+  * Update npms to latest versions
+
 ### 1.0.5
 
   * Fix: AND constraint after an OR constraint caused exception
