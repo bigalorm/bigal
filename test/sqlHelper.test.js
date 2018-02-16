@@ -1519,6 +1519,40 @@ describe('sqlHelper', () => {
       whereStatement.should.equal('WHERE (("name"=$1) OR ("name"<>$2 AND "store_id"=$3))');
       params.should.deep.equal([name, name, store]);
     });
+    it('should handle mixed or/and constraints', () => {
+      const id = faker.random.uuid();
+      const name = faker.random.uuid();
+      const store = faker.random.uuid();
+      const sku = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          id,
+          or: [{
+            name,
+          }, {
+            name: {
+              '!': name,
+            },
+            store,
+          }],
+          sku,
+        },
+      });
+
+      whereStatement.should.equal('WHERE "id"=$1 AND (("name"=$2) OR ("name"<>$3 AND "store_id"=$4)) AND "sku"=$5');
+      params.should.deep.equal([
+        id,
+        name,
+        name,
+        store,
+        sku,
+      ]);
+    });
     it('should treat arrays as an =ANY() statement', () => {
       const name = [faker.random.uuid(), faker.random.uuid()];
       const {

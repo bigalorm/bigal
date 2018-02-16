@@ -1,3 +1,7 @@
+### 1.0.5
+
+  * Fix: AND constraint after an OR constraint caused exception
+
 ### 1.0.4
 
   * Fix: Querying date values was not working
