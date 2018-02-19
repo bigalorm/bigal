@@ -1,3 +1,7 @@
+### 1.0.7
+
+  * Fix: Add additional stack trace data when an exception occurs
+
 ### 1.0.6
 
   * Fix: "invalid input syntax for type json" error when setting jsonb column value to an array. See https://github.com/brianc/node-postgres/issues/442
