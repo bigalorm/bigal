@@ -957,6 +957,15 @@ describe('model', () => {
         product.store,
       ]);
     });
+    it('should return empty array results if empty value array is specified', async () => {
+      const queryStub = sinon.stub(pool, 'query').returns([]);
+
+      const result = await Product.create([]);
+
+      queryStub.restore();
+      queryStub.calledOnce.should.equal(false);
+      result.should.deep.equal([]);
+    });
     it('should return object array results if multiple values are specified', async () => {
       const products = [{
         id: faker.random.uuid(),

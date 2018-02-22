@@ -1,3 +1,7 @@
+### 1.0.8
+
+  * Fix: Prevent trying to save when create() is called with an empty array
+
 ### 1.0.7
 
   * Fix: Add additional stack trace data when an exception occurs
