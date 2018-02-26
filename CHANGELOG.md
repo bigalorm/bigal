@@ -1,3 +1,7 @@
+### 1.1.1
+
+  * Fix: Checking if array column equals an empty array
+
 ### 1.1.0
 
   * Allow array values for: like, contains, startsWith, and endsWith

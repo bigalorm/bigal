@@ -1871,6 +1871,64 @@ describe('sqlHelper', () => {
       whereStatement.should.equal('WHERE "name"=ANY($1)');
       params.should.deep.equal([name]);
     });
+    it('should handle empty array with array type column', () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'array',
+          },
+        },
+      };
+
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId: {
+          [schema.globalId]: schema,
+        },
+        schema,
+        where: {
+          foo: [],
+        },
+      });
+
+      whereStatement.should.equal('WHERE "foo"=\'{}\'');
+      params.should.deep.equal([]);
+    });
+    it('should handle comparing array type as an array of null or empty', () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'array',
+          },
+        },
+      };
+
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId: {
+          [schema.globalId]: schema,
+        },
+        schema,
+        where: {
+          foo: [null, []],
+        },
+      });
+
+      whereStatement.should.equal('WHERE ("foo" IS NULL OR "foo"=\'{}\')');
+      params.should.deep.equal([]);
+    });
     it('should treat empty array as "false"', () => {
       const {
         whereStatement,
