@@ -1509,6 +1509,30 @@ describe('sqlHelper', () => {
       whereStatement.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`${name}%`]);
     });
+    it('should handle startsWith with an array of values', () => {
+      const name1 = "TestUpper";
+      const name2 = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            startsWith: [name1, name2],
+          },
+        },
+      });
+
+      whereStatement.should.equal('WHERE lower("name")=ANY($1)');
+      params.should.deep.equal([
+        [
+          `${name1.toLowerCase()}%`,
+          `${name2.toLowerCase()}%`,
+        ],
+      ]);
+    });
     it('should handle endsWith', () => {
       const name = faker.random.uuid();
       const {
@@ -1526,6 +1550,30 @@ describe('sqlHelper', () => {
 
       whereStatement.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`%${name}`]);
+    });
+    it('should handle endsWith with an array of values', () => {
+      const name1 = "TestUpper";
+      const name2 = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            endsWith: [name1, name2],
+          },
+        },
+      });
+
+      whereStatement.should.equal('WHERE lower("name")=ANY($1)');
+      params.should.deep.equal([
+        [
+          `%${name1.toLowerCase()}`,
+          `%${name2.toLowerCase()}`,
+        ],
+      ]);
     });
     it('should handle contains', () => {
       const name = faker.random.uuid();
@@ -1545,6 +1593,30 @@ describe('sqlHelper', () => {
       whereStatement.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`%${name}%`]);
     });
+    it('should handle contains with an array of values', () => {
+      const name1 = "TestUpper";
+      const name2 = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            contains: [name1, name2],
+          },
+        },
+      });
+
+      whereStatement.should.equal('WHERE lower("name")=ANY($1)');
+      params.should.deep.equal([
+        [
+          `%${name1.toLowerCase()}%`,
+          `%${name2.toLowerCase()}%`,
+        ],
+      ]);
+    });
     it('should handle like', () => {
       const name = faker.random.uuid();
       const {
@@ -1562,6 +1634,150 @@ describe('sqlHelper', () => {
 
       whereStatement.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([name]);
+    });
+    it('should handle not like', () => {
+      const name = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            '!': {
+              like: name,
+            },
+          },
+        },
+      });
+
+      whereStatement.should.equal('WHERE "name" NOT ILIKE $1');
+      params.should.deep.equal([name]);
+    });
+    it('should handle like with array with a single value', () => {
+      const name = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            like: [name],
+          },
+        },
+      });
+
+      whereStatement.should.equal('WHERE "name" ILIKE $1');
+      params.should.deep.equal([name]);
+    });
+    it('should handle not like with array with a single value', () => {
+      const name = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            '!': {
+              like: [name],
+            },
+          },
+        },
+      });
+
+      whereStatement.should.equal('WHERE "name" NOT ILIKE $1');
+      params.should.deep.equal([name]);
+    });
+    it('should handle like with an array of values', () => {
+      const name1 = "TestUpper";
+      const name2 = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            like: [name1, name2],
+          },
+        },
+      });
+
+      whereStatement.should.equal('WHERE lower("name")=ANY($1)');
+      params.should.deep.equal([
+        [
+          name1.toLowerCase(),
+          name2.toLowerCase(),
+        ],
+      ]);
+    });
+    it('should handle not like with an array of values', () => {
+      const name1 = "TestUpper";
+      const name2 = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            '!': {
+              like: [name1, name2],
+            },
+          },
+        },
+      });
+
+      whereStatement.should.equal('WHERE lower("name")<>ALL($1)');
+      params.should.deep.equal([
+        [
+          name1.toLowerCase(),
+          name2.toLowerCase(),
+        ],
+      ]);
+    });
+    it('should handle like with an empty array', () => {
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            like: [],
+          },
+        },
+      });
+
+      whereStatement.should.equal('WHERE 1<>1');
+      params.should.deep.equal([]);
+    });
+    it('should handle not like with an empty array', () => {
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            '!': {
+              like: [],
+            },
+          },
+        },
+      });
+
+      whereStatement.should.equal('WHERE 1=1');
+      params.should.deep.equal([]);
     });
     it('should handle date value', () => {
       const now = new Date();

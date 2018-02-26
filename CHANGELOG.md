@@ -1,3 +1,7 @@
+### 1.1.0
+
+  * Allow array values for: like, contains, startsWith, and endsWith
+
 ### 1.0.8
 
   * Fix: Prevent trying to save when create() is called with an empty array
