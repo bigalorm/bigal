@@ -229,6 +229,321 @@ describe('model', () => {
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" ORDER BY "name" LIMIT 1');
       params.should.deep.equal([]);
     });
+    it('should parse integer columns return as integer strings', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        tableName: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'integer',
+          },
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const id = faker.random.uuid();
+      const numberValue = 42;
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [{
+          id,
+          foo: `${numberValue}`,
+        }],
+      });
+      const result = await Model.findOne();
+      queryStub.restore();
+      result.should.deep.equal({
+        id,
+        foo: numberValue,
+      });
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+      params.should.deep.equal([]);
+    });
+    it('should parse integer columns return as float strings', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        tableName: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'integer',
+          },
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const id = faker.random.uuid();
+      const numberValue = 42.24;
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [{
+          id,
+          foo: `${numberValue}`,
+        }],
+      });
+      const result = await Model.findOne();
+      queryStub.restore();
+      result.should.deep.equal({
+        id,
+        foo: 42,
+      });
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+      params.should.deep.equal([]);
+    });
+    it('should parse integer columns return as number', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        tableName: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'integer',
+          },
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const id = faker.random.uuid();
+      const numberValue = 42;
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [{
+          id,
+          foo: numberValue,
+        }],
+      });
+      const result = await Model.findOne();
+      queryStub.restore();
+      result.should.deep.equal({
+        id,
+        foo: numberValue,
+      });
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+      params.should.deep.equal([]);
+    });
+    it('should ignore large integer columns', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        tableName: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'integer',
+          },
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const id = faker.random.uuid();
+      const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0`;
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [{
+          id,
+          foo: largeNumberValue,
+        }],
+      });
+      const result = await Model.findOne();
+      queryStub.restore();
+      result.should.deep.equal({
+        id,
+        foo: largeNumberValue,
+      });
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+      params.should.deep.equal([]);
+    });
+    it('should parse float columns return as float strings', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        tableName: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'float',
+          },
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const id = faker.random.uuid();
+      const numberValue = 42.24;
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [{
+          id,
+          foo: `${numberValue}`,
+        }],
+      });
+      const result = await Model.findOne();
+      queryStub.restore();
+      result.should.deep.equal({
+        id,
+        foo: numberValue,
+      });
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+      params.should.deep.equal([]);
+    });
+    it('should parse float columns return as number', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        tableName: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'float',
+          },
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const id = faker.random.uuid();
+      const numberValue = 42.24;
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [{
+          id,
+          foo: numberValue,
+        }],
+      });
+      const result = await Model.findOne();
+      queryStub.restore();
+      result.should.deep.equal({
+        id,
+        foo: numberValue,
+      });
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+      params.should.deep.equal([]);
+    });
+    it('should ignore large float columns', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        tableName: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'float',
+          },
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const id = faker.random.uuid();
+      const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0.42`;
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [{
+          id,
+          foo: largeNumberValue,
+        }],
+      });
+      const result = await Model.findOne();
+      queryStub.restore();
+      result.should.deep.equal({
+        id,
+        foo: largeNumberValue,
+      });
+
+      const [
+        query,
+        params,
+      ] = queryStub.firstCall.args;
+      query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+      params.should.deep.equal([]);
+    });
     it('should support populating a single relation', async () => {
       const store = {
         id: faker.random.uuid(),

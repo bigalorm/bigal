@@ -1,3 +1,7 @@
+### 1.1.2
+
+  * Fix: Try to convert float and integer column data to numbers when fetching records
+
 ### 1.1.1
 
   * Fix: Checking if array column equals an empty array
