@@ -1,3 +1,8 @@
+### 1.1.3
+
+  * Fix: Querying array types
+  * Fix: Explicitly cast array values
+
 ### 1.1.2
 
   * Fix: Try to convert float and integer column data to numbers when fetching records

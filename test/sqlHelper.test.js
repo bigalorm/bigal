@@ -1525,7 +1525,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE lower("name")=ANY($1)');
+      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([
         [
           `${name1.toLowerCase()}%`,
@@ -1567,7 +1567,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE lower("name")=ANY($1)');
+      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([
         [
           `%${name1.toLowerCase()}`,
@@ -1609,7 +1609,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE lower("name")=ANY($1)');
+      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([
         [
           `%${name1.toLowerCase()}%`,
@@ -1709,7 +1709,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE lower("name")=ANY($1)');
+      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([
         [
           name1.toLowerCase(),
@@ -1735,7 +1735,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE lower("name")<>ALL($1)');
+      whereStatement.should.equal('WHERE lower("name")<>ALL($1::TEXT[])');
       params.should.deep.equal([
         [
           name1.toLowerCase(),
@@ -1855,7 +1855,7 @@ describe('sqlHelper', () => {
         sku,
       ]);
     });
-    it('should treat arrays as an =ANY() statement', () => {
+    it('should treat string type with array values as an =ANY() statement', () => {
       const name = [faker.random.uuid(), faker.random.uuid()];
       const {
         whereStatement,
@@ -1868,10 +1868,72 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name"=ANY($1)');
+      whereStatement.should.equal('WHERE "name"=ANY($1::TEXT[])');
       params.should.deep.equal([name]);
     });
-    it('should handle empty array with array type column', () => {
+    it('should treat integer type with array values as an =ANY() statement', () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'integer',
+          },
+        },
+      };
+
+      const values = [42, 24];
+
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId: {
+          [schema.globalId]: schema,
+        },
+        schema,
+        where: {
+          foo: values,
+        },
+      });
+
+      whereStatement.should.equal('WHERE "foo"=ANY($1::INTEGER[])');
+      params.should.deep.equal([values]);
+    });
+    it('should treat float type with array values as an =ANY() statement', () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'float',
+          },
+        },
+      };
+
+      const values = [42.42, 24.24];
+
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId: {
+          [schema.globalId]: schema,
+        },
+        schema,
+        where: {
+          foo: values,
+        },
+      });
+
+      whereStatement.should.equal('WHERE "foo"=ANY($1::NUMERIC[])');
+      params.should.deep.equal([values]);
+    });
+    it('should handle empty array value with array type column', () => {
       const schema = {
         globalId: faker.random.uuid(),
         attributes: {
@@ -1929,7 +1991,147 @@ describe('sqlHelper', () => {
       whereStatement.should.equal('WHERE ("foo" IS NULL OR "foo"=\'{}\')');
       params.should.deep.equal([]);
     });
-    it('should treat empty array as "false"', () => {
+    it('should handle comparing array type with single value as =ANY()', () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'array',
+          },
+        },
+      };
+
+      const value = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId: {
+          [schema.globalId]: schema,
+        },
+        schema,
+        where: {
+          foo: value,
+        },
+      });
+
+      whereStatement.should.equal('WHERE $1=ANY("foo")');
+      params.should.deep.equal([
+        value,
+      ]);
+    });
+    it('should handle comparing array type with negated single value as <>ALL()', () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'array',
+          },
+        },
+      };
+
+      const value = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId: {
+          [schema.globalId]: schema,
+        },
+        schema,
+        where: {
+          foo: {
+            '!': value,
+          },
+        },
+      });
+
+      whereStatement.should.equal('WHERE $1<>ALL("foo")');
+      params.should.deep.equal([
+        value,
+      ]);
+    });
+    it('should handle comparing array type with array value as separate =ANY() statements', () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'array',
+          },
+        },
+      };
+
+      const values = [
+        faker.random.uuid(),
+        faker.random.uuid(),
+      ];
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId: {
+          [schema.globalId]: schema,
+        },
+        schema,
+        where: {
+          foo: values,
+        },
+      });
+
+      whereStatement.should.equal('WHERE ($1=ANY("foo") OR $2=ANY("foo"))');
+      params.should.deep.equal([
+        values[0],
+        values[1],
+      ]);
+    });
+    it('should handle comparing array type with negated array value as separate <>ALL() statements', () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'array',
+          },
+        },
+      };
+
+      const values = [
+        faker.random.uuid(),
+        faker.random.uuid(),
+      ];
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId: {
+          [schema.globalId]: schema,
+        },
+        schema,
+        where: {
+          foo: {
+            '!': values,
+          },
+        },
+      });
+
+      whereStatement.should.equal('WHERE $1<>ALL("foo") AND $2<>ALL("foo")');
+      params.should.deep.equal([
+        values[0],
+        values[1],
+      ]);
+    });
+    it('should treat empty array value as "false"', () => {
       const {
         whereStatement,
         params,
@@ -1944,7 +2146,7 @@ describe('sqlHelper', () => {
       whereStatement.should.equal('WHERE 1<>1');
       params.should.deep.equal([]);
     });
-    it('should treat negated empty array as "true"', () => {
+    it('should treat negated empty array value as "true"', () => {
       const {
         whereStatement,
         params,
@@ -1977,7 +2179,7 @@ describe('sqlHelper', () => {
       whereStatement.should.equal('WHERE "name"=$1');
       params.should.deep.equal([name]);
     });
-    it('should handle an array with NULL explicitly', () => {
+    it('should handle an array value with NULL explicitly', () => {
       const {
         whereStatement,
         params,
@@ -1992,7 +2194,7 @@ describe('sqlHelper', () => {
       whereStatement.should.equal('WHERE ("name" IS NULL OR "name"=$1)');
       params.should.deep.equal(['']);
     });
-    it('should treat negation of array as an <>ALL() statement', () => {
+    it('should treat negation of array value as an <>ALL() statement', () => {
       const name = [faker.random.uuid(), faker.random.uuid()];
       const {
         whereStatement,
@@ -2007,10 +2209,10 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name"<>ALL($1)');
+      whereStatement.should.equal('WHERE "name"<>ALL($1::TEXT[])');
       params.should.deep.equal([name]);
     });
-    it('should treat negation of empty array as "true"', () => {
+    it('should treat negation of empty array value as "true"', () => {
       const {
         whereStatement,
         params,
@@ -2027,7 +2229,7 @@ describe('sqlHelper', () => {
       whereStatement.should.equal('WHERE 1=1');
       params.should.deep.equal([]);
     });
-    it('should treat negation of array with NULL explicitly as AND statements', () => {
+    it('should treat negation of array value with NULL explicitly as AND statements', () => {
       const {
         whereStatement,
         params,

@@ -691,7 +691,7 @@ describe('model', () => {
         categoryQuery,
         categoryQueryParams,
       ] = queryStub.thirdCall.args;
-      categoryQuery.should.equal('SELECT "id","name" FROM "category" WHERE "id"=ANY($1)');
+      categoryQuery.should.equal('SELECT "id","name" FROM "category" WHERE "id"=ANY($1::TEXT[])');
       categoryQueryParams.should.deep.equal([
         [category1.id, category2.id],
       ]);
@@ -785,7 +785,7 @@ describe('model', () => {
         categoryQuery,
         categoryQueryParams,
       ] = queryStub.getCall(3).args;
-      categoryQuery.should.equal('SELECT "id","name" FROM "category" WHERE "id"=ANY($1) AND "name" ILIKE $2 ORDER BY "name" LIMIT 2');
+      categoryQuery.should.equal('SELECT "id","name" FROM "category" WHERE "id"=ANY($1::TEXT[]) AND "name" ILIKE $2 ORDER BY "name" LIMIT 2');
       categoryQueryParams.should.deep.equal([
         [category1.id, category2.id],
         'category%',
@@ -849,7 +849,7 @@ describe('model', () => {
         query,
         params,
       ] = queryStub.firstCall.args;
-      query.should.equal('SELECT "name","id" FROM "product" WHERE "id"=ANY($1) AND "store_id"=$2 ORDER BY "name" LIMIT 24 OFFSET 5');
+      query.should.equal('SELECT "name","id" FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2 ORDER BY "name" LIMIT 24 OFFSET 5');
       params.should.deep.equal([
         _.map(products, 'id'),
         store.id,
@@ -882,7 +882,7 @@ describe('model', () => {
         query,
         params,
       ] = queryStub.firstCall.args;
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=ANY($1) AND "store_id"=$2');
+      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2');
       params.should.deep.equal([
         _.map(products, 'id'),
         store.id,
@@ -1103,7 +1103,7 @@ describe('model', () => {
         query,
         params,
       ] = queryStub.firstCall.args;
-      query.should.equal('SELECT count(*) AS "count" FROM "product" WHERE "id"=ANY($1) AND "store_id"=$2');
+      query.should.equal('SELECT count(*) AS "count" FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2');
       params.should.deep.equal([
         _.map(products, 'id'),
         store.id,
@@ -1553,7 +1553,7 @@ describe('model', () => {
         query,
         params,
       ] = queryStub.firstCall.args;
-      query.should.equal('DELETE FROM "product" WHERE "id"=ANY($1) AND "store_id"=$2 RETURNING "id","name","store_id" AS "store"');
+      query.should.equal('DELETE FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2 RETURNING "id","name","store_id" AS "store"');
       params.should.deep.equal([
         _.map(products, 'id'),
         store.id,
