@@ -1,3 +1,7 @@
+### 1.1.4
+
+  * Fix: Results for model queries should share the same inherited base
+
 ### 1.1.3
 
   * Fix: Querying array types

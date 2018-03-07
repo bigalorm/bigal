@@ -3,7 +3,7 @@
 const _ = require('lodash');
 const faker = require('faker');
 const sinon = require('sinon');
-require('chai');
+const should = require('chai').should();
 
 const {
   initialize: initializeModelClasses,
@@ -791,6 +791,82 @@ describe('model', () => {
         'category%',
       ]);
     });
+    it('should have instance functions be equal across multiple queries', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        tableName: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'string',
+          },
+          toBar() {
+            return `${this.foo} bar!`;
+          },
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const id = faker.random.uuid();
+      const foo = faker.random.uuid();
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [{
+          id,
+          foo,
+        }],
+      });
+      const result1 = await Model.findOne();
+      const result2 = await Model.findOne();
+      queryStub.restore();
+
+      result1.should.deep.equal(result2);
+      result1.toBar().should.equal(`${foo} bar!`);
+      result2.toBar().should.equal(`${foo} bar!`);
+    });
+    it('should not create an object/assign instance functions to null results', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        tableName: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'string',
+          },
+          toBar() {
+            return `${this.foo} bar!`;
+          },
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [null],
+      });
+      const result = await Model.findOne();
+      queryStub.restore();
+
+      should.not.exist(result);
+    });
   });
   describe('#find()', () => {
     it('should support call without constraints', async () => {
@@ -1046,6 +1122,48 @@ describe('model', () => {
       ] = queryStub.firstCall.args;
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 42 OFFSET 24');
       params.should.deep.equal([store.id]);
+    });
+    it('should have instance functions be equal across multiple queries', async () => {
+      const schema = {
+        globalId: faker.random.uuid(),
+        tableName: faker.random.uuid(),
+        attributes: {
+          id: {
+            primaryKey: true,
+          },
+          foo: {
+            type: 'string',
+          },
+          toBar() {
+            return `${this.foo} bar!`;
+          },
+        },
+      };
+
+      let Model;
+      initializeModelClasses({
+        modelSchemas: [schema],
+        pool,
+        expose(model) {
+          Model = model;
+        },
+      });
+
+      const id = faker.random.uuid();
+      const foo = faker.random.uuid();
+      const queryStub = sinon.stub(pool, 'query').returns({
+        rows: [{
+          id,
+          foo,
+        }],
+      });
+      const result1 = await Model.find();
+      const result2 = await Model.find();
+      queryStub.restore();
+
+      result1.should.deep.equal(result2);
+      result1[0].toBar().should.equal(`${foo} bar!`);
+      result2[0].toBar().should.equal(`${foo} bar!`);
     });
   });
   describe('#count()', () => {
