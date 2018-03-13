@@ -192,9 +192,11 @@ const items = await MyModel.find().where({
 #### Page results using `paginate`
 
 ```js
+const page = 2;
+const pageSize = 42;
 const items = await MyModel.find().where({
   foo: context.params.foo,
-}).paginate(2, 42);
+}).paginate(page, pageSize);
 ```
 
 -------------------------------------------------
