@@ -1,3 +1,6 @@
+### 1.1.5
+  * Throw exception when find, update, findOne, and destroy queries receive a string parameter instead of object.
+
 ### 1.1.4
 
   * Fix: Results for model queries should share the same inherited base

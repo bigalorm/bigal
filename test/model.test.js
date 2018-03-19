@@ -139,6 +139,17 @@ describe('model', () => {
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 1');
       params.should.deep.equal([]);
     });
+    it('should throw error for where parameters of type string', async () => {
+      let threwException;
+      try {
+        await Product.findOne('test');
+      } catch (ex) {
+        threwException = true;
+        should.exist(ex);
+        ex.message.should.equal('The query cannot be a string, it must be an object');
+      }
+      threwException.should.equal(true);
+    });
     it('should support call with constraints as a parameter', async () => {
       const product = {
         id: faker.random.uuid(),
@@ -892,6 +903,17 @@ describe('model', () => {
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product"');
       params.should.deep.equal([]);
     });
+    it('should throw error for where parameters of type string', async () => {
+      let threwException;
+      try {
+        await Product.find('test');
+      } catch (ex) {
+        threwException = true;
+        should.exist(ex);
+        ex.message.should.equal('The query cannot be a string, it must be an object');
+      }
+      threwException.should.equal(true);
+    });
     it('should support call with constraints as a parameter', async () => {
       const store = {
         id: faker.random.uuid(),
@@ -1515,6 +1537,17 @@ describe('model', () => {
 
       values.called.should.equal(true);
     });
+    it('should throw error for where parameters of type string', async () => {
+      let threwException;
+      try {
+        await Product.update('test');
+      } catch (ex) {
+        threwException = true;
+        should.exist(ex);
+        ex.message.should.equal('The query cannot be a string, it must be an object');
+      }
+      threwException.should.equal(true);
+    });
     it('should execute beforeUpdate if defined as a schema attribute method', async () => {
       const schema = {
         globalId: faker.random.uuid(),
@@ -1676,6 +1709,17 @@ describe('model', () => {
         _.map(products, 'id'),
         store.id,
       ]);
+    });
+    it('should throw error for where parameters of type string', async () => {
+      let threwException;
+      try {
+        await Product.destroy('test');
+      } catch (ex) {
+        threwException = true;
+        should.exist(ex);
+        ex.message.should.equal('The query cannot be a string, it must be an object');
+      }
+      threwException.should.equal(true);
     });
     it('should support call with chained where constraints', async () => {
       const store = {
