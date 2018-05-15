@@ -1,3 +1,6 @@
+### 1.1.6
+  * Update dependencies
+
 ### 1.1.5
   * Throw exception when find, update, findOne, and destroy queries receive a string parameter instead of object.
 
