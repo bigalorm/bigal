@@ -1,6 +1,7 @@
 # BigAl
 
 [![NPM version](https://img.shields.io/npm/v/bigal.svg?style=flat)](https://npmjs.org/package/bigal)
+[![node version](https://img.shields.io/node/v/bigal.svg?style=flat)](https://nodejs.org)
 [![Known Vulnerabilities](https://snyk.io/test/npm/bigal/badge.svg)](https://snyk.io/test/npm/bigal)
 
 A fast, lightweight alternative to [Waterline](http://waterlinejs.org/). Supports [PostgreSQL](http://www.postgresql.org/) v9.6 and above. Note: this package does not create or update db schemas for you.

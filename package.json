@@ -28,6 +28,9 @@
     "url": "https://github.com/mpirik/bigal/issues"
   },
   "homepage": "https://github.com/mpirik/bigal#readme",
+  "engines": {
+    "node": ">=8"
+  },
   "dependencies": {
     "lodash": "~4.17.10",
     "pg": "~7.4.3"
