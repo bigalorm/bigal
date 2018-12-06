@@ -1,3 +1,6 @@
+### 1.2.1
+  * Use husky to enforce precommit hook for development
+
 ### 1.2.0
   * Add `connections` property to initialize method
   * Use `connection` on model schema to optionally set specific connection pools for each model
