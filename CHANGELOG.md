@@ -1,3 +1,8 @@
+### 1.2.0
+  * Add `connections` property to initialize method
+  * Use `connection` on model schema to optionally set specific connection pools for each model
+  * Update dependencies
+
 ### 1.1.6
   * Update dependencies
 

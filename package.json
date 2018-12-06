@@ -1,7 +1,7 @@
 {
   "name": "bigal",
-  "version": "1.1.6",
-  "description": "A fast and lightweight alternative to waterline",
+  "version": "1.2.0",
+  "description": "A fast and lightweight orm for postgres.",
   "main": "index.js",
   "scripts": {
     "test": "node ./node_modules/mocha/bin/_mocha -- -R spec ./test/**/*.js",
@@ -15,12 +15,7 @@
   "keywords": [
     "orm",
     "postgres",
-    "postgresql",
-    "sails",
-    "sailsjs",
-    "sails.js",
-    "waterline",
-    "waterline.js"
+    "postgresql"
   ],
   "author": "Jim Geurts <jim@biacreations.com>",
   "license": "MIT",
@@ -32,19 +27,19 @@
     "node": ">=8"
   },
   "dependencies": {
-    "lodash": "~4.17.10",
-    "pg": "~7.4.3"
+    "lodash": "~4.17.11",
+    "pg": "~7.7.1"
   },
   "devDependencies": {
-    "chai": "4.1.2",
-    "eslint": "4.17.0",
-    "eslint-config-airbnb-base": "12.1.0",
-    "eslint-plugin-import": "2.8.0",
+    "chai": "4.2.0",
+    "eslint": "5.9.0",
+    "eslint-config-airbnb-base": "13.1.0",
+    "eslint-plugin-import": "2.14.0",
     "faker": "4.1.0",
-    "grunt": "1.0.2",
-    "grunt-eslint": "20.1.0",
+    "grunt": "1.0.3",
+    "grunt-eslint": "21.0.0",
     "grunt-jsbeautifier": "0.2.13",
-    "mocha": "5.0.1",
-    "sinon": "4.3.0"
+    "mocha": "5.2.0",
+    "sinon": "7.1.1"
   }
 }
