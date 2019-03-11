@@ -1,3 +1,6 @@
+### 2.0.0
+  * Typescript ftw!
+
 ### 1.2.1
   * Use husky to enforce precommit hook for development
 

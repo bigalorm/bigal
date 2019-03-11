@@ -1,17 +1,13 @@
 {
   "name": "bigal",
-  "version": "1.2.1",
+  "version": "2.0.0",
   "description": "A fast and lightweight orm for postgres.",
   "main": "index.js",
   "scripts": {
-    "test": "node ./node_modules/mocha/bin/_mocha ./test/**/*.js",
-    "lint": "./node_modules/.bin/grunt jsbeautifier && ./node_modules/.bin/grunt eslint",
-    "prepublishOnly": "npm run lint && npm run test"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "npm run lint"
-    }
+    "build": "tsc",
+    "test": "mocha -r ts-node/register tests/**/*.tests.ts",
+    "lint": "tslint --fix -p tsconfig.lint.json -c tslint.json -t stylish",
+    "prepublishOnly": "npm run build && npm run lint && npm run test"
   },
   "repository": {
     "type": "git",
@@ -29,23 +25,27 @@
   },
   "homepage": "https://github.com/mpirik/bigal#readme",
   "engines": {
-    "node": ">=8"
+    "node": ">=8.10"
   },
   "dependencies": {
     "lodash": "~4.17.11",
-    "pg": "~7.7.1"
+    "pg": "~7.8.2"
   },
   "devDependencies": {
+    "@types/chai": "4.1.7",
+    "@types/mocha": "5.2.6",
+    "@types/node": "11.11.1",
     "chai": "4.2.0",
-    "eslint": "5.9.0",
+    "eslint": "5.15.1",
     "eslint-config-airbnb-base": "13.1.0",
-    "eslint-plugin-import": "2.14.0",
+    "eslint-plugin-import": "2.16.0",
     "faker": "4.1.0",
-    "grunt": "1.0.3",
-    "grunt-eslint": "21.0.0",
-    "grunt-jsbeautifier": "0.2.13",
-    "husky": "1.2.0",
-    "mocha": "5.2.0",
-    "sinon": "7.1.1"
+    "husky": "1.3.1",
+    "mocha": "6.0.2",
+    "sinon": "7.2.7",
+    "ts-node": "8.0.3",
+    "tslint": "5.13.1",
+    "tslint-config-airbnb": "5.11.1",
+    "typescript": "3.3.3333"
   }
 }
