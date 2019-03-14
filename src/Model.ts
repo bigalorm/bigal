@@ -5,7 +5,7 @@ import { ModelSchema } from './schema/ModelSchema';
 import { Repository } from './repository';
 import { FindArgs } from './query/FindArgs';
 import { FindOneArgs } from './query/FindOneArgs';
-import { CollectionAttribute, ModelAttribute, TypeAttribute } from './schema/attributes';
+import { Attributes, CollectionAttribute, ModelAttribute, TypeAttribute } from './schema/attributes';
 import { PopulateArgs } from './query/PopulateArgs';
 import { CreateUpdateDeleteOptions, DoNotReturnRecords } from './query/CreateUpdateDeleteOptions';
 import { CountResult } from './query/CountResult';
@@ -27,6 +27,15 @@ interface ModelOptions {
 }
 
 export class Model<TEntity extends Entity> implements Repository<TEntity> {
+
+  /**
+   * Easy access to schema attributes
+   * @returns {Object}
+   */
+  get attributes(): Attributes {
+    return this._schema.attributes;
+  }
+
   private _schema: ModelSchema;
   private _modelSchemasByGlobalId: ModelSchemasByGlobalId;
   private _modelClassesByGlobalId: ModelClassesByGlobalId;
@@ -73,14 +82,6 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
         this._intProperties.push(name);
       }
     }
-  }
-
-  /**
-   * Easy access to schema attributes
-   * @returns {Object}
-   */
-  get attributes() {
-    return this._schema.attributes;
   }
 
   /**
@@ -157,19 +158,19 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
        * @param {string|Number} [limit] - Number of results to return
        */
       populate(propertyName: Extract<keyof TEntity, string>, {
-        where,
-        select,
-        sort,
-        skip,
-        limit,
+        where: populateWhere,
+        select: populateSelect,
+        sort: populateSort,
+        skip: populateSkip,
+        limit: populateLimit,
       }: PopulateArgs = {}) {
         populates.push({
           propertyName,
-          where,
-          select,
-          sort,
-          skip,
-          limit,
+          where: populateWhere,
+          select: populateSelect,
+          sort: populateSort,
+          skip: populateSkip,
+          limit: populateLimit,
         });
 
         return this;
@@ -434,11 +435,11 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
        */
       paginate({
         page = 1,
-        limit = 10,
+        limit: paginateLimit = 10,
       }: PaginateOptions) {
         const safePage = Math.max(page, 1);
-        this.skip((safePage * limit) - limit);
-        this.limit(limit);
+        this.skip((safePage * paginateLimit) - paginateLimit);
+        this.limit(paginateLimit);
 
         return this;
       },
@@ -488,6 +489,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
        * @param {Object} value - Object representing the where query
        */
       where(value: WhereQuery) {
+        // tslint:disable-next-line:no-parameter-reassignment
         where = value;
 
         return this;
@@ -520,30 +522,14 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
       },
     };
   }
-
-  /**
-   * Creates an object using the specified values
-   * @param {object} values - Values to insert as a new object.
-   * @param {{returnRecords: false}} options
-   * @returns {boolean}
-   */
-  public async create(values: Partial<TEntity>, options: DoNotReturnRecords): Promise<boolean>;
-  /**
-   * Creates an object using the specified values
-   * @param {object} values - Values to insert as a new object.
-   * @param {object} [options]
-   * @param {Boolean} [options.returnRecords=true] - Determines if inserted records should be returned
-   * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
-   * @returns {Object} Return value from the db
-   */
   public async create(values: Partial<TEntity>, options?: CreateUpdateDeleteOptions): Promise<TEntity>;
   /**
    * Creates a objects using the specified values
-   * @param {object[]} values - Values to insert as multiple new objects.
+   * @param {object|object[]} values - Values to insert as multiple new objects.
    * @param {{returnRecords: false}} options
    * @returns {boolean}
    */
-  public async create(values: Array<Partial<TEntity>>, options: DoNotReturnRecords): Promise<boolean>;
+  public async create(values: Partial<TEntity> | Array<Partial<TEntity>>, options: DoNotReturnRecords): Promise<boolean>;
   /**
    * Creates a objects using the specified values
    * @param {object[]} values - Values to insert as multiple new objects.
@@ -579,8 +565,10 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
 
       if (beforeCreate) {
         if (Array.isArray(values)) {
+          // tslint:disable-next-line:no-parameter-reassignment
           values = await Promise.all(values.map(beforeCreate)) as Array<Partial<TEntity>>;
         } else {
+          // tslint:disable-next-line:no-parameter-reassignment
           values = await beforeCreate(values) as Partial<TEntity>;
         }
       }
@@ -659,6 +647,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
       }
 
       if (beforeUpdate) {
+        // tslint:disable-next-line:no-parameter-reassignment
         values = await beforeUpdate(values) as Partial<TEntity>;
       }
 
@@ -726,6 +715,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
        * @param {Object} value - Object representing the where query
        */
       where(value: WhereQuery) {
+        // tslint:disable-next-line:no-parameter-reassignment
         where = value;
 
         return this;
@@ -767,7 +757,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
    * @param {Object[]} results
    * @private
    */
-  public _buildInstances(results: TEntity[]): TEntity[] {
+  private _buildInstances(results: TEntity[]): TEntity[] {
     if (_.isNil(results)) {
       return results;
     }
@@ -785,7 +775,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
    * @returns {Object} Instance of model object
    * @private
    */
-  public _buildInstance(result: TEntity): TEntity {
+  private _buildInstance(result: TEntity): TEntity {
     if (_.isNil(result)) {
       return result;
     }

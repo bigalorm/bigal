@@ -5,24 +5,34 @@ import * as faker from 'faker';
 import { ModelSchema } from '../src/schema/ModelSchema';
 import { Repository } from '../src/Repository';
 import { Entity } from '../src/Entity';
-const sinon = require('sinon');
+import { initialize as initializeModelClasses } from '../src';
+import { Pool } from 'postgres-pool';
+import { anyString, anything, instance, mock, when, reset, capture, verify } from 'ts-mockito';
 
-const {
-  initialize: initializeModelClasses,
-} = require('../index');
+function getQueryResult(rows: any[] = []) {
+  return {
+    command: 'select',
+    rowCount: 1,
+    oid: 1,
+    fields: [],
+    rows,
+  };
+}
 
 describe('model', () => {
   let should: Chai.Should;
+  const mockedPool: Pool = mock(Pool);
 
   before(() => {
     should = chai.should();
   });
 
-  const storeSchema = {
+  const storeSchema: ModelSchema = {
     globalId: 'store',
     tableName: 'store',
     attributes: {
       id: {
+        type: 'integer',
         primaryKey: true,
       },
       name: {
@@ -34,11 +44,12 @@ describe('model', () => {
       },
     },
   };
-  const productSchema = {
+  const productSchema: ModelSchema = {
     globalId: 'product',
     tableName: 'product',
     attributes: {
       id: {
+        type: 'integer',
         primaryKey: true,
       },
       name: {
@@ -55,11 +66,12 @@ describe('model', () => {
       },
     },
   };
-  const categorySchema = {
+  const categorySchema: ModelSchema = {
     globalId: 'category',
     tableName: 'category',
     attributes: {
       id: {
+        type: 'integer',
         primaryKey: true,
       },
       name: {
@@ -72,12 +84,12 @@ describe('model', () => {
       },
     },
   };
-  const productCategorySchema = {
+  const productCategorySchema: ModelSchema = {
     globalId: 'productCategory',
     tableName: 'product__category',
-    junctionTable: true,
     attributes: {
       id: {
+        type: 'integer',
         primaryKey: true,
       },
       product: {
@@ -90,27 +102,23 @@ describe('model', () => {
       },
     },
   };
-  const schemas = [
+  const schemas: ModelSchema[] = [
     storeSchema,
     productSchema,
     categorySchema,
     productCategorySchema,
   ];
 
-  const pool = {
-    query() {
-      return {
-        rows: [],
-      };
-    },
-  };
-
+  // tslint:disable-next-line:variable-name
   let Product: Repository<Entity>;
+  // tslint:disable-next-line:variable-name
   let Store: Repository<Entity>;
   beforeEach(() => {
+    reset(mockedPool);
+
     initializeModelClasses({
       modelSchemas: schemas,
-      pool,
+      pool: instance(mockedPool),
       expose(model: Repository<Entity>, schema: ModelSchema) {
         switch (schema.globalId) {
           case 'product':
@@ -133,41 +141,26 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       };
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [product],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
       const result = await Product.findOne();
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(product);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 1');
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
-    // it('should throw error for where parameters of type string', async () => {
-    //   let threwException: boolean = false;
-    //   try {
-    //     await Product.findOne('test');
-    //   } catch (ex) {
-    //     threwException = true;
-    //     should.exist(ex);
-    //     ex.message.should.equal('The query cannot be a string, it must be an object');
-    //   }
-    //   threwException.should.equal(true);
-    // });
     it('should support call with constraints as a parameter', async () => {
       const product = {
         id: faker.random.uuid(),
         name: `product - ${faker.random.uuid()}`,
       };
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [product],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
       const result = await Product.findOne({
         select: ['name'],
         where: {
@@ -175,16 +168,15 @@ describe('model', () => {
         },
         sort: 'name asc',
       });
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(product);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "name","id" FROM "product" WHERE "id"=$1 ORDER BY "name" LIMIT 1');
-      params.should.deep.equal([product.id]);
+      params!.should.deep.equal([product.id]);
     });
     it('should support call with where constraint as a parameter', async () => {
       const product = {
@@ -192,22 +184,20 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       };
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [product],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
       const result = await Product.findOne({
         id: product.id,
       });
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(product);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
-      params.should.deep.equal([product.id]);
+      params!.should.deep.equal([product.id]);
     });
     it('should support call with chained where constraints', async () => {
       const product = {
@@ -215,22 +205,20 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       };
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [product],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
       const result = await Product.findOne().where({
         id: product.id,
       });
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(product);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
-      params.should.deep.equal([product.id]);
+      params!.should.deep.equal([product.id]);
     });
     it('should support call with chained sort', async () => {
       const product = {
@@ -238,20 +226,18 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       };
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [product],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
       const result = await Product.findOne().sort('name asc');
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(product);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" ORDER BY "name" LIMIT 1');
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should parse integer columns return as integer strings', async () => {
       const schema: ModelSchema = {
@@ -268,10 +254,11 @@ describe('model', () => {
         },
       };
 
+      // tslint:disable-next-line:variable-name
       let Model: Repository<Entity>;
       initializeModelClasses({
         modelSchemas: [schema],
-        pool,
+        pool: instance(mockedPool),
         expose(model: Repository<Entity>) {
           Model = model;
         },
@@ -279,14 +266,12 @@ describe('model', () => {
 
       const id = faker.random.uuid();
       const numberValue = 42;
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [{
-          id,
-          foo: `${numberValue}`,
-        }],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
+        id,
+        foo: `${numberValue}`,
+      }]));
+
       const result = await Model!.findOne();
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal({
         id,
@@ -296,9 +281,9 @@ describe('model', () => {
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should parse integer columns return as float strings', async () => {
       const schema: ModelSchema = {
@@ -315,10 +300,11 @@ describe('model', () => {
         },
       };
 
+      // tslint:disable-next-line:variable-name
       let Model: Repository<Entity>;
       initializeModelClasses({
         modelSchemas: [schema],
-        pool,
+        pool: instance(mockedPool),
         expose(model: Repository<Entity>) {
           Model = model;
         },
@@ -326,14 +312,12 @@ describe('model', () => {
 
       const id = faker.random.uuid();
       const numberValue = 42.24;
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [{
-          id,
-          foo: `${numberValue}`,
-        }],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
+        id,
+        foo: `${numberValue}`,
+      }]));
+
       const result = await Model!.findOne();
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal({
         id,
@@ -343,9 +327,9 @@ describe('model', () => {
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should parse integer columns return as number', async () => {
       const schema: ModelSchema = {
@@ -362,10 +346,11 @@ describe('model', () => {
         },
       };
 
+      // tslint:disable-next-line:variable-name
       let Model: Repository<Entity>;
       initializeModelClasses({
         modelSchemas: [schema],
-        pool,
+        pool: instance(mockedPool),
         expose(model: Repository<Entity>) {
           Model = model;
         },
@@ -373,14 +358,12 @@ describe('model', () => {
 
       const id = faker.random.uuid();
       const numberValue = 42;
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [{
-          id,
-          foo: numberValue,
-        }],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
+        id,
+        foo: numberValue,
+      }]));
+
       const result = await Model!.findOne();
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal({
         id,
@@ -390,9 +373,9 @@ describe('model', () => {
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should ignore large integer columns', async () => {
       const schema: ModelSchema = {
@@ -409,10 +392,11 @@ describe('model', () => {
         },
       };
 
+      // tslint:disable-next-line:variable-name
       let Model: Repository<Entity>;
       initializeModelClasses({
         modelSchemas: [schema],
-        pool,
+        pool: instance(mockedPool),
         expose(model: Repository<Entity>) {
           Model = model;
         },
@@ -420,14 +404,12 @@ describe('model', () => {
 
       const id = faker.random.uuid();
       const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0`;
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [{
-          id,
-          foo: largeNumberValue,
-        }],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
+        id,
+        foo: largeNumberValue,
+      }]));
+
       const result = await Model!.findOne();
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal({
         id,
@@ -437,9 +419,9 @@ describe('model', () => {
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should parse float columns return as float strings', async () => {
       const schema: ModelSchema = {
@@ -456,10 +438,11 @@ describe('model', () => {
         },
       };
 
+      // tslint:disable-next-line:variable-name
       let Model: Repository<Entity>;
       initializeModelClasses({
         modelSchemas: [schema],
-        pool,
+        pool: instance(mockedPool),
         expose(model: Repository<Entity>) {
           Model = model;
         },
@@ -467,14 +450,12 @@ describe('model', () => {
 
       const id = faker.random.uuid();
       const numberValue = 42.24;
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [{
-          id,
-          foo: `${numberValue}`,
-        }],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
+        id,
+        foo: `${numberValue}`,
+      }]));
+
       const result = await Model!.findOne();
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal({
         id,
@@ -484,9 +465,9 @@ describe('model', () => {
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should parse float columns return as number', async () => {
       const schema: ModelSchema = {
@@ -503,10 +484,11 @@ describe('model', () => {
         },
       };
 
+      // tslint:disable-next-line:variable-name
       let Model: Repository<Entity>;
       initializeModelClasses({
         modelSchemas: [schema],
-        pool,
+        pool: instance(mockedPool),
         expose(model: Repository<Entity>) {
           Model = model;
         },
@@ -514,14 +496,12 @@ describe('model', () => {
 
       const id = faker.random.uuid();
       const numberValue = 42.24;
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [{
-          id,
-          foo: numberValue,
-        }],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
+        id,
+        foo: numberValue,
+      }]));
+
       const result = await Model!.findOne();
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal({
         id,
@@ -531,9 +511,9 @@ describe('model', () => {
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should ignore large float columns', async () => {
       const schema: ModelSchema = {
@@ -550,10 +530,11 @@ describe('model', () => {
         },
       };
 
+      // tslint:disable-next-line:variable-name
       let Model: Repository<Entity>;
       initializeModelClasses({
         modelSchemas: [schema],
-        pool,
+        pool: instance(mockedPool),
         expose(model: Repository<Entity>) {
           Model = model;
         },
@@ -561,14 +542,12 @@ describe('model', () => {
 
       const id = faker.random.uuid();
       const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0.42`;
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [{
-          id,
-          foo: largeNumberValue,
-        }],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
+        id,
+        foo: largeNumberValue,
+      }]));
+
       const result = await Model!.findOne();
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal({
         id,
@@ -578,9 +557,9 @@ describe('model', () => {
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should support populating a single relation', async () => {
       const store = {
@@ -593,36 +572,32 @@ describe('model', () => {
         store,
       };
 
-      const queryStub = sinon.stub(pool, 'query');
-      queryStub.onFirstCall().returns({
-        rows: [{
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([{
           id: product.id,
           name: product.name,
           store: store.id,
-        }],
-      });
-      queryStub.onSecondCall().returns({
-        rows: [store],
-      });
+        }]),
+        getQueryResult([store]),
+      );
 
       const result = await Product.findOne().populate('store');
-      queryStub.restore();
-      queryStub.calledTwice.should.equal(true);
+      verify(mockedPool.query(anyString(), anything())).twice();
       should.exist(result);
       result!.should.deep.equal(product);
 
       const [
         productQuery,
         productQueryParams,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 1');
-      productQueryParams.should.deep.equal([]);
+      productQueryParams!.should.deep.equal([]);
       const [
         storeQuery,
         storeQueryParams,
-      ] = queryStub.secondCall.args;
+      ] = capture(mockedPool.query).second();
       storeQuery.should.equal('SELECT "id","name" FROM "store" WHERE "id"=$1 LIMIT 1');
-      storeQueryParams.should.deep.equal([store.id]);
+      storeQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating collection', async () => {
       const store = {
@@ -644,32 +619,28 @@ describe('model', () => {
         products: [product1, product2],
       }, store);
 
-      const queryStub = sinon.stub(pool, 'query');
-      queryStub.onFirstCall().returns({
-        rows: [store],
-      });
-      queryStub.onSecondCall().returns({
-        rows: [product1, product2],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([store]),
+        getQueryResult([product1, product2]),
+      );
 
       const result = await Store.findOne().populate('products');
-      queryStub.restore();
-      queryStub.calledTwice.should.equal(true);
+      verify(mockedPool.query(anyString(), anything())).twice();
       should.exist(result);
       result!.should.deep.equal(storeWithProducts);
 
       const [
         storeQuery,
         storeQueryParams,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       storeQuery.should.equal('SELECT "id","name" FROM "store" LIMIT 1');
-      storeQueryParams.should.deep.equal([]);
+      storeQueryParams!.should.deep.equal([]);
       const [
         productQuery,
         productQueryParams,
-      ] = queryStub.secondCall.args;
+      ] = capture(mockedPool.query).second();
       productQuery.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
-      productQueryParams.should.deep.equal([store.id]);
+      productQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating multi-multi collection', async () => {
       const product = {
@@ -699,41 +670,35 @@ describe('model', () => {
         categories: [category1, category2],
       }, product);
 
-      const queryStub = sinon.stub(pool, 'query');
-      queryStub.onFirstCall().returns({
-        rows: [product],
-      });
-      queryStub.onSecondCall().returns({
-        rows: [productCategory1Map, productCategory2Map],
-      });
-      queryStub.onThirdCall().returns({
-        rows: [category1, category2],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([product]),
+        getQueryResult([productCategory1Map, productCategory2Map]),
+        getQueryResult([category1, category2]),
+      );
 
       const result = await Product.findOne().populate('categories');
-      queryStub.restore();
-      queryStub.calledThrice.should.equal(true);
+      verify(mockedPool.query(anyString(), anything())).thrice();
       should.exist(result);
       result!.should.deep.equal(productWithCategories);
 
       const [
         productQuery,
         productQueryParams,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 1');
-      productQueryParams.should.deep.equal([]);
+      productQueryParams!.should.deep.equal([]);
       const [
         productCategoryMapQuery,
         productCategoryMapQueryParams,
-      ] = queryStub.secondCall.args;
+      ] = capture(mockedPool.query).second();
       productCategoryMapQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
-      productCategoryMapQueryParams.should.deep.equal([product.id]);
+      productCategoryMapQueryParams!.should.deep.equal([product.id]);
       const [
         categoryQuery,
         categoryQueryParams,
-      ] = queryStub.thirdCall.args;
+      ] = capture(mockedPool.query).third();
       categoryQuery.should.equal('SELECT "id","name" FROM "category" WHERE "id"=ANY($1::TEXT[])');
-      categoryQueryParams.should.deep.equal([
+      categoryQueryParams!.should.deep.equal([
         [category1.id, category2.id],
       ]);
     });
@@ -771,19 +736,12 @@ describe('model', () => {
         categories: [category1, category2],
       }, product);
 
-      const queryStub = sinon.stub(pool, 'query');
-      queryStub.onFirstCall().returns({
-        rows: [product],
-      });
-      queryStub.onSecondCall().returns({
-        rows: [store],
-      });
-      queryStub.onThirdCall().returns({
-        rows: [productCategory1Map, productCategory2Map],
-      });
-      queryStub.onCall(3).returns({
-        rows: [category1, category2],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([product]),
+        getQueryResult([store]),
+        getQueryResult([productCategory1Map, productCategory2Map]),
+        getQueryResult([category1, category2]),
+      );
 
       const result = await Product.findOne()
         .where({
@@ -800,35 +758,34 @@ describe('model', () => {
           limit: 2,
         })
         .sort('store desc');
-      queryStub.restore();
-      queryStub.callCount.should.equal(4);
+      verify(mockedPool.query(anyString(), anything())).times(4);
       should.exist(result);
       result!.should.deep.equal(fullProduct);
 
       const [
         productQuery,
         productQueryParams,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 1');
-      productQueryParams.should.deep.equal([store.id]);
+      productQueryParams!.should.deep.equal([store.id]);
       const [
         storeQuery,
         storeQueryParams,
-      ] = queryStub.secondCall.args;
+      ] = capture(mockedPool.query).second();
       storeQuery.should.equal('SELECT "id","name" FROM "store" WHERE "id"=$1 LIMIT 1');
-      storeQueryParams.should.deep.equal([store.id]);
+      storeQueryParams!.should.deep.equal([store.id]);
       const [
         productCategoryMapQuery,
         productCategoryMapQueryParams,
-      ] = queryStub.thirdCall.args;
+      ] = capture(mockedPool.query).third();
       productCategoryMapQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
-      productCategoryMapQueryParams.should.deep.equal([product.id]);
+      productCategoryMapQueryParams!.should.deep.equal([product.id]);
       const [
         categoryQuery,
         categoryQueryParams,
-      ] = queryStub.getCall(3).args;
+      ] = capture(mockedPool.query).byCallIndex(3);
       categoryQuery.should.equal('SELECT "id","name" FROM "category" WHERE "id"=ANY($1::TEXT[]) AND "name" ILIKE $2 ORDER BY "name" LIMIT 2');
-      categoryQueryParams.should.deep.equal([
+      categoryQueryParams!.should.deep.equal([
         [category1.id, category2.id],
         'category%',
       ]);
@@ -851,10 +808,11 @@ describe('model', () => {
         },
       };
 
+      // tslint:disable-next-line:variable-name
       let Model: Repository<Entity>;
       initializeModelClasses({
         modelSchemas: [schema],
-        pool,
+        pool: instance(mockedPool),
         expose(model: Repository<Entity>) {
           Model = model;
         },
@@ -862,15 +820,17 @@ describe('model', () => {
 
       const id = faker.random.uuid();
       const foo = faker.random.uuid();
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [{
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([{
           id,
           foo,
-        }],
-      });
+        }]),
+      );
+
       const result1 = await Model!.findOne();
       const result2 = await Model!.findOne();
-      queryStub.restore();
+
+      verify(mockedPool.query(anyString(), anything())).twice();
 
       should.exist(result1);
       result1!.should.deep.equal(result2);
@@ -896,20 +856,23 @@ describe('model', () => {
         },
       };
 
+      // tslint:disable-next-line:variable-name
       let Model: Repository<Entity>;
       initializeModelClasses({
         modelSchemas: [schema],
-        pool,
+        pool: instance(mockedPool),
         expose(model: Repository<Entity>) {
           Model = model;
         },
       });
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [null],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([null]),
+      );
+
       const result = await Model!.findOne();
-      queryStub.restore();
+
+      verify(mockedPool.query(anyString(), anything())).once();
 
       should.not.exist(result);
     });
@@ -924,32 +887,20 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
       const result = await Product.find();
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(products);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product"');
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
-    // it('should throw error for where parameters of type string', async () => {
-    //   let threwException;
-    //   try {
-    //     await Product.find('test');
-    //   } catch (ex) {
-    //     threwException = true;
-    //     should.exist(ex);
-    //     ex.message.should.equal('The query cannot be a string, it must be an object');
-    //   }
-    //   threwException.should.equal(true);
-    // });
     it('should support call with constraints as a parameter', async () => {
       const store = {
         id: faker.random.uuid(),
@@ -963,9 +914,9 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
       const result = await Product.find({
         select: ['name'],
         where: {
@@ -976,16 +927,15 @@ describe('model', () => {
         skip: 5,
         limit: 24,
       });
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(products);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "name","id" FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2 ORDER BY "name" LIMIT 24 OFFSET 5');
-      params.should.deep.equal([
+      params!.should.deep.equal([
         _.map(products, 'id'),
         store.id,
       ]);
@@ -1003,23 +953,22 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
       const result = await Product.find({
         id: _.map(products, 'id'),
         store,
       });
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(products);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2');
-      params.should.deep.equal([
+      params!.should.deep.equal([
         _.map(products, 'id'),
         store.id,
       ]);
@@ -1037,22 +986,21 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
       const result = await Product.find().where({
         store: store.id,
       });
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(products);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
-      params.should.deep.equal([store.id]);
+      params!.should.deep.equal([store.id]);
     });
     it('should support call with chained sort', async () => {
       const products = [{
@@ -1063,20 +1011,19 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
       const result = await Product.find().sort('name asc');
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(products);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" ORDER BY "name"');
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should support call with chained limit', async () => {
       const products = [{
@@ -1087,20 +1034,19 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
       const result = await Product.find().limit(42);
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(products);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 42');
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should support call with chained skip', async () => {
       const products = [{
@@ -1111,20 +1057,19 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
       const result = await Product.find().skip(24);
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(products);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" OFFSET 24');
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should support call with chained paginate', async () => {
       const products = [{
@@ -1135,23 +1080,22 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
       const result = await Product.find().paginate({
         page: 3,
         limit: 100,
       });
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(products);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 100 OFFSET 200');
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should support complex query with multiple chained modifiers', async () => {
       const store = {
@@ -1166,9 +1110,9 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
 
       const result = await Product.find()
         .where({
@@ -1177,17 +1121,17 @@ describe('model', () => {
         .skip(24)
         .limit(42)
         .sort('store desc');
-      queryStub.restore();
-      queryStub.calledOnce.should.equal(true);
+
+      verify(mockedPool.query(anyString(), anything())).once();
       should.exist(result);
       result!.should.deep.equal(products);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 42 OFFSET 24');
-      params.should.deep.equal([store.id]);
+      params!.should.deep.equal([store.id]);
     });
     it('should have instance functions be equal across multiple queries', async () => {
       const schema: ModelSchema = {
@@ -1207,10 +1151,11 @@ describe('model', () => {
         },
       };
 
+      // tslint:disable-next-line:variable-name
       let Model: Repository<Entity>;
       initializeModelClasses({
         modelSchemas: [schema],
-        pool,
+        pool: instance(mockedPool),
         expose(model: Repository<Entity>) {
           Model = model;
         },
@@ -1218,15 +1163,16 @@ describe('model', () => {
 
       const id = faker.random.uuid();
       const foo = faker.random.uuid();
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [{
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([{
           id,
           foo,
-        }],
-      });
+        }]),
+      );
+
       const result1 = await Model!.find();
       const result2 = await Model!.find();
-      queryStub.restore();
+      verify(mockedPool.query(anyString(), anything())).twice();
       should.exist(result1);
       should.exist(result2);
       result1!.should.deep.equal(result2);
@@ -1244,22 +1190,22 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [{
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([{
           count: products.length,
-        }],
-      });
+        }]),
+      );
+
       const result = await Product.count();
-      queryStub.restore();
       should.exist(result);
       result!.should.equal(products.length);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT count(*) AS "count" FROM "product"');
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should support call constraints as a parameter', async () => {
       const store = {
@@ -1274,25 +1220,25 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [{
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([{
           count: products.length,
-        }],
-      });
+        }]),
+      );
+
       const result = await Product.count({
         id: _.map(products, 'id'),
         store,
       });
-      queryStub.restore();
       should.exist(result);
       result!.should.equal(products.length);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT count(*) AS "count" FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2');
-      params.should.deep.equal([
+      params!.should.deep.equal([
         _.map(products, 'id'),
         store.id,
       ]);
@@ -1310,24 +1256,24 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [{
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([{
           count: products.length,
-        }],
-      });
+        }]),
+      );
+
       const result = await Product.count().where({
         store: store.id,
       });
-      queryStub.restore();
       should.exist(result);
       result!.should.equal(products.length);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('SELECT count(*) AS "count" FROM "product" WHERE "store_id"=$1');
-      params.should.deep.equal([store.id]);
+      params!.should.deep.equal([store.id]);
     });
   });
   describe('#create()', () => {
@@ -1347,6 +1293,7 @@ describe('model', () => {
           },
         },
         async beforeCreate(values) {
+          // tslint:disable-next-line:no-shadowed-variable
           return _.merge(values, {
             calledCreate: true,
             bar: true,
@@ -1354,10 +1301,11 @@ describe('model', () => {
         },
       };
 
+      // tslint:disable-next-line:variable-name
       let Model: Repository<Entity>;
       initializeModelClasses({
         modelSchemas: [schema],
-        pool,
+        pool: instance(mockedPool),
         expose(model: Repository<Entity>) {
           Model = model;
         },
@@ -1389,26 +1337,25 @@ describe('model', () => {
         store: faker.random.uuid(),
       };
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [product],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([product]),
+      );
 
       const result = await Product.create({
         name: product.name,
         store: product.store,
       });
 
-      queryStub.restore();
-      queryStub.calledOnce.should.equal(true);
+      verify(mockedPool.query(anyString(), anything())).once();
       should.exist(result);
       result!.should.deep.equal(product);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$2) RETURNING "id","name","store_id" AS "store"');
-      params.should.deep.equal([
+      params!.should.deep.equal([
         product.name,
         product.store,
       ]);
@@ -1420,9 +1367,9 @@ describe('model', () => {
         store: faker.random.uuid(),
       };
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [product],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([product]),
+      );
 
       const result = await Product.create({
         name: product.name,
@@ -1431,28 +1378,28 @@ describe('model', () => {
         returnRecords: false,
       });
 
-      queryStub.restore();
-      queryStub.calledOnce.should.equal(true);
+      verify(mockedPool.query(anyString(), anything())).once();
       should.exist(result);
       result!.should.equal(true);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$2)');
-      params.should.deep.equal([
+      params!.should.deep.equal([
         product.name,
         product.store,
       ]);
     });
     it('should return empty array results if empty value array is specified', async () => {
-      const queryStub = sinon.stub(pool, 'query').returns([]);
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([]),
+      );
 
       const result = await Product.create([]);
 
-      queryStub.restore();
-      queryStub.calledOnce.should.equal(false);
+      verify(mockedPool.query(anyString(), anything())).never();
       should.exist(result);
       result!.should.deep.equal([]);
     });
@@ -1467,9 +1414,9 @@ describe('model', () => {
         store: faker.random.uuid(),
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
 
       const result = await Product.create(products.map((product) => {
         return {
@@ -1478,16 +1425,15 @@ describe('model', () => {
         };
       }));
 
-      queryStub.restore();
-      queryStub.calledOnce.should.equal(true);
+      verify(mockedPool.query(anyString(), anything())).once();
       result.should.deep.equal(products);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$3),($2,$4) RETURNING "id","name","store_id" AS "store"');
-      params.should.deep.equal([
+      params!.should.deep.equal([
         products[0].name,
         products[1].name,
         products[0].store,
@@ -1505,9 +1451,9 @@ describe('model', () => {
         store: faker.random.uuid(),
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
 
       const result = await Product.create(products.map((product) => {
         return {
@@ -1518,16 +1464,15 @@ describe('model', () => {
         returnRecords: false,
       });
 
-      queryStub.restore();
-      queryStub.calledOnce.should.equal(true);
+      verify(mockedPool.query(anyString(), anything())).once();
       result.should.equal(true);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$3),($2,$4)');
-      params.should.deep.equal([
+      params!.should.deep.equal([
         products[0].name,
         products[1].name,
         products[0].store,
@@ -1552,6 +1497,7 @@ describe('model', () => {
           },
         },
         async beforeUpdate(values) {
+          // tslint:disable-next-line:no-shadowed-variable
           return _.merge(values, {
             calledUpdate: true,
             bar: true,
@@ -1559,10 +1505,11 @@ describe('model', () => {
         },
       };
 
+      // tslint:disable-next-line:variable-name
       let Model: Repository<Entity>;
       initializeModelClasses({
         modelSchemas: [schema],
-        pool,
+        pool: instance(mockedPool),
         expose(model: Repository<Entity>) {
           Model = model;
         },
@@ -1596,9 +1543,9 @@ describe('model', () => {
         store: faker.random.uuid(),
       };
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [product],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([product]),
+      );
 
       const result = await Product.update({
         id: product.id,
@@ -1607,16 +1554,15 @@ describe('model', () => {
         store: product.store,
       });
 
-      queryStub.restore();
-      queryStub.calledOnce.should.equal(true);
+      verify(mockedPool.query(anyString(), anything())).once();
       result.should.deep.equal([product]);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('UPDATE "product" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","store_id" AS "store"');
-      params.should.deep.equal([
+      params!.should.deep.equal([
         product.name,
         product.store,
         product.id,
@@ -1629,9 +1575,9 @@ describe('model', () => {
         store: faker.random.uuid(),
       };
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [product],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([product]),
+      );
 
       const result = await Product.update({
         id: product.id,
@@ -1642,16 +1588,15 @@ describe('model', () => {
         returnRecords: false,
       });
 
-      queryStub.restore();
-      queryStub.calledOnce.should.equal(true);
+      verify(mockedPool.query(anyString(), anything())).once();
       result.should.equal(true);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('UPDATE "product" SET "name"=$1,"store_id"=$2 WHERE "id"=$3');
-      params.should.deep.equal([
+      params!.should.deep.equal([
         product.name,
         product.store,
         product.id,
@@ -1668,20 +1613,20 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
+
       const result = await Product.destroy();
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(products);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('DELETE FROM "product" RETURNING "id","name","store_id" AS "store"');
-      params.should.deep.equal([]);
+      params!.should.deep.equal([]);
     });
     it('should support call constraints as a parameter', async () => {
       const store = {
@@ -1696,23 +1641,23 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
+
       const result = await Product.destroy({
         id: _.map(products, 'id'),
         store,
       });
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(products);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('DELETE FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2 RETURNING "id","name","store_id" AS "store"');
-      params.should.deep.equal([
+      params!.should.deep.equal([
         _.map(products, 'id'),
         store.id,
       ]);
@@ -1730,22 +1675,21 @@ describe('model', () => {
         name: `product - ${faker.random.uuid()}`,
       }];
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: products,
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
       const result = await Product.destroy().where({
         store: store.id,
       });
-      queryStub.restore();
       should.exist(result);
       result!.should.deep.equal(products);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('DELETE FROM "product" WHERE "store_id"=$1 RETURNING "id","name","store_id" AS "store"');
-      params.should.deep.equal([store.id]);
+      params!.should.deep.equal([store.id]);
     });
     it('should return true if returnRecords=false', async () => {
       const product = {
@@ -1754,9 +1698,9 @@ describe('model', () => {
         store: faker.random.uuid(),
       };
 
-      const queryStub = sinon.stub(pool, 'query').returns({
-        rows: [product],
-      });
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([product]),
+      );
 
       const result = await Product.destroy({
         id: product.id,
@@ -1764,17 +1708,16 @@ describe('model', () => {
         returnRecords: false,
       });
 
-      queryStub.restore();
-      queryStub.calledOnce.should.equal(true);
+      verify(mockedPool.query(anyString(), anything())).once();
       should.exist(result);
       result!.should.equal(true);
 
       const [
         query,
         params,
-      ] = queryStub.firstCall.args;
+      ] = capture(mockedPool.query).first();
       query.should.equal('DELETE FROM "product" WHERE "id"=$1');
-      params.should.deep.equal([
+      params!.should.deep.equal([
         product.id,
       ]);
     });

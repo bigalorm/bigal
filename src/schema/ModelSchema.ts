@@ -1,11 +1,5 @@
-import {
-  CollectionAttribute,
-  ModelAttribute,
-  TypeAttribute,
-} from './attributes';
 import { Entity } from '../Entity';
-
-type AnyFunction = () => any;
+import { Attributes } from './attributes';
 
 export interface ModelSchema {
   globalId: string;
@@ -13,9 +7,7 @@ export interface ModelSchema {
   connection?: string;
   autoCreatedAt?: boolean;
   autoUpdatedAt?: boolean;
-  attributes: {
-    [index: string]: CollectionAttribute | ModelAttribute | TypeAttribute | AnyFunction;
-  };
+  attributes: Attributes;
   beforeCreate?(values: Partial<Entity>): Partial<Entity> | Promise<Partial<Entity>>;
   beforeUpdate?(values: Partial<Entity>): Partial<Entity> | Promise<Partial<Entity>>;
 }
