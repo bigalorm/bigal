@@ -1510,7 +1510,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([`${name}%`]);
     });
     it('should handle startsWith with an array of values', () => {
-      const name1 = "TestUpper";
+      const name1 = 'TestUpper';
       const name2 = faker.random.uuid();
       const {
         whereStatement,
@@ -1552,7 +1552,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([`%${name}`]);
     });
     it('should handle endsWith with an array of values', () => {
-      const name1 = "TestUpper";
+      const name1 = 'TestUpper';
       const name2 = faker.random.uuid();
       const {
         whereStatement,
@@ -1594,7 +1594,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([`%${name}%`]);
     });
     it('should handle contains with an array of values', () => {
-      const name1 = "TestUpper";
+      const name1 = 'TestUpper';
       const name2 = faker.random.uuid();
       const {
         whereStatement,
@@ -1694,7 +1694,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name]);
     });
     it('should handle like with an array of values', () => {
-      const name1 = "TestUpper";
+      const name1 = 'TestUpper';
       const name2 = faker.random.uuid();
       const {
         whereStatement,
@@ -1718,7 +1718,7 @@ describe('sqlHelper', () => {
       ]);
     });
     it('should handle not like with an array of values', () => {
-      const name1 = "TestUpper";
+      const name1 = 'TestUpper';
       const name2 = faker.random.uuid();
       const {
         whereStatement,
