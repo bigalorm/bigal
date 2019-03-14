@@ -1,9 +1,10 @@
 import { WhereQuery } from './WhereQuery';
 import { PopulateArgs } from './PopulateArgs';
+import { Entity } from '../Entity';
 
-export interface FindOneResult<TEntity extends { [index: string]: any }> {
-  where: (args: WhereQuery) => FindOneResult<TEntity> | TEntity | null;
-  populate: (propertyName: Extract<keyof TEntity, string>, options?: PopulateArgs) => FindOneResult<TEntity> | TEntity | null;
-  sort: (value: string | object) => FindOneResult<TEntity> | TEntity | null;
-  then: (resolve: (thenableOrResult?: (TEntity | null) | PromiseLike<TEntity | null>) => void, reject: (err: Error) => void) => Promise<void>;
+export interface FindOneResult<TEntity extends Entity> {
+  where(args: WhereQuery): FindOneResult<TEntity>;
+  populate(propertyName: Extract<keyof TEntity, string>, options?: PopulateArgs): FindOneResult<TEntity>;
+  sort(value: string | object): FindOneResult<TEntity>;
+  then(resolve: (thenableOrResult?: (TEntity | null) | PromiseLike<TEntity | null>) => void, reject: (err: Error) => void): Promise<void>;
 }

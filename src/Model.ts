@@ -1,7 +1,7 @@
 import * as _ from 'lodash';
 import { Pool } from 'postgres-pool';
 import { SqlHelper } from './sqlHelper';
-import { ModelSchema, ModelSchemasByGlobalId } from './schema/ModelSchema';
+import { ModelSchema } from './schema/ModelSchema';
 import { Repository } from './repository';
 import { FindArgs } from './query/FindArgs';
 import { FindOneArgs } from './query/FindOneArgs';
@@ -14,8 +14,9 @@ import { FindOneResult } from './query/FindOneResult';
 import { PaginateOptions } from './query/PaginateOptions';
 import { WhereQuery } from './query/WhereQuery';
 import { DestroyResult } from './query/DestroyResult';
-
-interface ModelClassesByGlobalId { [index: string]: Model<object>; }
+import { ModelClassesByGlobalId } from './ModelClassesByGlobalId';
+import { ModelSchemasByGlobalId } from './schema/ModelSchemasByGlobalId';
+import { Entity } from './Entity';
 
 interface ModelOptions {
   modelSchema: ModelSchema;
@@ -25,7 +26,7 @@ interface ModelOptions {
   readonlyPool?: Pool;
 }
 
-export class Model<TEntity extends { [index: string]: any }> implements Repository<TEntity> {
+export class Model<TEntity extends Entity> implements Repository<TEntity> {
   private _schema: ModelSchema;
   private _modelSchemasByGlobalId: ModelSchemasByGlobalId;
   private _modelClassesByGlobalId: ModelClassesByGlobalId;
@@ -89,7 +90,7 @@ export class Model<TEntity extends { [index: string]: any }> implements Reposito
    * @param {Object} [args.where] - Object representing the where query
    * @param {string|Object|string[]|Object[]} [args.sort] - Property name(s) to sort by
    */
-  public findOne(args: FindOneArgs = {}): FindOneResult<TEntity> {
+  public findOne(args: FindOneArgs | WhereQuery = {}): FindOneResult<TEntity> {
     const {
       stack,
     } = new Error(`${this._schema.globalId}.findOne()`);
@@ -185,7 +186,7 @@ export class Model<TEntity extends { [index: string]: any }> implements Reposito
       async then(resolve: (result: TEntity | null) => void, reject: (err: Error) => void) {
         try {
           if (_.isString(where)) {
-            reject(new Error('The query cannot be a string, it must be an object'));
+            throw new Error('The query cannot be a string, it must be an object');
           }
 
           const {
@@ -337,7 +338,7 @@ export class Model<TEntity extends { [index: string]: any }> implements Reposito
    * @param {string|Number} [args.skip] - Number of records to skip
    * @param {string|Number} [args.limit] - Number of results to return
    */
-  public find(args: FindArgs = {}): FindResult<TEntity> {
+  public find(args: FindArgs | WhereQuery = {}): FindResult<TEntity> {
     const {
       stack,
     } = new Error(`${this._schema.globalId}.find()`);
@@ -535,7 +536,7 @@ export class Model<TEntity extends { [index: string]: any }> implements Reposito
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {Object} Return value from the db
    */
-  public async create(values: Partial<TEntity>, options?: CreateUpdateDeleteOptions): Promise<TEntity | null>;
+  public async create(values: Partial<TEntity>, options?: CreateUpdateDeleteOptions): Promise<TEntity>;
   /**
    * Creates a objects using the specified values
    * @param {object[]} values - Values to insert as multiple new objects.
@@ -565,7 +566,7 @@ export class Model<TEntity extends { [index: string]: any }> implements Reposito
     returnSelect,
   }: CreateUpdateDeleteOptions = {
     returnRecords: true,
-  }): Promise<TEntity | TEntity[] | null | boolean> {
+  }): Promise<TEntity | TEntity[] | boolean> {
     const {
       stack,
     } = new Error(`${this._schema.globalId}.create()`);
@@ -605,7 +606,7 @@ export class Model<TEntity extends { [index: string]: any }> implements Reposito
           return this._buildInstance(results.rows[0]);
         }
 
-        return null;
+        throw new Error(('Unknown error getting created rows back from the database'));
       }
 
       return true;
@@ -623,6 +624,16 @@ export class Model<TEntity extends { [index: string]: any }> implements Reposito
    * @returns {boolean}
    */
   public async update(where: WhereQuery, values: Partial<TEntity>, options: DoNotReturnRecords): Promise<boolean>;
+  /**
+   * Updates object(s) matching the where query, with the specified values
+   * @param {Object} where - Object representing the where query
+   * @param {Object} values - Values to update
+   * @param {Object} [options] - Values to update
+   * @param {Boolean} [options.returnRecords=true] - Determines if inserted records should be returned
+   * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
+   * @returns {boolean}
+   */
+  public async update(where: WhereQuery, values: Partial<TEntity>, options?: CreateUpdateDeleteOptions): Promise<TEntity[]>;
   /**
    * Updates object(s) matching the where query, with the specified values
    * @param {Object} where - Object representing the where query
@@ -690,7 +701,7 @@ export class Model<TEntity extends { [index: string]: any }> implements Reposito
    * @param {Boolean} [options.returnRecords=true] - Determines if inserted records should be returned
    * @returns {boolean}
    */
-  public destroy(where: WhereQuery, options?: CreateUpdateDeleteOptions): DestroyResult<TEntity, TEntity[]>;
+  public destroy(where?: WhereQuery, options?: CreateUpdateDeleteOptions): DestroyResult<TEntity, TEntity[]>;
   /**
    * Destroys object(s) matching the where query
    * @param {Object} where - Object representing the where query
@@ -698,7 +709,7 @@ export class Model<TEntity extends { [index: string]: any }> implements Reposito
    * @param {string[]} [returnSelect] - Array of model property names to return from the query.
    * @returns {Object[]|Boolean} Records affected or `true` if returnRecords=false
    */
-  public destroy(where: WhereQuery, {
+  public destroy(where: WhereQuery = {}, {
     returnRecords = true,
     returnSelect,
   }: CreateUpdateDeleteOptions = {
@@ -722,7 +733,7 @@ export class Model<TEntity extends { [index: string]: any }> implements Reposito
       async then(resolve: (result: TEntity[] | boolean) => void, reject: (err: Error) => void) {
         try {
           if (_.isString(where)) {
-            throw new Error('The query cannot be a string, it must be an object');
+            reject(new Error('The query cannot be a string, it must be an object'));
           }
 
           const {

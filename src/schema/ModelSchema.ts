@@ -3,12 +3,12 @@ import {
   ModelAttribute,
   TypeAttribute,
 } from './attributes';
+import { Entity } from '../Entity';
 
 type AnyFunction = () => any;
-interface Values { [index: string]: any; }
 
 export interface ModelSchema {
-  globalId?: string;
+  globalId: string;
   tableName?: string;
   connection?: string;
   autoCreatedAt?: boolean;
@@ -16,10 +16,6 @@ export interface ModelSchema {
   attributes: {
     [index: string]: CollectionAttribute | ModelAttribute | TypeAttribute | AnyFunction;
   };
-  beforeCreate?: (values: Values) => Values | Promise<Values>;
-  beforeUpdate?: (values: Values) => Values | Promise<Values>;
-}
-
-export interface ModelSchemasByGlobalId {
-  [index: string]: ModelSchema;
+  beforeCreate?(values: Partial<Entity>): Partial<Entity> | Promise<Partial<Entity>>;
+  beforeUpdate?(values: Partial<Entity>): Partial<Entity> | Promise<Partial<Entity>>;
 }

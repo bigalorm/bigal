@@ -1,14 +1,16 @@
-'use strict';
-
-const _ = require('lodash');
-const faker = require('faker');
-const chai = require('chai');
-
-const should = chai.should();
+// @ts-ignore
+import chai from 'chai';
+import * as _ from 'lodash';
+import * as faker from 'faker';
 
 const sqlHelper = require('../lib/sqlHelper');
 
 describe('sqlHelper', () => {
+  let should: Chai.Should;
+  before(() => {
+    should = chai.should();
+  });
+
   const storeSchema = {
     globalId: 'store',
     tableName: 'store',
