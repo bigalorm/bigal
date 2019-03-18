@@ -4,83 +4,78 @@
 [![node version](https://img.shields.io/node/v/bigal.svg?style=flat)](https://nodejs.org)
 [![Known Vulnerabilities](https://snyk.io/test/npm/bigal/badge.svg)](https://snyk.io/test/npm/bigal)
 
-A fast, lightweight alternative to [Waterline](http://waterlinejs.org/). Supports [PostgreSQL](http://www.postgresql.org/) v9.6 and above. Note: this package does not create or update db schemas for you.
+A fast, lightweight ORM for PostgreSQL and node.js, written in Typescript. 
+
+This ORM does not: 
+
+* Create or update db schemas for you
+* Handle associations/joins
+* Do much else than basic queries, inserts, updates, and deletes
 
 ## Compatibility
-- Node.js 8.x or above
-- PostgreSQL 9.6.x
+- Node.js 8.10 or above
+- [PostgreSQL](http://www.postgresql.org/) 9.6 or above
 
 ## Install
 
 ```sh
-$ npm install bigal
+$ npm install pg postgres-pool bigal
 ```
 
-## Configuring sails.js
+## Configuring
 
-#### Disable default ORM hook
-
-```js
-// config/hooks.js
-module.exports = {
-  orm: false,
-  pubsub: false,
-};
-```
-
-#### `api/hooks/bigal/index.js`
+#### Load schema definition files
+> Load model schema definition files from a directory and create global repositories for each model
 
 ```js
 const _ = require('lodash');
 const fs = require('mz/fs');
 const path = require('path');
-const { Pool } = require('pg');
+const { Pool } = require('postgres-pool');
 const bigal = require('bigal');
 
-module.exports = (sails) => {
-  return {
-    loadModules(next) {
-      (async function loadOrm() {
-        sails.log.verbose('Setup BigAl orm...');
+let pool;
+let readonlyPool;
 
-        const pool = new Pool(sails.config.connections.postgres);
-        const readonlyPool = new Pool(sails.config.connections.readonlyPostgres);
+module.exports = {
+  async startup({
+    connectionString,
+    readonlyConnectionString,
+  }) {
+    const models = {};
+    pool = new Pool(connectionString);
+    readonlyPool = new Pool(readonlyConnectionString);
 
-        const modelsPath = path.join(__dirname, '../../models');
-        // eslint-disable-next-line security/detect-non-literal-fs-filename
-        const files = await fs.readdir(modelsPath);
-        const modelSchemas = files.filter((file) => /.js$/ig.test(file)).map((file) => {
-          const fileBasename = path.basename(file, '.js');
-          /* eslint-disable global-require, import/no-dynamic-require */
-          const schema = require(`${modelsPath}/${fileBasename}`);
-          /* eslint-enable global-require, import/no-dynamic-require */
+    const modelsPath = path.join(__dirname, 'src/models');
+    const files = await fs.readdir(modelsPath);
+    const modelSchemas = files.filter((file) => /.(js|ts)$/i.test(file)).map((file) => {
+      const fileBasename = path.basename(file, '.js');
+      const schema = require(`${modelsPath}/${fileBasename}`);
 
-          return _.merge({
-            globalId: fileBasename,
-            tableName: fileBasename.toLowerCase(),
-          }, schema);
-        });
+      return _.merge({
+        globalId: fileBasename,
+        tableName: fileBasename.toLowerCase(),
+      }, schema);
+    });
 
-        sails.models = sails.models || {};
-        await bigal.initialize({
-          modelSchemas,
-          pool,
-          readonlyPool,
-          expose: (model, modelSchema) => {
-            if (sails.config.globals.models) {
-              global[modelSchema.globalId] = model;
-            }
-
-            sails.models[modelSchema.globalId] = model;
-          },
-        });
-
-        sails.log.verbose('Done!');
-
-        return next();
-      }()).catch(next);
-    },
-  };
+    await bigal.initialize({
+      modelSchemas,
+      pool,
+      readonlyPool,
+      expose(repository, modelSchema) {
+        global[modelSchema.globalId] = repository;
+        models[modelSchema.globalId] = repository;
+      },
+    });
+    
+    return models;
+  },
+  shutdown() {
+    return Promise.all([
+      pool.end(),
+      readonlyPool.end(),
+    ]);
+  },
 };
 ```
 
