@@ -95,7 +95,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
     const {
       stack,
     } = new Error(`${this._schema.globalId}.findOne()`);
-    let select: string[] = [];
+    let select: string[] | undefined;
     let where = {};
     let sort: string | string[] | null = null;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
@@ -112,7 +112,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
           sort = value;
           break;
         default:
-          select = [];
+          select = undefined;
           where = args;
           sort = null;
           isWhereCriteria = true;
@@ -152,10 +152,10 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
        * Populates/hydrates relations
        * @param {string} propertyName - Name of property to join
        * @param {Object} [where] - Object representing the where query
-       * @param {string[]} [select] - Array of model property names to return from the query.
-       * @param {string|Object} [sort] - Property name(s) to sort by
-       * @param {string|Number} [skip] - Number of records to skip
-       * @param {string|Number} [limit] - Number of results to return
+       * @param {string[]} [populateSelect] - Array of model property names to return from the query.
+       * @param {string|Object} [populateSort] - Property name(s) to sort by
+       * @param {string|Number} [populateSkip] - Number of records to skip
+       * @param {string|Number} [populateLimit] - Number of results to return
        */
       populate(propertyName: Extract<keyof TEntity, string>, {
         where: populateWhere,

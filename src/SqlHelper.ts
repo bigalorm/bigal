@@ -1,9 +1,10 @@
 import * as _ from 'lodash';
-import { ModelSchema, ModelSchemasByGlobalId } from './schema/ModelSchema';
+import { ModelSchema } from './schema/ModelSchema';
 import { BaseAttribute } from './schema/attributes/BaseAttribute';
 import { WhereQuery } from './query/WhereQuery';
 import { CollectionAttribute, ModelAttribute, TypeAttribute } from './schema/attributes';
 import { Comparer } from './query/Comparer';
+import { ModelSchemasByGlobalId } from './schema/ModelSchemasByGlobalId';
 
 interface Entity { [index: string]: any; }
 
@@ -36,7 +37,7 @@ export class SqlHelper {
     modelSchemasByGlobalId: ModelSchemasByGlobalId;
     schema: ModelSchema;
     select?: string[];
-    where: WhereQuery;
+    where?: WhereQuery;
     sorts: Array<string | object>;
     skip: number;
     limit: number;
@@ -74,6 +75,7 @@ export class SqlHelper {
 
     if (limit) {
       if (_.isString(limit)) {
+        // tslint:disable-next-line:no-parameter-reassignment
         limit = Number(limit);
       }
 
@@ -86,6 +88,7 @@ export class SqlHelper {
 
     if (skip) {
       if (_.isString(skip)) {
+        // tslint:disable-next-line:no-parameter-reassignment
         skip = Number(skip);
       }
 
@@ -158,7 +161,7 @@ export class SqlHelper {
     modelSchemasByGlobalId: ModelSchemasByGlobalId;
     schema: ModelSchema;
     values: Partial<Entity> | Array<Partial<Entity>>;
-    returnRecords: boolean;
+    returnRecords?: boolean;
     returnSelect?: Array<Extract<keyof Entity, string>>;
   }): QueryAndParams {
     const entitiesToInsert = _.isArray(values) ? values : [values];
@@ -303,7 +306,7 @@ export class SqlHelper {
     schema: ModelSchema;
     where: WhereQuery;
     values: Partial<Entity>;
-    returnRecords: boolean;
+    returnRecords?: boolean;
     returnSelect?: Array<Extract<keyof Entity, string>>;
   }): QueryAndParams {
     if (schema.autoUpdatedAt && _.isUndefined(values.updatedAt)) {
@@ -412,8 +415,8 @@ export class SqlHelper {
   }: {
     modelSchemasByGlobalId: ModelSchemasByGlobalId;
     schema: ModelSchema;
-    where: WhereQuery;
-    returnRecords: boolean;
+    where?: WhereQuery;
+    returnRecords?: boolean;
     returnSelect?: Array<Extract<keyof Entity, string>>;
   }): QueryAndParams {
     let query = `DELETE FROM "${schema.tableName}"`;
@@ -471,7 +474,7 @@ export class SqlHelper {
    * @returns {string} SQL columns
    * @private
    */
-  private static _getColumnsToSelect({
+  public static _getColumnsToSelect({
     schema,
     select,
   }: {
@@ -523,7 +526,7 @@ export class SqlHelper {
    * @returns {{whereStatement?: string, params: Array}}
    * @private
    */
-  private static _buildWhereStatement({
+  public static _buildWhereStatement({
     modelSchemasByGlobalId,
     schema,
     where,
@@ -910,6 +913,7 @@ export class SqlHelper {
               if (this._isComparer(key)) {
                 subQueryComparer = key;
               } else {
+                // tslint:disable-next-line:no-parameter-reassignment
                 propertyName = key;
               }
 
@@ -1011,7 +1015,7 @@ export class SqlHelper {
    * @returns {string} Column name
    * @private
    */
-  private static _getColumnName({
+  public static _getColumnName({
     schema,
     propertyName,
   }: {
@@ -1037,7 +1041,7 @@ export class SqlHelper {
    * @returns {string} SQL order by statement
    * @private
    */
-  private static _buildOrderStatement({
+  public static _buildOrderStatement({
     schema,
     sorts,
   }: {

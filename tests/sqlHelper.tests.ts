@@ -3,7 +3,9 @@ import chai from 'chai';
 import * as _ from 'lodash';
 import * as faker from 'faker';
 
-const sqlHelper = require('../lib/sqlHelper');
+import { SqlHelper as sqlHelper } from '../src/SqlHelper';
+import {ModelSchema} from "../src/schema/ModelSchema";
+import {ModelSchemasByGlobalId} from "../src/schema/ModelSchemasByGlobalId";
 
 describe('sqlHelper', () => {
   let should: Chai.Should;
@@ -11,11 +13,12 @@ describe('sqlHelper', () => {
     should = chai.should();
   });
 
-  const storeSchema = {
+  const storeSchema: ModelSchema = {
     globalId: 'store',
     tableName: 'store',
     attributes: {
       id: {
+        type: 'integer',
         primaryKey: true,
       },
       name: {
@@ -27,11 +30,12 @@ describe('sqlHelper', () => {
       },
     },
   };
-  const productSchema = {
+  const productSchema: ModelSchema = {
     globalId: 'product',
     tableName: 'product',
     attributes: {
       id: {
+        type: 'integer',
         primaryKey: true,
       },
       name: {
@@ -57,11 +61,12 @@ describe('sqlHelper', () => {
       },
     },
   };
-  const categorySchema = {
+  const categorySchema: ModelSchema = {
     globalId: 'category',
     tableName: 'category',
     attributes: {
       id: {
+        type: 'integer',
         primaryKey: true,
       },
       name: {
@@ -69,12 +74,12 @@ describe('sqlHelper', () => {
       },
     },
   };
-  const productCategorySchema = {
+  const productCategorySchema: ModelSchema = {
     globalId: 'productCategory',
     tableName: 'product__category',
-    junctionTable: true,
     attributes: {
       id: {
+        type: 'integer',
         primaryKey: true,
       },
       product: {
@@ -93,25 +98,12 @@ describe('sqlHelper', () => {
     categorySchema,
     productCategorySchema,
   ];
-  const modelSchemasByGlobalId = _.keyBy(schemas, (schema) => {
+  const modelSchemasByGlobalId: ModelSchemasByGlobalId = _.keyBy(schemas, (schema) => {
     return schema.globalId.toLowerCase();
   });
 
   describe('#getSelectQueryAndParams()', () => {
     describe('select', () => {
-      it('should include all columns if select is null', () => {
-        const {
-          query,
-          params,
-        } = sqlHelper.getSelectQueryAndParams({
-          modelSchemasByGlobalId,
-          schema: productSchema,
-          select: null,
-        });
-
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}"`);
-        params.should.deep.equal([]);
-      });
       it('should include all columns if select is undefined', () => {
         const {
           query,
@@ -119,6 +111,10 @@ describe('sqlHelper', () => {
         } = sqlHelper.getSelectQueryAndParams({
           modelSchemasByGlobalId,
           schema: productSchema,
+          where: {},
+          sorts: [],
+          limit: 1,
+          skip: 0,
         });
 
         query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}"`);
@@ -132,6 +128,10 @@ describe('sqlHelper', () => {
           modelSchemasByGlobalId,
           schema: productSchema,
           select: [],
+          where: {},
+          sorts: [],
+          limit: 1,
+          skip: 0,
         });
 
         query.should.equal(`SELECT "id" FROM "${productSchema.tableName}"`);
@@ -145,6 +145,10 @@ describe('sqlHelper', () => {
           modelSchemasByGlobalId,
           schema: productSchema,
           select: ['name'],
+          where: {},
+          sorts: [],
+          limit: 1,
+          skip: 0,
         });
 
         query.should.equal(`SELECT "name","id" FROM "${productSchema.tableName}"`);
@@ -163,6 +167,9 @@ describe('sqlHelper', () => {
           where: {
             name,
           },
+          sorts: [],
+          limit: 1,
+          skip: 0,
         });
 
         query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" WHERE "name"=$1`);
@@ -178,6 +185,9 @@ describe('sqlHelper', () => {
           modelSchemasByGlobalId,
           schema: productSchema,
           sorts: ['name'],
+          where: {},
+          limit: 1,
+          skip: 0,
         });
 
         query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" ORDER BY "name"`);
@@ -185,19 +195,6 @@ describe('sqlHelper', () => {
       });
     });
     describe('skip', () => {
-      it('should not include OFFSET statement if skip is a null', () => {
-        const {
-          query,
-          params,
-        } = sqlHelper.getSelectQueryAndParams({
-          modelSchemasByGlobalId,
-          schema: productSchema,
-          skip: null,
-        });
-
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}"`);
-        params.should.deep.equal([]);
-      });
       it('should include OFFSET statement if skip is a number', () => {
         const {
           query,
@@ -205,49 +202,17 @@ describe('sqlHelper', () => {
         } = sqlHelper.getSelectQueryAndParams({
           modelSchemasByGlobalId,
           schema: productSchema,
+          where: {},
+          sorts: [],
+          limit: 1,
           skip: 100,
         });
 
         query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" OFFSET 100`);
         params.should.deep.equal([]);
       });
-      it('should include OFFSET statement if skip is a string number', () => {
-        const {
-          query,
-          params,
-        } = sqlHelper.getSelectQueryAndParams({
-          modelSchemasByGlobalId,
-          schema: productSchema,
-          skip: '100',
-        });
-
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" OFFSET 100`);
-        params.should.deep.equal([]);
-      });
-      it('should should throw if skip is not a valid number', () => {
-        (() => {
-          sqlHelper.getSelectQueryAndParams({
-            modelSchemasByGlobalId,
-            schema: productSchema,
-            skip: 'a',
-          });
-        }).should.throw(Error, 'Skip should be a number');
-      });
     });
     describe('limit', () => {
-      it('should not include LIMIT statement if limit is null', () => {
-        const {
-          query,
-          params,
-        } = sqlHelper.getSelectQueryAndParams({
-          modelSchemasByGlobalId,
-          schema: productSchema,
-          limit: null,
-        });
-
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}"`);
-        params.should.deep.equal([]);
-      });
       it('should include LIMIT statement if limit is a number', () => {
         const {
           query,
@@ -255,33 +220,14 @@ describe('sqlHelper', () => {
         } = sqlHelper.getSelectQueryAndParams({
           modelSchemasByGlobalId,
           schema: productSchema,
+          where: {},
+          sorts: [],
+          skip: 0,
           limit: 100,
         });
 
         query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" LIMIT 100`);
         params.should.deep.equal([]);
-      });
-      it('should include OFFSET statement if limit is a string number', () => {
-        const {
-          query,
-          params,
-        } = sqlHelper.getSelectQueryAndParams({
-          modelSchemasByGlobalId,
-          schema: productSchema,
-          limit: '100',
-        });
-
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" LIMIT 100`);
-        params.should.deep.equal([]);
-      });
-      it('should should throw if limit is not a valid number', () => {
-        (() => {
-          sqlHelper.getSelectQueryAndParams({
-            modelSchemasByGlobalId,
-            schema: productSchema,
-            limit: 'a',
-          });
-        }).should.throw(Error, 'Limit should be a number');
       });
     });
   });
@@ -330,15 +276,17 @@ describe('sqlHelper', () => {
           values: {
             store: faker.random.uuid(),
           },
+          returnRecords: true,
         });
       }).should.throw(Error, `Create statement for "${productSchema.globalId}" is missing value for required field: name`);
     });
     it('should not throw if a required property has a defaultValue and an undefined initial value', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -359,15 +307,17 @@ describe('sqlHelper', () => {
           values: {
             bar: faker.random.uuid(),
           },
+          returnRecords: true,
         });
       }).should.not.throw();
     });
     it('should not override properties with defaultValue if value is defined', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -386,16 +336,18 @@ describe('sqlHelper', () => {
         values: {
           name,
         },
+        returnRecords: true,
       });
 
       params.should.deep.equal([name]);
     });
     it('should set undefined properties to defaultValue if defined on schema', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -425,11 +377,12 @@ describe('sqlHelper', () => {
       ]);
     });
     it('should set undefined properties to result of defaultValue function if defined on schema', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -462,12 +415,13 @@ describe('sqlHelper', () => {
     });
     it('should set createdAt if schema.autoCreatedAt and value is undefined', () => {
       const beforeTime = new Date();
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         autoCreatedAt: true,
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -505,12 +459,13 @@ describe('sqlHelper', () => {
     });
     it('should not override createdAt if schema.autoCreatedAt and value is defined', () => {
       const createdAt = faker.date.past();
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         autoCreatedAt: true,
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -544,12 +499,13 @@ describe('sqlHelper', () => {
     });
     it('should set updatedAt if schema.autoUpdatedAt and value is undefined', () => {
       const beforeTime = new Date();
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         autoUpdatedAt: true,
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -587,12 +543,13 @@ describe('sqlHelper', () => {
     });
     it('should not override updatedAt if schema.autoUpdatedAt and value is defined', () => {
       const updatedAt = faker.date.past();
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         autoUpdatedAt: true,
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -625,12 +582,13 @@ describe('sqlHelper', () => {
       ]);
     });
     it('should ignore collection properties', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         autoUpdatedAt: true,
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -694,11 +652,12 @@ describe('sqlHelper', () => {
     });
     it('should cast value to jsonb if type=json and value is an array', () => {
       // Please see https://github.com/brianc/node-postgres/issues/442 for details of why this is needed
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -892,12 +851,13 @@ describe('sqlHelper', () => {
   });
   describe('#getUpdateQueryAndParams()', () => {
     it('should not set createdAt if schema.autoCreatedAt and value is undefined', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         autoCreatedAt: true,
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -917,6 +877,7 @@ describe('sqlHelper', () => {
       } = sqlHelper.getUpdateQueryAndParams({
         modelSchemasByGlobalId,
         schema,
+        where: {},
         values: {
           name,
         },
@@ -929,12 +890,13 @@ describe('sqlHelper', () => {
     });
     it('should set updatedAt if schema.autoUpdatedAt and value is undefined', () => {
       const beforeTime = new Date();
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         autoUpdatedAt: true,
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -954,6 +916,7 @@ describe('sqlHelper', () => {
       } = sqlHelper.getUpdateQueryAndParams({
         modelSchemasByGlobalId,
         schema,
+        where: {},
         values: {
           name,
         },
@@ -972,12 +935,13 @@ describe('sqlHelper', () => {
     });
     it('should not override updatedAt if schema.autoUpdatedAt and value is defined', () => {
       const updatedAt = faker.date.past();
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         autoUpdatedAt: true,
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -997,6 +961,7 @@ describe('sqlHelper', () => {
       } = sqlHelper.getUpdateQueryAndParams({
         modelSchemasByGlobalId,
         schema,
+        where: {},
         values: {
           name,
           updatedAt,
@@ -1010,11 +975,12 @@ describe('sqlHelper', () => {
       ]);
     });
     it('should ignore collection properties', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -1039,6 +1005,7 @@ describe('sqlHelper', () => {
       } = sqlHelper.getUpdateQueryAndParams({
         modelSchemasByGlobalId,
         schema,
+        where: {},
         values: {
           name,
           bars: [faker.random.uuid()],
@@ -1064,6 +1031,7 @@ describe('sqlHelper', () => {
       } = sqlHelper.getUpdateQueryAndParams({
         modelSchemasByGlobalId,
         schema: productSchema,
+        where: {},
         values: {
           name,
           store,
@@ -1078,11 +1046,12 @@ describe('sqlHelper', () => {
     });
     it('should cast value to jsonb if type=json and value is an array', () => {
       // Please see https://github.com/brianc/node-postgres/issues/442 for details of why this is needed
-      const schema = {
+      const schema: ModelSchema = {
         globalId: 'foo',
         tableName: 'foo',
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           name: {
@@ -1107,6 +1076,7 @@ describe('sqlHelper', () => {
       } = sqlHelper.getUpdateQueryAndParams({
         modelSchemasByGlobalId,
         schema,
+        where: {},
         values: {
           name,
           bar,
@@ -1325,40 +1295,55 @@ describe('sqlHelper', () => {
   });
   describe('#getPrimaryKeyPropertyName()', () => {
     it('should return the first attribute with primaryKey=true', () => {
-      const value = sqlHelper.getPrimaryKeyPropertyName({
-        schema: {
-          attributes: {
-            foo: {},
-            bar: {
-              primaryKey: true,
-            },
+      const schema: ModelSchema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          foo: {
+            type: 'string',
+          },
+          bar: {
+            type: 'string',
+            primaryKey: true,
           },
         },
+      };
+
+      const value = sqlHelper.getPrimaryKeyPropertyName({
+        schema,
       });
 
       value.should.equal('bar');
     });
     it('should return id if no attributes are found with primaryKey=true', () => {
-      const value = sqlHelper.getPrimaryKeyPropertyName({
-        schema: {
-          attributes: {
-            foo: {},
+      const schema: ModelSchema = {
+        globalId: faker.random.uuid(),
+        attributes: {
+          foo: {
+            type: 'string',
           },
         },
+      };
+
+      const value = sqlHelper.getPrimaryKeyPropertyName({
+        schema,
       });
 
       value.should.equal('id');
     });
   });
   describe('#_getColumnName()', () => {
-    const schema = {
+    const schema: ModelSchema = {
       globalId: faker.random.uuid(),
       attributes: {
         id: {
+          type: 'string',
           primaryKey: true,
         },
-        foo: {},
+        foo: {
+          type: 'string',
+        },
         bar: {
+          type: 'string',
           columnName: 'foobar',
         },
       },
@@ -1392,10 +1377,10 @@ describe('sqlHelper', () => {
     });
   });
   describe('#_getColumnsToSelect()', () => {
-    it('should include all columns if select is null', () => {
+    it('should include all columns if select is undefined', () => {
       const query = sqlHelper._getColumnsToSelect({
         schema: productSchema,
-        select: null,
+        select: undefined,
       });
 
       query.should.equal(`"id","name","sku","store_id" AS "store","created_at" AS "createdAt"`);
@@ -1425,19 +1410,6 @@ describe('sqlHelper', () => {
     });
   });
   describe('#_buildWhereStatement()', () => {
-    it('should return empty if where is null', () => {
-      const {
-        whereStatement,
-        params,
-      } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
-        where: null,
-      });
-
-      should.not.exist(whereStatement);
-      params.should.deep.equal([]);
-    });
     it('should return empty if where is undefined', () => {
       const {
         whereStatement,
@@ -1455,6 +1427,7 @@ describe('sqlHelper', () => {
         sqlHelper._buildWhereStatement({
           modelSchemasByGlobalId,
           schema: productSchema,
+          // @ts-ignore
           where: {
             store: undefined,
           },
@@ -1474,7 +1447,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "store_id"=$1');
+      whereStatement!.should.equal('WHERE "store_id"=$1');
       params.should.deep.equal([storeId]);
     });
     it('should use property name if columnName is not defined', () => {
@@ -1490,7 +1463,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name"=$1');
+      whereStatement!.should.equal('WHERE "name"=$1');
       params.should.deep.equal([name]);
     });
     it('should handle startsWith', () => {
@@ -1508,7 +1481,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name" ILIKE $1');
+      whereStatement!.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`${name}%`]);
     });
     it('should handle startsWith with an array of values', () => {
@@ -1527,7 +1500,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
+      whereStatement!.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([
         [
           `${name1.toLowerCase()}%`,
@@ -1550,7 +1523,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name" ILIKE $1');
+      whereStatement!.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`%${name}`]);
     });
     it('should handle endsWith with an array of values', () => {
@@ -1569,7 +1542,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
+      whereStatement!.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([
         [
           `%${name1.toLowerCase()}`,
@@ -1592,7 +1565,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name" ILIKE $1');
+      whereStatement!.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`%${name}%`]);
     });
     it('should handle contains with an array of values', () => {
@@ -1611,7 +1584,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
+      whereStatement!.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([
         [
           `%${name1.toLowerCase()}%`,
@@ -1634,7 +1607,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name" ILIKE $1');
+      whereStatement!.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([name]);
     });
     it('should handle not like', () => {
@@ -1654,7 +1627,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name" NOT ILIKE $1');
+      whereStatement!.should.equal('WHERE "name" NOT ILIKE $1');
       params.should.deep.equal([name]);
     });
     it('should handle like with array with a single value', () => {
@@ -1672,7 +1645,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name" ILIKE $1');
+      whereStatement!.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([name]);
     });
     it('should handle not like with array with a single value', () => {
@@ -1692,7 +1665,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name" NOT ILIKE $1');
+      whereStatement!.should.equal('WHERE "name" NOT ILIKE $1');
       params.should.deep.equal([name]);
     });
     it('should handle like with an array of values', () => {
@@ -1711,7 +1684,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
+      whereStatement!.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([
         [
           name1.toLowerCase(),
@@ -1737,7 +1710,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE lower("name")<>ALL($1::TEXT[])');
+      whereStatement!.should.equal('WHERE lower("name")<>ALL($1::TEXT[])');
       params.should.deep.equal([
         [
           name1.toLowerCase(),
@@ -1759,7 +1732,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE 1<>1');
+      whereStatement!.should.equal('WHERE 1<>1');
       params.should.deep.equal([]);
     });
     it('should handle not like with an empty array', () => {
@@ -1778,7 +1751,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE 1=1');
+      whereStatement!.should.equal('WHERE 1=1');
       params.should.deep.equal([]);
     });
     it('should handle date value', () => {
@@ -1796,7 +1769,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "created_at">$1');
+      whereStatement!.should.equal('WHERE "created_at">$1');
       params.should.deep.equal([now]);
     });
     it('should handle or', () => {
@@ -1820,7 +1793,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE (("name"=$1) OR ("name"<>$2 AND "store_id"=$3))');
+      whereStatement!.should.equal('WHERE (("name"=$1) OR ("name"<>$2 AND "store_id"=$3))');
       params.should.deep.equal([name, name, store]);
     });
     it('should handle mixed or/and constraints', () => {
@@ -1848,7 +1821,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "id"=$1 AND (("name"=$2) OR ("name"<>$3 AND "store_id"=$4)) AND "sku"=$5');
+      whereStatement!.should.equal('WHERE "id"=$1 AND (("name"=$2) OR ("name"<>$3 AND "store_id"=$4)) AND "sku"=$5');
       params.should.deep.equal([
         id,
         name,
@@ -1870,14 +1843,15 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name"=ANY($1::TEXT[])');
+      whereStatement!.should.equal('WHERE "name"=ANY($1::TEXT[])');
       params.should.deep.equal([name]);
     });
     it('should treat integer type with array values as an =ANY() statement', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: faker.random.uuid(),
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           foo: {
@@ -1901,14 +1875,15 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "foo"=ANY($1::INTEGER[])');
+      whereStatement!.should.equal('WHERE "foo"=ANY($1::INTEGER[])');
       params.should.deep.equal([values]);
     });
     it('should treat float type with array values as an =ANY() statement', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: faker.random.uuid(),
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           foo: {
@@ -1932,14 +1907,15 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "foo"=ANY($1::NUMERIC[])');
+      whereStatement!.should.equal('WHERE "foo"=ANY($1::NUMERIC[])');
       params.should.deep.equal([values]);
     });
     it('should handle empty array value with array type column', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: faker.random.uuid(),
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           foo: {
@@ -1961,14 +1937,15 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "foo"=\'{}\'');
+      whereStatement!.should.equal('WHERE "foo"=\'{}\'');
       params.should.deep.equal([]);
     });
     it('should handle comparing array type as an array of null or empty', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: faker.random.uuid(),
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           foo: {
@@ -1990,14 +1967,15 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE ("foo" IS NULL OR "foo"=\'{}\')');
+      whereStatement!.should.equal('WHERE ("foo" IS NULL OR "foo"=\'{}\')');
       params.should.deep.equal([]);
     });
     it('should handle comparing array type with single value as =ANY()', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: faker.random.uuid(),
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           foo: {
@@ -2020,16 +1998,17 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE $1=ANY("foo")');
+      whereStatement!.should.equal('WHERE $1=ANY("foo")');
       params.should.deep.equal([
         value,
       ]);
     });
     it('should handle comparing array type with negated single value as <>ALL()', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: faker.random.uuid(),
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           foo: {
@@ -2054,16 +2033,17 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE $1<>ALL("foo")');
+      whereStatement!.should.equal('WHERE $1<>ALL("foo")');
       params.should.deep.equal([
         value,
       ]);
     });
     it('should handle comparing array type with array value as separate =ANY() statements', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: faker.random.uuid(),
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           foo: {
@@ -2089,17 +2069,18 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE ($1=ANY("foo") OR $2=ANY("foo"))');
+      whereStatement!.should.equal('WHERE ($1=ANY("foo") OR $2=ANY("foo"))');
       params.should.deep.equal([
         values[0],
         values[1],
       ]);
     });
     it('should handle comparing array type with negated array value as separate <>ALL() statements', () => {
-      const schema = {
+      const schema: ModelSchema = {
         globalId: faker.random.uuid(),
         attributes: {
           id: {
+            type: 'integer',
             primaryKey: true,
           },
           foo: {
@@ -2127,7 +2108,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE $1<>ALL("foo") AND $2<>ALL("foo")');
+      whereStatement!.should.equal('WHERE $1<>ALL("foo") AND $2<>ALL("foo")');
       params.should.deep.equal([
         values[0],
         values[1],
@@ -2145,7 +2126,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE 1<>1');
+      whereStatement!.should.equal('WHERE 1<>1');
       params.should.deep.equal([]);
     });
     it('should treat negated empty array value as "true"', () => {
@@ -2162,7 +2143,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE 1=1');
+      whereStatement!.should.equal('WHERE 1=1');
       params.should.deep.equal([]);
     });
     it('should handle single value array', () => {
@@ -2178,7 +2159,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name"=$1');
+      whereStatement!.should.equal('WHERE "name"=$1');
       params.should.deep.equal([name]);
     });
     it('should handle an array value with NULL explicitly', () => {
@@ -2193,7 +2174,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE ("name" IS NULL OR "name"=$1)');
+      whereStatement!.should.equal('WHERE ("name" IS NULL OR "name"=$1)');
       params.should.deep.equal(['']);
     });
     it('should treat negation of array value as an <>ALL() statement', () => {
@@ -2211,7 +2192,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name"<>ALL($1::TEXT[])');
+      whereStatement!.should.equal('WHERE "name"<>ALL($1::TEXT[])');
       params.should.deep.equal([name]);
     });
     it('should treat negation of empty array value as "true"', () => {
@@ -2228,7 +2209,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE 1=1');
+      whereStatement!.should.equal('WHERE 1=1');
       params.should.deep.equal([]);
     });
     it('should treat negation of array value with NULL explicitly as AND statements', () => {
@@ -2245,7 +2226,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "name" IS NOT NULL AND "name"<>$1');
+      whereStatement!.should.equal('WHERE "name" IS NOT NULL AND "name"<>$1');
       params.should.deep.equal(['']);
     });
     it('should use primaryKey if hydrated object is passed as a query value', () => {
@@ -2264,19 +2245,23 @@ describe('sqlHelper', () => {
         },
       });
 
-      whereStatement.should.equal('WHERE "store_id"=$1');
+      whereStatement!.should.equal('WHERE "store_id"=$1');
       params.should.deep.equal([store.id]);
     });
   });
   describe('#_buildOrderStatement()', () => {
-    const schema = {
+    const schema: ModelSchema = {
       globalId: faker.random.uuid(),
       attributes: {
         id: {
+          type: 'integer',
           primaryKey: true,
         },
-        foo: {},
+        foo: {
+          type: 'string',
+        },
         bar: {
+          type: 'string',
           columnName: 'foobar',
         },
       },
@@ -2293,6 +2278,7 @@ describe('sqlHelper', () => {
     it('should return empty if there are orders is null', () => {
       const result = sqlHelper._buildOrderStatement({
         schema,
+        // @ts-ignore
         sorts: null,
       });
 
