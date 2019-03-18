@@ -237,7 +237,7 @@ export class SqlHelper {
               schema: relationSchema,
             });
 
-            const primaryKeyValue = entityValue[relationPrimaryKeyPropertyName];
+            const primaryKeyValue = (entityValue as Partial<Entity>)[relationPrimaryKeyPropertyName];
             if (_.isUndefined(primaryKeyValue)) {
               throw new Error(`Undefined primary key value for hydrated object value for "${propertyName}" on "${schema.globalId}"`);
             }
@@ -345,7 +345,7 @@ export class SqlHelper {
                 schema: relationSchema,
               });
 
-              const primaryKeyValue = value[relationPrimaryKeyPropertyName];
+              const primaryKeyValue = (value as Partial<Entity>)[relationPrimaryKeyPropertyName];
               if (_.isUndefined(primaryKeyValue)) {
                 throw new Error(`Undefined primary key value for hydrated object value for "${propertyName}" on "${schema.globalId}"`);
               }
@@ -700,30 +700,14 @@ export class SqlHelper {
           value,
           params,
         });
-      case 'or': {
-        const orClauses = [];
-        for (const constraint of (value as string[] | number[])) {
-          const orClause = this._buildWhere({
-            modelSchemasByGlobalId,
-            schema,
-            isNegated,
-            value: constraint,
-            params,
-          });
-
-          orClauses.push(`(${orClause})`);
-        }
-
-        if (orClauses.length === 1) {
-          return orClauses[0];
-        }
-
-        if (isNegated) {
-          return orClauses.join(' AND ');
-        }
-
-        return `(${orClauses.join(' OR ')})`;
-      }
+      case 'or':
+        return this._buildOrOperatorStatement({
+          modelSchemasByGlobalId,
+          schema,
+          isNegated,
+          value: value as string[] | number[],
+          params,
+        });
       case 'contains':
         if (_.isArray(value)) {
           const values =  (value as string[]).map((val) => {
@@ -827,257 +811,339 @@ export class SqlHelper {
 
         throw new Error(`Expected value to be a string for "endsWith" constraint. Property (${propertyName}) in model (${schema.globalId}).`);
       case 'like':
-        if (_.isArray(value)) {
-          if (!value.length) {
-            if (isNegated) {
-              return '1=1';
-            }
-            return '1<>1';
-          }
-
-          if (value.length > 1) {
-            const lowerValues =  (value as string[]).map((val) => {
-              return val.toLowerCase();
-            });
-
-            const columnName = this._getColumnName({
-              schema,
-              propertyName: propertyName!,
-            });
-
-            // NOTE: This is doing a case-insensitive pattern match
-            params.push(lowerValues);
-            return `lower("${columnName}")${isNegated ? '<>ALL' : '=ANY'}($${params.length}::TEXT[])`;
-          }
-
-          // tslint:disable-next-line:no-parameter-reassignment
-          value = _.first(value as string[]);
+        return this._buildLikeOperatorStatement({
+          schema,
+          propertyName,
+          isNegated,
+          value,
+          params,
+        });
+      default: {
+        if (_.isUndefined(value)) {
+          throw new Error(`Attempting to query with an undefined value. ${propertyName || ''} on ${schema.globalId}`);
         }
 
-        if (_.isString(value)) {
-          const columnName = this._getColumnName({
-            schema,
-            propertyName: propertyName!,
-          });
+        if (propertyName) {
+          const modelAttribute = schema.attributes[propertyName] as ModelAttribute;
+          if (modelAttribute) {
+            if (modelAttribute.model && _.isObject(value)) {
+              const relationSchema = modelSchemasByGlobalId[modelAttribute.model.toLowerCase()];
 
-          // NOTE: This is doing a case-insensitive pattern match
-          params.push(value);
-          return `"${columnName}"${isNegated ? ' NOT' : ''} ILIKE $${params.length}`;
-        }
+              if (!relationSchema) {
+                throw new Error(`Unable to find model schema (${modelAttribute.model}) specified in where clause`);
+              }
 
-        throw new Error(`Expected value to be a string for "like" constraint. Property (${propertyName}) in model (${schema.globalId}).`);
-      default:
-        {
-          if (_.isUndefined(value)) {
-            throw new Error(`Attempting to query with an undefined value. ${propertyName || ''} on ${schema.globalId}`);
-          }
+              const relationPrimaryKey = this.getPrimaryKeyPropertyName({
+                schema: relationSchema,
+              });
 
-          if (propertyName) {
-            const propertyFromPropertyName = propertyName ? schema.attributes[propertyName] : null;
-            const propertyFromComparer = comparer ? schema.attributes[comparer] : null;
-            const property = propertyFromPropertyName || propertyFromComparer;
-            if (property) {
-              if ((property as ModelAttribute).model && _.isObject(value)) {
-                const relationSchema = modelSchemasByGlobalId[(property as ModelAttribute).model.toLowerCase()];
-
-                if (!relationSchema) {
-                  throw new Error(`Unable to find model schema (${(property as ModelAttribute).model}) specified in where clause`);
-                }
-
-                const relationPrimaryKey = this.getPrimaryKeyPropertyName({
-                  schema: relationSchema,
-                });
-
-                if (!_.isUndefined((value as Entity)[relationPrimaryKey])) {
+              if (!_.isUndefined((value as Entity)[relationPrimaryKey])) {
                   // Treat `value` as a hydrated object
-                  return this._buildWhere({
-                    modelSchemasByGlobalId,
-                    schema,
-                    propertyName,
-                    comparer,
-                    isNegated,
-                    value: (value as Entity)[relationPrimaryKey],
-                    params,
-                  });
-                }
-              }
-            }
-          }
-
-          if (_.isArray(value)) {
-            if (!value.length) {
-              const propertyFromPropertyName = propertyName ? schema.attributes[propertyName] : null;
-              const propertyFromComparer = comparer ? schema.attributes[comparer] : null;
-              const property = propertyFromPropertyName || propertyFromComparer;
-
-              if (property && (property as TypeAttribute).type && (property as TypeAttribute).type.toLowerCase() === 'array') {
-                const columnName = this._getColumnName({
-                  schema,
-                  propertyName: propertyName!,
-                });
-
-                return `"${columnName}"${isNegated ? '<>' : '='}'{}'`;
-              }
-
-              if (isNegated) {
-                return '1=1';
-              }
-
-              return '1<>1';
-            }
-
-            const orConstraints = [];
-            const valueWithoutNull = [];
-            for (const item of value) {
-              if (_.isNull(item)) {
-                orConstraints.push(this._buildWhere({
+                return this._buildWhere({
                   modelSchemasByGlobalId,
                   schema,
                   propertyName,
+                  comparer,
                   isNegated,
-                  value: null,
+                  value: (value as Entity)[relationPrimaryKey],
                   params,
-                }));
-              } else {
-                valueWithoutNull.push(item);
+                });
               }
             }
+          }
+        }
 
-            if (valueWithoutNull.length === 1) {
+        if (_.isArray(value)) {
+          if (!value.length) {
+            const typeAttributeFromPropertyName = propertyName ? schema.attributes[propertyName] as TypeAttribute : null;
+            const typeAttributeFromComparer = comparer ? schema.attributes[comparer] as TypeAttribute : null;
+            const arrayAttribute = typeAttributeFromPropertyName || typeAttributeFromComparer;
+
+            if (arrayAttribute && arrayAttribute.type && arrayAttribute.type.toLowerCase() === 'array') {
+              const arrayColumnName = this._getColumnName({
+                schema,
+                propertyName: propertyName!,
+              });
+
+              return `"${arrayColumnName}"${isNegated ? '<>' : '='}'{}'`;
+            }
+
+            if (isNegated) {
+              return '1=1';
+            }
+
+            return '1<>1';
+          }
+
+          const orConstraints = [];
+          const valueWithoutNull = [];
+          for (const item of value) {
+            if (_.isNull(item)) {
               orConstraints.push(this._buildWhere({
                 modelSchemasByGlobalId,
                 schema,
                 propertyName,
                 isNegated,
-                value: valueWithoutNull[0],
+                value: null,
                 params,
               }));
-            } else if (valueWithoutNull.length) {
-              const columnName = this._getColumnName({
-                schema,
-                propertyName: propertyName!,
-              });
+            } else {
+              valueWithoutNull.push(item);
+            }
+          }
 
-              const propertyFromPropertyName = propertyName ? schema.attributes[propertyName] : null;
-              const propertyFromComparer = comparer ? schema.attributes[comparer] : null;
-              const property = propertyFromPropertyName || propertyFromComparer;
-              const propertyType = property && (property as TypeAttribute).type ? (property as TypeAttribute).type.toLowerCase() : '';
+          if (valueWithoutNull.length === 1) {
+            orConstraints.push(this._buildWhere({
+              modelSchemasByGlobalId,
+              schema,
+              propertyName,
+              isNegated,
+              value: valueWithoutNull[0],
+              params,
+            }));
+          } else if (valueWithoutNull.length) {
+            const columnName = this._getColumnName({
+              schema,
+              propertyName: propertyName!,
+            });
+
+            const propertyFromPropertyName = propertyName ? schema.attributes[propertyName] as TypeAttribute : null;
+            const propertyFromComparer = comparer ? schema.attributes[comparer] as TypeAttribute : null;
+            const property = propertyFromPropertyName || propertyFromComparer;
+            const propertyType = property && property.type ? property.type.toLowerCase() : '';
               // If an array column type is queried with an array value, query each value of the array value separately
-              if (propertyType === 'array') {
-                for (const val of valueWithoutNull) {
-                  orConstraints.push(this._buildWhere({
-                    modelSchemasByGlobalId,
-                    schema,
-                    propertyName,
-                    isNegated,
-                    value: val,
-                    params,
-                  }));
-                }
-              } else {
-                let castType;
-                switch (propertyType) {
-                  case 'int':
-                  case 'integer':
-                    castType = '::INTEGER[]';
-                    break;
-                  case 'float':
-                    castType = '::NUMERIC[]';
-                    break;
-                  default:
-                    castType = '::TEXT[]';
-                    break;
-                }
-
-                params.push(valueWithoutNull);
-                orConstraints.push(`"${columnName}"${isNegated ? '<>ALL' : '=ANY'}($${params.length}${castType})`);
+            if (propertyType === 'array') {
+              for (const val of valueWithoutNull) {
+                orConstraints.push(this._buildWhere({
+                  modelSchemasByGlobalId,
+                  schema,
+                  propertyName,
+                  isNegated,
+                  value: val,
+                  params,
+                }));
               }
-            }
+            } else {
+              let castType;
+              switch (propertyType) {
+                case 'int':
+                case 'integer':
+                  castType = '::INTEGER[]';
+                  break;
+                case 'float':
+                  castType = '::NUMERIC[]';
+                  break;
+                default:
+                  castType = '::TEXT[]';
+                  break;
+              }
 
-            if (orConstraints.length === 1) {
-              return orConstraints[0];
+              params.push(valueWithoutNull);
+              orConstraints.push(`"${columnName}"${isNegated ? '<>ALL' : '=ANY'}($${params.length}${castType})`);
             }
-
-            if (isNegated) {
-              return orConstraints.join(' AND ');
-            }
-
-            return `(${orConstraints.join(' OR ')})`;
           }
 
-          if (_.isObject(value) && !_.isDate(value)) {
-            const andValues = [];
-            for (const [key, where] of Object.entries(value as WhereQuery)) {
-              let subQueryComparer: (Comparer | string | undefined);
-              if (this._isComparer(key)) {
-                subQueryComparer = key;
-              } else {
-                // tslint:disable-next-line:no-parameter-reassignment
-                propertyName = key;
-              }
-
-              andValues.push(this._buildWhere({
-                modelSchemasByGlobalId,
-                schema,
-                propertyName,
-                comparer: subQueryComparer,
-                isNegated,
-                value: where,
-                params,
-              }));
-            }
-
-            return andValues.join(' AND ');
+          if (orConstraints.length === 1) {
+            return orConstraints[0];
           }
 
-          const columnName = this._getColumnName({
-            schema,
-            propertyName: propertyName!,
-          });
-
-          if (_.isNull(value)) {
-            return `"${columnName}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
+          if (isNegated) {
+            return orConstraints.join(' AND ');
           }
 
-          params.push(value);
-
-          const property = schema.attributes[propertyName!];
-          const propertyType = (property as TypeAttribute).type;
-          const supportsLessThanGreaterThan = propertyType !== 'array' && propertyType !== 'json';
-
-          switch (comparer) {
-            case '<':
-              if (!supportsLessThanGreaterThan) {
-                throw new Error(`< operator is not supported for ${propertyType || 'unknown'} type. ${propertyName || ''} on ${schema.globalId}`);
-              }
-
-              return `"${columnName}"${isNegated ? '>=' : '<'}$${params.length}`;
-            case '<=':
-              if (!supportsLessThanGreaterThan) {
-                throw new Error(`<= operator is not supported for ${propertyType || 'unknown'} type. ${propertyName || ''} on ${schema.globalId}`);
-              }
-
-              return `"${columnName}"${isNegated ? '>' : '<='}$${params.length}`;
-            case '>':
-              if (!supportsLessThanGreaterThan) {
-                throw new Error(`> operator is not supported for ${propertyType || 'unknown'} type. ${propertyName || ''} on ${schema.globalId}`);
-              }
-
-              return `"${columnName}"${isNegated ? '<=' : '>'}$${params.length}`;
-            case '>=':
-              if (!supportsLessThanGreaterThan) {
-                throw new Error(`>= operator is not supported for ${propertyType || 'unknown'} type. ${propertyName || ''} on ${schema.globalId}`);
-              }
-
-              return `"${columnName}"${isNegated ? '<' : '>='}$${params.length}`;
-            default:
-              if (propertyType === 'array') {
-                return `$${params.length}${isNegated ? '<>ALL(' : '=ANY('}"${columnName}")`;
-              }
-
-              return `"${columnName}"${isNegated ? '<>' : '='}$${params.length}`;
-          }
+          return `(${orConstraints.join(' OR ')})`;
         }
+
+        if (_.isObject(value) && !_.isDate(value)) {
+          const andValues = [];
+          for (const [key, where] of Object.entries(value as WhereQuery)) {
+            let subQueryComparer: (Comparer | string | undefined);
+            if (this._isComparer(key)) {
+              subQueryComparer = key;
+            } else {
+                // tslint:disable-next-line:no-parameter-reassignment
+              propertyName = key;
+            }
+
+            andValues.push(this._buildWhere({
+              modelSchemasByGlobalId,
+              schema,
+              propertyName,
+              comparer: subQueryComparer,
+              isNegated,
+              value: where,
+              params,
+            }));
+          }
+
+          return andValues.join(' AND ');
+        }
+
+        return this._buildComparisonOperatorStatement({
+          schema,
+          propertyName: propertyName!,
+          comparer,
+          isNegated,
+          value,
+          params,
+        });
+      }
+    }
+  }
+
+  private static _buildOrOperatorStatement({
+                                             modelSchemasByGlobalId,
+                                             schema,
+                                             isNegated,
+                                             value,
+                                             params = [],
+                                           }: {
+                                             modelSchemasByGlobalId: ModelSchemasByGlobalId;
+                                             schema: ModelSchema;
+                                             isNegated: boolean;
+                                             value: string[] | number[];
+                                             params: any[];
+                                           }) {
+    const orClauses = [];
+    for (const constraint of value) {
+      const orClause = this._buildWhere({
+        modelSchemasByGlobalId,
+        schema,
+        isNegated,
+        value: constraint,
+        params,
+      });
+
+      orClauses.push(`(${orClause})`);
+    }
+
+    if (orClauses.length === 1) {
+      return orClauses[0];
+    }
+
+    if (isNegated) {
+      return orClauses.join(' AND ');
+    }
+
+    return `(${orClauses.join(' OR ')})`;
+  }
+
+  private static _buildLikeOperatorStatement({
+    schema,
+    propertyName,
+                                               isNegated,
+    value,
+                                               params,
+                                             }: {
+                                               schema: ModelSchema;
+                                               propertyName?: string;
+                                               comparer?: Comparer | string;
+                                               isNegated: boolean;
+                                               value?: string | string[] | number | number[] | Date | WhereQuery | null | Entity;
+                                               params: any[];
+                                             }) {
+    if (_.isArray(value)) {
+      if (!value.length) {
+        if (isNegated) {
+          return '1=1';
+        }
+        return '1<>1';
+      }
+
+      if (value.length > 1) {
+        const lowerValues =  (value as string[]).map((val) => {
+          return val.toLowerCase();
+        });
+
+        const columnName = this._getColumnName({
+          schema,
+          propertyName: propertyName!,
+        });
+
+        // NOTE: This is doing a case-insensitive pattern match
+        params.push(lowerValues);
+        return `lower("${columnName}")${isNegated ? '<>ALL' : '=ANY'}($${params.length}::TEXT[])`;
+      }
+
+      // tslint:disable-next-line:no-parameter-reassignment
+      value = _.first(value as string[]);
+    }
+
+    if (_.isString(value)) {
+      const columnName = this._getColumnName({
+        schema,
+        propertyName: propertyName!,
+      });
+
+      // NOTE: This is doing a case-insensitive pattern match
+      params.push(value);
+      return `"${columnName}"${isNegated ? ' NOT' : ''} ILIKE $${params.length}`;
+    }
+
+    throw new Error(`Expected value to be a string for "like" constraint. Property (${propertyName}) in model (${schema.globalId}).`);
+  }
+
+  private static _buildComparisonOperatorStatement({
+                                                     schema,
+                                                     propertyName,
+                                                     comparer,
+                                                     isNegated,
+                                                     value,
+                                                     params = [],
+                                                   }: {
+                                                     schema: ModelSchema;
+                                                     propertyName: string;
+                                                     comparer?: Comparer | string;
+                                                     isNegated: boolean;
+                                                     value: string | number | Date | WhereQuery | null | Entity;
+                                                     params: any[];
+                                                   }) {
+    const columnName = this._getColumnName({
+      schema,
+      propertyName,
+    });
+
+    if (_.isNull(value)) {
+      return `"${columnName}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
+    }
+
+    params.push(value);
+
+    const property = schema.attributes[propertyName!];
+    const propertyType = (property as TypeAttribute).type;
+    const supportsLessThanGreaterThan = propertyType !== 'array' && propertyType !== 'json';
+
+    switch (comparer) {
+      case '<':
+        if (!supportsLessThanGreaterThan) {
+          throw new Error(`< operator is not supported for ${propertyType || 'unknown'} type. ${propertyName || ''} on ${schema.globalId}`);
+        }
+
+        return `"${columnName}"${isNegated ? '>=' : '<'}$${params.length}`;
+      case '<=':
+        if (!supportsLessThanGreaterThan) {
+          throw new Error(`<= operator is not supported for ${propertyType || 'unknown'} type. ${propertyName || ''} on ${schema.globalId}`);
+        }
+
+        return `"${columnName}"${isNegated ? '>' : '<='}$${params.length}`;
+      case '>':
+        if (!supportsLessThanGreaterThan) {
+          throw new Error(`> operator is not supported for ${propertyType || 'unknown'} type. ${propertyName || ''} on ${schema.globalId}`);
+        }
+
+        return `"${columnName}"${isNegated ? '<=' : '>'}$${params.length}`;
+      case '>=':
+        if (!supportsLessThanGreaterThan) {
+          throw new Error(`>= operator is not supported for ${propertyType || 'unknown'} type. ${propertyName || ''} on ${schema.globalId}`);
+        }
+
+        return `"${columnName}"${isNegated ? '<' : '>='}$${params.length}`;
+      default:
+        if (propertyType === 'array') {
+          return `$${params.length}${isNegated ? '<>ALL(' : '=ANY('}"${columnName}")`;
+        }
+
+        return `"${columnName}"${isNegated ? '<>' : '='}$${params.length}`;
     }
   }
 

@@ -1293,8 +1293,8 @@ describe('model', () => {
             type: 'boolean',
           },
         },
+        // tslint:disable-next-line:no-shadowed-variable
         async beforeCreate(values) {
-          // tslint:disable-next-line:no-shadowed-variable
           return _.merge(values, {
             calledCreate: true,
             bar: true,
@@ -1504,8 +1504,8 @@ describe('model', () => {
             type: 'boolean',
           },
         },
+        // tslint:disable-next-line:no-shadowed-variable
         async beforeUpdate(values) {
-          // tslint:disable-next-line:no-shadowed-variable
           return _.merge(values, {
             calledUpdate: true,
             bar: true,
