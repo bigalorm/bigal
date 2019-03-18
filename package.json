@@ -34,17 +34,17 @@
   },
   "dependencies": {
     "lodash": "~4.17.11",
-    "pg": "~7.8.2"
+    "pg": "~7.9.0"
   },
   "devDependencies": {
     "@types/chai": "4.1.7",
     "@types/faker": "4.1.5",
-    "@types/lodash": "4.14.122",
+    "@types/lodash": "4.14.123",
     "@types/mocha": "5.2.6",
-    "@types/node": "11.11.1",
+    "@types/node": "11.11.3",
     "@types/pg": "7.4.13",
     "chai": "4.2.0",
-    "eslint": "5.15.1",
+    "eslint": "5.15.3",
     "eslint-config-airbnb-base": "13.1.0",
     "eslint-plugin-import": "2.16.0",
     "faker": "4.1.0",
@@ -54,7 +54,7 @@
     "strict-event-emitter-types": "2.0.0",
     "ts-mockito": "2.3.1",
     "ts-node": "8.0.3",
-    "tslint": "5.13.1",
+    "tslint": "5.14.0",
     "tslint-config-airbnb": "5.11.1",
     "typescript": "3.3.3333"
   }
