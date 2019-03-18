@@ -92,9 +92,6 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
    * @param {string|Object|string[]|Object[]} [args.sort] - Property name(s) to sort by
    */
   public findOne(args: FindOneArgs | WhereQuery = {}): FindOneResult<TEntity> {
-    const {
-      stack,
-    } = new Error(`${this._schema.globalId}.findOne()`);
     let select: string[] | undefined;
     let where = {};
     let sort: string | string[] | null = null;
@@ -204,7 +201,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
           });
 
           const results = await modelInstance._readonlyPool.query(query, params);
-          if (results.rows.length) {
+          if (results.rows && results.rows.length) {
             const result = modelInstance._buildInstance(results.rows[0]);
 
             const populateQueries = [];
@@ -323,7 +320,6 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
 
           return resolve(null);
         } catch (ex) {
-          ex.stack += stack;
           reject(ex);
         }
       },
@@ -340,9 +336,6 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
    * @param {string|Number} [args.limit] - Number of results to return
    */
   public find(args: FindArgs | WhereQuery = {}): FindResult<TEntity> {
-    const {
-      stack,
-    } = new Error(`${this._schema.globalId}.find()`);
     let select: string[] | undefined;
     let where = {};
     let sort: string | string[] | null = null;
@@ -465,7 +458,6 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
           const results = await modelInstance._readonlyPool.query(query, params);
           resolve(modelInstance._buildInstances(results.rows));
         } catch (ex) {
-          ex.stack += stack;
           reject(ex);
         }
       },
@@ -478,9 +470,6 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
    * @returns {Number} Number of records matching the where criteria
    */
   public count(where?: WhereQuery): CountResult<TEntity> {
-    const {
-      stack,
-    } = new Error(`${this._schema.globalId}.count()`);
     const modelInstance = this;
 
     return {
@@ -516,7 +505,6 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
           // If the count is greater than MAX_SAFE_INT, return value as a string
           return resolve(originalValue);
         } catch (ex) {
-          ex.stack += stack;
           reject(ex);
         }
       },
@@ -553,27 +541,23 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
   }: CreateUpdateDeleteOptions = {
     returnRecords: true,
   }): Promise<TEntity | TEntity[] | boolean> {
+    if (_.isArray(values) && !values.length) {
+      return [];
+    }
+
+    const beforeCreate = this._schema.beforeCreate;
+
+    if (beforeCreate) {
+      if (Array.isArray(values)) {
+          // tslint:disable-next-line:no-parameter-reassignment
+        values = await Promise.all(values.map(beforeCreate)) as Array<Partial<TEntity>>;
+      } else {
+          // tslint:disable-next-line:no-parameter-reassignment
+        values = await beforeCreate(values) as Partial<TEntity>;
+      }
+    }
+
     const {
-      stack,
-    } = new Error(`${this._schema.globalId}.create()`);
-    try {
-      if (_.isArray(values) && !values.length) {
-        return [];
-      }
-
-      const beforeCreate = this._schema.beforeCreate;
-
-      if (beforeCreate) {
-        if (Array.isArray(values)) {
-          // tslint:disable-next-line:no-parameter-reassignment
-          values = await Promise.all(values.map(beforeCreate)) as Array<Partial<TEntity>>;
-        } else {
-          // tslint:disable-next-line:no-parameter-reassignment
-          values = await beforeCreate(values) as Partial<TEntity>;
-        }
-      }
-
-      const {
         query,
         params,
       } = SqlHelper.getInsertQueryAndParams({
@@ -584,24 +568,20 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
         returnSelect,
       });
 
-      const results = await this._pool.query(query, params);
-      if (returnRecords) {
-        if (_.isArray(values)) {
-          return this._buildInstances(results.rows);
-        }
-
-        if (results.rows.length) {
-          return this._buildInstance(results.rows[0]);
-        }
-
-        throw new Error(('Unknown error getting created rows back from the database'));
+    const results = await this._pool.query(query, params);
+    if (returnRecords) {
+      if (_.isArray(values)) {
+        return this._buildInstances(results.rows);
       }
 
-      return true;
-    } catch (ex) {
-      ex.stack += stack;
-      throw ex;
+      if (results.rows && results.rows.length) {
+        return this._buildInstance(results.rows[0]);
+      }
+
+      throw new Error(('Unknown error getting created rows back from the database'));
     }
+
+    return true;
   }
 
   /**
@@ -636,22 +616,18 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
   }: CreateUpdateDeleteOptions = {
     returnRecords: true,
   }): Promise<TEntity[] | boolean> {
-    const {
-      stack,
-    } = new Error(`${this._schema.globalId}.update()`);
-    try {
-      const beforeUpdate = this._schema.beforeUpdate;
+    const beforeUpdate = this._schema.beforeUpdate;
 
-      if (_.isString(where)) {
-        throw new Error('The query cannot be a string, it must be an object');
-      }
+    if (_.isString(where)) {
+      throw new Error('The query cannot be a string, it must be an object');
+    }
 
-      if (beforeUpdate) {
+    if (beforeUpdate) {
         // tslint:disable-next-line:no-parameter-reassignment
-        values = await beforeUpdate(values) as Partial<TEntity>;
-      }
+      values = await beforeUpdate(values) as Partial<TEntity>;
+    }
 
-      const {
+    const {
         query,
         params,
       } = SqlHelper.getUpdateQueryAndParams({
@@ -663,17 +639,13 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
         returnSelect,
       });
 
-      const results = await this._pool.query(query, params);
+    const results = await this._pool.query(query, params);
 
-      if (returnRecords) {
-        return this._buildInstances(results.rows);
-      }
-
-      return true;
-    } catch (ex) {
-      ex.stack += stack;
-      throw ex;
+    if (returnRecords) {
+      return this._buildInstances(results.rows);
     }
+
+    return true;
   }
 
   /**
@@ -704,9 +676,6 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
   }: CreateUpdateDeleteOptions = {
     returnRecords: true,
   }): DestroyResult<TEntity, TEntity[] | boolean> {
-    const {
-      stack,
-    } = new Error(`${this._schema.globalId}.destroy()`);
     const modelInstance = this;
 
     return {
@@ -721,11 +690,11 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
         return this;
       },
       async then(resolve: (result: TEntity[] | boolean) => void, reject: (err: Error) => void) {
-        try {
-          if (_.isString(where)) {
-            reject(new Error('The query cannot be a string, it must be an object'));
-          }
+        if (_.isString(where)) {
+          reject(new Error('The query cannot be a string, it must be an object'));
+        }
 
+        try {
           const {
             query,
             params,
@@ -745,7 +714,6 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
 
           return resolve(true);
         } catch (ex) {
-          ex.stack += stack;
           reject(ex);
         }
       },

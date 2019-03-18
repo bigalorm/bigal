@@ -474,6 +474,7 @@ export class SqlHelper {
    * @returns {string} SQL columns
    * @private
    */
+  // tslint:disable-next-line:function-name
   public static _getColumnsToSelect({
     schema,
     select,
@@ -526,6 +527,7 @@ export class SqlHelper {
    * @returns {{whereStatement?: string, params: Array}}
    * @private
    */
+  // tslint:disable-next-line:function-name
   public static _buildWhereStatement({
     modelSchemasByGlobalId,
     schema,
@@ -559,6 +561,103 @@ export class SqlHelper {
       whereStatement,
       params,
     };
+  }
+
+  /**
+   * Gets the name of the sql column for the specified property
+   * @param {Object} schema - Model schema
+   * @param {string} propertyName - Name of property in model
+   * @returns {string} Column name
+   * @private
+   */
+  // tslint:disable-next-line:function-name
+  public static _getColumnName({
+    schema,
+    propertyName,
+  }: {
+    schema: ModelSchema;
+    propertyName: string;
+  }) {
+    if (!propertyName) {
+      throw new Error('propertyName is not defined.');
+    }
+
+    const property = schema.attributes[propertyName];
+    if (!property) {
+      throw new Error(`Property (${propertyName}) not found in model (${schema.globalId}).`);
+    }
+
+    return (property as BaseAttribute).columnName || propertyName;
+  }
+
+  /**
+   * Builds the SQL order by statement based on the array of sortable expressions
+   * @param {Object} schema - Model schema
+   * @param {string[]|Object[]} sorts - Property name(s) to sort by
+   * @returns {string} SQL order by statement
+   * @private
+   */
+  // tslint:disable-next-line:function-name
+  public static _buildOrderStatement({
+    schema,
+    sorts,
+  }: {
+    schema: ModelSchema;
+    sorts: Array<string | object>
+  }): string {
+    if (_.isNil(sorts) || !_.some(sorts)) {
+      return '';
+    }
+
+    let orderStatement = 'ORDER BY ';
+    const orderProperties: Array<{
+      propertyName: string;
+      order: number | string;
+    }> = [];
+    for (const sortStatement of sorts) {
+      if (_.isString(sortStatement)) {
+        for (const sort of sortStatement.split(',')) {
+          const parts = sort.split(' ');
+          const propertyName = parts.shift();
+          if (propertyName) {
+            orderProperties.push({
+              propertyName,
+              order: parts.join(''),
+            });
+          }
+        }
+      } else if (_.isObject(sortStatement)) {
+        for (const [propertyName, order] of Object.entries(sortStatement)) {
+          orderProperties.push({
+            propertyName,
+            order,
+          });
+        }
+      }
+    }
+
+    for (const [index, orderProperty] of orderProperties.entries()) {
+      if (index > 0) {
+        orderStatement += ',';
+      }
+
+      const {
+        propertyName,
+        order,
+      } = orderProperty;
+      const columnName = this._getColumnName({
+        schema,
+        propertyName,
+      });
+
+      orderStatement += `"${columnName}"`;
+
+      if (order && (order === -1 || order === '-1' || /desc/i.test(`${order}`))) {
+        orderStatement += ' DESC';
+      }
+    }
+
+    return orderStatement;
   }
 
   /**
@@ -1006,100 +1105,5 @@ export class SqlHelper {
       default:
         return false;
     }
-  }
-
-  /**
-   * Gets the name of the sql column for the specified property
-   * @param {Object} schema - Model schema
-   * @param {string} propertyName - Name of property in model
-   * @returns {string} Column name
-   * @private
-   */
-  public static _getColumnName({
-    schema,
-    propertyName,
-  }: {
-    schema: ModelSchema;
-    propertyName: string;
-  }) {
-    if (!propertyName) {
-      throw new Error('propertyName is not defined.');
-    }
-
-    const property = schema.attributes[propertyName];
-    if (!property) {
-      throw new Error(`Property (${propertyName}) not found in model (${schema.globalId}).`);
-    }
-
-    return (property as BaseAttribute).columnName || propertyName;
-  }
-
-  /**
-   * Builds the SQL order by statement based on the array of sortable expressions
-   * @param {Object} schema - Model schema
-   * @param {string[]|Object[]} sorts - Property name(s) to sort by
-   * @returns {string} SQL order by statement
-   * @private
-   */
-  public static _buildOrderStatement({
-    schema,
-    sorts,
-  }: {
-    schema: ModelSchema;
-    sorts: Array<string | object>
-  }): string {
-    if (_.isNil(sorts) || !_.some(sorts)) {
-      return '';
-    }
-
-    let orderStatement = 'ORDER BY ';
-    const orderProperties: Array<{
-      propertyName: string;
-      order: number | string;
-    }> = [];
-    for (const sortStatement of sorts) {
-      if (_.isString(sortStatement)) {
-        for (const sort of sortStatement.split(',')) {
-          const parts = sort.split(' ');
-          const propertyName = parts.shift();
-          if (propertyName) {
-            orderProperties.push({
-              propertyName,
-              order: parts.join(''),
-            });
-          }
-        }
-      } else if (_.isObject(sortStatement)) {
-        for (const [propertyName, order] of Object.entries(sortStatement)) {
-          orderProperties.push({
-            propertyName,
-            order,
-          });
-        }
-      }
-    }
-
-    for (const [index, orderProperty] of orderProperties.entries()) {
-      if (index > 0) {
-        orderStatement += ',';
-      }
-
-      const {
-        propertyName,
-        order,
-      } = orderProperty;
-      const columnName = this._getColumnName({
-        schema,
-        propertyName,
-      });
-
-      orderStatement += `"${columnName}"`;
-
-      if (order && (order === -1 || order === '-1' || /desc/i.test(`${order}`))) {
-        orderStatement += ' DESC';
-      }
-    }
-
-    return orderStatement;
   }
 }

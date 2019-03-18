@@ -4,8 +4,8 @@ import * as _ from 'lodash';
 import * as faker from 'faker';
 
 import { SqlHelper as sqlHelper } from '../src/SqlHelper';
-import {ModelSchema} from "../src/schema/ModelSchema";
-import {ModelSchemasByGlobalId} from "../src/schema/ModelSchemasByGlobalId";
+import { ModelSchema } from '../src/schema/ModelSchema';
+import { ModelSchemasByGlobalId } from '../src/schema/ModelSchemasByGlobalId';
 
 describe('sqlHelper', () => {
   let should: Chai.Should;
@@ -117,7 +117,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}"`);
+        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
       it('should include primaryKey column if select is empty', () => {
@@ -134,7 +134,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id" FROM "${productSchema.tableName}"`);
+        query.should.equal(`SELECT "id" FROM "${productSchema.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
       it('should include primaryKey column if select does not include it', () => {
@@ -151,7 +151,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "name","id" FROM "${productSchema.tableName}"`);
+        query.should.equal(`SELECT "name","id" FROM "${productSchema.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
     });
@@ -172,7 +172,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" WHERE "name"=$1`);
+        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" WHERE "name"=$1 LIMIT 1`);
         params.should.deep.equal([name]);
       });
     });
@@ -190,7 +190,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" ORDER BY "name"`);
+        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" ORDER BY "name" LIMIT 1`);
         params.should.deep.equal([]);
       });
     });
@@ -208,7 +208,7 @@ describe('sqlHelper', () => {
           skip: 100,
         });
 
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" OFFSET 100`);
+        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" LIMIT 1 OFFSET 100`);
         params.should.deep.equal([]);
       });
     });
@@ -1297,6 +1297,7 @@ describe('sqlHelper', () => {
     it('should return the first attribute with primaryKey=true', () => {
       const schema: ModelSchema = {
         globalId: faker.random.uuid(),
+        tableName: 'foo',
         attributes: {
           foo: {
             type: 'string',
@@ -1317,6 +1318,7 @@ describe('sqlHelper', () => {
     it('should return id if no attributes are found with primaryKey=true', () => {
       const schema: ModelSchema = {
         globalId: faker.random.uuid(),
+        tableName: 'foo',
         attributes: {
           foo: {
             type: 'string',
@@ -1334,6 +1336,7 @@ describe('sqlHelper', () => {
   describe('#_getColumnName()', () => {
     const schema: ModelSchema = {
       globalId: faker.random.uuid(),
+      tableName: 'foo',
       attributes: {
         id: {
           type: 'string',
@@ -1849,6 +1852,7 @@ describe('sqlHelper', () => {
     it('should treat integer type with array values as an =ANY() statement', () => {
       const schema: ModelSchema = {
         globalId: faker.random.uuid(),
+        tableName: 'foo',
         attributes: {
           id: {
             type: 'integer',
@@ -1881,6 +1885,7 @@ describe('sqlHelper', () => {
     it('should treat float type with array values as an =ANY() statement', () => {
       const schema: ModelSchema = {
         globalId: faker.random.uuid(),
+        tableName: 'foo',
         attributes: {
           id: {
             type: 'integer',
@@ -1913,6 +1918,7 @@ describe('sqlHelper', () => {
     it('should handle empty array value with array type column', () => {
       const schema: ModelSchema = {
         globalId: faker.random.uuid(),
+        tableName: 'foo',
         attributes: {
           id: {
             type: 'integer',
@@ -1943,6 +1949,7 @@ describe('sqlHelper', () => {
     it('should handle comparing array type as an array of null or empty', () => {
       const schema: ModelSchema = {
         globalId: faker.random.uuid(),
+        tableName: 'foo',
         attributes: {
           id: {
             type: 'integer',
@@ -1973,6 +1980,7 @@ describe('sqlHelper', () => {
     it('should handle comparing array type with single value as =ANY()', () => {
       const schema: ModelSchema = {
         globalId: faker.random.uuid(),
+        tableName: 'foo',
         attributes: {
           id: {
             type: 'integer',
@@ -2006,6 +2014,7 @@ describe('sqlHelper', () => {
     it('should handle comparing array type with negated single value as <>ALL()', () => {
       const schema: ModelSchema = {
         globalId: faker.random.uuid(),
+        tableName: 'foo',
         attributes: {
           id: {
             type: 'integer',
@@ -2041,6 +2050,7 @@ describe('sqlHelper', () => {
     it('should handle comparing array type with array value as separate =ANY() statements', () => {
       const schema: ModelSchema = {
         globalId: faker.random.uuid(),
+        tableName: 'foo',
         attributes: {
           id: {
             type: 'integer',
@@ -2078,6 +2088,7 @@ describe('sqlHelper', () => {
     it('should handle comparing array type with negated array value as separate <>ALL() statements', () => {
       const schema: ModelSchema = {
         globalId: faker.random.uuid(),
+        tableName: 'foo',
         attributes: {
           id: {
             type: 'integer',
@@ -2252,6 +2263,7 @@ describe('sqlHelper', () => {
   describe('#_buildOrderStatement()', () => {
     const schema: ModelSchema = {
       globalId: faker.random.uuid(),
+      tableName: 'foo',
       attributes: {
         id: {
           type: 'integer',

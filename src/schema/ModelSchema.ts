@@ -3,7 +3,7 @@ import { Attributes } from './attributes';
 
 export interface ModelSchema {
   globalId: string;
-  tableName?: string;
+  tableName: string;
   connection?: string;
   autoCreatedAt?: boolean;
   autoUpdatedAt?: boolean;

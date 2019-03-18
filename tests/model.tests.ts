@@ -32,7 +32,7 @@ describe('model', () => {
     tableName: 'store',
     attributes: {
       id: {
-        type: 'integer',
+        type: 'string',
         primaryKey: true,
       },
       name: {
@@ -49,7 +49,7 @@ describe('model', () => {
     tableName: 'product',
     attributes: {
       id: {
-        type: 'integer',
+        type: 'string',
         primaryKey: true,
       },
       name: {
@@ -71,7 +71,7 @@ describe('model', () => {
     tableName: 'category',
     attributes: {
       id: {
-        type: 'integer',
+        type: 'string',
         primaryKey: true,
       },
       name: {
@@ -89,7 +89,7 @@ describe('model', () => {
     tableName: 'product__category',
     attributes: {
       id: {
-        type: 'integer',
+        type: 'string',
         primaryKey: true,
       },
       product: {
@@ -1280,6 +1280,7 @@ describe('model', () => {
     it('should execute beforeCreate if defined as a schema method', async () => {
       const schema: ModelSchema = {
         globalId: faker.random.uuid(),
+        tableName: 'foo',
         attributes: {
           id: {
             type: 'integer',
@@ -1310,6 +1311,12 @@ describe('model', () => {
           Model = model;
         },
       });
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([{
+          id: 42,
+        }]),
+      );
 
       interface ValueType {
         id: number;
@@ -1484,6 +1491,7 @@ describe('model', () => {
     it('should execute beforeUpdate if defined as a schema method', async () => {
       const schema: ModelSchema = {
         globalId: faker.random.uuid(),
+        tableName: 'foo',
         attributes: {
           id: {
             type: 'integer',
@@ -1522,6 +1530,12 @@ describe('model', () => {
         foo?: boolean;
         bar?: boolean;
       }
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([{
+          id: 42,
+        }]),
+      );
 
       const values: ValueType = {
         id: 42,
