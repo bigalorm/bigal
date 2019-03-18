@@ -7,8 +7,12 @@
 .npmrc
 .github
 
-test
-git-hooks
+src
+tests
+
+tsconfig.json
+tsconfig.lint.json
+tslint.json
 
 node_modules
 npm-debug.log
