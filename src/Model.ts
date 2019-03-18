@@ -92,7 +92,9 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
    * @param {string|Object|string[]|Object[]} [args.sort] - Property name(s) to sort by
    */
   public findOne(args: FindOneArgs | WhereQuery = {}): FindOneResult<TEntity> {
-    let select: string[] | undefined;
+    const {
+      stack,
+    } = new Error(`${this._schema.globalId}.findOne()`);    let select: string[] | undefined;
     let where = {};
     let sort: string | string[] | null = null;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
@@ -133,6 +135,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
       sorts.push(sort);
     }
 
+    // tslint:disable-next-line:no-this-assignment
     const modelInstance = this;
 
     return {
@@ -320,6 +323,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
 
           return resolve(null);
         } catch (ex) {
+          ex.stack += stack;
           reject(ex);
         }
       },
@@ -336,6 +340,10 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
    * @param {string|Number} [args.limit] - Number of results to return
    */
   public find(args: FindArgs | WhereQuery = {}): FindResult<TEntity> {
+    const {
+      stack,
+    } = new Error(`${this._schema.globalId}.find()`);
+
     let select: string[] | undefined;
     let where = {};
     let sort: string | string[] | null = null;
@@ -382,6 +390,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
       sorts.push(sort);
     }
 
+    // tslint:disable-next-line:no-this-assignment
     const modelInstance = this;
 
     return {
@@ -458,6 +467,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
           const results = await modelInstance._readonlyPool.query(query, params);
           resolve(modelInstance._buildInstances(results.rows));
         } catch (ex) {
+          ex.stack += stack;
           reject(ex);
         }
       },
@@ -470,6 +480,11 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
    * @returns {Number} Number of records matching the where criteria
    */
   public count(where?: WhereQuery): CountResult<TEntity> {
+    const {
+      stack,
+    } = new Error(`${this._schema.globalId}.count()`);
+
+    // tslint:disable-next-line:no-this-assignment
     const modelInstance = this;
 
     return {
@@ -505,6 +520,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
           // If the count is greater than MAX_SAFE_INT, return value as a string
           return resolve(originalValue);
         } catch (ex) {
+          ex.stack += stack;
           reject(ex);
         }
       },
@@ -676,6 +692,11 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
   }: CreateUpdateDeleteOptions = {
     returnRecords: true,
   }): DestroyResult<TEntity, TEntity[] | boolean> {
+    const {
+      stack,
+    } = new Error(`${this._schema.globalId}.destroy()`);
+
+    // tslint:disable-next-line:no-this-assignment
     const modelInstance = this;
 
     return {
@@ -714,6 +735,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
 
           return resolve(true);
         } catch (ex) {
+          ex.stack += stack;
           reject(ex);
         }
       },
