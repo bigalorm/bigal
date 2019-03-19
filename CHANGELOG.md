@@ -1,5 +1,5 @@
 ### 2.0.0
-  * Typescript ftw!
+  * Typescript ftw! The API is the same as BigAl v1.x. BigAl v2 is a rewrite in typescript, to provide strong type support. It should be a drop in update to go to v2.
 
 ### 1.2.1
   * Use husky to enforce precommit hook for development
