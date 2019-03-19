@@ -1,7 +1,7 @@
 import * as _ from 'lodash';
 import { Pool } from 'postgres-pool';
 import { ModelSchema } from './schema/ModelSchema';
-import { Model } from './model';
+import { Model } from './Model';
 import { Repository } from './Repository';
 import { ModelClassesByGlobalId } from './ModelClassesByGlobalId';
 import { ModelSchemasByGlobalId } from './schema/ModelSchemasByGlobalId';

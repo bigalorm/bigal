@@ -1,3 +1,6 @@
+### 2.0.1
+  * Fix case of import module for initialization function
+
 ### 2.0.0
   * Typescript ftw! The API is the same as BigAl v1.x. BigAl v2 is a rewrite in typescript, to provide strong type support. It should be a drop in update to go to v2.
 
