@@ -667,7 +667,7 @@ export class SqlHelper {
    * @param {string} [propertyName] - Name of property to query by
    * @param {string} [comparer] - Comparison operator
    * @param {Boolean} [isNegated=false] - If it is negated comparison
-   * @param {Object|string|Number} [value] - Value to compare. Can also represent a complex where query
+   * @param {Object|string|Number|boolean} [value] - Value to compare. Can also represent a complex where query
    * @param {Array} params - Objects to pass as parameters for the query
    * @returns {string} - Query text
    * @private
@@ -686,7 +686,7 @@ export class SqlHelper {
     propertyName?: string;
     comparer?: Comparer | string;
     isNegated?: boolean;
-    value?: string | string[] | number | number[] | Date | WhereQuery | null | Entity;
+    value?: string | string[] | number | number[] | Date | boolean | WhereQuery | null | Entity;
     params: any[];
   }): string {
     switch (comparer || propertyName) {
@@ -1039,7 +1039,7 @@ export class SqlHelper {
                                                propertyName?: string;
                                                comparer?: Comparer | string;
                                                isNegated: boolean;
-                                               value?: string | string[] | number | number[] | Date | WhereQuery | null | Entity;
+                                               value?: string | string[] | number | number[] | Date | boolean | WhereQuery | null | Entity;
                                                params: any[];
                                              }) {
     if (_.isArray(value)) {
@@ -1095,7 +1095,7 @@ export class SqlHelper {
                                                      propertyName: string;
                                                      comparer?: Comparer | string;
                                                      isNegated: boolean;
-                                                     value: string | number | Date | WhereQuery | null | Entity;
+                                                     value: string | number | Date | boolean | WhereQuery | null | Entity;
                                                      params: any[];
                                                    }) {
     const columnName = this._getColumnName({

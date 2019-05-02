@@ -1,3 +1,6 @@
+### 2.0.2
+  * Add boolean types as acceptable values for a where clause
+
 ### 2.0.1
   * Fix case of import module for initialization function
 
