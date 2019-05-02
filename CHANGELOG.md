@@ -1,3 +1,6 @@
+### 2.0.3
+  * Update npm dependencies
+
 ### 2.0.2
   * Add boolean types as acceptable values for a where clause
 

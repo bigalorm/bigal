@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "A fast and lightweight orm for postgres.",
   "main": "dist/index.js",
   "scripts": {
@@ -34,28 +34,28 @@
   },
   "dependencies": {
     "lodash": "~4.17.11",
-    "pg": "~7.9.0"
+    "pg": "7.10.0"
   },
   "devDependencies": {
     "@types/chai": "4.1.7",
     "@types/faker": "4.1.5",
     "@types/lodash": "4.14.123",
     "@types/mocha": "5.2.6",
-    "@types/node": "11.11.3",
-    "@types/pg": "7.4.13",
+    "@types/node": "11.13.8",
+    "@types/pg": "7.4.14",
     "chai": "4.2.0",
-    "eslint": "5.15.3",
+    "eslint": "5.16.0",
     "eslint-config-airbnb-base": "13.1.0",
-    "eslint-plugin-import": "2.16.0",
+    "eslint-plugin-import": "2.17.2",
     "faker": "4.1.0",
-    "husky": "1.3.1",
-    "mocha": "6.0.2",
-    "postgres-pool": "1.2.0",
+    "husky": "2.2.0",
+    "mocha": "6.1.4",
+    "postgres-pool": "1.3.0",
     "strict-event-emitter-types": "2.0.0",
     "ts-mockito": "2.3.1",
-    "ts-node": "8.0.3",
-    "tslint": "5.14.0",
+    "ts-node": "8.1.0",
+    "tslint": "5.16.0",
     "tslint-config-airbnb": "5.11.1",
-    "typescript": "3.3.3333"
+    "typescript": "3.4.5"
   }
 }
