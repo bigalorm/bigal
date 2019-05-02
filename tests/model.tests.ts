@@ -220,6 +220,31 @@ describe('model', () => {
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
       params!.should.deep.equal([product.id]);
     });
+    it('should support call with chained where constraints - Promise.all', async () => {
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      const [
+        result,
+      ] = await Promise.all([
+        Product.findOne().where({
+          id: product.id,
+        }),
+      ]);
+      should.exist(result);
+      result!.should.deep.equal(product);
+
+      const [
+        query,
+        params,
+      ] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
+      params!.should.deep.equal([product.id]);
+    });
     it('should support call with chained sort', async () => {
       const product = {
         id: faker.random.uuid(),
@@ -1002,6 +1027,39 @@ describe('model', () => {
       query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
       params!.should.deep.equal([store.id]);
     });
+    it('should support call with chained where constraints - Promise.all', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
+      const [
+        result,
+      ] = await Promise.all([
+        Product.find().where({
+          store: store.id,
+        }),
+      ]);
+      should.exist(result);
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
+      params!.should.deep.equal([store.id]);
+    });
     it('should support call with chained sort', async () => {
       const products = [{
         id: faker.random.uuid(),
@@ -1275,6 +1333,42 @@ describe('model', () => {
       query.should.equal('SELECT count(*) AS "count" FROM "product" WHERE "store_id"=$1');
       params!.should.deep.equal([store.id]);
     });
+    it('should support call with chained where constraints - Promise.all', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([{
+          count: products.length,
+        }]),
+      );
+
+      const [
+        result,
+      ] = await Promise.all([
+        Product.count().where({
+          store: store.id,
+        }),
+      ]);
+      should.exist(result);
+      result.should.equal(products.length);
+
+      const [
+        query,
+        params,
+      ] = capture(mockedPool.query).first();
+      query.should.equal('SELECT count(*) AS "count" FROM "product" WHERE "store_id"=$1');
+      params!.should.deep.equal([store.id]);
+    });
   });
   describe('#create()', () => {
     it('should execute beforeCreate if defined as a schema method', async () => {
@@ -1352,6 +1446,40 @@ describe('model', () => {
         name: product.name,
         store: product.store,
       });
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      should.exist(result);
+      result.should.deep.equal(product);
+
+      const [
+        query,
+        params,
+      ] = capture(mockedPool.query).first();
+      query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$2) RETURNING "id","name","store_id" AS "store"');
+      params!.should.deep.equal([
+        product.name,
+        product.store,
+      ]);
+    });
+    it('should return single object result if single value is specified - Promise.all', async () => {
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([product]),
+      );
+
+      const [
+        result,
+      ] = await Promise.all([
+        Product.create({
+          name: product.name,
+          store: product.store,
+        }),
+      ]);
 
       verify(mockedPool.query(anyString(), anything())).once();
       should.exist(result);
@@ -1582,6 +1710,42 @@ describe('model', () => {
         product.id,
       ]);
     });
+    it('should return array of updated objects if second parameter is not defined - Promise.all', async () => {
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([product]),
+      );
+
+      const [
+        results,
+      ] = await Promise.all([
+        Product.update({
+          id: product.id,
+        }, {
+          name: product.name,
+          store: product.store,
+        }),
+      ]);
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      results.should.deep.equal([product]);
+
+      const [
+        query,
+        params,
+      ] = capture(mockedPool.query).first();
+      query.should.equal('UPDATE "product" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","store_id" AS "store"');
+      params!.should.deep.equal([
+        product.name,
+        product.store,
+        product.id,
+      ]);
+    });
     it('should return true if returnRecords=false', async () => {
       const product = {
         id: faker.random.uuid(),
@@ -1695,6 +1859,39 @@ describe('model', () => {
       const result = await Product.destroy().where({
         store: store.id,
       });
+      should.exist(result);
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = capture(mockedPool.query).first();
+      query.should.equal('DELETE FROM "product" WHERE "store_id"=$1 RETURNING "id","name","store_id" AS "store"');
+      params!.should.deep.equal([store.id]);
+    });
+    it('should support call with chained where constraints - Promise.all', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
+      const [
+        result,
+      ] = await Promise.all([
+        Product.destroy().where({
+          store: store.id,
+        }),
+      ]);
       should.exist(result);
       result.should.deep.equal(products);
 

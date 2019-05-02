@@ -1,3 +1,6 @@
+### 2.0.5
+  * Allow .findOne(), .find(), .count(), .update(), and .destroy() to be used in an iterable promise (eg. Promise.all())
+
 ### 2.0.4
   * Fix return type for .findOne(), .find(), .count(), .destroy() to not include `undefined`
 
