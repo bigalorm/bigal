@@ -7,5 +7,5 @@ export interface FindResult<TEntity> {
   limit(value: number): FindResult<TEntity>;
   skip(value: number): FindResult<TEntity>;
   paginate(options: PaginateOptions): FindResult<TEntity>;
-  then(resolve: (thenableOrResult?: TEntity[] | PromiseLike<TEntity[]>) => void, reject: (err: Error) => void): Promise<void>;
+  then(resolve: (thenableOrResult: TEntity[] | PromiseLike<TEntity[]>) => void, reject: (err: Error) => void): Promise<void>;
 }

@@ -892,7 +892,7 @@ describe('model', () => {
       );
       const result = await Product.find();
       should.exist(result);
-      result!.should.deep.equal(products);
+      result.should.deep.equal(products);
 
       const [
         query,
@@ -928,7 +928,7 @@ describe('model', () => {
         limit: 24,
       });
       should.exist(result);
-      result!.should.deep.equal(products);
+      result.should.deep.equal(products);
 
       const [
         query,
@@ -961,7 +961,7 @@ describe('model', () => {
         store,
       });
       should.exist(result);
-      result!.should.deep.equal(products);
+      result.should.deep.equal(products);
 
       const [
         query,
@@ -993,7 +993,7 @@ describe('model', () => {
         store: store.id,
       });
       should.exist(result);
-      result!.should.deep.equal(products);
+      result.should.deep.equal(products);
 
       const [
         query,
@@ -1016,7 +1016,7 @@ describe('model', () => {
       );
       const result = await Product.find().sort('name asc');
       should.exist(result);
-      result!.should.deep.equal(products);
+      result.should.deep.equal(products);
 
       const [
         query,
@@ -1039,7 +1039,7 @@ describe('model', () => {
       );
       const result = await Product.find().limit(42);
       should.exist(result);
-      result!.should.deep.equal(products);
+      result.should.deep.equal(products);
 
       const [
         query,
@@ -1062,7 +1062,7 @@ describe('model', () => {
       );
       const result = await Product.find().skip(24);
       should.exist(result);
-      result!.should.deep.equal(products);
+      result.should.deep.equal(products);
 
       const [
         query,
@@ -1088,7 +1088,7 @@ describe('model', () => {
         limit: 100,
       });
       should.exist(result);
-      result!.should.deep.equal(products);
+      result.should.deep.equal(products);
 
       const [
         query,
@@ -1124,7 +1124,7 @@ describe('model', () => {
 
       verify(mockedPool.query(anyString(), anything())).once();
       should.exist(result);
-      result!.should.deep.equal(products);
+      result.should.deep.equal(products);
 
       const [
         query,
@@ -1175,7 +1175,7 @@ describe('model', () => {
       verify(mockedPool.query(anyString(), anything())).twice();
       should.exist(result1);
       should.exist(result2);
-      result1!.should.deep.equal(result2);
+      result1.should.deep.equal(result2);
       result1![0].toBar().should.equal(`${foo} bar!`);
       result2![0].toBar().should.equal(`${foo} bar!`);
     });
@@ -1198,7 +1198,7 @@ describe('model', () => {
 
       const result = await Product.count();
       should.exist(result);
-      result!.should.equal(products.length);
+      result.should.equal(products.length);
 
       const [
         query,
@@ -1231,7 +1231,7 @@ describe('model', () => {
         store,
       });
       should.exist(result);
-      result!.should.equal(products.length);
+      result.should.equal(products.length);
 
       const [
         query,
@@ -1266,7 +1266,7 @@ describe('model', () => {
         store: store.id,
       });
       should.exist(result);
-      result!.should.equal(products.length);
+      result.should.equal(products.length);
 
       const [
         query,
@@ -1355,7 +1355,7 @@ describe('model', () => {
 
       verify(mockedPool.query(anyString(), anything())).once();
       should.exist(result);
-      result!.should.deep.equal(product);
+      result.should.deep.equal(product);
 
       const [
         query,
@@ -1387,7 +1387,7 @@ describe('model', () => {
 
       verify(mockedPool.query(anyString(), anything())).once();
       should.exist(result);
-      result!.should.equal(true);
+      result.should.equal(true);
 
       const [
         query,
@@ -1408,7 +1408,7 @@ describe('model', () => {
 
       verify(mockedPool.query(anyString(), anything())).never();
       should.exist(result);
-      result!.should.deep.equal([]);
+      result.should.deep.equal([]);
     });
     it('should return object array results if multiple values are specified', async () => {
       const products = [{
@@ -1633,7 +1633,7 @@ describe('model', () => {
 
       const result = await Product.destroy();
       should.exist(result);
-      result!.should.deep.equal(products);
+      result.should.deep.equal(products);
 
       const [
         query,
@@ -1664,7 +1664,7 @@ describe('model', () => {
         store,
       });
       should.exist(result);
-      result!.should.deep.equal(products);
+      result.should.deep.equal(products);
 
       const [
         query,
@@ -1696,7 +1696,7 @@ describe('model', () => {
         store: store.id,
       });
       should.exist(result);
-      result!.should.deep.equal(products);
+      result.should.deep.equal(products);
 
       const [
         query,
@@ -1724,7 +1724,7 @@ describe('model', () => {
 
       verify(mockedPool.query(anyString(), anything())).once();
       should.exist(result);
-      result!.should.equal(true);
+      result.should.equal(true);
 
       const [
         query,

@@ -1,3 +1,6 @@
+### 2.0.4
+  * Fix return type for .findOne(), .find(), .count(), .destroy() to not include `undefined`
+
 ### 2.0.3
   * Update npm dependencies
 
