@@ -1,3 +1,6 @@
+### 2.0.7
+  * Add additional array types as type for defaultsTo
+
 ### 2.0.6
   * Add array as type for defaultsTo
   * Fix generic type issues due to Typescript 3.5
