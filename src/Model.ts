@@ -44,7 +44,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
   private _floatProperties: string[];
   private _intProperties: string[];
   private _hasInstanceFunctions: boolean;
-  private _instance: Partial<TEntity>;
+  private _instance: Partial<Entity>;
 
   /**
    * Creates a new Model object
@@ -205,7 +205,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
 
           const results = await modelInstance._readonlyPool.query(query, params);
           if (results.rows && results.rows.length) {
-            const result = modelInstance._buildInstance(results.rows[0]);
+            const result = modelInstance._buildInstance(results.rows[0]) as Entity;
 
             const populateQueries = [];
             for (const populate of populates) {
@@ -318,7 +318,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
               await Promise.all(populateQueries);
             }
 
-            return resolve(result);
+            return resolve(result as TEntity);
           }
 
           return resolve(null);
@@ -770,7 +770,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
       return result;
     }
 
-    let instance = result;
+    let instance = result as Entity;
     if (this._hasInstanceFunctions) {
       // Inherit functions defined in the `this._instance` object and assign values from `result`
       instance = _.create(this._instance, result);
@@ -807,6 +807,6 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
       }
     }
 
-    return instance;
+    return instance as TEntity;
   }
 }

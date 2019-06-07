@@ -1,3 +1,3 @@
 export interface WhereQuery {
-  [index: string]: string | string[] | number | number[] | Date | boolean | object;
+  [index: string]: string | string[] | number | number[] | Date | boolean | object | WhereQuery;
 }

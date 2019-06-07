@@ -1,3 +1,8 @@
+### 2.0.6
+  * Add array as type for defaultsTo
+  * Fix generic type issues due to Typescript 3.5
+  * Update npms
+
 ### 2.0.5
   * Allow .findOne(), .find(), .count(), .update(), and .destroy() to be used in an iterable promise (eg. Promise.all())
 
