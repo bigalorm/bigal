@@ -1,3 +1,6 @@
+### 2.0.8
+  * Add binary data type
+
 ### 2.0.7
   * Add additional array types as type for defaultsTo
 
