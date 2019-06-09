@@ -1,8 +1,8 @@
 import * as _ from 'lodash';
 import { Pool } from 'postgres-pool';
-import { SqlHelper } from './sqlHelper';
+import { SqlHelper } from './SqlHelper';
 import { ModelSchema } from './schema/ModelSchema';
-import { Repository } from './repository';
+import { Repository } from './Repository';
 import { FindArgs } from './query/FindArgs';
 import { FindOneArgs } from './query/FindOneArgs';
 import { Attributes, CollectionAttribute, ModelAttribute, TypeAttribute } from './schema/attributes';

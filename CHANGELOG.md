@@ -1,3 +1,7 @@
+### 2.1.2
+  * Fix casing issues with generated Repository and SqlHelper
+  * Revert explicit export of interfaces/classes: Entity, Model, ModelClassesByGlobalId, and Repository
+
 ### 2.1.1
   * Explicit export of interfaces/classes: Entity, Model, ModelClassesByGlobalId, and Repository
 

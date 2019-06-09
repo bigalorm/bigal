@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "2.1.1",
+  "version": "2.1.2",
   "description": "A fast and lightweight orm for postgres.",
   "main": "index.js",
   "types": "index.d.ts",
