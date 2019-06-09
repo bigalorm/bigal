@@ -8,7 +8,8 @@
     "build": "tsc",
     "test": "mocha -r ts-node/register tests/**/*.tests.ts",
     "lint": "tslint --fix -p tsconfig.lint.json -c tslint.json -t stylish",
-    "prepublishOnly": "if [ -d \"src\" ]; then rm -rf dist && npm run build && npm run lint && npm run test && cp package.json dist && cp *.md dist && cp LICENSE dist && cp .npmignore dist && cd dist && npm publish && echo \"Successfully published! Ignore the following error...\" && exit 125; fi"
+    "dist": "if [ -d \"src\" ]; then rm -rf dist && npm run build && npm run lint && npm run test && cp package.json dist && cp *.md dist && cp LICENSE dist && cp .npmignore dist && cd dist && npm publish; fi",
+    "prepublishOnly": "if [ -d \"src\" ]; then echo \"Please use: npm run dist\" && exit 125; fi"
   },
   "husky": {
     "hooks": {
