@@ -1,14 +1,14 @@
 {
   "name": "bigal",
-  "version": "2.0.8",
+  "version": "2.1.0",
   "description": "A fast and lightweight orm for postgres.",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "index.js",
+  "types": "index.d.ts",
   "scripts": {
     "build": "tsc",
     "test": "mocha -r ts-node/register tests/**/*.tests.ts",
     "lint": "tslint --fix -p tsconfig.lint.json -c tslint.json -t stylish",
-    "prepublishOnly": "rm -rf dist && npm run build && npm run lint && npm run test"
+    "prepublishOnly": "if [ -d \"src\" ]; then rm -rf dist && npm run build && npm run lint && npm run test && cp package.json dist && cp *.md dist && cp LICENSE dist && cp .npmignore dist && cd dist && npm publish && exit 1; fi"
   },
   "husky": {
     "hooks": {
@@ -34,16 +34,16 @@
     "node": ">=8.10"
   },
   "dependencies": {
+    "@types/lodash": "4.14.134",
+    "@types/node": "10.14.8",
+    "@types/pg": "7.4.14",
     "lodash": "~4.17.11",
     "pg": "7.11.0"
   },
   "devDependencies": {
     "@types/chai": "4.1.7",
     "@types/faker": "4.1.5",
-    "@types/lodash": "4.14.134",
     "@types/mocha": "5.2.7",
-    "@types/node": "10.14.8",
-    "@types/pg": "7.4.14",
     "chai": "4.2.0",
     "eslint": "5.16.0",
     "eslint-config-airbnb-base": "13.1.0",

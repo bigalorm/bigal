@@ -1,3 +1,7 @@
+### 2.1.0
+  * Fix publish path to remove "dist"
+  * Add type definitions to "dependencies"
+
 ### 2.0.8
   * Add binary data type
 
