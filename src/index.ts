@@ -7,12 +7,17 @@ import { ModelClassesByGlobalId } from './ModelClassesByGlobalId';
 import { ModelSchemasByGlobalId } from './schema/ModelSchemasByGlobalId';
 import { Entity } from './Entity';
 
-interface Connection {
+export * from './Entity';
+export * from './Model';
+export * from './ModelClassesByGlobalId';
+export * from './Repository';
+
+export interface Connection {
   pool: Pool;
   readonlyPool?: Pool;
 }
 
-interface InitializeOptions extends Connection {
+export interface InitializeOptions extends Connection {
   modelSchemas: ModelSchema[];
   connections?: { [index: string]: Connection };
   expose: (repository: Repository<Entity>, modelSchema: ModelSchema) => void;

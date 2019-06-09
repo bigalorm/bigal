@@ -1,12 +1,11 @@
 import * as _ from 'lodash';
+import { Entity } from './Entity';
 import { ModelSchema } from './schema/ModelSchema';
 import { BaseAttribute } from './schema/attributes/BaseAttribute';
 import { WhereQuery } from './query/WhereQuery';
 import { CollectionAttribute, ModelAttribute, TypeAttribute } from './schema/attributes';
 import { Comparer } from './query/Comparer';
 import { ModelSchemasByGlobalId } from './schema/ModelSchemasByGlobalId';
-
-interface Entity { [index: string]: any; }
 
 interface QueryAndParams {
   query: string;

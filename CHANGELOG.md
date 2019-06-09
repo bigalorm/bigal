@@ -1,3 +1,6 @@
+### 2.1.1
+  * Explicit export of interfaces/classes: Entity, Model, ModelClassesByGlobalId, and Repository
+
 ### 2.1.0
   * Fix publish path to remove "dist"
   * Add type definitions to "dependencies"
