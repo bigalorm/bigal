@@ -1,3 +1,7 @@
+### 2.1.3
+  * Fix querying array columns with `like` operator
+  * Add additional array types: string[], integer[], float[], boolean[]
+
 ### 2.1.2
   * Fix casing issues with generated Repository and SqlHelper
   * Revert explicit export of interfaces/classes: Entity, Model, ModelClassesByGlobalId, and Repository

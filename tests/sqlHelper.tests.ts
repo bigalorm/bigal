@@ -46,6 +46,11 @@ describe('sqlHelper', () => {
         type: 'string',
         columnName: 'sku',
       },
+      aliases: {
+        type: 'array',
+        defaultsTo: [],
+        columnName: 'alias_names',
+      },
       store: {
         model: 'store',
         columnName: 'store_id',
@@ -117,7 +122,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
       it('should include primaryKey column if select is empty', () => {
@@ -172,7 +177,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" WHERE "name"=$1 LIMIT 1`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" WHERE "name"=$1 LIMIT 1`);
         params.should.deep.equal([name]);
       });
     });
@@ -190,7 +195,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" ORDER BY "name" LIMIT 1`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" ORDER BY "name" LIMIT 1`);
         params.should.deep.equal([]);
       });
     });
@@ -208,7 +213,7 @@ describe('sqlHelper', () => {
           skip: 100,
         });
 
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" LIMIT 1 OFFSET 100`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" LIMIT 1 OFFSET 100`);
         params.should.deep.equal([]);
       });
     });
@@ -226,7 +231,7 @@ describe('sqlHelper', () => {
           limit: 100,
         });
 
-        query.should.equal(`SELECT "id","name","sku","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" LIMIT 100`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" LIMIT 100`);
         params.should.deep.equal([]);
       });
     });
@@ -644,9 +649,10 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$2) RETURNING "id","name","sku","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
+        [],
         store.id,
       ]);
     });
@@ -710,9 +716,10 @@ describe('sqlHelper', () => {
         returnRecords: true,
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$2) RETURNING "id","name","sku","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
+        [],
         storeId,
       ]);
     });
@@ -733,9 +740,10 @@ describe('sqlHelper', () => {
         returnSelect: ['name'],
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$2) RETURNING "name","id"`);
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "name","id"`);
       params.should.deep.equal([
         name,
+        [],
         storeId,
       ]);
     });
@@ -755,9 +763,10 @@ describe('sqlHelper', () => {
         returnRecords: false,
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$2)`);
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3)`);
       params.should.deep.equal([
         name,
+        [],
         storeId,
       ]);
     });
@@ -783,10 +792,12 @@ describe('sqlHelper', () => {
         returnSelect: ['store'],
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$3),($2,$4) RETURNING "store_id" AS "store","id"`);
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "store_id" AS "store","id"`);
       params.should.deep.equal([
         name1,
         name2,
+        [],
+        [],
         storeId1,
         storeId2,
       ]);
@@ -811,10 +822,12 @@ describe('sqlHelper', () => {
         }],
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$3),($2,$4) RETURNING "id","name","sku","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name1,
         name2,
+        [],
+        [],
         storeId1,
         storeId2,
       ]);
@@ -840,10 +853,12 @@ describe('sqlHelper', () => {
         returnRecords: false,
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","store_id") VALUES ($1,$3),($2,$4)`);
+      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)`);
       params.should.deep.equal([
         name1,
         name2,
+        [],
+        [],
         storeId1,
         storeId2,
       ]);
@@ -1038,7 +1053,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1,"store_id"=$2 RETURNING "id","name","sku","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1,"store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         store.id,
@@ -1110,7 +1125,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1 WHERE "store_id"=$2 RETURNING "id","name","sku","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1 WHERE "store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         store.id,
@@ -1136,7 +1151,7 @@ describe('sqlHelper', () => {
         returnRecords: true,
       });
 
-      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         storeId,
@@ -1209,7 +1224,7 @@ describe('sqlHelper', () => {
         schema: productSchema,
       });
 
-      query.should.equal(`DELETE FROM "${productSchema.tableName}" RETURNING "id","name","sku","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`DELETE FROM "${productSchema.tableName}" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([]);
     });
     it('should include where statement if defined', () => {
@@ -1229,7 +1244,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`DELETE FROM "${productSchema.tableName}" WHERE "store_id"=$1 RETURNING "id","name","sku","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`DELETE FROM "${productSchema.tableName}" WHERE "store_id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         store.id,
       ]);
@@ -1248,7 +1263,7 @@ describe('sqlHelper', () => {
         returnRecords: true,
       });
 
-      query.should.equal(`DELETE FROM "${productSchema.tableName}" WHERE "id"=$1 RETURNING "id","name","sku","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`DELETE FROM "${productSchema.tableName}" WHERE "id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         productId,
       ]);
@@ -1386,14 +1401,14 @@ describe('sqlHelper', () => {
         select: undefined,
       });
 
-      query.should.equal(`"id","name","sku","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`"id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
     });
     it('should include all columns if select is undefined', () => {
       const query = sqlHelper._getColumnsToSelect({
         schema: productSchema,
       });
 
-      query.should.equal(`"id","name","sku","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`"id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
     });
     it('should include primaryKey column if select is empty', () => {
       const query = sqlHelper._getColumnsToSelect({
@@ -1633,6 +1648,42 @@ describe('sqlHelper', () => {
       whereStatement!.should.equal('WHERE "name" NOT ILIKE $1');
       params.should.deep.equal([name]);
     });
+    it('should handle like with an empty value', () => {
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            like: '',
+          },
+        },
+      });
+
+      whereStatement!.should.equal('WHERE "name" = \'\'');
+      params.should.deep.equal([]);
+    });
+    it('should handle not like with an empty value', () => {
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          name: {
+            '!': {
+              like: '',
+            },
+          },
+        },
+      });
+
+      whereStatement!.should.equal('WHERE "name" != \'\'');
+      params.should.deep.equal([]);
+    });
     it('should handle like with array with a single value', () => {
       const name = faker.random.uuid();
       const {
@@ -1756,6 +1807,132 @@ describe('sqlHelper', () => {
 
       whereStatement!.should.equal('WHERE 1=1');
       params.should.deep.equal([]);
+    });
+    it('should handle like with array column and array with a single value', () => {
+      const name = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          aliases: {
+            like: [name],
+          },
+        },
+      });
+
+      whereStatement!.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
+      params.should.deep.equal([name]);
+    });
+    it('should handle not like with array column and array with a single value', () => {
+      const name = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          aliases: {
+            '!': {
+              like: [name],
+            },
+          },
+        },
+      });
+
+      whereStatement!.should.equal('WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
+      params.should.deep.equal([name]);
+    });
+    it('should handle like with array column and single value', () => {
+      const name = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          aliases: {
+            like: name,
+          },
+        },
+      });
+
+      whereStatement!.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
+      params.should.deep.equal([name]);
+    });
+    it('should handle not like with array column and a single value', () => {
+      const name = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          aliases: {
+            '!': {
+              like: name,
+            },
+          },
+        },
+      });
+
+      whereStatement!.should.equal('WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
+      params.should.deep.equal([name]);
+    });
+    it('should handle like with array column and an array of values', () => {
+      const name1 = 'TestUpper';
+      const name2 = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          aliases: {
+            like: [name1, name2],
+          },
+        },
+      });
+
+      whereStatement!.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")=ANY($1::TEXT[]))');
+      params.should.deep.equal([
+        [
+          name1.toLowerCase(),
+          name2.toLowerCase(),
+        ],
+      ]);
+    });
+    it('should handle not like with array column and an array of values', () => {
+      const name1 = 'TestUpper';
+      const name2 = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        modelSchemasByGlobalId,
+        schema: productSchema,
+        where: {
+          aliases: {
+            '!': {
+              like: [name1, name2],
+            },
+          },
+        },
+      });
+
+      whereStatement!.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")<>ALL($1::TEXT[]))');
+      params.should.deep.equal([
+        [
+          name1.toLowerCase(),
+          name2.toLowerCase(),
+        ],
+      ]);
     });
     it('should handle date value', () => {
       const now = new Date();

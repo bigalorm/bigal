@@ -55,6 +55,15 @@ describe('model', () => {
       name: {
         type: 'string',
       },
+      serialNumber: {
+        type: 'string',
+        columnName: 'serial_number',
+      },
+      aliases: {
+        type: 'array',
+        defaultsTo: [],
+        columnName: 'alias_names',
+      },
       store: {
         model: 'store',
         columnName: 'store_id',
@@ -150,7 +159,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 1');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" LIMIT 1');
       params!.should.deep.equal([]);
     });
     it('should support call with constraints as a parameter', async () => {
@@ -196,7 +205,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
       params!.should.deep.equal([product.id]);
     });
     it('should support call with chained where constraints', async () => {
@@ -217,7 +226,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
       params!.should.deep.equal([product.id]);
     });
     it('should support call with chained where constraints - Promise.all', async () => {
@@ -242,7 +251,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
       params!.should.deep.equal([product.id]);
     });
     it('should support call with chained sort', async () => {
@@ -261,7 +270,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" ORDER BY "name" LIMIT 1');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" ORDER BY "name" LIMIT 1');
       params!.should.deep.equal([]);
     });
     it('should parse integer columns return as integer strings', async () => {
@@ -615,7 +624,7 @@ describe('model', () => {
         productQuery,
         productQueryParams,
       ] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 1');
+      productQuery.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" LIMIT 1');
       productQueryParams!.should.deep.equal([]);
       const [
         storeQuery,
@@ -664,7 +673,7 @@ describe('model', () => {
         productQuery,
         productQueryParams,
       ] = capture(mockedPool.query).second();
-      productQuery.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
+      productQuery.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
       productQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating multi-multi collection', async () => {
@@ -710,7 +719,7 @@ describe('model', () => {
         productQuery,
         productQueryParams,
       ] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 1');
+      productQuery.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" LIMIT 1');
       productQueryParams!.should.deep.equal([]);
       const [
         productCategoryMapQuery,
@@ -791,7 +800,7 @@ describe('model', () => {
         productQuery,
         productQueryParams,
       ] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 1');
+      productQuery.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 1');
       productQueryParams!.should.deep.equal([store.id]);
       const [
         storeQuery,
@@ -923,7 +932,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product"');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product"');
       params!.should.deep.equal([]);
     });
     it('should support call with constraints as a parameter', async () => {
@@ -992,7 +1001,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2');
       params!.should.deep.equal([
         _.map(products, 'id'),
         store.id,
@@ -1024,8 +1033,81 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
       params!.should.deep.equal([store.id]);
+    });
+    it('should support call with chained where constraints - array ILIKE array of values', async () => {
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        serialNumber: faker.random.uuid(),
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        serialNumber: faker.random.uuid(),
+      }];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
+      const result = await Product.find().where({
+        or: [{
+          name: {
+            like: 'product',
+          },
+        }, {
+          name: {
+            like: 'Foo Bar',
+          },
+        }],
+        aliases: {
+          like: ['Foo', 'BAR'],
+        },
+      });
+      should.exist(result);
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE (("name" ILIKE $1) OR ("name" ILIKE $2)) AND EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")=ANY($3::TEXT[]))');
+      params!.should.deep.equal([
+        'product',
+        'Foo Bar',
+        ['foo', 'bar'],
+      ]);
+    });
+    it('should support call with chained where constraints - NOT ILIKE array of values', async () => {
+      const products = [{
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        serialNumber: faker.random.uuid(),
+      }, {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        serialNumber: faker.random.uuid(),
+      }];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
+      const result = await Product.find().where({
+        serialNumber: {
+          '!': {
+            like: ['Foo', 'BAR'],
+          },
+        },
+      });
+      should.exist(result);
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE lower("serial_number")<>ALL($1::TEXT[])');
+      params!.should.deep.equal([['foo', 'bar']]);
     });
     it('should support call with chained where constraints - Promise.all', async () => {
       const store = {
@@ -1057,7 +1139,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
       params!.should.deep.equal([store.id]);
     });
     it('should support call with chained sort', async () => {
@@ -1080,7 +1162,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" ORDER BY "name"');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" ORDER BY "name"');
       params!.should.deep.equal([]);
     });
     it('should support call with chained limit', async () => {
@@ -1103,7 +1185,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 42');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" LIMIT 42');
       params!.should.deep.equal([]);
     });
     it('should support call with chained skip', async () => {
@@ -1126,7 +1208,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" OFFSET 24');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" OFFSET 24');
       params!.should.deep.equal([]);
     });
     it('should support call with chained paginate', async () => {
@@ -1152,7 +1234,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" LIMIT 100 OFFSET 200');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" LIMIT 100 OFFSET 200');
       params!.should.deep.equal([]);
     });
     it('should support complex query with multiple chained modifiers', async () => {
@@ -1188,7 +1270,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store" FROM "product" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 42 OFFSET 24');
+      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 42 OFFSET 24');
       params!.should.deep.equal([store.id]);
     });
     it('should have instance functions be equal across multiple queries', async () => {
@@ -1455,9 +1537,10 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$2) RETURNING "id","name","store_id" AS "store"');
+      query.should.equal('INSERT INTO "product" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
       params!.should.deep.equal([
         product.name,
+        [],
         product.store,
       ]);
     });
@@ -1489,9 +1572,10 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$2) RETURNING "id","name","store_id" AS "store"');
+      query.should.equal('INSERT INTO "product" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
       params!.should.deep.equal([
         product.name,
+        [],
         product.store,
       ]);
     });
@@ -1521,9 +1605,10 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$2)');
+      query.should.equal('INSERT INTO "product" ("name","alias_names","store_id") VALUES ($1,$2,$3)');
       params!.should.deep.equal([
         product.name,
+        [],
         product.store,
       ]);
     });
@@ -1567,10 +1652,12 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$3),($2,$4) RETURNING "id","name","store_id" AS "store"');
+      query.should.equal('INSERT INTO "product" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
       params!.should.deep.equal([
         products[0].name,
         products[1].name,
+        [],
+        [],
         products[0].store,
         products[1].store,
       ]);
@@ -1606,10 +1693,12 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "product" ("name","store_id") VALUES ($1,$3),($2,$4)');
+      query.should.equal('INSERT INTO "product" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)');
       params!.should.deep.equal([
         products[0].name,
         products[1].name,
+        [],
+        [],
         products[0].store,
         products[1].store,
       ]);
@@ -1703,7 +1792,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "product" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","store_id" AS "store"');
+      query.should.equal('UPDATE "product" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
       params!.should.deep.equal([
         product.name,
         product.store,
@@ -1739,7 +1828,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "product" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","store_id" AS "store"');
+      query.should.equal('UPDATE "product" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
       params!.should.deep.equal([
         product.name,
         product.store,
@@ -1803,7 +1892,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "product" RETURNING "id","name","store_id" AS "store"');
+      query.should.equal('DELETE FROM "product" RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
       params!.should.deep.equal([]);
     });
     it('should support call constraints as a parameter', async () => {
@@ -1834,7 +1923,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2 RETURNING "id","name","store_id" AS "store"');
+      query.should.equal('DELETE FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2 RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
       params!.should.deep.equal([
         _.map(products, 'id'),
         store.id,
@@ -1866,7 +1955,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "product" WHERE "store_id"=$1 RETURNING "id","name","store_id" AS "store"');
+      query.should.equal('DELETE FROM "product" WHERE "store_id"=$1 RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
       params!.should.deep.equal([store.id]);
     });
     it('should support call with chained where constraints - Promise.all', async () => {
@@ -1899,7 +1988,7 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "product" WHERE "store_id"=$1 RETURNING "id","name","store_id" AS "store"');
+      query.should.equal('DELETE FROM "product" WHERE "store_id"=$1 RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
       params!.should.deep.equal([store.id]);
     });
     it('should return true if returnRecords=false', async () => {

@@ -858,7 +858,8 @@ export class SqlHelper {
             const typeAttributeFromComparer = comparer ? schema.attributes[comparer] as TypeAttribute : null;
             const arrayAttribute = typeAttributeFromPropertyName || typeAttributeFromComparer;
 
-            if (arrayAttribute && arrayAttribute.type && arrayAttribute.type.toLowerCase() === 'array') {
+            const arrayAttributeType = arrayAttribute && arrayAttribute.type ? arrayAttribute.type.toLowerCase() : '';
+            if (arrayAttributeType === 'array' || arrayAttributeType === 'string[]' || arrayAttributeType === 'integer[]' || arrayAttributeType === 'float[]' || arrayAttributeType === 'boolean[]') {
               const arrayColumnName = this._getColumnName({
                 schema,
                 propertyName: propertyName!,
@@ -910,8 +911,8 @@ export class SqlHelper {
             const propertyFromComparer = comparer ? schema.attributes[comparer] as TypeAttribute : null;
             const property = propertyFromPropertyName || propertyFromComparer;
             const propertyType = property && property.type ? property.type.toLowerCase() : '';
-              // If an array column type is queried with an array value, query each value of the array value separately
-            if (propertyType === 'array') {
+            // If an array column type is queried with an array value, query each value of the array value separately
+            if (propertyType === 'array' || propertyType === 'string[]' || propertyType === 'integer[]' || propertyType === 'float[]' || propertyType === 'boolean[]') {
               for (const val of valueWithoutNull) {
                 orConstraints.push(this._buildWhere({
                   modelSchemasByGlobalId,
@@ -927,10 +928,16 @@ export class SqlHelper {
               switch (propertyType) {
                 case 'int':
                 case 'integer':
+                case 'integer[]':
                   castType = '::INTEGER[]';
                   break;
                 case 'float':
+                case 'float[]':
                   castType = '::NUMERIC[]';
+                  break;
+                case 'boolean':
+                case 'boolean[]':
+                  castType = '::BOOLEAN[]';
                   break;
                 default:
                   castType = '::TEXT[]';
@@ -1046,6 +1053,7 @@ export class SqlHelper {
         if (isNegated) {
           return '1=1';
         }
+
         return '1<>1';
       }
 
@@ -1061,6 +1069,13 @@ export class SqlHelper {
 
         // NOTE: This is doing a case-insensitive pattern match
         params.push(lowerValues);
+
+        const property = schema.attributes[propertyName!] as TypeAttribute;
+        const propertyType = (property && property.type) ? property.type.toLowerCase() : '';
+        if (propertyType === 'array' || propertyType === 'string[]') {
+          return `EXISTS(SELECT 1 FROM (SELECT unnest("${columnName}") AS "unnested_${columnName}") __unnested WHERE lower("unnested_${columnName}")${isNegated ? '<>ALL' : '=ANY'}($${params.length}::TEXT[]))`;
+        }
+
         return `lower("${columnName}")${isNegated ? '<>ALL' : '=ANY'}($${params.length}::TEXT[])`;
       }
 
@@ -1074,9 +1089,20 @@ export class SqlHelper {
         propertyName: propertyName!,
       });
 
-      // NOTE: This is doing a case-insensitive pattern match
-      params.push(value);
-      return `"${columnName}"${isNegated ? ' NOT' : ''} ILIKE $${params.length}`;
+      if (value) {
+        // NOTE: This is doing a case-insensitive pattern match
+        params.push(value);
+
+        const property = schema.attributes[propertyName!] as TypeAttribute;
+        const propertyType = (property && property.type) ? property.type.toLowerCase() : '';
+        if (propertyType === 'array' || propertyType === 'string[]') {
+          return `${isNegated ? 'NOT ' : ''}EXISTS(SELECT 1 FROM (SELECT unnest("${columnName}") AS "unnested_${columnName}") __unnested WHERE "unnested_${columnName}" ILIKE $${params.length})`;
+        }
+
+        return `"${columnName}"${isNegated ? ' NOT' : ''} ILIKE $${params.length}`;
+      }
+
+      return `"${columnName}" ${isNegated ? '!=' : '='} ''`;
     }
 
     throw new Error(`Expected value to be a string for "like" constraint. Property (${propertyName}) in model (${schema.globalId}).`);
