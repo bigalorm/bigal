@@ -8,10 +8,13 @@ import { WhereQuery } from './query/WhereQuery';
 import { DestroyResult } from './query/DestroyResult';
 import { Entity } from './Entity';
 
-export interface Repository<T extends Entity> {
+export interface ReadonlyRepository<T extends Entity> {
   findOne(args?: FindOneArgs | WhereQuery): FindOneResult<T>;
   find(args?: FindArgs | WhereQuery): FindResult<T>;
   count(where?: WhereQuery): CountResult<T>;
+}
+
+export interface Repository<T extends Entity> extends ReadonlyRepository<T> {
   create(values: Partial<T>, options?: CreateUpdateDeleteOptions): Promise<T>;
   create(values: Partial<T> | Array<Partial<T>>, options: DoNotReturnRecords): Promise<boolean>;
   create(values: Array<Partial<T>>, options?: CreateUpdateDeleteOptions): Promise<T[]>;

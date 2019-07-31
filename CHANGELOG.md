@@ -1,3 +1,7 @@
+### 2.2.0
+  * Add readonly property to schemas to limit access to create(), update(), destroy() methods
+  * Update npms
+
 ### 2.1.3
   * Fix querying array columns with `like` operator
   * Add additional array types: string[], integer[], float[], boolean[]

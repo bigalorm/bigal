@@ -557,6 +557,10 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
   }: CreateUpdateDeleteOptions = {
     returnRecords: true,
   }): Promise<TEntity | TEntity[] | boolean> {
+    if (this._schema.readonly) {
+      throw new Error(`${this._schema.globalId} is readonly.`);
+    }
+
     if (_.isArray(values) && !values.length) {
       return [];
     }
@@ -632,6 +636,10 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
   }: CreateUpdateDeleteOptions = {
     returnRecords: true,
   }): Promise<TEntity[] | boolean> {
+    if (this._schema.readonly) {
+      throw new Error(`${this._schema.globalId} is readonly.`);
+    }
+
     const beforeUpdate = this._schema.beforeUpdate;
 
     if (_.isString(where)) {
@@ -692,6 +700,10 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
   }: CreateUpdateDeleteOptions = {
     returnRecords: true,
   }): DestroyResult<TEntity, TEntity[] | boolean> {
+    if (this._schema.readonly) {
+      throw new Error(`${this._schema.globalId} is readonly.`);
+    }
+
     const {
       stack,
     } = new Error(`${this._schema.globalId}.destroy()`);

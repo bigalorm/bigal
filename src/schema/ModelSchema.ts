@@ -5,6 +5,7 @@ export interface ModelSchema {
   globalId: string;
   tableName: string;
   connection?: string;
+  readonly?: boolean;
   autoCreatedAt?: boolean;
   autoUpdatedAt?: boolean;
   attributes: Attributes;

@@ -75,6 +75,12 @@ describe('model', () => {
       },
     },
   };
+  const readonlyProductSchema: ModelSchema = {
+    ...productSchema,
+    globalId: 'readonlyProduct',
+    tableName: 'readonly_product',
+    readonly: true,
+  };
   const categorySchema: ModelSchema = {
     globalId: 'category',
     tableName: 'category',
@@ -114,12 +120,15 @@ describe('model', () => {
   const schemas: ModelSchema[] = [
     storeSchema,
     productSchema,
+    readonlyProductSchema,
     categorySchema,
     productCategorySchema,
   ];
 
   // tslint:disable-next-line:variable-name
   let Product: Repository<Entity>;
+  // tslint:disable-next-line:variable-name
+  let ReadonlyProduct: Repository<Entity>;
   // tslint:disable-next-line:variable-name
   let Store: Repository<Entity>;
   beforeEach(() => {
@@ -132,6 +141,9 @@ describe('model', () => {
         switch (schema.globalId) {
           case 'product':
             Product = model;
+            break;
+          case 'readonlyProduct':
+            ReadonlyProduct = model;
             break;
           case 'store':
             Store = model;
@@ -1513,6 +1525,27 @@ describe('model', () => {
         bar: true,
       });
     });
+    it('should throw if readonly', async () => {
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([product]),
+      );
+
+      try {
+        await ReadonlyProduct.create({
+          name: product.name,
+          store: product.store,
+        });
+        false.should.equal(true);
+      } catch (ex) {
+        ex.message.should.equal(`readonlyProduct is readonly.`);
+      }
+    });
     it('should return single object result if single value is specified', async () => {
       const product = {
         id: faker.random.uuid(),
@@ -1767,6 +1800,29 @@ describe('model', () => {
         calledUpdate: true,
       });
     });
+    it('should throw if readonly', async () => {
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([product]),
+      );
+
+      try {
+        await ReadonlyProduct.update({
+          id: product.id,
+        }, {
+          name: product.name,
+          store: product.store,
+        });
+        false.should.equal(true);
+      } catch (ex) {
+        ex.message.should.equal(`readonlyProduct is readonly.`);
+      }
+    });
     it('should return array of updated objects if second parameter is not defined', async () => {
       const product = {
         id: faker.random.uuid(),
@@ -1871,6 +1927,24 @@ describe('model', () => {
     });
   });
   describe('#destroy()', () => {
+    it('should throw if readonly', async () => {
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.uuid(),
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([product]),
+      );
+
+      try {
+        await ReadonlyProduct.destroy({});
+        false.should.equal(true);
+      } catch (ex) {
+        ex.message.should.equal(`readonlyProduct is readonly.`);
+      }
+    });
     it('should support call without constraints', async () => {
       const products = [{
         id: faker.random.uuid(),
