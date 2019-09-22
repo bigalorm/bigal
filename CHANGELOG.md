@@ -1,3 +1,6 @@
+### 2.2.1
+  * Update npms
+
 ### 2.2.0
   * Add readonly property to schemas to limit access to create(), update(), destroy() methods
   * Update npms

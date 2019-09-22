@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "A fast and lightweight orm for postgres.",
   "main": "index.js",
   "types": "index.d.ts",
@@ -35,29 +35,29 @@
     "node": ">=8.10"
   },
   "dependencies": {
-    "@types/lodash": "~4.14.136",
-    "@types/node": "~10.14.8",
-    "@types/pg": "~7.4.14",
+    "@types/lodash": "4.14.138",
+    "@types/node": "~10.14.18",
+    "@types/pg": "7.11.1",
     "lodash": "~4.17.15",
-    "pg": "~7.12.0",
+    "pg": "7.12.1",
     "postgres-pool": "~1.4.1"
   },
   "devDependencies": {
-    "@types/chai": "4.1.7",
+    "@types/chai": "4.2.3",
     "@types/faker": "4.1.5",
     "@types/mocha": "5.2.7",
     "chai": "4.2.0",
-    "eslint": "6.1.0",
-    "eslint-config-airbnb-base": "13.2.0",
+    "eslint": "6.4.0",
+    "eslint-config-airbnb-base": "14.0.0",
     "eslint-plugin-import": "2.18.2",
     "faker": "4.1.0",
-    "husky": "2.4.0",
+    "husky": "3.0.5",
     "mocha": "6.2.0",
     "strict-event-emitter-types": "2.0.0",
-    "ts-mockito": "2.4.2",
-    "ts-node": "8.3.0",
-    "tslint": "5.18.0",
-    "tslint-config-airbnb": "5.11.1",
-    "typescript": "3.5.3"
+    "ts-mockito": "2.5.0",
+    "ts-node": "8.4.1",
+    "tslint": "5.20.0",
+    "tslint-config-airbnb": "5.11.2",
+    "typescript": "3.6.3"
   }
 }
