@@ -6,6 +6,10 @@ import { Repository } from './Repository';
 import { ModelClassesByGlobalId } from './ModelClassesByGlobalId';
 import { ModelSchemasByGlobalId } from './schema/ModelSchemasByGlobalId';
 import { Entity } from './Entity';
+import { ReadonlyRepository } from './ReadonlyRepository';
+import { EntityMetadata } from './metadata/EntityMetadata';
+import { ColumnMetadata } from './metadata/ColumnMetadata';
+import { getMetadataStorage } from './metadata';
 
 export interface Connection {
   pool: Pool;
@@ -13,9 +17,9 @@ export interface Connection {
 }
 
 export interface InitializeOptions extends Connection {
-  modelSchemas: ModelSchema[];
+  entities: Array<new() => Entity>;
   connections?: { [index: string]: Connection };
-  expose: (repository: Repository<Entity>, modelSchema: ModelSchema) => void;
+  expose: (repository: Repository<Entity>, entityMetadata: EntityMetadata) => void;
 }
 
 /**
@@ -27,39 +31,88 @@ export interface InitializeOptions extends Connection {
  * @param {function} expose - Used to expose model classes
  */
 export function initialize({
-                             modelSchemas,
                              pool,
                              readonlyPool = pool,
                              connections = {},
                              expose,
                            }: InitializeOptions) {
-  const modelClassesByGlobalId: ModelClassesByGlobalId = {};
-  const modelSchemasByGlobalId: ModelSchemasByGlobalId = _.keyBy(modelSchemas, (schema) => {
-    return schema.globalId.toLowerCase();
-  });
+  const repositoriesByEntityName: { [index: string]: ReadonlyRepository } = {};
+  const repositoriesByEntityNameLowered: { [index: string]: ReadonlyRepository } = {};
+  const entitiesByName: { [index: string]: new() => Entity } = {};
 
-  for (const modelSchema of modelSchemas) {
-    let modelPool = pool;
-    let modelReadonlyPool = readonlyPool;
+  // Assemble all metadata for complete entity and column definitions
+  const metadataByEntityName: { [index: string]: EntityMetadata } = {};
+  const metadataStorage = getMetadataStorage();
 
-    if (modelSchema.connection) {
-      const modelConnection = connections[modelSchema.connection];
-      if (modelConnection) {
-        modelPool = modelConnection.pool || pool;
-        modelReadonlyPool = modelConnection.readonlyPool || modelPool;
-      }
+  // Add dictionary to quickly find a column by propertyName, for applying ColumnModifierMetadata records
+  const columnsByEntityName: { [index: string]: { columns: ColumnMetadata[], columnsByPropertyName: { [index: string]: ColumnMetadata } } } = {};
+  for (const column of metadataStorage.columns) {
+    columnsByEntityName[column.name] = columnsByEntityName[column.name] || {
+      columns: [],
+      columnsByPropertyName: {},
+    };
+
+    columnsByEntityName[column.name].columns.push(column);
+    columnsByEntityName[column.name].columnsByPropertyName[column.propertyName] = column;
+  }
+
+  for (const columnModifier of metadataStorage.columnModifiers) {
+    const entityColumns = columnsByEntityName[columnModifier.entity];
+    if (!entityColumns) {
+      throw new Error(`Please use @table() before using a column modifier like @primaryColumn, @createDateColumn, etc. Entity: ${columnModifier.entity}, Column: ${columnModifier.propertyName}`);
     }
 
-    const model = new Model({
-      modelSchema,
-      modelSchemasByGlobalId,
-      modelClassesByGlobalId,
-      pool: modelPool,
-      readonlyPool: modelReadonlyPool,
-    });
+    const column = entityColumns.columnsByPropertyName[columnModifier.propertyName];
+    if (!column) {
+      throw new Error(`Please use @column() before using a column modifier like @primaryColumn, @createDateColumn, etc. Entity: ${columnModifier.entity}, Column: ${columnModifier.propertyName}`);
+    }
 
-    modelClassesByGlobalId[modelSchema.globalId.toLowerCase()] = model;
+    Object.assign(column, columnModifier);
+  }
 
-    expose(model, modelSchema);
+
+  for (const entity of metadataStorage.entities) {
+    const entityColumns = columnsByEntityName[entity.name];
+    if (!entityColumns) {
+      throw new Error(`Did not find any columns decorated with @column. Entity: ${entity.name}`);
+    }
+
+    entity.columns = entityColumns.columns;
+    metadataByEntityName[entity.name] = entity;
+
+    entitiesByNameLowered[entity.name.toLowerCase()] = entity.type;
+
+    let entityPool = pool;
+    let entityReadonlyPool = readonlyPool;
+
+    if (entity.connection) {
+      const entityConnection = connections[entity.connection];
+      if (!entityConnection) {
+        throw new Error(`Unable to find connection (${entity.connection}) for entity: ${entity.name}`);
+      }
+
+      entityPool = entityConnection.pool || pool;
+      entityReadonlyPool = entityConnection.readonlyPool || entityPool;
+    }
+
+    let repository: ReadonlyRepository;
+    if (entity.readonly) {
+      repository = new ReadonlyRepository({
+        entityMetadata: entity,
+        type: entity.type,
+        repositoriesByEntityName,
+        repositoriesByEntityNameLowered,
+        entitiesByNameLowered,
+        pool: entityPool,
+        readonlyPool: entityReadonlyPool,
+      });
+
+      repositoriesByEntityName[entity.name] = repository;
+      repositoriesByEntityNameLowered[entity.name.toLowerCase()] = repository;
+    } else {
+      // TODO: Fill in Repository
+    }
+
+    expose(repository, entity);
   }
 }

@@ -295,7 +295,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
                       skip: populate.skip,
                       limit: populate.limit,
                     });
-                  }());
+                  });
                 } else {
                   const populateWhere = _.merge({
                     [collectionProperty.via]: id,
@@ -309,7 +309,7 @@ export class Model<TEntity extends Entity> implements Repository<TEntity> {
                       skip: populate.skip,
                       limit: populate.limit,
                     });
-                  }());
+                  });
                 }
               }
             }
