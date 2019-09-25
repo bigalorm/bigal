@@ -1,4 +1,4 @@
-import lodash from 'lodash';
+import _ from 'lodash';
 import { ReadonlyRepository } from './ReadonlyRepository';
 import { Entity } from './Entity';
 import { CreateUpdateDeleteOptions, DestroyResult, DoNotReturnRecords, WhereQuery } from './query';

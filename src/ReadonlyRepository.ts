@@ -1,4 +1,4 @@
-import lodash from 'lodash';
+import _ from 'lodash';
 import { Entity, EntityStatic } from './Entity';
 import {
   CountResult,
