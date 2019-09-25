@@ -5,14 +5,14 @@ import {
   ModelMetadata,
 } from '../metadata';
 import { TableOptions } from './TableOptions';
-import { Entity } from '../Entity';
+import { Entity, EntityStatic } from '../Entity';
 
-type ReturnFunctionType = (object: new() => Entity, className: string) => void;
+type ReturnFunctionType = (object: EntityStatic<Entity>, className: string) => void;
 
 export function table(options?: TableOptions): ReturnFunctionType;
 export function table(dbName: string, options: TableOptions): ReturnFunctionType;
 export function table(dbNameOrTableOptions?: string | TableOptions, options?: TableOptions): ReturnFunctionType {
-  return function tableDecorator(object: new() => Entity, className: string) {
+  return function tableDecorator(object: EntityStatic<Entity>, className: string) {
     if (!dbNameOrTableOptions) {
       // tslint:disable-next-line:no-parameter-reassignment
       dbNameOrTableOptions = _.snakeCase(className);

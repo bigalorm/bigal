@@ -92,7 +92,7 @@ export function initialize({
       modelReadonlyPool = modelConnection.readonlyPool || modelPool;
     }
 
-    let repository: ReadonlyRepository<Entity>;
+    let repository: ReadonlyRepository<Entity> | Repository<Entity>;
     if (model.readonly) {
       repository = new ReadonlyRepository({
         modelMetadata: model,
@@ -104,8 +104,15 @@ export function initialize({
 
       repositoriesByModelNameLowered[model.name.toLowerCase()] = repository;
     } else {
-      // TODO: Fill in Repository
-      throw new Error('Not implemented yet');
+      repository = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        repositoriesByModelNameLowered,
+        pool: modelPool,
+        readonlyPool: modelReadonlyPool,
+      });
+
+      repositoriesByModelNameLowered[model.name.toLowerCase()] = repository;
     }
 
     expose(repository, model);

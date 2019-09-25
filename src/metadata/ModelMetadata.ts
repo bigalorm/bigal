@@ -2,20 +2,20 @@ import * as _ from 'lodash';
 import { ColumnTypeMetadata } from './ColumnTypeMetadata';
 import { ColumnModelMetadata } from './ColumnModelMetadata';
 import { ColumnCollectionMetadata } from './ColumnCollectionMetadata';
-import { Entity } from '../Entity';
+import { Entity, EntityStatic } from '../Entity';
 
 type Column = ColumnTypeMetadata | ColumnModelMetadata | ColumnCollectionMetadata;
 interface ColumnByStringId { [index: string]: Column; }
 
-export interface ModelMetadataOptions {
+export interface ModelMetadataOptions<T extends Entity = Entity> {
   name: string;
-  type: new() => Entity;
+  type: EntityStatic<T>;
   connection?: string;
   tableName?: string;
   readonly?: boolean;
 }
 
-export class ModelMetadata {
+export class ModelMetadata<T extends Entity = Entity> {
   public set columns(columns: readonly Column[]) {
     this._columns = columns;
     this.columnsByColumnName = {};
@@ -60,7 +60,7 @@ export class ModelMetadata {
     return this._versionDateColumns;
   }
   public name: string;
-  public type: new() => Entity;
+  public type: EntityStatic<T>;
   public connection?: string;
   public tableName: string;
   public readonly: boolean;
@@ -78,7 +78,7 @@ export class ModelMetadata {
     connection,
     tableName,
     readonly = false,
-  }: ModelMetadataOptions) {
+  }: ModelMetadataOptions<T>) {
     this.name = name;
     this.type = type;
     this.connection = connection;

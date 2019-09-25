@@ -1,22 +1,24 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "es2017",
     "module": "commonjs",
-    "esModuleInterop": true,
     "lib": ["esnext"],
     "moduleResolution": "node",
-    "declaration": true,
-    "sourceMap": true,
+
+    "esModuleInterop": true,
+
     "outDir": "dist",
     "baseUrl": ".",
 
+    "declaration": true,
+    "sourceMap": true,
+
     "strict": true,
-    /* Additional Checks */
     "forceConsistentCasingInFileNames": true,
-    "noUnusedLocals": true,                /* Report errors on unused locals. */
-    "noUnusedParameters": true,            /* Report errors on unused parameters. */
-    "noImplicitReturns": true,             /* Report error when not all code paths in function return a value. */
-    "noFallthroughCasesInSwitch": true,    /* Report errors for fallthrough cases in switch statement. */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
 
     "paths": {
       "*": [

@@ -1,5 +1,5 @@
-import * as _ from 'lodash';
-import { Entity } from './Entity';
+import lodash from 'lodash';
+import { Entity, EntityStatic } from './Entity';
 import {
   CountResult,
   FindArgs,
@@ -22,14 +22,14 @@ import { RepositoriesByModelNameLowered } from './RepositoriesByModelNameLowered
 
 export interface RepositoryOptions<T extends Entity> {
   modelMetadata: ModelMetadata;
-  type: T;
+  type: EntityStatic<T>;
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   pool: Pool;
   readonlyPool?: Pool;
 }
 
 export class ReadonlyRepository<T extends Entity> {
-  protected _type: T;
+  protected _type: EntityStatic<T>;
   protected _pool: Pool;
   protected _readonlyPool: Pool;
   protected _repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
@@ -523,7 +523,8 @@ export class ReadonlyRepository<T extends Entity> {
     };
   }
 
-  private _buildInstance(row: Partial<T>): T {
+  // tslint:disable-next-line:function-name
+  protected _buildInstance(row: Partial<T>): T {
     const instance = new this._type() as T;
     Object.assign(instance, row);
 
@@ -566,7 +567,8 @@ export class ReadonlyRepository<T extends Entity> {
     return instance;
   }
 
-  private _buildInstances(rows: Array<Partial<T>>): T[] {
+  // tslint:disable-next-line:function-name
+  protected _buildInstances(rows: Array<Partial<T>>): T[] {
     if (_.isNil(rows)) {
       return rows;
     }

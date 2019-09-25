@@ -1,7 +1,11 @@
 export interface Entity {
   [index: string]: any;
+}
 
-  beforeCreate?: (values: Partial<Entity>) => Partial<Entity> | Promise<Partial<Entity>>;
-  beforeUpdate?: (values: Partial<Entity>) => Partial<Entity> | Promise<Partial<Entity>>;
-  new(): Entity;
+export interface EntityStatic<T extends Entity> {
+
+  // NOTE: Static methods
+  beforeCreate?: (values: Partial<T>) => Partial<T> | Promise<Partial<T>>;
+  beforeUpdate?: (values: Partial<T>) => Partial<T> | Promise<Partial<T>>;
+  new(): T;
 }
