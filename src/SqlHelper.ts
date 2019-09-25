@@ -2,10 +2,16 @@ import * as _ from 'lodash';
 import { Entity } from './Entity';
 import {
   Comparer,
+  WhereClauseValue,
   WhereQuery,
 } from './query';
 import { RepositoriesByModelNameLowered } from './RepositoriesByModelNameLowered';
-import { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
+import {
+  ColumnCollectionMetadata,
+  ColumnModelMetadata,
+  ColumnTypeMetadata,
+  ModelMetadata,
+} from './metadata';
 
 interface QueryAndParams {
   query: string;
@@ -44,7 +50,7 @@ export class SqlHelper {
     let query = 'SELECT ';
 
     query += this._getColumnsToSelect({
-      schema,
+      model,
       select,
     });
 
@@ -179,6 +185,8 @@ export class SqlHelper {
           defaultValue = new Date();
         } else if (column.updateDate) {
           defaultValue = new Date();
+        } else if (column.version) {
+          defaultValue = 1;
         }
 
         const hasDefaultValue = !_.isUndefined(defaultValue);
@@ -223,18 +231,18 @@ export class SqlHelper {
           const isJsonArray = (column as ColumnTypeMetadata).type === 'json' && _.isArray(entityValue);
           const relatedModelName = (column as ColumnModelMetadata).model;
           if (relatedModelName && _.isObject(entityValue)) {
-            const relationSchema = repositoriesByModelNameLowered[relatedModelName.toLowerCase()];
+            const relatedModelRepository = repositoriesByModelNameLowered[relatedModelName.toLowerCase()];
 
-            if (!relationSchema) {
+            if (!relatedModelRepository) {
               throw new Error(`Unable to find model schema (${relatedModelName}) specified as model type for "${column.propertyName}" on "${model.name}"`);
             }
 
-            const relationPrimaryKeyColumn = relationSchema.model.primaryKeyColumn;
-            if (!relationPrimaryKeyColumn) {
+            const relatedModelPrimaryKey = relatedModelRepository.model.primaryKeyColumn;
+            if (!relatedModelPrimaryKey) {
               throw new Error(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`);
             }
 
-            const primaryKeyValue = (entityValue as Partial<Entity>)[relationPrimaryKeyColumn.propertyName];
+            const primaryKeyValue = (entityValue as Partial<Entity>)[relatedModelPrimaryKey.propertyName];
             if (_.isNil(primaryKeyValue)) {
               throw new Error(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`);
             }
@@ -283,8 +291,8 @@ export class SqlHelper {
 
   /**
    * Gets the update syntax for the specified model and values
-   * @param {Object} modelSchemasByGlobalId - All model schemas organized by global id
-   * @param {Object} schema - Model schema
+   * @param {Object} repositoriesByModelNameLowered - All model schemas organized by global id
+   * @param {Object} model - Model schema
    * @param {Object} [where] - Object representing the where query
    * @param {Object} values - Values to set.
    * @param {Boolean} [returnRecords=true] - Determines if inserted records should be returned
@@ -292,86 +300,95 @@ export class SqlHelper {
    * @returns {{query: string, params: Array}}
    */
   public static getUpdateQueryAndParams({
-    modelSchemasByGlobalId,
-    schema,
+    repositoriesByModelNameLowered,
+    model,
     where,
     values = {},
     returnRecords = true,
     returnSelect,
   }: {
-    modelSchemasByGlobalId: ModelSchemasByGlobalId;
-    schema: ModelSchema;
+    repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+    model: ModelMetadata;
     where: WhereQuery;
     values: Partial<Entity>;
     returnRecords?: boolean;
     returnSelect?: Array<Extract<keyof Entity, string>>;
   }): QueryAndParams {
-    if (schema.autoUpdatedAt && _.isUndefined(values.updatedAt)) {
-      values.updatedAt = new Date();
+    for (const column of model.updateDateColumns) {
+      if (_.isUndefined(values[column.propertyName])) {
+        values[column.propertyName] = new Date();
+      }
     }
 
     const params = [];
-    let query = `UPDATE "${schema.tableName}" SET `;
+    let query = `UPDATE "${model.tableName}" SET `;
     let isFirstProperty = true;
     for (const [propertyName, value] of Object.entries(values)) {
-      if (!_.isUndefined(schema.attributes[propertyName])) {
-        const property = schema.attributes[propertyName];
-        if (!(property as CollectionAttribute).collection) {
-          const columnName = this._getColumnName({
-            schema,
-            propertyName,
-          });
+      const column = model.columnsByPropertyName[propertyName];
+      if (column && !(column as ColumnCollectionMetadata).collection) {
+        if (!isFirstProperty) {
+          query += ',';
+        }
 
-          if (!isFirstProperty) {
-            query += ',';
-          }
+        query += `"${column.name}"=`;
+        if (_.isNil(value)) {
+          query += 'NULL';
+        } else {
+          const isJsonArray = (column as ColumnTypeMetadata).type === 'json' && _.isArray(value);
+          const relatedModelName = (column as ColumnModelMetadata).model;
+          if (relatedModelName && _.isObject(value)) {
+            const relatedModelRepository = repositoriesByModelNameLowered[relatedModelName.toLowerCase()];
 
-          query += `"${columnName}"=`;
-          if (_.isNil(value)) {
-            query += 'NULL';
-          } else {
-            const isJsonArray = (property as TypeAttribute).type === 'json' && _.isArray(value);
-            if ((property as ModelAttribute).model && _.isObject(value)) {
-              const relationSchema = modelSchemasByGlobalId[(property as ModelAttribute).model.toLowerCase()];
+            if (!relatedModelRepository) {
+              throw new Error(`Unable to find model schema (${relatedModelName}) specified as model type for "${propertyName}" on "${model.name}"`);
+            }
 
-              if (!relationSchema) {
-                throw new Error(`Unable to find model schema (${(property as ModelAttribute).model}) specified as model type for "${propertyName}" on "${schema.globalId}"`);
-              }
+            const relatedModelPrimaryKey = relatedModelRepository.model.primaryKeyColumn;
+            if (!relatedModelPrimaryKey) {
+              throw new Error(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`);
+            }
 
-              const relationPrimaryKeyPropertyName = this.getPrimaryKeyPropertyName({
-                schema: relationSchema,
-              });
+            const primaryKeyValue = (value as Partial<Entity>)[relatedModelPrimaryKey.propertyName];
+            if (_.isNil(primaryKeyValue)) {
+              throw new Error(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`);
+            }
 
-              const primaryKeyValue = (value as Partial<Entity>)[relationPrimaryKeyPropertyName];
-              if (_.isUndefined(primaryKeyValue)) {
-                throw new Error(`Undefined primary key value for hydrated object value for "${propertyName}" on "${schema.globalId}"`);
-              }
-
-              params.push(primaryKeyValue);
-            } else if (isJsonArray) {
+            params.push(primaryKeyValue);
+          } else if (isJsonArray) {
               // Inserting an array to a json/jsonb column will result in a message: invalid input syntax for type json
               // https://github.com/brianc/node-postgres/issues/442
-              params.push(JSON.stringify(value));
-            } else {
-              params.push(value);
-            }
-
-            query += `$${params.length}`;
-            if (isJsonArray) {
-              query += '::jsonb';
-            }
+            params.push(JSON.stringify(value));
+          } else {
+            params.push(value);
           }
 
-          isFirstProperty = false;
+          query += `$${params.length}`;
+          if (isJsonArray) {
+            query += '::jsonb';
+          }
         }
+
+        isFirstProperty = false;
+      }
+    }
+
+    for (const column of model.versionColumns) {
+      if (!_.isUndefined(values[column.propertyName])) {
+        if (!isFirstProperty) {
+          query += ',';
+        }
+
+        query += `"${column.name}"="${column.name}"+1`;
+
+        isFirstProperty = false;
       }
     }
 
     const {
       whereStatement,
     } = this._buildWhereStatement({
-      modelSchemasByGlobalId,
-      schema,
+      repositoriesByModelNameLowered,
+      model,
       where,
       params,
     });
@@ -383,7 +400,7 @@ export class SqlHelper {
     if (returnRecords) {
       query += ' RETURNING ';
       query += this._getColumnsToSelect({
-        schema,
+        model,
         select: returnSelect,
       });
     }
@@ -396,34 +413,34 @@ export class SqlHelper {
 
   /**
    * Gets the delete syntax for the specified model and where criteria
-   * @param {Object} modelSchemasByGlobalId - All model schemas organized by global id
-   * @param {Object} schema - Model schema
+   * @param {Object} repositoriesByModelNameLowered - All model schemas organized by global id
+   * @param {Object} model - Model schema
    * @param {Object} [where] - Object representing the where query
    * @param {Boolean} [returnRecords=true] - Determines if inserted records should be returned
    * @param {string[]} [returnSelect] - Array of model property names to return from the query.
    * @returns {{query: string, params: Array}}
    */
   public static getDeleteQueryAndParams({
-    modelSchemasByGlobalId,
-    schema,
+    repositoriesByModelNameLowered,
+    model,
     where,
     returnRecords = true,
     returnSelect,
   }: {
-    modelSchemasByGlobalId: ModelSchemasByGlobalId;
-    schema: ModelSchema;
+    repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+    model: ModelMetadata;
     where?: WhereQuery;
     returnRecords?: boolean;
     returnSelect?: Array<Extract<keyof Entity, string>>;
   }): QueryAndParams {
-    let query = `DELETE FROM "${schema.tableName}"`;
+    let query = `DELETE FROM "${model.tableName}"`;
 
     const {
       whereStatement,
       params,
     } = this._buildWhereStatement({
-      modelSchemasByGlobalId,
-      schema,
+      repositoriesByModelNameLowered,
+      model,
       where,
     });
 
@@ -434,7 +451,7 @@ export class SqlHelper {
     if (returnRecords) {
       query += ' RETURNING ';
       query += this._getColumnsToSelect({
-        schema,
+        model,
         select: returnSelect,
       });
     }
@@ -443,25 +460,6 @@ export class SqlHelper {
       query,
       params,
     };
-  }
-
-  /**
-   * Gets the property name of the primary key
-   * @param {Object} schema - Model schema
-   * @returns {string}
-   */
-  public static getPrimaryKeyPropertyName({
-    schema,
-  }: {
-    schema: ModelSchema;
-  }): string {
-    for (const [name, value] of Object.entries(schema.attributes)) {
-      if ((value as TypeAttribute).primaryKey) {
-        return name;
-      }
-    }
-
-    return 'id';
   }
 
   /**
@@ -515,8 +513,8 @@ export class SqlHelper {
 
   /**
    * Builds the SQL where statement based on the where expression
-   * @param {Object} modelSchemasByGlobalId - All model schemas organized by global id
-   * @param {Object} schema - Model schema
+   * @param {Object} repositoriesByModelNameLowered - All model schemas organized by global id
+   * @param {Object} model - Model schema
    * @param {Object} [where]
    * @param {Array} [params] - Objects to pass as parameters for the query
    * @returns {{whereStatement?: string, params: Array}}
@@ -524,13 +522,13 @@ export class SqlHelper {
    */
   // tslint:disable-next-line:function-name
   public static _buildWhereStatement({
-    modelSchemasByGlobalId,
-    schema,
+    repositoriesByModelNameLowered,
+    model,
     where,
     params = [],
   }: {
-    modelSchemasByGlobalId: ModelSchemasByGlobalId;
-    schema: ModelSchema;
+    repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+    model: ModelMetadata;
     where?: WhereQuery;
     params?: any[];
   }): {
@@ -540,8 +538,8 @@ export class SqlHelper {
     let whereStatement;
     if (_.isObject(where)) {
       whereStatement = this._buildWhere({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered,
+        model,
         comparer: 'and',
         value: where,
         params,
@@ -559,45 +557,18 @@ export class SqlHelper {
   }
 
   /**
-   * Gets the name of the sql column for the specified property
-   * @param {Object} schema - Model schema
-   * @param {string} propertyName - Name of property in model
-   * @returns {string} Column name
-   * @private
-   */
-  // tslint:disable-next-line:function-name
-  public static _getColumnName({
-    schema,
-    propertyName,
-  }: {
-    schema: ModelSchema;
-    propertyName: string;
-  }) {
-    if (!propertyName) {
-      throw new Error('propertyName is not defined.');
-    }
-
-    const property = schema.attributes[propertyName];
-    if (!property) {
-      throw new Error(`Property (${propertyName}) not found in model (${schema.globalId}).`);
-    }
-
-    return (property as BaseAttribute).columnName || propertyName;
-  }
-
-  /**
    * Builds the SQL order by statement based on the array of sortable expressions
-   * @param {Object} schema - Model schema
+   * @param {Object} model - Model schema
    * @param {string[]|Object[]} sorts - Property name(s) to sort by
    * @returns {string} SQL order by statement
    * @private
    */
   // tslint:disable-next-line:function-name
   public static _buildOrderStatement({
-    schema,
+    model,
     sorts,
   }: {
-    schema: ModelSchema;
+    model: ModelMetadata;
     sorts: Array<string | object>
   }): string {
     if (_.isNil(sorts) || !_.some(sorts)) {
@@ -640,12 +611,12 @@ export class SqlHelper {
         propertyName,
         order,
       } = orderProperty;
-      const columnName = this._getColumnName({
-        schema,
-        propertyName,
-      });
+      const column = model.columnsByPropertyName[propertyName];
+      if (!column) {
+        throw new Error(`Property (${propertyName}) not found in model (${model.name}).`);
+      }
 
-      orderStatement += `"${columnName}"`;
+      orderStatement += `"${column.name}"`;
 
       if (order && (order === -1 || order === '-1' || /desc/i.test(`${order}`))) {
         orderStatement += ' DESC';
@@ -657,8 +628,8 @@ export class SqlHelper {
 
   /**
    * Builds a portion of the where statement based on the propertyName
-   * @param {Object} modelSchemasByGlobalId - All model schemas organized by global id
-   * @param {Object} schema - Model schema
+   * @param {Object} repositoriesByModelNameLowered - All model schemas organized by global id
+   * @param {Object} model - Model schema
    * @param {string} [propertyName] - Name of property to query by
    * @param {string} [comparer] - Comparison operator
    * @param {Boolean} [isNegated=false] - If it is negated comparison
@@ -668,28 +639,28 @@ export class SqlHelper {
    * @private
    */
   private static _buildWhere({
-    modelSchemasByGlobalId,
-    schema,
+    repositoriesByModelNameLowered,
+    model,
     propertyName,
     comparer,
     isNegated = false,
     value,
     params = [],
   }: {
-    modelSchemasByGlobalId: ModelSchemasByGlobalId;
-    schema: ModelSchema;
+    repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+    model: ModelMetadata;
     propertyName?: string;
     comparer?: Comparer | string;
     isNegated?: boolean;
-    value?: string | string[] | number | number[] | Date | boolean | WhereQuery | null | Entity;
+    value?: WhereClauseValue;
     params: any[];
   }): string {
     switch (comparer || propertyName) {
       case '!':
       case 'not':
         return this._buildWhere({
-          modelSchemasByGlobalId,
-          schema,
+          repositoriesByModelNameLowered,
+          model,
           propertyName,
           isNegated: true,
           value,
@@ -697,8 +668,8 @@ export class SqlHelper {
         });
       case 'or':
         return this._buildOrOperatorStatement({
-          modelSchemasByGlobalId,
-          schema,
+          repositoriesByModelNameLowered,
+          model,
           isNegated,
           value: value as string[] | number[],
           params,
@@ -707,15 +678,15 @@ export class SqlHelper {
         if (_.isArray(value)) {
           const values =  (value as string[]).map((val) => {
             if (!_.isString(val)) {
-              throw new Error(`Expected all array values to be strings for "contains" constraint. Property (${propertyName}) in model (${schema.globalId}).`);
+              throw new Error(`Expected all array values to be strings for "contains" constraint. Property (${propertyName}) in model (${model.name}).`);
             }
 
             return `%${val}%`;
           });
 
           return this._buildWhere({
-            modelSchemasByGlobalId,
-            schema,
+            repositoriesByModelNameLowered,
+            model,
             propertyName,
             comparer: 'like',
             isNegated,
@@ -726,8 +697,8 @@ export class SqlHelper {
 
         if (_.isString(value)) {
           return this._buildWhere({
-            modelSchemasByGlobalId,
-            schema,
+            repositoriesByModelNameLowered,
+            model,
             propertyName,
             comparer: 'like',
             isNegated,
@@ -736,20 +707,20 @@ export class SqlHelper {
           });
         }
 
-        throw new Error(`Expected value to be a string for "contains" constraint. Property (${propertyName}) in model (${schema.globalId}).`);
+        throw new Error(`Expected value to be a string for "contains" constraint. Property (${propertyName}) in model (${model.name}).`);
       case 'startsWith':
         if (_.isArray(value)) {
           const values = (value as string[]).map((val) => {
             if (!_.isString(val)) {
-              throw new Error(`Expected all array values to be strings for "startsWith" constraint. Property (${propertyName}) in model (${schema.globalId}).`);
+              throw new Error(`Expected all array values to be strings for "startsWith" constraint. Property (${propertyName}) in model (${model.name}).`);
             }
 
             return `${val}%`;
           });
 
           return this._buildWhere({
-            modelSchemasByGlobalId,
-            schema,
+            repositoriesByModelNameLowered,
+            model,
             propertyName,
             comparer: 'like',
             isNegated,
@@ -760,8 +731,8 @@ export class SqlHelper {
 
         if (_.isString(value)) {
           return this._buildWhere({
-            modelSchemasByGlobalId,
-            schema,
+            repositoriesByModelNameLowered,
+            model,
             propertyName,
             comparer: 'like',
             isNegated,
@@ -770,20 +741,20 @@ export class SqlHelper {
           });
         }
 
-        throw new Error(`Expected value to be a string for "startsWith" constraint. Property (${propertyName}) in model (${schema.globalId}).`);
+        throw new Error(`Expected value to be a string for "startsWith" constraint. Property (${propertyName}) in model (${model.name}).`);
       case 'endsWith':
         if (_.isArray(value)) {
           const values =  (value as string[]).map((val) => {
             if (!_.isString(val)) {
-              throw new Error(`Expected all array values to be strings for "endsWith" constraint. Property (${propertyName}) in model (${schema.globalId}).`);
+              throw new Error(`Expected all array values to be strings for "endsWith" constraint. Property (${propertyName}) in model (${model.name}).`);
             }
 
             return `%${val}`;
           });
 
           return this._buildWhere({
-            modelSchemasByGlobalId,
-            schema,
+            repositoriesByModelNameLowered,
+            model,
             propertyName,
             comparer: 'like',
             isNegated,
@@ -794,8 +765,8 @@ export class SqlHelper {
 
         if (_.isString(value)) {
           return this._buildWhere({
-            modelSchemasByGlobalId,
-            schema,
+            repositoriesByModelNameLowered,
+            model,
             propertyName,
             comparer: 'like',
             isNegated,
@@ -804,10 +775,10 @@ export class SqlHelper {
           });
         }
 
-        throw new Error(`Expected value to be a string for "endsWith" constraint. Property (${propertyName}) in model (${schema.globalId}).`);
+        throw new Error(`Expected value to be a string for "endsWith" constraint. Property (${propertyName}) in model (${model.name}).`);
       case 'like':
         return this._buildLikeOperatorStatement({
-          schema,
+          model,
           propertyName,
           isNegated,
           value,
@@ -815,53 +786,50 @@ export class SqlHelper {
         });
       default: {
         if (_.isUndefined(value)) {
-          throw new Error(`Attempting to query with an undefined value. ${propertyName || ''} on ${schema.globalId}`);
+          throw new Error(`Attempting to query with an undefined value. ${propertyName || ''} on ${model.name}`);
         }
 
         if (propertyName) {
-          const modelAttribute = schema.attributes[propertyName] as ModelAttribute;
-          if (modelAttribute) {
-            if (modelAttribute.model && _.isObject(value)) {
-              const relationSchema = modelSchemasByGlobalId[modelAttribute.model.toLowerCase()];
+          const column = model.columnsByPropertyName[propertyName] as ColumnModelMetadata;
+          if (column && column.model && _.isObject(value)) {
+            const relatedModelRepository = repositoriesByModelNameLowered[column.model.toLowerCase()];
 
-              if (!relationSchema) {
-                throw new Error(`Unable to find model schema (${modelAttribute.model}) specified in where clause`);
-              }
+            if (!relatedModelRepository) {
+              throw new Error(`Unable to find model schema (${column.model}) specified in where clause for "${column.propertyName}"`);
+            }
 
-              const relationPrimaryKey = this.getPrimaryKeyPropertyName({
-                schema: relationSchema,
-              });
+            const relatedModelPrimaryKey = relatedModelRepository.model.primaryKeyColumn;
+            if (!relatedModelPrimaryKey) {
+              throw new Error(`Unable to find primary key column for ${column.model} specified in where clause for ${model.name}.${column.propertyName}`);
+            }
 
-              if (!_.isUndefined((value as Entity)[relationPrimaryKey])) {
+            const primaryKeyValue = (value as Partial<Entity>)[relatedModelPrimaryKey.propertyName];
+            if (!_.isNil(primaryKeyValue)) {
                   // Treat `value` as a hydrated object
-                return this._buildWhere({
-                  modelSchemasByGlobalId,
-                  schema,
-                  propertyName,
-                  comparer,
-                  isNegated,
-                  value: (value as Entity)[relationPrimaryKey],
-                  params,
-                });
-              }
+              return this._buildWhere({
+                repositoriesByModelNameLowered,
+                model,
+                propertyName,
+                comparer,
+                isNegated,
+                value: primaryKeyValue,
+                params,
+              });
             }
           }
         }
 
         if (_.isArray(value)) {
           if (!value.length) {
-            const typeAttributeFromPropertyName = propertyName ? schema.attributes[propertyName] as TypeAttribute : null;
-            const typeAttributeFromComparer = comparer ? schema.attributes[comparer] as TypeAttribute : null;
-            const arrayAttribute = typeAttributeFromPropertyName || typeAttributeFromComparer;
+            const columnTypeFromPropertyName = propertyName ? model.columnsByPropertyName[propertyName] as ColumnTypeMetadata : null;
+            const columnTypeFromComparer = comparer ? model.columnsByPropertyName[comparer] as ColumnTypeMetadata : null;
+            const arrayColumn = columnTypeFromPropertyName || columnTypeFromComparer;
 
-            const arrayAttributeType = arrayAttribute && arrayAttribute.type ? arrayAttribute.type.toLowerCase() : '';
-            if (arrayAttributeType === 'array' || arrayAttributeType === 'string[]' || arrayAttributeType === 'integer[]' || arrayAttributeType === 'float[]' || arrayAttributeType === 'boolean[]') {
-              const arrayColumnName = this._getColumnName({
-                schema,
-                propertyName: propertyName!,
-              });
-
-              return `"${arrayColumnName}"${isNegated ? '<>' : '='}'{}'`;
+            if (arrayColumn) {
+              const arrayColumnType = arrayColumn.type ? arrayColumn.type.toLowerCase() : '';
+              if (arrayColumnType === 'array' || arrayColumnType === 'string[]' || arrayColumnType === 'integer[]' || arrayColumnType === 'float[]' || arrayColumnType === 'boolean[]') {
+                return `"${arrayColumn.name}"${isNegated ? '<>' : '='}'{}'`;
+              }
             }
 
             if (isNegated) {
@@ -876,8 +844,8 @@ export class SqlHelper {
           for (const item of value) {
             if (_.isNull(item)) {
               orConstraints.push(this._buildWhere({
-                modelSchemasByGlobalId,
-                schema,
+                repositoriesByModelNameLowered,
+                model,
                 propertyName,
                 isNegated,
                 value: null,
@@ -890,59 +858,58 @@ export class SqlHelper {
 
           if (valueWithoutNull.length === 1) {
             orConstraints.push(this._buildWhere({
-              modelSchemasByGlobalId,
-              schema,
+              repositoriesByModelNameLowered,
+              model,
               propertyName,
               isNegated,
               value: valueWithoutNull[0],
               params,
             }));
           } else if (valueWithoutNull.length) {
-            const columnName = this._getColumnName({
-              schema,
-              propertyName: propertyName!,
-            });
+            const columnTypeFromPropertyName = propertyName ? model.columnsByPropertyName[propertyName] as ColumnTypeMetadata : null;
+            const columnTypeFromComparer = comparer ? model.columnsByPropertyName[comparer] as ColumnTypeMetadata : null;
+            const columnType = columnTypeFromPropertyName || columnTypeFromComparer;
 
-            const propertyFromPropertyName = propertyName ? schema.attributes[propertyName] as TypeAttribute : null;
-            const propertyFromComparer = comparer ? schema.attributes[comparer] as TypeAttribute : null;
-            const property = propertyFromPropertyName || propertyFromComparer;
-            const propertyType = property && property.type ? property.type.toLowerCase() : '';
-            // If an array column type is queried with an array value, query each value of the array value separately
-            if (propertyType === 'array' || propertyType === 'string[]' || propertyType === 'integer[]' || propertyType === 'float[]' || propertyType === 'boolean[]') {
-              for (const val of valueWithoutNull) {
-                orConstraints.push(this._buildWhere({
-                  modelSchemasByGlobalId,
-                  schema,
-                  propertyName,
-                  isNegated,
-                  value: val,
-                  params,
-                }));
-              }
-            } else {
-              let castType;
-              switch (propertyType) {
-                case 'int':
-                case 'integer':
-                case 'integer[]':
-                  castType = '::INTEGER[]';
-                  break;
-                case 'float':
-                case 'float[]':
-                  castType = '::NUMERIC[]';
-                  break;
-                case 'boolean':
-                case 'boolean[]':
-                  castType = '::BOOLEAN[]';
-                  break;
-                default:
-                  castType = '::TEXT[]';
-                  break;
-              }
+            if (columnType) {
+              const columnTypeLowered = columnType.type ? columnType.type.toLowerCase() : '';
+              if (columnTypeLowered === 'array' || columnTypeLowered === 'string[]' || columnTypeLowered === 'integer[]' || columnTypeLowered === 'float[]' || columnTypeLowered === 'boolean[]') {
+                for (const val of valueWithoutNull) {
+                  orConstraints.push(this._buildWhere({
+                    repositoriesByModelNameLowered,
+                    model,
+                    propertyName,
+                    isNegated,
+                    value: val,
+                    params,
+                  }));
+                }
+              } else {
+                let castType;
+                switch (columnTypeLowered) {
+                  case 'int':
+                  case 'integer':
+                  case 'integer[]':
+                    castType = '::INTEGER[]';
+                    break;
+                  case 'float':
+                  case 'float[]':
+                    castType = '::NUMERIC[]';
+                    break;
+                  case 'boolean':
+                  case 'boolean[]':
+                    castType = '::BOOLEAN[]';
+                    break;
+                  default:
+                    castType = '::TEXT[]';
+                    break;
+                }
 
-              params.push(valueWithoutNull);
-              orConstraints.push(`"${columnName}"${isNegated ? '<>ALL' : '=ANY'}($${params.length}${castType})`);
+                params.push(valueWithoutNull);
+                orConstraints.push(`"${columnType.name}"${isNegated ? '<>ALL' : '=ANY'}($${params.length}${castType})`);
+              }
             }
+
+            // TODO: Validate that when columnType is null, it is expected to return existing constraints
           }
 
           if (orConstraints.length === 1) {
@@ -968,8 +935,8 @@ export class SqlHelper {
             }
 
             andValues.push(this._buildWhere({
-              modelSchemasByGlobalId,
-              schema,
+              repositoriesByModelNameLowered,
+              model,
               propertyName,
               comparer: subQueryComparer,
               isNegated,
@@ -982,7 +949,7 @@ export class SqlHelper {
         }
 
         return this._buildComparisonOperatorStatement({
-          schema,
+          model,
           propertyName: propertyName!,
           comparer,
           isNegated,
@@ -994,14 +961,14 @@ export class SqlHelper {
   }
 
   private static _buildOrOperatorStatement({
-                                             modelSchemasByGlobalId,
-                                             schema,
+                                             repositoriesByModelNameLowered,
+                                             model,
                                              isNegated,
                                              value,
                                              params = [],
                                            }: {
-                                             modelSchemasByGlobalId: ModelSchemasByGlobalId;
-                                             schema: ModelSchema;
+                                             repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+                                             model: ModelMetadata;
                                              isNegated: boolean;
                                              value: string[] | number[];
                                              params: any[];
@@ -1009,8 +976,8 @@ export class SqlHelper {
     const orClauses = [];
     for (const constraint of value) {
       const orClause = this._buildWhere({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered,
+        model,
         isNegated,
         value: constraint,
         params,
@@ -1031,17 +998,17 @@ export class SqlHelper {
   }
 
   private static _buildLikeOperatorStatement({
-    schema,
+    model,
     propertyName,
                                                isNegated,
     value,
                                                params,
                                              }: {
-                                               schema: ModelSchema;
+                                               model: ModelMetadata;
                                                propertyName?: string;
                                                comparer?: Comparer | string;
                                                isNegated: boolean;
-                                               value?: string | string[] | number | number[] | Date | boolean | WhereQuery | null | Entity;
+                                               value?: WhereClauseValue;
                                                params: any[];
                                              }) {
     if (_.isArray(value)) {
@@ -1058,21 +1025,20 @@ export class SqlHelper {
           return val.toLowerCase();
         });
 
-        const columnName = this._getColumnName({
-          schema,
-          propertyName: propertyName!,
-        });
-
         // NOTE: This is doing a case-insensitive pattern match
         params.push(lowerValues);
 
-        const property = schema.attributes[propertyName!] as TypeAttribute;
-        const propertyType = (property && property.type) ? property.type.toLowerCase() : '';
-        if (propertyType === 'array' || propertyType === 'string[]') {
-          return `EXISTS(SELECT 1 FROM (SELECT unnest("${columnName}") AS "unnested_${columnName}") __unnested WHERE lower("unnested_${columnName}")${isNegated ? '<>ALL' : '=ANY'}($${params.length}::TEXT[]))`;
+        const column = model.columnsByPropertyName[propertyName!];
+        if (!column) {
+          throw new Error(`Unable to find property ${propertyName} on model ${model.name}`);
         }
 
-        return `lower("${columnName}")${isNegated ? '<>ALL' : '=ANY'}($${params.length}::TEXT[])`;
+        const columnType = (column as ColumnTypeMetadata).type && (column as ColumnTypeMetadata).type.toLowerCase();
+        if (columnType === 'array' || columnType === 'string[]') {
+          return `EXISTS(SELECT 1 FROM (SELECT unnest("${column.name}") AS "unnested_${column.name}") __unnested WHERE lower("unnested_${column.name}")${isNegated ? '<>ALL' : '=ANY'}($${params.length}::TEXT[]))`;
+        }
+
+        return `lower("${column.name}")${isNegated ? '<>ALL' : '=ANY'}($${params.length}::TEXT[])`;
       }
 
       // tslint:disable-next-line:no-parameter-reassignment
@@ -1080,91 +1046,89 @@ export class SqlHelper {
     }
 
     if (_.isString(value)) {
-      const columnName = this._getColumnName({
-        schema,
-        propertyName: propertyName!,
-      });
+      const column = model.columnsByPropertyName[propertyName!];
+      if (!column) {
+        throw new Error(`Unable to find property ${propertyName} on model ${model.name}`);
+      }
 
       if (value) {
         // NOTE: This is doing a case-insensitive pattern match
         params.push(value);
 
-        const property = schema.attributes[propertyName!] as TypeAttribute;
-        const propertyType = (property && property.type) ? property.type.toLowerCase() : '';
-        if (propertyType === 'array' || propertyType === 'string[]') {
-          return `${isNegated ? 'NOT ' : ''}EXISTS(SELECT 1 FROM (SELECT unnest("${columnName}") AS "unnested_${columnName}") __unnested WHERE "unnested_${columnName}" ILIKE $${params.length})`;
+        const columnType = (column as ColumnTypeMetadata).type && (column as ColumnTypeMetadata).type.toLowerCase();
+        if (columnType === 'array' || columnType === 'string[]') {
+          return `${isNegated ? 'NOT ' : ''}EXISTS(SELECT 1 FROM (SELECT unnest("${column.name}") AS "unnested_${column.name}") __unnested WHERE "unnested_${column.name}" ILIKE $${params.length})`;
         }
 
-        return `"${columnName}"${isNegated ? ' NOT' : ''} ILIKE $${params.length}`;
+        return `"${column.name}"${isNegated ? ' NOT' : ''} ILIKE $${params.length}`;
       }
 
-      return `"${columnName}" ${isNegated ? '!=' : '='} ''`;
+      return `"${column.name}" ${isNegated ? '!=' : '='} ''`;
     }
 
-    throw new Error(`Expected value to be a string for "like" constraint. Property (${propertyName}) in model (${schema.globalId}).`);
+    throw new Error(`Expected value to be a string for "like" constraint. Property (${propertyName}) in model (${model.name}).`);
   }
 
   private static _buildComparisonOperatorStatement({
-                                                     schema,
+                                                     model,
                                                      propertyName,
                                                      comparer,
                                                      isNegated,
                                                      value,
                                                      params = [],
                                                    }: {
-                                                     schema: ModelSchema;
+                                                     model: ModelMetadata;
                                                      propertyName: string;
                                                      comparer?: Comparer | string;
                                                      isNegated: boolean;
                                                      value: string | number | Date | boolean | WhereQuery | null | Entity;
                                                      params: any[];
                                                    }) {
-    const columnName = this._getColumnName({
-      schema,
-      propertyName,
-    });
+    const column = model.columnsByPropertyName[propertyName];
+    if (!column) {
+      throw new Error(`Unable to find property ${propertyName} on model ${model.name}`);
+    }
 
     if (_.isNull(value)) {
-      return `"${columnName}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
+      return `"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
     }
 
     params.push(value);
 
-    const property = schema.attributes[propertyName!];
-    const propertyType = (property as TypeAttribute).type;
-    const supportsLessThanGreaterThan = propertyType !== 'array' && propertyType !== 'json';
+    const columnType = (column as ColumnTypeMetadata).type;
+    const supportsLessThanGreaterThan = columnType !== 'array' && columnType !== 'json';
 
     switch (comparer) {
       case '<':
         if (!supportsLessThanGreaterThan) {
-          throw new Error(`< operator is not supported for ${propertyType || 'unknown'} type. ${propertyName || ''} on ${schema.globalId}`);
+          throw new Error(`< operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`);
         }
 
-        return `"${columnName}"${isNegated ? '>=' : '<'}$${params.length}`;
+        return `"${column.name}"${isNegated ? '>=' : '<'}$${params.length}`;
       case '<=':
         if (!supportsLessThanGreaterThan) {
-          throw new Error(`<= operator is not supported for ${propertyType || 'unknown'} type. ${propertyName || ''} on ${schema.globalId}`);
+          throw new Error(`<= operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`);
         }
 
-        return `"${columnName}"${isNegated ? '>' : '<='}$${params.length}`;
+        return `"${column.name}"${isNegated ? '>' : '<='}$${params.length}`;
       case '>':
         if (!supportsLessThanGreaterThan) {
-          throw new Error(`> operator is not supported for ${propertyType || 'unknown'} type. ${propertyName || ''} on ${schema.globalId}`);
+          throw new Error(`> operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`);
         }
 
-        return `"${columnName}"${isNegated ? '<=' : '>'}$${params.length}`;
+        return `"${column.name}"${isNegated ? '<=' : '>'}$${params.length}`;
       case '>=':
         if (!supportsLessThanGreaterThan) {
-          throw new Error(`>= operator is not supported for ${propertyType || 'unknown'} type. ${propertyName || ''} on ${schema.globalId}`);
+          throw new Error(`>= operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`);
         }
 
-        return `"${columnName}"${isNegated ? '<' : '>='}$${params.length}`;
+        return `"${column.name}"${isNegated ? '<' : '>='}$${params.length}`;
       default:
-        if (propertyType === 'array') {
-          return `$${params.length}${isNegated ? '<>ALL(' : '=ANY('}"${columnName}")`;
+        if (columnType === 'array') {
+          return `$${params.length}${isNegated ? '<>ALL(' : '=ANY('}"${column.name}")`;
         }
 
-        return `"${columnName}"${isNegated ? '<>' : '='}$${params.length}`;
+        return `"${column.name}"${isNegated ? '<>' : '='}$${params.length}`;
     }
   }
 

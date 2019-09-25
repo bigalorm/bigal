@@ -1,23 +1,24 @@
 import * as _ from 'lodash';
 import 'reflect-metadata';
-import { getMetadataStorage } from '../metadata';
 import { ColumnCollectionOptions } from './ColumnCollectionOptions';
 import { ColumnModelOptions } from './ColumnModelOptions';
 import { ColumnTypeOptions } from './ColumnTypeOptions';
 import {
+  getMetadataStorage,
   ColumnCollectionMetadata,
   ColumnModelMetadata,
   ColumnTypeMetadata,
 } from '../metadata';
 
 type ColumnOptions = ColumnTypeOptions | ColumnCollectionOptions | ColumnModelOptions;
+type ReturnFunctionType = (object: object, propertyName: string) => void;
 
-export function column(): Function;
-export function column(options: ColumnOptions): Function;
-export function column(dbColumnName: string, options: ColumnOptions): Function;
-export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?: ColumnOptions): Function {
-  return function columnDecorator(object: Object, propertyName: string) {
+export function column(options?: ColumnOptions): ReturnFunctionType;
+export function column(dbColumnName: string, options: ColumnOptions): ReturnFunctionType;
+export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?: ColumnOptions): ReturnFunctionType {
+  return function columnDecorator(object: object, propertyName: string) {
     if (!dbColumnNameOrOptions) {
+      // tslint:disable-next-line:no-parameter-reassignment
       dbColumnNameOrOptions = _.snakeCase(propertyName);
     }
 
@@ -25,10 +26,12 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
     if (typeof dbColumnNameOrOptions === 'string') {
       dbColumnName = dbColumnNameOrOptions;
     } else {
+      // tslint:disable-next-line:no-parameter-reassignment
       options = dbColumnNameOrOptions;
     }
 
     if (!options) {
+      // tslint:disable-next-line:no-parameter-reassignment
       options = {} as ColumnTypeOptions;
     }
 

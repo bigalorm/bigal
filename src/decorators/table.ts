@@ -7,12 +7,14 @@ import {
 import { TableOptions } from './TableOptions';
 import { Entity } from '../Entity';
 
-export function table(): Function;
-export function table(options: TableOptions): Function;
-export function table(dbName: string, options: TableOptions): Function;
-export function table(dbNameOrTableOptions?: string | TableOptions, options?: TableOptions): Function {
+type ReturnFunctionType = (object: new() => Entity, className: string) => void;
+
+export function table(options?: TableOptions): ReturnFunctionType;
+export function table(dbName: string, options: TableOptions): ReturnFunctionType;
+export function table(dbNameOrTableOptions?: string | TableOptions, options?: TableOptions): ReturnFunctionType {
   return function tableDecorator(object: new() => Entity, className: string) {
     if (!dbNameOrTableOptions) {
+      // tslint:disable-next-line:no-parameter-reassignment
       dbNameOrTableOptions = _.snakeCase(className);
     }
 
@@ -20,10 +22,12 @@ export function table(dbNameOrTableOptions?: string | TableOptions, options?: Ta
     if (typeof dbNameOrTableOptions === 'string') {
       dbTableName = dbNameOrTableOptions;
     } else {
+      // tslint:disable-next-line:no-parameter-reassignment
       options = dbNameOrTableOptions;
     }
 
     if (!options) {
+      // tslint:disable-next-line:no-parameter-reassignment
       options = {} as TableOptions;
     }
 

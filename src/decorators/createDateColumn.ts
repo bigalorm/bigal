@@ -4,8 +4,10 @@ import {
   ColumnModifierMetadata,
 } from '../metadata';
 
-export function createDateColumn(): Function {
-  return function createDateColumnDecorator(object: Object, propertyName: string) {
+type ReturnFunctionType = (object: object, propertyName: string) => void;
+
+export function createDateColumn(): ReturnFunctionType {
+  return function createDateColumnDecorator(object: object, propertyName: string) {
     const metadataStorage = getMetadataStorage();
     metadataStorage.columnModifiers.push({
       createDate: true,

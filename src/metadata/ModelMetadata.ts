@@ -16,7 +16,7 @@ export interface ModelMetadataOptions {
 }
 
 export class ModelMetadata {
-  public set columns(columns: Column[]) {
+  public set columns(columns: readonly Column[]) {
     this._columns = columns;
     this.columnsByColumnName = {};
     this.columnsByPropertyName = {};
@@ -28,15 +28,36 @@ export class ModelMetadata {
       if (column.primary) {
         this._primaryKeyColumn = column;
       }
+
+      if (column.createDate) {
+        this._createDateColumns.push(column);
+      }
+
+      if (column.updateDate) {
+        this._updateDateColumns.push(column);
+      }
+
+      if (column.version) {
+        this._versionDateColumns.push(column);
+      }
     }
   }
 
-  public get columns(): Column[] {
+  public get columns(): readonly Column[] {
     return this._columns;
   }
 
   public get primaryKeyColumn(): Column | undefined {
     return this._primaryKeyColumn;
+  }
+  public get createDateColumns(): ReadonlyArray<Column> {
+    return this._createDateColumns;
+  }
+  public get updateDateColumns(): ReadonlyArray<Column> {
+    return this._updateDateColumns;
+  }
+  public get versionColumns(): ReadonlyArray<Column> {
+    return this._versionDateColumns;
   }
   public name: string;
   public type: new() => Entity;
@@ -45,8 +66,11 @@ export class ModelMetadata {
   public readonly: boolean;
   public columnsByColumnName: ColumnByStringId = {};
   public columnsByPropertyName: ColumnByStringId = {};
-  private _columns: Column[] = [];
+  private _columns: readonly Column[] = [];
   private _primaryKeyColumn: Column | undefined;
+  private _createDateColumns: Column[] = [];
+  private _updateDateColumns: Column[] = [];
+  private _versionDateColumns: Column[] = [];
 
   constructor({
     name,

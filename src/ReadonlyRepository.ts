@@ -6,17 +6,19 @@ import {
   FindOneArgs,
   FindOneResult,
   FindResult,
+  PaginateOptions,
   PopulateArgs,
   WhereQuery,
 } from './query';
 import { SqlHelper } from './SqlHelper';
 import { Pool } from 'postgres-pool';
-import { ModelMetadata } from './metadata/ModelMetadata';
-import { ColumnTypeMetadata } from './metadata/ColumnTypeMetadata';
-import { ColumnModelMetadata } from './metadata/ColumnModelMetadata';
-import { ColumnCollectionMetadata } from './metadata/ColumnCollectionMetadata';
+import {
+  ColumnCollectionMetadata,
+  ColumnModelMetadata,
+  ColumnTypeMetadata,
+  ModelMetadata,
+} from './metadata';
 import { RepositoriesByModelNameLowered } from './RepositoriesByModelNameLowered';
-import { PaginateOptions } from './query/PaginateOptions';
 
 export interface RepositoryOptions<T extends Entity> {
   modelMetadata: ModelMetadata;
@@ -33,7 +35,7 @@ export class ReadonlyRepository<T extends Entity> {
   protected _repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   protected _floatProperties: string[] = [];
   protected _intProperties: string[] = [];
-  private _modelMetadata: ModelMetadata;
+  private readonly _modelMetadata: ModelMetadata;
 
   constructor({
                 modelMetadata,
