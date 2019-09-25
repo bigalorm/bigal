@@ -1,4 +1,4 @@
-import * as _ from 'lodash';
+import _ from 'lodash';
 import 'reflect-metadata';
 import {
   getMetadataStorage,
@@ -7,12 +7,13 @@ import {
 import { TableOptions } from './TableOptions';
 import { Entity, EntityStatic } from '../Entity';
 
-type ReturnFunctionType = (object: EntityStatic<Entity>, className: string) => void;
+type ReturnFunctionType<T extends Entity = Entity> = (object: EntityStatic<T>) => void;
 
 export function table(options?: TableOptions): ReturnFunctionType;
 export function table(dbName: string, options: TableOptions): ReturnFunctionType;
 export function table(dbNameOrTableOptions?: string | TableOptions, options?: TableOptions): ReturnFunctionType {
-  return function tableDecorator(object: EntityStatic<Entity>, className: string) {
+  return function tableDecorator<T extends Entity>(classObject: EntityStatic<T>) {
+    const className = classObject.constructor.name;
     if (!dbNameOrTableOptions) {
       // tslint:disable-next-line:no-parameter-reassignment
       dbNameOrTableOptions = _.snakeCase(className);
@@ -38,7 +39,7 @@ export function table(dbNameOrTableOptions?: string | TableOptions, options?: Ta
     const metadataStorage = getMetadataStorage();
     const modelMetadata = new ModelMetadata({
       name: className,
-      type: object,
+      type: classObject,
       tableName: options.name,
       readonly: options.readonly || false,
       connection: options.connection,
