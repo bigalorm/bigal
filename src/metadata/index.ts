@@ -13,3 +13,10 @@ export function getMetadataStorage(): MetadataStorage {
 
   return global.bigAlMetadataArgsStorage;
 }
+
+export * from './ColumnCollectionMetadata';
+export * from './ColumnMetadata';
+export * from './ColumnModelMetadata';
+export * from './ColumnModifierMetadata';
+export * from './ColumnTypeMetadata';
+export * from './ModelMetadata';

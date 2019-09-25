@@ -30,7 +30,7 @@ export class ColumnCollectionMetadata extends ColumnBaseMetadata {
   public through?: string;
 
   public constructor({
-    entity,
+    target,
     name,
     propertyName,
     required,
@@ -45,7 +45,7 @@ export class ColumnCollectionMetadata extends ColumnBaseMetadata {
     through,
   }: ColumnCollectionMetadataOptions) {
     super({
-      entity,
+      target,
       name,
       propertyName,
       required,

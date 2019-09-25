@@ -1,11 +1,11 @@
 import * as _ from 'lodash';
 import { Entity } from './Entity';
-import { ModelSchema } from './schema/ModelSchema';
-import { BaseAttribute } from './schema/attributes/BaseAttribute';
-import { WhereQuery } from './query/WhereQuery';
-import { CollectionAttribute, ModelAttribute, TypeAttribute } from './schema/attributes';
-import { Comparer } from './query/Comparer';
-import { ModelSchemasByGlobalId } from './schema/ModelSchemasByGlobalId';
+import {
+  Comparer,
+  WhereQuery,
+} from './query';
+import { RepositoriesByModelNameLowered } from './RepositoriesByModelNameLowered';
+import { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
 
 interface QueryAndParams {
   query: string;
@@ -15,8 +15,8 @@ interface QueryAndParams {
 export class SqlHelper {
   /**
    * Gets the select syntax for the specified model and filters
-   * @param {Object} modelSchemasByGlobalId - All model schemas organized by global id
-   * @param {Object} schema - Model schema
+   * @param {Object} repositoriesByModelNameLowered - All model schemas organized by model name
+   * @param {Object} model - Model schema
    * @param {string[]} [select] - Array of model property names to return from the query.
    * @param {Object} [where] - Object representing the where query
    * @param {string[]|Object[]} [sorts] - Property name(s) to sort by
@@ -25,16 +25,16 @@ export class SqlHelper {
    * @returns {{query: string, params: Array}}
    */
   public static getSelectQueryAndParams({
-    modelSchemasByGlobalId,
-    schema,
+    repositoriesByModelNameLowered,
+    model,
     select,
     where,
     sorts,
     skip,
     limit,
   }: {
-    modelSchemasByGlobalId: ModelSchemasByGlobalId;
-    schema: ModelSchema;
+    repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+    model: ModelMetadata;
     select?: string[];
     where?: WhereQuery;
     sorts: Array<string | object>;
@@ -48,14 +48,14 @@ export class SqlHelper {
       select,
     });
 
-    query += ` FROM "${schema.tableName}"`;
+    query += ` FROM "${model.tableName}"`;
 
     const {
       whereStatement,
       params,
     } = this._buildWhereStatement({
-      modelSchemasByGlobalId,
-      schema,
+      repositoriesByModelNameLowered,
+      model,
       where,
     });
 
@@ -64,7 +64,7 @@ export class SqlHelper {
     }
 
     const orderStatement = this._buildOrderStatement({
-      schema,
+      model,
       sorts,
     });
 
@@ -106,28 +106,28 @@ export class SqlHelper {
 
   /**
    * Gets the count syntax for the specified model and values
-   * @param {Object} modelSchemasByGlobalId - All model schemas organized by global id
-   * @param {Object} schema - Model schema
+   * @param {Object} repositoriesByModelNameLowered - All model schemas organized by model name
+   * @param {Object} model - Model schema
    * @param {Object} [where] - Object representing the where query
    * @returns {{query: string, params: Array}}
    */
   public static getCountQueryAndParams({
-    modelSchemasByGlobalId,
-    schema,
+    repositoriesByModelNameLowered,
+    model,
     where,
   }: {
-    modelSchemasByGlobalId: ModelSchemasByGlobalId;
-    schema: ModelSchema;
+    repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+    model: ModelMetadata;
     where?: WhereQuery;
   }): QueryAndParams {
-    let query = `SELECT count(*) AS "count" FROM "${schema.tableName}"`;
+    let query = `SELECT count(*) AS "count" FROM "${model.tableName}"`;
 
     const {
       whereStatement,
       params,
     } = this._buildWhereStatement({
-      modelSchemasByGlobalId,
-      schema,
+      repositoriesByModelNameLowered,
+      model,
       where,
     });
 
@@ -143,40 +143,41 @@ export class SqlHelper {
 
   /**
    * Gets the insert syntax for the specified model and values
-   * @param {Object} modelSchemasByGlobalId - All model schemas organized by global id
-   * @param {Object} schema - Model schema
+   * @param {Object} repositoriesByModelNameLowered - All model schemas organized by model name
+   * @param {Object} model - Model schema
    * @param {Object|Object[]} values - Values to insert. Insert multiple records by passing an array of values.
    * @param {Boolean} [returnRecords=true] - Determines if inserted records should be returned
    * @param {string[]} [returnSelect] - Array of model property names to return from the query.
    * @returns {{query: string, params: Array}}
    */
   public static getInsertQueryAndParams({
-    modelSchemasByGlobalId,
-    schema,
+    repositoriesByModelNameLowered,
+    model,
     values,
     returnRecords = true,
     returnSelect,
   }: {
-    modelSchemasByGlobalId: ModelSchemasByGlobalId;
-    schema: ModelSchema;
+    repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+    model: ModelMetadata;
     values: Partial<Entity> | Array<Partial<Entity>>;
     returnRecords?: boolean;
     returnSelect?: Array<Extract<keyof Entity, string>>;
   }): QueryAndParams {
     const entitiesToInsert = _.isArray(values) ? values : [values];
-    const propertiesToInsert = [];
+    const columnsToInsert = [];
     // Set defaulted property values and verify required columns have a value specified
-    for (const [name, value] of Object.entries(schema.attributes)) {
-      if (!(value as CollectionAttribute).collection && !_.isFunction(value)) {
-        const defaultsTo = (value as TypeAttribute).defaultsTo;
+    for (const column of model.columns) {
+      const collectionColumn = column as ColumnCollectionMetadata;
+      if (!collectionColumn.collection) {
+        const defaultsTo = (column as ColumnTypeMetadata).defaultsTo;
         let defaultValue;
         if (_.isFunction(defaultsTo)) {
           defaultValue = defaultsTo();
         } else if (!_.isUndefined(defaultsTo)) {
           defaultValue = defaultsTo;
-        } else if (name === 'createdAt' && schema.autoCreatedAt) {
+        } else if (column.createDate) {
           defaultValue = new Date();
-        } else if (name === 'updatedAt' && schema.autoUpdatedAt) {
+        } else if (column.updateDate) {
           defaultValue = new Date();
         }
 
@@ -184,13 +185,13 @@ export class SqlHelper {
         let includePropertyName = false;
         for (const entity of entitiesToInsert) {
           // If there is a default value for the property and it is not defined, use the default
-          if (hasDefaultValue && _.isUndefined(entity[name])) {
-            entity[name] = defaultValue;
+          if (hasDefaultValue && _.isUndefined(entity[column.propertyName])) {
+            entity[column.propertyName] = defaultValue;
           }
 
-          if (_.isUndefined(entity[name])) {
-            if (value.required) {
-              throw new Error(`Create statement for "${schema.globalId}" is missing value for required field: ${name}`);
+          if (_.isUndefined(entity[column.propertyName])) {
+            if (column.required) {
+              throw new Error(`Create statement for "${model.name}" is missing value for required field: ${column.propertyName}`);
             }
           } else {
             includePropertyName = true;
@@ -198,47 +199,44 @@ export class SqlHelper {
         }
 
         if (includePropertyName) {
-          propertiesToInsert.push(name);
+          columnsToInsert.push(column);
         }
       }
     }
 
     const valueCollections: string[][] = entitiesToInsert.map(() => []);
     const params = [];
-    let query = `INSERT INTO "${schema.tableName}" (`;
-    for (const [propertyNameIndex, propertyName] of propertiesToInsert.entries()) {
-      const property = schema.attributes[propertyName];
-      const columnName = this._getColumnName({
-        schema,
-        propertyName,
-      });
-      if (propertyNameIndex > 0) {
+    let query = `INSERT INTO "${model.tableName}" (`;
+    for (const [columnIndex, column] of columnsToInsert.entries()) {
+      if (columnIndex > 0) {
         query += ',';
       }
 
-      query += `"${columnName}"`;
+      query += `"${column.name}"`;
 
       for (const [entityIndex, entity] of entitiesToInsert.entries()) {
         let value;
-        const entityValue = entity[propertyName];
+        const entityValue = entity[column.propertyName];
         if (_.isNil(entityValue)) {
           value = 'NULL';
         } else {
-          const isJsonArray = (property as TypeAttribute).type === 'json' && _.isArray(entityValue);
-          if ((property as ModelAttribute).model && _.isObject(entityValue)) {
-            const relationSchema = modelSchemasByGlobalId[(property as ModelAttribute).model.toLowerCase()];
+          const isJsonArray = (column as ColumnTypeMetadata).type === 'json' && _.isArray(entityValue);
+          const relatedModelName = (column as ColumnModelMetadata).model;
+          if (relatedModelName && _.isObject(entityValue)) {
+            const relationSchema = repositoriesByModelNameLowered[relatedModelName.toLowerCase()];
 
             if (!relationSchema) {
-              throw new Error(`Unable to find model schema (${(property as ModelAttribute).model}) specified as model type for "${propertyName}" on "${schema.globalId}"`);
+              throw new Error(`Unable to find model schema (${relatedModelName}) specified as model type for "${column.propertyName}" on "${model.name}"`);
             }
 
-            const relationPrimaryKeyPropertyName = this.getPrimaryKeyPropertyName({
-              schema: relationSchema,
-            });
+            const relationPrimaryKeyColumn = relationSchema.model.primaryKeyColumn;
+            if (!relationPrimaryKeyColumn) {
+              throw new Error(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`);
+            }
 
-            const primaryKeyValue = (entityValue as Partial<Entity>)[relationPrimaryKeyPropertyName];
-            if (_.isUndefined(primaryKeyValue)) {
-              throw new Error(`Undefined primary key value for hydrated object value for "${propertyName}" on "${schema.globalId}"`);
+            const primaryKeyValue = (entityValue as Partial<Entity>)[relationPrimaryKeyColumn.propertyName];
+            if (_.isNil(primaryKeyValue)) {
+              throw new Error(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`);
             }
 
             params.push(primaryKeyValue);
@@ -272,7 +270,7 @@ export class SqlHelper {
     if (returnRecords) {
       query += ' RETURNING ';
       query += this._getColumnsToSelect({
-        schema,
+        model,
         select: returnSelect,
       });
     }
@@ -468,47 +466,45 @@ export class SqlHelper {
 
   /**
    * Gets SQL representing columns to select
-   * @param {Object} schema - Model schema
+   * @param {Object} model - Model schema
    * @param {string[]} [select] - Array of model property names to return from the query.
    * @returns {string} SQL columns
    * @private
    */
   // tslint:disable-next-line:function-name
   public static _getColumnsToSelect({
-    schema,
+    model,
     select,
   }: {
-    schema: ModelSchema;
+    model: ModelMetadata;
     select?: Array<Extract<keyof Entity, string>>;
   }): string {
     if (select) {
-      const primaryKeyPropertyName = this.getPrimaryKeyPropertyName({
-        schema,
-      });
+      const primaryKeyColumn = model.primaryKeyColumn;
 
       // Include primary key column if it's not defined
-      if (!select.includes(primaryKeyPropertyName)) {
-        select.push(primaryKeyPropertyName);
+      if (primaryKeyColumn && !select.includes(primaryKeyColumn.propertyName)) {
+        select.push(primaryKeyColumn.propertyName);
       }
     } else {
       // tslint:disable-next-line:no-parameter-reassignment
       select = [];
-      for (const [name, value] of Object.entries(schema.attributes)) {
-        if (!(value as CollectionAttribute).collection && !_.isFunction(value)) {
-          select.push(name);
+      for (const column of model.columns) {
+        if (!(column as ColumnCollectionMetadata).collection) {
+          select.push(column.propertyName);
         }
       }
     }
 
     let query = '';
     for (const [index, propertyName] of select.entries()) {
-      const property = schema.attributes[propertyName];
+      const column = model.columnsByPropertyName[propertyName];
       if (index > 0) {
         query += ',';
       }
 
-      if (property && (property as BaseAttribute).columnName && (property as BaseAttribute).columnName !== propertyName) {
-        query += `"${(property as BaseAttribute).columnName}" AS "${propertyName}"`;
+      if (column.name !== propertyName) {
+        query += `"${column.name}" AS "${propertyName}"`;
       } else {
         query += `"${propertyName}"`;
       }

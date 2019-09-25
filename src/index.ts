@@ -1,15 +1,17 @@
-import * as _ from 'lodash';
 import { Pool } from 'postgres-pool';
-import { ModelSchema } from './schema/ModelSchema';
-import { Model } from './Model';
 import { Repository } from './Repository';
-import { ModelClassesByGlobalId } from './ModelClassesByGlobalId';
-import { ModelSchemasByGlobalId } from './schema/ModelSchemasByGlobalId';
 import { Entity } from './Entity';
 import { ReadonlyRepository } from './ReadonlyRepository';
-import { EntityMetadata } from './metadata/EntityMetadata';
-import { ColumnMetadata } from './metadata/ColumnMetadata';
-import { getMetadataStorage } from './metadata';
+import {
+  ColumnMetadata,
+  getMetadataStorage,
+  ModelMetadata,
+} from './metadata';
+import { RepositoriesByModelNameLowered } from './RepositoriesByModelNameLowered';
+
+export * from './Entity';
+export * from './ReadonlyRepository';
+export * from './Repository';
 
 export interface Connection {
   pool: Pool;
@@ -17,9 +19,8 @@ export interface Connection {
 }
 
 export interface InitializeOptions extends Connection {
-  entities: Array<new() => Entity>;
   connections?: { [index: string]: Connection };
-  expose: (repository: Repository<Entity>, entityMetadata: EntityMetadata) => void;
+  expose: (repository: ReadonlyRepository<Entity> | Repository<Entity>, tableMetadata: ModelMetadata) => void;
 }
 
 /**
@@ -36,83 +37,77 @@ export function initialize({
                              connections = {},
                              expose,
                            }: InitializeOptions) {
-  const repositoriesByEntityName: { [index: string]: ReadonlyRepository } = {};
-  const repositoriesByEntityNameLowered: { [index: string]: ReadonlyRepository } = {};
-  const entitiesByName: { [index: string]: new() => Entity } = {};
+  const repositoriesByModelNameLowered: RepositoriesByModelNameLowered = {};
 
-  // Assemble all metadata for complete entity and column definitions
-  const metadataByEntityName: { [index: string]: EntityMetadata } = {};
+  // Assemble all metadata for complete model and column definitions
+  const metadataByModelName: { [index: string]: ModelMetadata } = {};
   const metadataStorage = getMetadataStorage();
 
   // Add dictionary to quickly find a column by propertyName, for applying ColumnModifierMetadata records
-  const columnsByEntityName: { [index: string]: { columns: ColumnMetadata[], columnsByPropertyName: { [index: string]: ColumnMetadata } } } = {};
+  const columnsByModelName: { [index: string]: { columns: ColumnMetadata[], columnsByPropertyName: { [index: string]: ColumnMetadata } } } = {};
   for (const column of metadataStorage.columns) {
-    columnsByEntityName[column.name] = columnsByEntityName[column.name] || {
+    columnsByModelName[column.name] = columnsByModelName[column.name] || {
       columns: [],
       columnsByPropertyName: {},
     };
 
-    columnsByEntityName[column.name].columns.push(column);
-    columnsByEntityName[column.name].columnsByPropertyName[column.propertyName] = column;
+    columnsByModelName[column.name].columns.push(column);
+    columnsByModelName[column.name].columnsByPropertyName[column.propertyName] = column;
   }
 
   for (const columnModifier of metadataStorage.columnModifiers) {
-    const entityColumns = columnsByEntityName[columnModifier.entity];
-    if (!entityColumns) {
-      throw new Error(`Please use @table() before using a column modifier like @primaryColumn, @createDateColumn, etc. Entity: ${columnModifier.entity}, Column: ${columnModifier.propertyName}`);
+    const columns = columnsByModelName[columnModifier.target];
+    if (!columns) {
+      throw new Error(`Please use @table() before using a column modifier like @primaryColumn, @createDateColumn, etc. Entity: ${columnModifier.target}, Column: ${columnModifier.propertyName}`);
     }
 
-    const column = entityColumns.columnsByPropertyName[columnModifier.propertyName];
+    const column = columns.columnsByPropertyName[columnModifier.propertyName];
     if (!column) {
-      throw new Error(`Please use @column() before using a column modifier like @primaryColumn, @createDateColumn, etc. Entity: ${columnModifier.entity}, Column: ${columnModifier.propertyName}`);
+      throw new Error(`Please use @column() before using a column modifier like @primaryColumn, @createDateColumn, etc. Entity: ${columnModifier.target}, Column: ${columnModifier.propertyName}`);
     }
 
     Object.assign(column, columnModifier);
   }
 
 
-  for (const entity of metadataStorage.entities) {
-    const entityColumns = columnsByEntityName[entity.name];
+  for (const model of metadataStorage.models) {
+    const entityColumns = columnsByModelName[model.name];
     if (!entityColumns) {
-      throw new Error(`Did not find any columns decorated with @column. Entity: ${entity.name}`);
+      throw new Error(`Did not find any columns decorated with @column. Entity: ${model.name}`);
     }
 
-    entity.columns = entityColumns.columns;
-    metadataByEntityName[entity.name] = entity;
+    model.columns = entityColumns.columns;
+    metadataByModelName[model.name] = model;
 
-    entitiesByNameLowered[entity.name.toLowerCase()] = entity.type;
+    let modelPool = pool;
+    let modelReadonlyPool = readonlyPool;
 
-    let entityPool = pool;
-    let entityReadonlyPool = readonlyPool;
-
-    if (entity.connection) {
-      const entityConnection = connections[entity.connection];
-      if (!entityConnection) {
-        throw new Error(`Unable to find connection (${entity.connection}) for entity: ${entity.name}`);
+    if (model.connection) {
+      const modelConnection = connections[model.connection];
+      if (!modelConnection) {
+        throw new Error(`Unable to find connection (${model.connection}) for entity: ${model.name}`);
       }
 
-      entityPool = entityConnection.pool || pool;
-      entityReadonlyPool = entityConnection.readonlyPool || entityPool;
+      modelPool = modelConnection.pool || pool;
+      modelReadonlyPool = modelConnection.readonlyPool || modelPool;
     }
 
-    let repository: ReadonlyRepository;
-    if (entity.readonly) {
+    let repository: ReadonlyRepository<Entity>;
+    if (model.readonly) {
       repository = new ReadonlyRepository({
-        entityMetadata: entity,
-        type: entity.type,
-        repositoriesByEntityName,
-        repositoriesByEntityNameLowered,
-        entitiesByNameLowered,
-        pool: entityPool,
-        readonlyPool: entityReadonlyPool,
+        modelMetadata: model,
+        type: model.type,
+        repositoriesByModelNameLowered,
+        pool: modelPool,
+        readonlyPool: modelReadonlyPool,
       });
 
-      repositoriesByEntityName[entity.name] = repository;
-      repositoriesByEntityNameLowered[entity.name.toLowerCase()] = repository;
+      repositoriesByModelNameLowered[model.name.toLowerCase()] = repository;
     } else {
       // TODO: Fill in Repository
+      throw new Error('Not implemented yet');
     }
 
-    expose(repository, entity);
+    expose(repository, model);
   }
 }

@@ -1,8 +1,8 @@
 export interface ColumnBaseMetadataOptions {
   /**
-   * Entity name
+   * Name of class with @table decorator
    */
-  entity: string;
+  target: string;
   /**
    * Column name in the database
    */
@@ -47,9 +47,9 @@ export interface ColumnBaseMetadataOptions {
 
 export abstract class ColumnBaseMetadata {
   /**
-   * Entity name
+   * Name of class with @table decorator
    */
-  public entity: string;
+  public target: string;
   /**
    * Column name in the database
    */
@@ -92,7 +92,7 @@ export abstract class ColumnBaseMetadata {
   public version: boolean;
 
   protected constructor({
-    entity,
+    target,
     name,
     propertyName,
     required = false,
@@ -103,7 +103,7 @@ export abstract class ColumnBaseMetadata {
     updateDate = false,
     version = false,
   }: ColumnBaseMetadataOptions) {
-    this.entity = entity;
+    this.target = target;
     this.name = name;
     this.propertyName = propertyName;
     this.required = required;

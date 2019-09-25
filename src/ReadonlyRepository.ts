@@ -1,61 +1,64 @@
 import * as _ from 'lodash';
 import { Entity } from './Entity';
-import { FindOneArgs } from './query/FindOneArgs';
-import { WhereQuery } from './query/WhereQuery';
-import { FindOneResult } from './query/FindOneResult';
-import { FindArgs } from './query/FindArgs';
-import { FindResult } from './query/FindResult';
-import { CountResult } from './query/CountResult';
-import { ModelSchema } from './schema/ModelSchema';
-import { PopulateArgs } from './query/PopulateArgs';
+import {
+  CountResult,
+  FindArgs,
+  FindOneArgs,
+  FindOneResult,
+  FindResult,
+  PopulateArgs,
+  WhereQuery,
+} from './query';
 import { SqlHelper } from './SqlHelper';
 import { Pool } from 'postgres-pool';
-import { EntityMetadata } from './metadata/EntityMetadata';
+import { ModelMetadata } from './metadata/ModelMetadata';
 import { ColumnTypeMetadata } from './metadata/ColumnTypeMetadata';
 import { ColumnModelMetadata } from './metadata/ColumnModelMetadata';
 import { ColumnCollectionMetadata } from './metadata/ColumnCollectionMetadata';
+import { RepositoriesByModelNameLowered } from './RepositoriesByModelNameLowered';
+import { PaginateOptions } from './query/PaginateOptions';
 
 export interface RepositoryOptions<T extends Entity> {
-  entityMetadata: EntityMetadata;
-  type: new() => T;
-  repositoriesByEntityNameLowered: { [index: string]: ReadonlyRepository<T> };
+  modelMetadata: ModelMetadata;
+  type: T;
+  repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   pool: Pool;
   readonlyPool?: Pool;
 }
 
 export class ReadonlyRepository<T extends Entity> {
-
-  get entity(): EntityMetadata {
-    return this._entityMetadata;
-  }
-  protected _type: new() => T;
+  protected _type: T;
   protected _pool: Pool;
   protected _readonlyPool: Pool;
-  protected _repositoriesByEntityNameLowered: { [index: string]: ReadonlyRepository<T> };
+  protected _repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   protected _floatProperties: string[] = [];
   protected _intProperties: string[] = [];
-  private _entityMetadata: EntityMetadata;
+  private _modelMetadata: ModelMetadata;
 
   constructor({
-                entityMetadata,
+                modelMetadata,
                 type,
                 pool,
                 readonlyPool,
-                repositoriesByEntityNameLowered,
+                repositoriesByModelNameLowered,
               }: RepositoryOptions<T>) {
-    this._entityMetadata = entityMetadata;
+    this._modelMetadata = modelMetadata;
     this._type = type;
     this._pool = pool;
     this._readonlyPool = readonlyPool || pool;
-    this._repositoriesByEntityNameLowered = repositoriesByEntityNameLowered;
+    this._repositoriesByModelNameLowered = repositoriesByModelNameLowered;
 
-    for (const column of entityMetadata.columns) {
+    for (const column of modelMetadata.columns) {
       if ((column as ColumnTypeMetadata).type === 'float') {
         this._floatProperties.push(column.propertyName);
       } else if ((column as ColumnTypeMetadata).type === 'integer') {
         this._intProperties.push(column.propertyName);
       }
     }
+  }
+
+  get model(): ModelMetadata {
+    return this._modelMetadata;
   }
 
   /**
@@ -68,7 +71,7 @@ export class ReadonlyRepository<T extends Entity> {
   public findOne(args: FindOneArgs | WhereQuery = {}): FindOneResult<T> {
     const {
       stack,
-    } = new Error(`${this.entity.name}.findOne()`);
+    } = new Error(`${this.model.name}.findOne()`);
 
     let select: string[] | undefined;
     let where = {};
@@ -170,8 +173,8 @@ export class ReadonlyRepository<T extends Entity> {
             query,
             params,
           } = SqlHelper.getSelectQueryAndParams({
-            repositoriesByEntityNameLowered: modelInstance._repositoriesByEntityNameLowered,
-            entity: modelInstance.entity,
+            repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+            model: modelInstance.model,
             select,
             where,
             sorts,
@@ -185,106 +188,121 @@ export class ReadonlyRepository<T extends Entity> {
 
             const populateQueries = [];
             for (const populate of populates) {
-              const column = modelInstance.entity.columnsByPropertyName[populate.propertyName];
+              const column = modelInstance.model.columnsByPropertyName[populate.propertyName];
               if (!column) {
-                throw new Error(`Unable to find ${populate.propertyName} on ${modelInstance.entity.name} model for populating.`);
+                throw new Error(`Unable to find ${populate.propertyName} on ${modelInstance.model.name} model for populating.`);
               }
 
               const modelColumn = column as ColumnModelMetadata;
               const collectionColumn = column as ColumnCollectionMetadata;
-              if (modelColumn.model) {
-                const populateRepository = modelInstance._repositoriesByEntityNameLowered[modelColumn.model.toLowerCase()];
+              if (modelColumn.target) {
+                const populateRepository = modelInstance._repositoriesByModelNameLowered[modelColumn.target.toLowerCase()];
                 if (!populateRepository) {
-                  throw new Error(`Unable to find populate repository by entity name: ${modelColumn.model}. Column ${column.propertyName} on entity: ${column.entity}`);
+                  throw new Error(`Unable to find populate repository by entity name: ${modelColumn.target}. Column ${column.propertyName} on model: ${column.target}`);
                 }
 
-                const primaryKeyName = SqlHelper.getPrimaryKeyPropertyName({
-                  entity: populateRepository.entity,
-                });
+                if (!populateRepository.model.primaryKeyColumn) {
+                  throw new Error(`Unable to populate ${modelColumn.target} from ${column.target}.${column.propertyName}. There is no primary key defined in ${modelColumn.target}`);
+                }
 
                 const populateWhere = _.merge({
-                  [primaryKeyName]: result[populate.propertyName],
+                  // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
+                  [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName],
                 }, populate.where);
 
-                populateQueries.push(async function populateSingle() {
-                  result[populate.propertyName] = await populateRepository.findOne({
+                populateQueries.push(async () => {
+                  const populateResult = await populateRepository.findOne({
                     select: populate.select,
                     where: populateWhere,
                     sort: populate.sort,
                   });
-                }());
+
+                  // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
+                  result[populate.propertyName] = populateResult;
+                });
               } else if (collectionColumn.collection) {
-                const populateRepository = modelInstance._repositoriesByEntityNameLowered[collectionColumn.collection.toLowerCase()];
+                const populateRepository = modelInstance._repositoriesByModelNameLowered[collectionColumn.collection.toLowerCase()];
                 if (!populateRepository) {
-                  throw new Error(`Unable to find populate repository for collection by name ${collectionColumn.collection}. For ${populate.propertyName} property on entity: ${column.entity}`);
+                  throw new Error(`Unable to find populate repository for collection by name ${collectionColumn.collection}. For ${populate.propertyName} property on model: ${column.target}`);
                 }
 
-                const populateModelPrimaryKeyName = SqlHelper.getPrimaryKeyPropertyName({
-                  entity: populateRepository.entity,
-                });
+                const populateModelPrimaryKeyColumn = populateRepository.model.primaryKeyColumn;
+                if (!populateModelPrimaryKeyColumn) {
+                  throw new Error(`Unable to populate ${collectionColumn.collection} objects from ${column.target}.${column.propertyName}. There is no primary key defined in ${collectionColumn.collection}`);
+                }
 
-                const primaryKeyName = SqlHelper.getPrimaryKeyPropertyName({
-                  entity: populateRepository.entity,
-                });
+                const primaryKeyColumn = modelInstance.model.primaryKeyColumn;
+                if (!primaryKeyColumn) {
+                  throw new Error(`Unable to populate ${column.target}.${column.propertyName}. There is no primary key defined in ${modelInstance.model.name}`);
+                }
 
-                const id = result[primaryKeyName];
-                if (_.isUndefined(id)) {
-                  throw new Error(`Primary key (${primaryKeyName}) has no value for entity ${column.entity}.`);
+                // @ts-ignore - Ignoring result does not have index signature for known field (primaryKeyColumn.propertyName)
+                const id = result[primaryKeyColumn.propertyName];
+                if (_.isNil(id)) {
+                  throw new Error(`Primary key (${primaryKeyColumn.propertyName}) has no value for entity ${column.target}.`);
                 }
 
                 if (collectionColumn.through) {
-                  const throughRepository = modelInstance._repositoriesByEntityNameLowered[collectionColumn.through.toLowerCase()];
+                  const throughRepository = modelInstance._repositoriesByModelNameLowered[collectionColumn.through.toLowerCase()];
                   if (!throughRepository) {
-                    throw new Error(`Unable to find repository for multi-map collection by global id ${collectionColumn.through}. For ${populate.propertyName} property on entity: ${column.entity}`);
+                    throw new Error(`Unable to find repository for multi-map collection: ${collectionColumn.through}. For ${populate.propertyName} property on model: ${column.target}`);
                   }
 
-                  let relatedEntityColumn: ColumnCollectionMetadata | null = null;
-                  for (const populateEntityColumn of populateRepository.entity.columns) {
-                    const through = (populateEntityColumn as ColumnCollectionMetadata).through;
+                  let relatedModelColumn: ColumnCollectionMetadata | undefined;
+                  for (const populateModelColumn of populateRepository.model.columns) {
+                    const through = (populateModelColumn as ColumnCollectionMetadata).through;
                     if (through && through.toLowerCase() === collectionColumn.through.toLowerCase()) {
-                      relatedEntityColumn = populateEntityColumn as ColumnCollectionMetadata;
+                      relatedModelColumn = populateModelColumn as ColumnCollectionMetadata;
                       break;
                     }
                   }
 
-                  if (!relatedEntityColumn) {
-                    throw new Error(`Unable to find property on related model for multi-map collection. For ${populate.propertyName} property of the ${modelInstance._schema.globalId} model.`);
+                  if (!relatedModelColumn) {
+                    throw new Error(`Unable to find property on related model for multi-map collection: ${collectionColumn.through}. Coming from ${populate.propertyName} property on model: ${column.target}`);
                   }
 
-                  populateQueries.push(async function populateMultiMapCollection() {
-                    const mapRecords = await throughRepository.find({
-                      select: [relatedEntityColumn.via],
-                      where: {
-                        [collectionColumn.via]: id,
-                      },
-                    });
-                    const ids = _.map(mapRecords, relatedEntityColumn.via);
+                  populateQueries.push(async () => {
+                    if (relatedModelColumn) {
+                      const mapRecords = await throughRepository.find({
+                        select: [relatedModelColumn.via],
+                        where: {
+                          [collectionColumn.via]: id,
+                        },
+                      });
+                      const ids = _.map(mapRecords, relatedModelColumn.via);
 
-                    const populateWhere = _.merge({
-                      [populateModelPrimaryKeyName]: ids,
-                    }, populate.where);
+                      const populateWhere = _.merge({
+                        [populateModelPrimaryKeyColumn.propertyName]: ids,
+                      }, populate.where);
 
-                    result[populate.propertyName] = await populateRepository.find({
-                      select: populate.select,
-                      where: populateWhere,
-                      sort: populate.sort,
-                      skip: populate.skip,
-                      limit: populate.limit,
-                    });
+                      const populateResults = await populateRepository.find({
+                        select: populate.select,
+                        where: populateWhere,
+                        sort: populate.sort,
+                        skip: populate.skip,
+                        limit: populate.limit,
+                      });
+
+                      // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
+                      result[populate.propertyName] = populateResults;
+                    }
                   });
                 } else {
                   const populateWhere = _.merge({
                     [collectionColumn.via]: id,
                   }, populate.where);
 
-                  populateQueries.push(async function populateCollection() {
-                    result[populate.propertyName] = await populateRepository.find({
+                  populateQueries.push(async () => {
+                    const populateResults = await populateRepository.find({
                       select: populate.select,
                       where: populateWhere,
                       sort: populate.sort,
                       skip: populate.skip,
                       limit: populate.limit,
                     });
+
+                    // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
+                    result[populate.propertyName] = populateResults;
                   });
                 }
               }
@@ -306,8 +324,205 @@ export class ReadonlyRepository<T extends Entity> {
     };
   }
 
-  private _buildInstance(row: Partial<Entity>): Entity {
-    const instance = new this._type();
+  /**
+   * Gets a collection of objects
+   * @param {Object} [args] - Arguments
+   * @param {string[]} [args.select] - Array of model property names to return from the query.
+   * @param {Object} [args.where] - Object representing the where query
+   * @param {string|Object|string[]|Object[]} [args.sort] - Property name(s) to sort by
+   * @param {string|Number} [args.skip] - Number of records to skip
+   * @param {string|Number} [args.limit] - Number of results to return
+   */
+  public find(args: FindArgs | WhereQuery = {}): FindResult<T> {
+    const {
+      stack,
+    } = new Error(`${this.model.name}.find()`);
+
+    let select: string[] | undefined;
+    let where = {};
+    let sort: string | string[] | null = null;
+    let skip: number | null = null;
+    let limit: number | null = null;
+    // Args can be a FindArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
+    for (const [name, value] of Object.entries(args)) {
+      let isWhereCriteria = false;
+      switch (name) {
+        case 'select':
+          select = value;
+          break;
+        case 'where':
+          where = value;
+          break;
+        case 'sort':
+          sort = value;
+          break;
+        case 'skip':
+          skip = value;
+          break;
+        case 'limit':
+          limit = value;
+          break;
+        default:
+          select = undefined;
+          where = args;
+          sort = null;
+          skip = null;
+          limit = null;
+          isWhereCriteria = true;
+          break;
+      }
+
+      if (isWhereCriteria) {
+        break;
+      }
+    }
+
+    const sorts: Array<string | object> = [];
+    if (_.isArray(sort)) {
+      sorts.push(...sort);
+    } else if (sort) {
+      sorts.push(sort);
+    }
+
+    // tslint:disable-next-line:no-this-assignment
+    const modelInstance = this;
+
+    return {
+      /**
+       * Filters the query
+       * @param {Object} value - Object representing the where query
+       */
+      where(value: WhereQuery) {
+        where = value;
+
+        return this;
+      },
+      /**
+       * Sorts the query
+       * @param {string|Object} value
+       */
+      sort(value: string | object) {
+        sorts.push(value);
+
+        return this;
+      },
+      /**
+       * Limits results returned by the query
+       * @param {Number} value
+       */
+      limit(value: number) {
+        limit = value;
+
+        return this;
+      },
+      /**
+       * Skips records returned by the query
+       * @param {Number} value
+       */
+      skip(value: number) {
+        skip = value;
+
+        return this;
+      },
+      /**
+       * Pages records returned by the query
+       * @param {Number} [page=1] - Page to return - Starts at 1
+       * @param {Number} [limit=10] - Number of records to return
+       */
+      paginate({
+                 page = 1,
+                 limit: paginateLimit = 10,
+               }: PaginateOptions) {
+        const safePage = Math.max(page, 1);
+        this.skip((safePage * paginateLimit) - paginateLimit);
+        this.limit(paginateLimit);
+
+        return this;
+      },
+      async then(resolve: (result: T[]) => void, reject: (err: Error) => void) {
+        try {
+          if (_.isString(where)) {
+            reject(new Error('The query cannot be a string, it must be an object'));
+          }
+
+          const {
+            query,
+            params,
+          } = SqlHelper.getSelectQueryAndParams({
+            repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+            model: modelInstance.model,
+            select,
+            where,
+            sorts,
+            skip: skip || 0,
+            limit: limit || 0,
+          });
+
+          const results = await modelInstance._readonlyPool.query(query, params);
+          resolve(modelInstance._buildInstances(results.rows));
+        } catch (ex) {
+          ex.stack += stack;
+          reject(ex);
+        }
+      },
+    };
+  }
+
+  /**
+   * Gets a count of rows matching the where query
+   * @param {Object} [where] - Object representing the where query
+   * @returns {Number} Number of records matching the where criteria
+   */
+  public count(where?: WhereQuery): CountResult<T> {
+    const {
+      stack,
+    } = new Error(`${this.model.name}.count()`);
+
+    // tslint:disable-next-line:no-this-assignment
+    const modelInstance = this;
+
+    return {
+      /**
+       * Filters the query
+       * @param {Object} value - Object representing the where query
+       */
+      where(value: WhereQuery) {
+        // tslint:disable-next-line:no-parameter-reassignment
+        where = value;
+
+        return this;
+      },
+      async then(resolve: (result: number) => void, reject: (err: Error) => void) {
+        try {
+          const {
+            query,
+            params,
+          } = SqlHelper.getCountQueryAndParams({
+            repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+            model: modelInstance.model,
+            where,
+          });
+
+          const result = await modelInstance._pool.query(query, params);
+
+          const originalValue = result.rows[0].count;
+          const value = Number(originalValue);
+          if (_.isFinite(value) && Number.isSafeInteger(value)) {
+            return resolve(value);
+          }
+
+          // If the count is greater than MAX_SAFE_INT, return value as a string
+          return resolve(originalValue);
+        } catch (ex) {
+          ex.stack += stack;
+          reject(ex);
+        }
+      },
+    };
+  }
+
+  private _buildInstance(row: Partial<T>): T {
+    const instance = new this._type() as T;
     Object.assign(instance, row);
 
     // NOTE: Number fields may be strings coming from the db. In those cases, try to convert the value to Number
@@ -347,5 +562,13 @@ export class ReadonlyRepository<T extends Entity> {
     }
 
     return instance;
+  }
+
+  private _buildInstances(rows: Array<Partial<T>>): T[] {
+    if (_.isNil(rows)) {
+      return rows;
+    }
+
+    return rows.map(this._buildInstance);
   }
 }

@@ -1,8 +1,10 @@
 import * as _ from 'lodash';
 import 'reflect-metadata';
-import { getMetadataStorage } from '../metadata';
+import {
+  getMetadataStorage,
+  ModelMetadata,
+} from '../metadata';
 import { TableOptions } from './TableOptions';
-import { EntityMetadata } from '../metadata/EntityMetadata';
 import { Entity } from '../Entity';
 
 export function table(): Function;
@@ -30,7 +32,7 @@ export function table(dbNameOrTableOptions?: string | TableOptions, options?: Ta
     }
 
     const metadataStorage = getMetadataStorage();
-    const entityMetadata = new EntityMetadata({
+    const modelMetadata = new ModelMetadata({
       name: className,
       type: object,
       tableName: options.name,
@@ -38,6 +40,6 @@ export function table(dbNameOrTableOptions?: string | TableOptions, options?: Ta
       connection: options.connection,
     });
 
-    metadataStorage.entities.push(entityMetadata);
+    metadataStorage.models.push(modelMetadata);
   };
 }

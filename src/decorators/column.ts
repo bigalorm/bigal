@@ -4,9 +4,11 @@ import { getMetadataStorage } from '../metadata';
 import { ColumnCollectionOptions } from './ColumnCollectionOptions';
 import { ColumnModelOptions } from './ColumnModelOptions';
 import { ColumnTypeOptions } from './ColumnTypeOptions';
-import { ColumnCollectionMetadata } from '../metadata/ColumnCollectionMetadata';
-import { ColumnModelMetadata } from '../metadata/ColumnModelMetadata';
-import { ColumnTypeMetadata } from '../metadata/ColumnTypeMetadata';
+import {
+  ColumnCollectionMetadata,
+  ColumnModelMetadata,
+  ColumnTypeMetadata,
+} from '../metadata';
 
 type ColumnOptions = ColumnTypeOptions | ColumnCollectionOptions | ColumnModelOptions;
 
@@ -40,7 +42,7 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
 
     if (columnCollectionOptions.collection) {
       metadataStorage.columns.push(new ColumnCollectionMetadata({
-        entity: object.constructor.name,
+        target: object.constructor.name,
         name: dbColumnName,
         propertyName,
         required: columnCollectionOptions.required,
@@ -55,7 +57,7 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
     const columnModelOptions = options as ColumnModelOptions;
     if (columnModelOptions.model) {
       metadataStorage.columns.push(new ColumnModelMetadata({
-        entity: object.constructor.name,
+        target: object.constructor.name,
         name: dbColumnName,
         propertyName,
         required: columnModelOptions.required,
@@ -67,7 +69,7 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
 
     const columnTypeOptions = options as ColumnTypeOptions;
     metadataStorage.columns.push(new ColumnTypeMetadata({
-      entity: object.constructor.name,
+      target: object.constructor.name,
       name: dbColumnName,
       propertyName,
       required: columnTypeOptions.required,

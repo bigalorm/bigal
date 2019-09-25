@@ -7,7 +7,7 @@ import { Entity } from '../Entity';
 type Column = ColumnTypeMetadata | ColumnModelMetadata | ColumnCollectionMetadata;
 interface ColumnByStringId { [index: string]: Column; }
 
-export interface EntityMetadataOptions {
+export interface ModelMetadataOptions {
   name: string;
   type: new() => Entity;
   connection?: string;
@@ -15,8 +15,7 @@ export interface EntityMetadataOptions {
   readonly?: boolean;
 }
 
-export class EntityMetadata {
-
+export class ModelMetadata {
   public set columns(columns: Column[]) {
     this._columns = columns;
     this.columnsByColumnName = {};
@@ -25,11 +24,19 @@ export class EntityMetadata {
     for (const column of columns) {
       this.columnsByColumnName[column.name] = column;
       this.columnsByPropertyName[column.propertyName] = column;
+
+      if (column.primary) {
+        this._primaryKeyColumn = column;
+      }
     }
   }
 
   public get columns(): Column[] {
     return this._columns;
+  }
+
+  public get primaryKeyColumn(): Column | undefined {
+    return this._primaryKeyColumn;
   }
   public name: string;
   public type: new() => Entity;
@@ -39,6 +46,7 @@ export class EntityMetadata {
   public columnsByColumnName: ColumnByStringId = {};
   public columnsByPropertyName: ColumnByStringId = {};
   private _columns: Column[] = [];
+  private _primaryKeyColumn: Column | undefined;
 
   constructor({
     name,
@@ -46,7 +54,7 @@ export class EntityMetadata {
     connection,
     tableName,
     readonly = false,
-  }: EntityMetadataOptions) {
+  }: ModelMetadataOptions) {
     this.name = name;
     this.type = type;
     this.connection = connection;
