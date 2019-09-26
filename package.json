@@ -7,13 +7,21 @@
   "scripts": {
     "build": "tsc",
     "test": "mocha -r ts-node/register tests/**/*.tests.ts",
-    "lint": "tslint --fix -p tsconfig.lint.json -c tslint.json -t stylish",
+    "lint": "eslint --fix --ext .ts src tests",
     "dist": "if [ -d \"src\" ]; then rm -rf dist && npm run build && npm run lint && npm run test && cp package.json dist && cp *.md dist && cp LICENSE dist && cp .npmignore dist && cd dist && npm publish; fi",
     "prepublishOnly": "if [ -d \"src\" ]; then echo \"Please use: npm run dist\" && exit 125; fi"
   },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix"
+    ],
+    "*.ts": [
+      "eslint --fix"
+    ]
+  },
   "husky": {
     "hooks": {
-      "pre-commit": "npm run lint"
+      "pre-commit": "lint-staged"
     }
   },
   "repository": {
@@ -46,18 +54,23 @@
     "@types/chai": "4.2.3",
     "@types/faker": "4.1.5",
     "@types/mocha": "5.2.7",
+    "@typescript-eslint/eslint-plugin": "2.3.1",
+    "@typescript-eslint/parser": "2.3.1",
     "chai": "4.2.0",
     "eslint": "6.4.0",
     "eslint-config-airbnb-base": "14.0.0",
     "eslint-plugin-import": "2.18.2",
+    "eslint-plugin-jsdoc": "15.9.2",
+    "eslint-plugin-mocha": "6.1.1",
+    "eslint-plugin-promise": "4.2.1",
+    "eslint-plugin-security": "1.4.0",
     "faker": "4.1.0",
     "husky": "3.0.5",
+    "lint-staged": "9.3.0",
     "mocha": "6.2.0",
     "strict-event-emitter-types": "2.0.0",
     "ts-mockito": "2.5.0",
     "ts-node": "8.4.1",
-    "tslint": "5.20.0",
-    "tslint-config-airbnb": "5.11.2",
     "typescript": "3.6.3"
   }
 }
