@@ -473,7 +473,7 @@ export function getDeleteQueryAndParams({
  * @returns {string} SQL columns
  * @private
  */
-function _getColumnsToSelect({
+export function _getColumnsToSelect({
                                       model,
                                       select,
                                     }: {
@@ -523,7 +523,7 @@ function _getColumnsToSelect({
  * @returns {object} {{whereStatement?: string, params: Array}}
  * @private
  */
-function _buildWhereStatement({
+export function _buildWhereStatement({
                                        repositoriesByModelNameLowered,
                                        model,
                                        where,
@@ -567,7 +567,7 @@ function _buildWhereStatement({
  * @returns {string} SQL order by statement
  * @private
  */
-function _buildOrderStatement({
+export function _buildOrderStatement({
                                        model,
                                        sorts,
                                      }: {

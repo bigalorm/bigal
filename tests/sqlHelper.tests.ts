@@ -1,128 +1,60 @@
-// @ts-ignore
 import chai from 'chai';
-import * as _ from 'lodash';
 import * as faker from 'faker';
 
-import { SqlHelper as sqlHelper } from '../src/SqlHelper';
-import { ModelSchema } from '../src/schema/ModelSchema';
-import { ModelSchemasByGlobalId } from '../src/schema/ModelSchemasByGlobalId';
+import * as sqlHelper from '../src/SqlHelper';
+import {RepositoriesByModelNameLowered} from "../src/RepositoriesByModelNameLowered";
+import {initialize, Entity, Repository} from "../src";
+import {Pool} from "postgres-pool";
+import {mock} from "ts-mockito";
+import {ColumnCollectionMetadata, ColumnTypeMetadata, ModelMetadata} from "../src/metadata";
+import {
+  Category,
+  Product,
+  ProductCategory,
+  ProductWithCreateUpdateDateTracking,
+  ReadonlyProduct,
+  Store,
+} from "./models";
 
 describe('sqlHelper', () => {
   let should: Chai.Should;
+  const mockedPool: Pool = mock(Pool);
+  let repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+
+  class TestEntity implements Entity {
+  }
+
   before(() => {
     should = chai.should();
-  });
-
-  const storeSchema: ModelSchema = {
-    globalId: 'store',
-    tableName: 'store',
-    attributes: {
-      id: {
-        type: 'integer',
-        primaryKey: true,
-      },
-      name: {
-        type: 'string',
-      },
-      products: {
-        collection: 'product',
-        via: 'store',
-      },
-    },
-  };
-  const productSchema: ModelSchema = {
-    globalId: 'product',
-    tableName: 'product',
-    attributes: {
-      id: {
-        type: 'integer',
-        primaryKey: true,
-      },
-      name: {
-        type: 'string',
-        required: true,
-      },
-      sku: {
-        type: 'string',
-        columnName: 'sku',
-      },
-      aliases: {
-        type: 'array',
-        defaultsTo: [],
-        columnName: 'alias_names',
-      },
-      store: {
-        model: 'store',
-        columnName: 'store_id',
-      },
-      categories: {
-        collection: 'category',
-        via: 'category',
-        through: 'productCategory',
-      },
-      createdAt: {
-        type: 'datetime',
-        columnName: 'created_at',
-      },
-    },
-  };
-  const categorySchema: ModelSchema = {
-    globalId: 'category',
-    tableName: 'category',
-    attributes: {
-      id: {
-        type: 'integer',
-        primaryKey: true,
-      },
-      name: {
-        type: 'string',
-      },
-    },
-  };
-  const productCategorySchema: ModelSchema = {
-    globalId: 'productCategory',
-    tableName: 'product__category',
-    attributes: {
-      id: {
-        type: 'integer',
-        primaryKey: true,
-      },
-      product: {
-        model: 'product',
-        columnName: 'product_id',
-      },
-      category: {
-        model: 'category',
-        columnName: 'category_id',
-      },
-    },
-  };
-  const schemas = [
-    storeSchema,
-    productSchema,
-    categorySchema,
-    productCategorySchema,
-  ];
-  const modelSchemasByGlobalId: ModelSchemasByGlobalId = _.keyBy(schemas, (schema) => {
-    return schema.globalId.toLowerCase();
+    repositoriesByModelNameLowered = initialize({
+      models: [
+        Category,
+        Product,
+        ProductCategory,
+        ProductWithCreateUpdateDateTracking,
+        ReadonlyProduct,
+        Store,
+      ],
+      pool: mockedPool,
+    })
   });
 
   describe('#getSelectQueryAndParams()', () => {
     describe('select', () => {
-      it('should include all columns if select is undefined', () => {
+      it.only('should include all columns if select is undefined', () => {
         const {
           query,
           params,
         } = sqlHelper.getSelectQueryAndParams({
-          modelSchemasByGlobalId,
-          schema: productSchema,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered['product'].model,
           where: {},
           sorts: [],
           limit: 1,
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
       it('should include primaryKey column if select is empty', () => {
@@ -130,8 +62,8 @@ describe('sqlHelper', () => {
           query,
           params,
         } = sqlHelper.getSelectQueryAndParams({
-          modelSchemasByGlobalId,
-          schema: productSchema,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered['product'].model,
           select: [],
           where: {},
           sorts: [],
@@ -139,7 +71,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id" FROM "${productSchema.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "id" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
       it('should include primaryKey column if select does not include it', () => {
@@ -147,8 +79,8 @@ describe('sqlHelper', () => {
           query,
           params,
         } = sqlHelper.getSelectQueryAndParams({
-          modelSchemasByGlobalId,
-          schema: productSchema,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered['product'].model,
           select: ['name'],
           where: {},
           sorts: [],
@@ -156,7 +88,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "name","id" FROM "${productSchema.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "name","id" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
     });
@@ -167,8 +99,8 @@ describe('sqlHelper', () => {
           query,
           params,
         } = sqlHelper.getSelectQueryAndParams({
-          modelSchemasByGlobalId,
-          schema: productSchema,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered['product'].model,
           where: {
             name,
           },
@@ -177,7 +109,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" WHERE "name"=$1 LIMIT 1`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" WHERE "name"=$1 LIMIT 1`);
         params.should.deep.equal([name]);
       });
     });
@@ -187,15 +119,15 @@ describe('sqlHelper', () => {
           query,
           params,
         } = sqlHelper.getSelectQueryAndParams({
-          modelSchemasByGlobalId,
-          schema: productSchema,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered['product'].model,
           sorts: ['name'],
           where: {},
           limit: 1,
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" ORDER BY "name" LIMIT 1`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" ORDER BY "name" LIMIT 1`);
         params.should.deep.equal([]);
       });
     });
@@ -205,15 +137,15 @@ describe('sqlHelper', () => {
           query,
           params,
         } = sqlHelper.getSelectQueryAndParams({
-          modelSchemasByGlobalId,
-          schema: productSchema,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered['product'].model,
           where: {},
           sorts: [],
           limit: 1,
           skip: 100,
         });
 
-        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" LIMIT 1 OFFSET 100`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" LIMIT 1 OFFSET 100`);
         params.should.deep.equal([]);
       });
     });
@@ -223,15 +155,15 @@ describe('sqlHelper', () => {
           query,
           params,
         } = sqlHelper.getSelectQueryAndParams({
-          modelSchemasByGlobalId,
-          schema: productSchema,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered['product'].model,
           where: {},
           sorts: [],
           skip: 0,
           limit: 100,
         });
 
-        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${productSchema.tableName}" LIMIT 100`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" LIMIT 100`);
         params.should.deep.equal([]);
       });
     });
@@ -242,11 +174,11 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getCountQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
       });
 
-      query.should.equal(`SELECT count(*) AS "count" FROM "${productSchema.tableName}"`);
+      query.should.equal(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered['product'].model.tableName}"`);
       params.should.deep.equal([]);
     });
     it('should include where statement if defined', () => {
@@ -259,14 +191,14 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getCountQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           store,
         },
       });
 
-      query.should.equal(`SELECT count(*) AS "count" FROM "${productSchema.tableName}" WHERE "store_id"=$1`);
+      query.should.equal(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" WHERE "store_id"=$1`);
       params.should.deep.equal([
         store.id,
       ]);
@@ -276,39 +208,55 @@ describe('sqlHelper', () => {
     it('should throw if a required property has an undefined value', () => {
       (() => {
         sqlHelper.getInsertQueryAndParams({
-          modelSchemasByGlobalId,
-          schema: productSchema,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered['product'].model,
           values: {
             store: faker.random.uuid(),
           },
           returnRecords: true,
         });
-      }).should.throw(Error, `Create statement for "${productSchema.globalId}" is missing value for required field: name`);
+      }).should.throw(Error, `Create statement for "${repositoriesByModelNameLowered['product'].model.name}" is missing value for required field: name`);
     });
     it('should not throw if a required property has a defaultValue and an undefined initial value', () => {
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-            required: true,
-            defaultsTo: 'foobar',
-          },
-          bar: {
-            type: 'string',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          required: true,
+          defaultsTo: 'foobar',
+          type: 'string',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'bar',
+          propertyName: 'bar',
+          type: 'string',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       (() => {
         sqlHelper.getInsertQueryAndParams({
-          modelSchemasByGlobalId,
-          schema,
+          repositoriesByModelNameLowered: repositories,
+          model,
           values: {
             bar: faker.random.uuid(),
           },
@@ -317,27 +265,40 @@ describe('sqlHelper', () => {
       }).should.not.throw();
     });
     it('should not override properties with defaultValue if value is defined', () => {
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-            defaultsTo: 'foobar',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          defaultsTo: 'foobar',
+          type: 'string',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const name = faker.random.uuid();
       const {
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         values: {
           name,
         },
@@ -347,30 +308,46 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name]);
     });
     it('should set undefined properties to defaultValue if defined on schema', () => {
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-            defaultsTo: 'foobar',
-          },
-          bar: {
-            type: 'string',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          defaultsTo: 'foobar',
+          type: 'string',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'bar',
+          propertyName: 'bar',
+          type: 'string',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const bar = faker.random.uuid();
       const {
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         values: {
           bar,
         },
@@ -382,32 +359,46 @@ describe('sqlHelper', () => {
       ]);
     });
     it('should set undefined properties to result of defaultValue function if defined on schema', () => {
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-            defaultsTo: () => {
-              return 'foobar';
-            },
-          },
-          bar: {
-            type: 'string',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          defaultsTo: () => 'foobar',
+          type: 'string',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'bar',
+          propertyName: 'bar',
+          type: 'string',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const bar = faker.random.uuid();
       const {
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         values: {
           bar,
         },
@@ -420,38 +411,53 @@ describe('sqlHelper', () => {
     });
     it('should set createdAt if schema.autoCreatedAt and value is undefined', () => {
       const beforeTime = new Date();
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        autoCreatedAt: true,
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-          },
-          createdAt: {
-            type: 'datetime',
-            columnName: 'created_at',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          type: 'string',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'created_at',
+          propertyName: 'createdAt',
+          type: 'datetime',
+          createDate: true,
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const name = faker.random.uuid();
       const {
         query,
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         values: {
           name,
         },
       });
 
-      query.should.equal(`INSERT INTO "${schema.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${model.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
       params.should.have.length(2);
       const afterTime = new Date();
       for (const [index, value] of params.entries()) {
@@ -464,39 +470,54 @@ describe('sqlHelper', () => {
     });
     it('should not override createdAt if schema.autoCreatedAt and value is defined', () => {
       const createdAt = faker.date.past();
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        autoCreatedAt: true,
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-          },
-          createdAt: {
-            type: 'datetime',
-            columnName: 'created_at',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          type: 'string',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'created_at',
+          propertyName: 'createdAt',
+          type: 'datetime',
+          createDate: true,
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const name = faker.random.uuid();
       const {
         query,
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         values: {
           name,
           createdAt,
         },
       });
 
-      query.should.equal(`INSERT INTO "${schema.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${model.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         createdAt,
@@ -504,38 +525,53 @@ describe('sqlHelper', () => {
     });
     it('should set updatedAt if schema.autoUpdatedAt and value is undefined', () => {
       const beforeTime = new Date();
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        autoUpdatedAt: true,
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-          },
-          updatedAt: {
-            type: 'datetime',
-            columnName: 'updated_at',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          type: 'string',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'updated_at',
+          propertyName: 'updatedAt',
+          type: 'datetime',
+          updateDate: true,
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const name = faker.random.uuid();
       const {
         query,
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         values: {
           name,
         },
       });
 
-      query.should.equal(`INSERT INTO "${schema.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
+      query.should.equal(`INSERT INTO "${model.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
       params.should.have.length(2);
       const afterTime = new Date();
       for (const [index, value] of params.entries()) {
@@ -548,76 +584,109 @@ describe('sqlHelper', () => {
     });
     it('should not override updatedAt if schema.autoUpdatedAt and value is defined', () => {
       const updatedAt = faker.date.past();
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        autoUpdatedAt: true,
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-          },
-          updatedAt: {
-            type: 'datetime',
-            columnName: 'updated_at',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          type: 'string',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'updated_at',
+          propertyName: 'updatedAt',
+          type: 'datetime',
+          updateDate: true,
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const name = faker.random.uuid();
       const {
         query,
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         values: {
           name,
           updatedAt,
         },
       });
 
-      query.should.equal(`INSERT INTO "${schema.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
+      query.should.equal(`INSERT INTO "${model.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
       params.should.deep.equal([
         name,
         updatedAt,
       ]);
     });
     it('should ignore collection properties', () => {
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        autoUpdatedAt: true,
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-          },
-          bars: {
-            collection: 'bar',
-            via: 'foo',
-          },
-          bats: {
-            collection: 'bats',
-            through: 'foo__bats',
-            via: 'foo',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          type: 'string',
+        }),
+        new ColumnCollectionMetadata({
+          target: 'foo',
+          name: 'bars',
+          propertyName: 'bars',
+          collection: 'bar',
+          via: 'foo',
+        }),
+        new ColumnCollectionMetadata({
+          target: 'foo',
+          name: 'bats',
+          propertyName: 'bats',
+          collection: 'bats',
+          through: 'foo__bats',
+          via: 'foo',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const name = faker.random.uuid();
       const {
         query,
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         values: {
           name,
           bars: [faker.random.uuid()],
@@ -625,7 +694,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`INSERT INTO "${schema.tableName}" ("name") VALUES ($1) RETURNING "id","name"`);
+      query.should.equal(`INSERT INTO "${model.tableName}" ("name") VALUES ($1) RETURNING "id","name"`);
       params.should.deep.equal([
         name,
       ]);
@@ -641,15 +710,15 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         values: {
           name,
           store,
         },
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         [],
@@ -658,24 +727,38 @@ describe('sqlHelper', () => {
     });
     it('should cast value to jsonb if type=json and value is an array', () => {
       // Please see https://github.com/brianc/node-postgres/issues/442 for details of why this is needed
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-            required: true,
-            defaultsTo: 'foobar',
-          },
-          bar: {
-            type: 'json',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          type: 'string',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'bar',
+          propertyName: 'bar',
+          type: 'json',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const name = faker.random.uuid();
       const bar = [{
@@ -686,15 +769,15 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         values: {
           name,
           bar,
         },
       });
 
-      query.should.equal(`INSERT INTO "${schema.tableName}" ("name","bar") VALUES ($1,$2::jsonb) RETURNING "id","name","bar"`);
+      query.should.equal(`INSERT INTO "${model.tableName}" ("name","bar") VALUES ($1,$2::jsonb) RETURNING "id","name","bar"`);
       params.should.deep.equal([
         name,
         JSON.stringify(bar),
@@ -707,8 +790,8 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         values: {
           name,
           store: storeId,
@@ -716,7 +799,7 @@ describe('sqlHelper', () => {
         returnRecords: true,
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         [],
@@ -730,8 +813,8 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         values: {
           name,
           store: storeId,
@@ -740,7 +823,7 @@ describe('sqlHelper', () => {
         returnSelect: ['name'],
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "name","id"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "name","id"`);
       params.should.deep.equal([
         name,
         [],
@@ -754,8 +837,8 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         values: {
           name,
           store: storeId,
@@ -763,7 +846,7 @@ describe('sqlHelper', () => {
         returnRecords: false,
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3)`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3)`);
       params.should.deep.equal([
         name,
         [],
@@ -779,8 +862,8 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         values: [{
           name: name1,
           store: storeId1,
@@ -792,7 +875,7 @@ describe('sqlHelper', () => {
         returnSelect: ['store'],
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "store_id" AS "store","id"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "store_id" AS "store","id"`);
       params.should.deep.equal([
         name1,
         name2,
@@ -811,8 +894,8 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         values: [{
           name: name1,
           store: storeId1,
@@ -822,7 +905,7 @@ describe('sqlHelper', () => {
         }],
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name1,
         name2,
@@ -841,8 +924,8 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getInsertQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         values: [{
           name: name1,
           store: storeId1,
@@ -853,7 +936,7 @@ describe('sqlHelper', () => {
         returnRecords: false,
       });
 
-      query.should.equal(`INSERT INTO "${productSchema.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)`);
       params.should.deep.equal([
         name1,
         name2,
@@ -866,78 +949,108 @@ describe('sqlHelper', () => {
   });
   describe('#getUpdateQueryAndParams()', () => {
     it('should not set createdAt if schema.autoCreatedAt and value is undefined', () => {
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        autoCreatedAt: true,
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-          },
-          createdAt: {
-            type: 'datetime',
-            columnName: 'created_at',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          type: 'string',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'created_at',
+          propertyName: 'createdAt',
+          type: 'datetime',
+          createDate: true,
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const name = faker.random.uuid();
       const {
         query,
         params,
       } = sqlHelper.getUpdateQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         where: {},
         values: {
           name,
         },
       });
 
-      query.should.equal(`UPDATE "${schema.tableName}" SET "name"=$1 RETURNING "id","name","created_at" AS "createdAt"`);
+      query.should.equal(`UPDATE "${model.tableName}" SET "name"=$1 RETURNING "id","name","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
       ]);
     });
     it('should set updatedAt if schema.autoUpdatedAt and value is undefined', () => {
       const beforeTime = new Date();
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        autoUpdatedAt: true,
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-          },
-          updatedAt: {
-            type: 'datetime',
-            columnName: 'updated_at',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          type: 'string',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'updated_at',
+          propertyName: 'updatedAt',
+          type: 'datetime',
+          updateDate: true,
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const name = faker.random.uuid();
       const {
         query,
         params,
       } = sqlHelper.getUpdateQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         where: {},
         values: {
           name,
         },
       });
 
-      query.should.equal(`UPDATE "${schema.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
+      query.should.equal(`UPDATE "${model.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
       params.should.have.length(2);
       const afterTime = new Date();
       for (const [index, value] of params.entries()) {
@@ -950,32 +1063,47 @@ describe('sqlHelper', () => {
     });
     it('should not override updatedAt if schema.autoUpdatedAt and value is defined', () => {
       const updatedAt = faker.date.past();
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        autoUpdatedAt: true,
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-          },
-          updatedAt: {
-            type: 'datetime',
-            columnName: 'updated_at',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          type: 'string',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'updated_at',
+          propertyName: 'updatedAt',
+          type: 'datetime',
+          updateDate: true,
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const name = faker.random.uuid();
       const {
         query,
         params,
       } = sqlHelper.getUpdateQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {},
         values: {
           name,
@@ -983,43 +1111,62 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${schema.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
+      query.should.equal(`UPDATE "${model.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
       params.should.deep.equal([
         name,
         updatedAt,
       ]);
     });
     it('should ignore collection properties', () => {
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-          },
-          bars: {
-            collection: 'bar',
-            via: 'foo',
-          },
-          bats: {
-            collection: 'bats',
-            through: 'foo__bats',
-            via: 'foo',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          type: 'string',
+        }),
+        new ColumnCollectionMetadata({
+          target: 'foo',
+          name: 'bars',
+          propertyName: 'bars',
+          collection: 'bar',
+          via: 'foo',
+        }),
+        new ColumnCollectionMetadata({
+          target: 'foo',
+          name: 'bats',
+          propertyName: 'bats',
+          collection: 'bats',
+          through: 'foo__bats',
+          via: 'foo',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const name = faker.random.uuid();
       const {
         query,
         params,
       } = sqlHelper.getUpdateQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         where: {},
         values: {
           name,
@@ -1028,7 +1175,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${schema.tableName}" SET "name"=$1 RETURNING "id","name"`);
+      query.should.equal(`UPDATE "${model.tableName}" SET "name"=$1 RETURNING "id","name"`);
       params.should.deep.equal([
         name,
       ]);
@@ -1044,8 +1191,8 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getUpdateQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {},
         values: {
           name,
@@ -1053,7 +1200,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1,"store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`UPDATE "${repositoriesByModelNameLowered['product'].model.tableName}" SET "name"=$1,"store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         store.id,
@@ -1061,24 +1208,38 @@ describe('sqlHelper', () => {
     });
     it('should cast value to jsonb if type=json and value is an array', () => {
       // Please see https://github.com/brianc/node-postgres/issues/442 for details of why this is needed
-      const schema: ModelSchema = {
-        globalId: 'foo',
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          name: {
-            type: 'string',
-            required: true,
-            defaultsTo: 'foobar',
-          },
-          bar: {
-            type: 'json',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          type: 'string',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'bar',
+          propertyName: 'bar',
+          type: 'json',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const name = faker.random.uuid();
       const bar = [{
@@ -1089,8 +1250,8 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getUpdateQueryAndParams({
-        modelSchemasByGlobalId,
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         where: {},
         values: {
           name,
@@ -1098,7 +1259,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${schema.tableName}" SET "name"=$1,"bar"=$2::jsonb RETURNING "id","name","bar"`);
+      query.should.equal(`UPDATE "${model.tableName}" SET "name"=$1,"bar"=$2::jsonb RETURNING "id","name","bar"`);
       params.should.deep.equal([
         name,
         JSON.stringify(bar),
@@ -1115,8 +1276,8 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getUpdateQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           store,
         },
@@ -1125,7 +1286,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1 WHERE "store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`UPDATE "${repositoriesByModelNameLowered['product'].model.tableName}" SET "name"=$1 WHERE "store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         store.id,
@@ -1139,8 +1300,8 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getUpdateQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           id: productId,
         },
@@ -1151,7 +1312,7 @@ describe('sqlHelper', () => {
         returnRecords: true,
       });
 
-      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`UPDATE "${repositoriesByModelNameLowered['product'].model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         storeId,
@@ -1166,8 +1327,8 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getUpdateQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           id: productId,
         },
@@ -1179,7 +1340,7 @@ describe('sqlHelper', () => {
         returnSelect: ['name'],
       });
 
-      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "name","id"`);
+      query.should.equal(`UPDATE "${repositoriesByModelNameLowered['product'].model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "name","id"`);
       params.should.deep.equal([
         name,
         storeId,
@@ -1194,8 +1355,8 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getUpdateQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           id: productId,
         },
@@ -1206,7 +1367,7 @@ describe('sqlHelper', () => {
         returnRecords: false,
       });
 
-      query.should.equal(`UPDATE "${productSchema.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3`);
+      query.should.equal(`UPDATE "${repositoriesByModelNameLowered['product'].model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3`);
       params.should.deep.equal([
         name,
         storeId,
@@ -1220,11 +1381,11 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getDeleteQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
       });
 
-      query.should.equal(`DELETE FROM "${productSchema.tableName}" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered['product'].model.tableName}" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([]);
     });
     it('should include where statement if defined', () => {
@@ -1237,14 +1398,14 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getDeleteQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           store,
         },
       });
 
-      query.should.equal(`DELETE FROM "${productSchema.tableName}" WHERE "store_id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered['product'].model.tableName}" WHERE "store_id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         store.id,
       ]);
@@ -1255,15 +1416,15 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getDeleteQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           id: productId,
         },
         returnRecords: true,
       });
 
-      query.should.equal(`DELETE FROM "${productSchema.tableName}" WHERE "id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered['product'].model.tableName}" WHERE "id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         productId,
       ]);
@@ -1274,8 +1435,8 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getDeleteQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           id: productId,
         },
@@ -1283,7 +1444,7 @@ describe('sqlHelper', () => {
         returnSelect: ['name'],
       });
 
-      query.should.equal(`DELETE FROM "${productSchema.tableName}" WHERE "id"=$1 RETURNING "name","id"`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered['product'].model.tableName}" WHERE "id"=$1 RETURNING "name","id"`);
       params.should.deep.equal([
         productId,
       ]);
@@ -1294,137 +1455,51 @@ describe('sqlHelper', () => {
         query,
         params,
       } = sqlHelper.getDeleteQueryAndParams({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           id: productId,
         },
         returnRecords: false,
       });
 
-      query.should.equal(`DELETE FROM "${productSchema.tableName}" WHERE "id"=$1`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered['product'].model.tableName}" WHERE "id"=$1`);
       params.should.deep.equal([
         productId,
       ]);
     });
   });
-  describe('#getPrimaryKeyPropertyName()', () => {
-    it('should return the first attribute with primaryKey=true', () => {
-      const schema: ModelSchema = {
-        globalId: faker.random.uuid(),
-        tableName: 'foo',
-        attributes: {
-          foo: {
-            type: 'string',
-          },
-          bar: {
-            type: 'string',
-            primaryKey: true,
-          },
-        },
-      };
-
-      const value = sqlHelper.getPrimaryKeyPropertyName({
-        schema,
-      });
-
-      value.should.equal('bar');
-    });
-    it('should return id if no attributes are found with primaryKey=true', () => {
-      const schema: ModelSchema = {
-        globalId: faker.random.uuid(),
-        tableName: 'foo',
-        attributes: {
-          foo: {
-            type: 'string',
-          },
-        },
-      };
-
-      const value = sqlHelper.getPrimaryKeyPropertyName({
-        schema,
-      });
-
-      value.should.equal('id');
-    });
-  });
-  describe('#_getColumnName()', () => {
-    const schema: ModelSchema = {
-      globalId: faker.random.uuid(),
-      tableName: 'foo',
-      attributes: {
-        id: {
-          type: 'string',
-          primaryKey: true,
-        },
-        foo: {
-          type: 'string',
-        },
-        bar: {
-          type: 'string',
-          columnName: 'foobar',
-        },
-      },
-    };
-
-    it('should return columnName value if defined in the schema', () => {
-      const result = sqlHelper._getColumnName({
-        schema,
-        propertyName: 'bar',
-      });
-
-      result.should.equal('foobar');
-    });
-    it('should return propertyName if columnName is not defined in the schema', () => {
-      const propertyName = 'foo';
-      const result = sqlHelper._getColumnName({
-        schema,
-        propertyName,
-      });
-
-      result.should.equal(propertyName);
-    });
-    it('should throw if propertyName is not an attribute key in the schema', () => {
-      const propertyName = 'foobar';
-      (() => {
-        sqlHelper._getColumnName({
-          schema,
-          propertyName,
-        });
-      }).should.throw(Error, `Property (${propertyName}) not found in model (${schema.globalId}).`);
-    });
-  });
-  describe('#_getColumnsToSelect()', () => {
+ describe('#_getColumnsToSelect()', () => {
     it('should include all columns if select is undefined', () => {
       const query = sqlHelper._getColumnsToSelect({
-        schema: productSchema,
+        model: repositoriesByModelNameLowered['product'].model,
         select: undefined,
       });
 
-      query.should.equal(`"id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal('"id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
     });
     it('should include all columns if select is undefined', () => {
       const query = sqlHelper._getColumnsToSelect({
-        schema: productSchema,
+        model: repositoriesByModelNameLowered['product'].model,
       });
 
-      query.should.equal(`"id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal('"id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
     });
     it('should include primaryKey column if select is empty', () => {
       const query = sqlHelper._getColumnsToSelect({
-        schema: productSchema,
+        model: repositoriesByModelNameLowered['product'].model,
         select: [],
       });
 
-      query.should.equal(`"id"`);
+      query.should.equal('"id"');
     });
     it('should include primaryKey column if select does not include it', () => {
       const query = sqlHelper._getColumnsToSelect({
-        schema: productSchema,
+        model: repositoriesByModelNameLowered['product'].model,
         select: ['name'],
       });
 
-      query.should.equal(`"name","id"`);
+      query.should.equal('"name","id"');
     });
   });
   describe('#_buildWhereStatement()', () => {
@@ -1433,8 +1508,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
       });
 
       should.not.exist(whereStatement);
@@ -1443,14 +1518,14 @@ describe('sqlHelper', () => {
     it('should throw if query value is undefined', () => {
       (() => {
         sqlHelper._buildWhereStatement({
-          modelSchemasByGlobalId,
-          schema: productSchema,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered['product'].model,
           // @ts-ignore
           where: {
             store: undefined,
           },
         });
-      }).should.throw(Error, `Attempting to query with an undefined value. store on ${productSchema.globalId}`);
+      }).should.throw(Error, `Attempting to query with an undefined value. store on ${repositoriesByModelNameLowered['product'].model.name}`);
     });
     it('should use column name if defined', () => {
       const storeId = faker.random.uuid();
@@ -1458,8 +1533,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           store: storeId,
         },
@@ -1474,8 +1549,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name,
         },
@@ -1490,8 +1565,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             startsWith: name,
@@ -1509,8 +1584,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             startsWith: [name1, name2],
@@ -1532,8 +1607,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             endsWith: name,
@@ -1551,8 +1626,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             endsWith: [name1, name2],
@@ -1574,8 +1649,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             contains: name,
@@ -1593,8 +1668,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             contains: [name1, name2],
@@ -1616,8 +1691,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             like: name,
@@ -1634,8 +1709,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             '!': {
@@ -1653,8 +1728,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             like: '',
@@ -1670,8 +1745,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             '!': {
@@ -1690,8 +1765,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             like: [name],
@@ -1708,8 +1783,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             '!': {
@@ -1729,8 +1804,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             like: [name1, name2],
@@ -1753,8 +1828,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             '!': {
@@ -1777,8 +1852,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             like: [],
@@ -1794,8 +1869,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             '!': {
@@ -1814,8 +1889,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           aliases: {
             like: [name],
@@ -1832,8 +1907,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           aliases: {
             '!': {
@@ -1852,8 +1927,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           aliases: {
             like: name,
@@ -1870,8 +1945,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           aliases: {
             '!': {
@@ -1891,8 +1966,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           aliases: {
             like: [name1, name2],
@@ -1915,8 +1990,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           aliases: {
             '!': {
@@ -1940,8 +2015,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           createdAt: {
             '>': now,
@@ -1959,8 +2034,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           or: [{
             name,
@@ -1985,8 +2060,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           id,
           or: [{
@@ -2016,8 +2091,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name,
         },
@@ -2027,19 +2102,32 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name]);
     });
     it('should treat integer type with array values as an =ANY() statement', () => {
-      const schema: ModelSchema = {
-        globalId: faker.random.uuid(),
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          foo: {
-            type: 'integer',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foo',
+          propertyName: 'foo',
+          type: 'integer',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const values = [42, 24];
 
@@ -2047,10 +2135,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId: {
-          [schema.globalId]: schema,
-        },
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         where: {
           foo: values,
         },
@@ -2060,19 +2146,32 @@ describe('sqlHelper', () => {
       params.should.deep.equal([values]);
     });
     it('should treat float type with array values as an =ANY() statement', () => {
-      const schema: ModelSchema = {
-        globalId: faker.random.uuid(),
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          foo: {
-            type: 'float',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foo',
+          propertyName: 'foo',
+          type: 'float',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const values = [42.42, 24.24];
 
@@ -2080,10 +2179,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId: {
-          [schema.globalId]: schema,
-        },
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         where: {
           foo: values,
         },
@@ -2093,28 +2190,39 @@ describe('sqlHelper', () => {
       params.should.deep.equal([values]);
     });
     it('should handle empty array value with array type column', () => {
-      const schema: ModelSchema = {
-        globalId: faker.random.uuid(),
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          foo: {
-            type: 'array',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foo',
+          propertyName: 'foo',
+          type: 'array',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId: {
-          [schema.globalId]: schema,
-        },
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         where: {
           foo: [],
         },
@@ -2124,28 +2232,39 @@ describe('sqlHelper', () => {
       params.should.deep.equal([]);
     });
     it('should handle comparing array type as an array of null or empty', () => {
-      const schema: ModelSchema = {
-        globalId: faker.random.uuid(),
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          foo: {
-            type: 'array',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foo',
+          propertyName: 'foo',
+          type: 'array',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId: {
-          [schema.globalId]: schema,
-        },
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         where: {
           foo: [null, []],
         },
@@ -2155,29 +2274,40 @@ describe('sqlHelper', () => {
       params.should.deep.equal([]);
     });
     it('should handle comparing array type with single value as =ANY()', () => {
-      const schema: ModelSchema = {
-        globalId: faker.random.uuid(),
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          foo: {
-            type: 'array',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foo',
+          propertyName: 'foo',
+          type: 'array',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const value = faker.random.uuid();
       const {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId: {
-          [schema.globalId]: schema,
-        },
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         where: {
           foo: value,
         },
@@ -2189,29 +2319,40 @@ describe('sqlHelper', () => {
       ]);
     });
     it('should handle comparing array type with negated single value as <>ALL()', () => {
-      const schema: ModelSchema = {
-        globalId: faker.random.uuid(),
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          foo: {
-            type: 'array',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foo',
+          propertyName: 'foo',
+          type: 'array',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const value = faker.random.uuid();
       const {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId: {
-          [schema.globalId]: schema,
-        },
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         where: {
           foo: {
             '!': value,
@@ -2225,19 +2366,32 @@ describe('sqlHelper', () => {
       ]);
     });
     it('should handle comparing array type with array value as separate =ANY() statements', () => {
-      const schema: ModelSchema = {
-        globalId: faker.random.uuid(),
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          foo: {
-            type: 'array',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foo',
+          propertyName: 'foo',
+          type: 'array',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const values = [
         faker.random.uuid(),
@@ -2247,10 +2401,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId: {
-          [schema.globalId]: schema,
-        },
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         where: {
           foo: values,
         },
@@ -2263,19 +2415,32 @@ describe('sqlHelper', () => {
       ]);
     });
     it('should handle comparing array type with negated array value as separate <>ALL() statements', () => {
-      const schema: ModelSchema = {
-        globalId: faker.random.uuid(),
-        tableName: 'foo',
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          foo: {
-            type: 'array',
-          },
-        },
-      };
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foo',
+          propertyName: 'foo',
+          type: 'array',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
 
       const values = [
         faker.random.uuid(),
@@ -2285,10 +2450,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId: {
-          [schema.globalId]: schema,
-        },
-        schema,
+        repositoriesByModelNameLowered: repositories,
+        model,
         where: {
           foo: {
             '!': values,
@@ -2307,8 +2470,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: [],
         },
@@ -2322,8 +2485,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             '!': [],
@@ -2340,8 +2503,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: [name],
         },
@@ -2355,8 +2518,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: [null, ''],
         },
@@ -2371,8 +2534,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             '!': name,
@@ -2388,8 +2551,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             '!': [],
@@ -2405,8 +2568,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           name: {
             '!': [null, ''],
@@ -2426,8 +2589,8 @@ describe('sqlHelper', () => {
         whereStatement,
         params,
       } = sqlHelper._buildWhereStatement({
-        modelSchemasByGlobalId,
-        schema: productSchema,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered['product'].model,
         where: {
           store,
         },
@@ -2438,27 +2601,35 @@ describe('sqlHelper', () => {
     });
   });
   describe('#_buildOrderStatement()', () => {
-    const schema: ModelSchema = {
-      globalId: faker.random.uuid(),
-      tableName: 'foo',
-      attributes: {
-        id: {
-          type: 'integer',
-          primaryKey: true,
-        },
-        foo: {
-          type: 'string',
-        },
-        bar: {
-          type: 'string',
-          columnName: 'foobar',
-        },
-      },
-    };
+    const model = new ModelMetadata({
+      name: 'foo',
+      type: TestEntity,
+    });
+    model.columns = [
+      new ColumnTypeMetadata({
+        target: 'foo',
+        name: 'id',
+        propertyName: 'id',
+        primary: true,
+        type: 'integer',
+      }),
+      new ColumnTypeMetadata({
+        target: 'foo',
+        name: 'foo',
+        propertyName: 'foo',
+        type: 'string',
+      }),
+      new ColumnTypeMetadata({
+        target: 'foo',
+        name: 'foobar',
+        propertyName: 'bar',
+        type: 'string',
+      }),
+    ];
 
     it('should return empty if there are no orders defined', () => {
       const result = sqlHelper._buildOrderStatement({
-        schema,
+        model,
         sorts: [],
       });
 
@@ -2466,7 +2637,7 @@ describe('sqlHelper', () => {
     });
     it('should return empty if there are orders is null', () => {
       const result = sqlHelper._buildOrderStatement({
-        schema,
+        model,
         // @ts-ignore
         sorts: null,
       });
@@ -2475,7 +2646,7 @@ describe('sqlHelper', () => {
     });
     it('should handle single string order with implicit direction', () => {
       const result = sqlHelper._buildOrderStatement({
-        schema,
+        model,
         sorts: ['foo'],
       });
 
@@ -2483,7 +2654,7 @@ describe('sqlHelper', () => {
     });
     it('should handle single string order with implicit direction and explicit columnName', () => {
       const result = sqlHelper._buildOrderStatement({
-        schema,
+        model,
         sorts: ['bar'],
       });
 
@@ -2491,7 +2662,7 @@ describe('sqlHelper', () => {
     });
     it('should handle single string order with explicit asc direction', () => {
       const result = sqlHelper._buildOrderStatement({
-        schema,
+        model,
         sorts: ['foo asc'],
       });
 
@@ -2499,7 +2670,7 @@ describe('sqlHelper', () => {
     });
     it('should handle single string order with explicit asc direction and explicit columnName', () => {
       const result = sqlHelper._buildOrderStatement({
-        schema,
+        model,
         sorts: ['bar asc'],
       });
 
@@ -2507,7 +2678,7 @@ describe('sqlHelper', () => {
     });
     it('should handle single string order with explicit desc direction', () => {
       const result = sqlHelper._buildOrderStatement({
-        schema,
+        model,
         sorts: ['foo desc'],
       });
 
@@ -2515,7 +2686,7 @@ describe('sqlHelper', () => {
     });
     it('should handle single string order with explicit desc direction and explicit columnName', () => {
       const result = sqlHelper._buildOrderStatement({
-        schema,
+        model,
         sorts: ['bar desc'],
       });
 
@@ -2523,7 +2694,7 @@ describe('sqlHelper', () => {
     });
     it('should handle multiple string order', () => {
       const result = sqlHelper._buildOrderStatement({
-        schema,
+        model,
         sorts: ['bar desc', 'foo'],
       });
 
@@ -2531,7 +2702,7 @@ describe('sqlHelper', () => {
     });
     it('should handle single object order with explicit desc direction', () => {
       const result = sqlHelper._buildOrderStatement({
-        schema,
+        model,
         sorts: [{
           foo: -1,
         }],
@@ -2541,7 +2712,7 @@ describe('sqlHelper', () => {
     });
     it('should handle single object order with explicit desc direction and explicit columnName', () => {
       const result = sqlHelper._buildOrderStatement({
-        schema,
+        model,
         sorts: [{
           bar: -1,
         }],
@@ -2551,7 +2722,7 @@ describe('sqlHelper', () => {
     });
     it('should handle multiple string order', () => {
       const result = sqlHelper._buildOrderStatement({
-        schema,
+        model,
         sorts: [{
           foo: 1,
           bar: -1,
@@ -2562,7 +2733,7 @@ describe('sqlHelper', () => {
     });
     it('should handle mixed string and object orders', () => {
       const result = sqlHelper._buildOrderStatement({
-        schema,
+        model,
         sorts: ['foo asc', {
           bar: -1,
         }],

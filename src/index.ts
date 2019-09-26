@@ -1,9 +1,10 @@
+import _ from 'lodash';
 import { Pool } from 'postgres-pool';
 import { Repository } from './Repository';
-import { Entity } from './Entity';
+import {Entity, EntityStatic} from './Entity';
 import { ReadonlyRepository } from './ReadonlyRepository';
 import {
-  ColumnMetadata,
+  ColumnMetadata, ColumnTypeMetadata,
   getMetadataStorage,
   ModelMetadata,
 } from './metadata';
@@ -19,12 +20,14 @@ export interface Connection {
 }
 
 export interface InitializeOptions extends Connection {
+  models: EntityStatic<Entity>[];
   connections?: { [index: string]: Connection };
-  expose: (repository: ReadonlyRepository<Entity> | Repository<Entity>, tableMetadata: ModelMetadata) => void;
+  expose?: (repository: ReadonlyRepository<Entity> | Repository<Entity>, tableMetadata: ModelMetadata) => void;
 }
 
 /**
  * Initializes BigAl
+ * @param {object[]} models - Model classes - used to force decorator evaluation for all models
  * @param {object[]} modelSchemas - Model definitions
  * @param {object} pool - Postgres Pool
  * @param {object} [readonlyPool] - Postgres Pool for `find` and `findOne` operations. If not defined, `pool` will be used
@@ -32,11 +35,16 @@ export interface InitializeOptions extends Connection {
  * @param {Function} expose - Used to expose model classes
  */
 export function initialize({
+  models,
                              pool,
                              readonlyPool = pool,
                              connections = {},
                              expose,
-                           }: InitializeOptions) {
+                           }: InitializeOptions): RepositoriesByModelNameLowered {
+  if (!models.length) {
+    throw new Error('Models need to be specified to read all model information from decorators');
+  }
+
   const repositoriesByModelNameLowered: RepositoriesByModelNameLowered = {};
 
   // Assemble all metadata for complete model and column definitions
@@ -46,27 +54,35 @@ export function initialize({
   // Add dictionary to quickly find a column by propertyName, for applying ColumnModifierMetadata records
   const columnsByModelName: { [index: string]: { columns: ColumnMetadata[]; columnsByPropertyName: { [index: string]: ColumnMetadata } } } = {};
   for (const column of metadataStorage.columns) {
-    columnsByModelName[column.name] = columnsByModelName[column.name] || {
+    columnsByModelName[column.target] = columnsByModelName[column.target] || {
       columns: [],
       columnsByPropertyName: {},
     };
 
-    columnsByModelName[column.name].columns.push(column);
-    columnsByModelName[column.name].columnsByPropertyName[column.propertyName] = column;
+    columnsByModelName[column.target].columns.push(column);
+    columnsByModelName[column.target].columnsByPropertyName[column.propertyName] = column;
   }
 
   for (const columnModifier of metadataStorage.columnModifiers) {
+    columnsByModelName[columnModifier.target] = columnsByModelName[columnModifier.target] || {
+      columns: [],
+      columnsByPropertyName: {},
+    };
+
     const columns = columnsByModelName[columnModifier.target];
-    if (!columns) {
-      throw new Error(`Please use @table() before using a column modifier like @primaryColumn, @createDateColumn, etc. Entity: ${columnModifier.target}, Column: ${columnModifier.propertyName}`);
-    }
 
     const column = columns.columnsByPropertyName[columnModifier.propertyName];
-    if (!column) {
-      throw new Error(`Please use @column() before using a column modifier like @primaryColumn, @createDateColumn, etc. Entity: ${columnModifier.target}, Column: ${columnModifier.propertyName}`);
-    }
+    if (column) {
+      Object.assign(column, _.omit(columnModifier, ['target', 'name', 'propertyName', 'type']));
+    } else {
+      if (!columnModifier.name) {
+        throw new Error(`Missing column name `)
+      }
 
-    Object.assign(column, columnModifier);
+      const columnModifierColumn = new ColumnTypeMetadata(columnModifier);
+      columns.columns.push(columnModifierColumn);
+      columns.columnsByPropertyName[columnModifierColumn.propertyName] = columnModifierColumn;
+    }
   }
 
 
@@ -115,6 +131,10 @@ export function initialize({
       repositoriesByModelNameLowered[model.name.toLowerCase()] = repository;
     }
 
-    expose(repository, model);
+    if (expose) {
+      expose(repository, model);
+    }
   }
+
+  return repositoriesByModelNameLowered;
 }
