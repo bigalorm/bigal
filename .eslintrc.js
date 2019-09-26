@@ -120,6 +120,7 @@ module.exports = {
     "no-param-reassign": "off", // Work toward enforcing this rule
     "radix": "off",
     "spaced-comment": "off",
+    "max-len": "off",
     "no-continue": "off",
     "no-plusplus": "off",
     "no-prototype-builtins": "off",
@@ -179,6 +180,8 @@ module.exports = {
     rules: {
       'class-methods-use-this': 'off',
       'indent': 'off',
+      "max-len": "off",
+      'no-dupe-class-members': 'off',
       'no-underscore-dangle': 'off',
       'no-useless-constructor': 'off',
       "no-restricted-syntax": [
@@ -192,15 +195,15 @@ module.exports = {
       'import/no-extraneous-dependencies': 'off',
 
       '@typescript-eslint/await-thenable': 'error',
+      '@typescript-eslint/ban-ts-ignore': 'off',
       '@typescript-eslint/no-extraneous-class': 'error',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-member-accessibility': ["error"],
-      '@typescript-eslint/interface-name-prefix': ['error', 'always'],
+      '@typescript-eslint/interface-name-prefix': ['error', 'never'],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-for-in-array': 'error',
       '@typescript-eslint/no-require-imports': 'error',
       '@typescript-eslint/no-this-alias': 'error',
-      '@typescript-eslint/no-triple-slash-reference': 'error',
       '@typescript-eslint/no-useless-constructor': 'error',
       '@typescript-eslint/no-unused-vars': 'error',
       '@typescript-eslint/prefer-for-of': 'error',

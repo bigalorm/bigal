@@ -25,11 +25,11 @@ export interface InitializeOptions extends Connection {
 
 /**
  * Initializes BigAl
- * @param {Object[]} modelSchemas - Model definitions
- * @param {Object} pool - Postgres Pool
- * @param {Object} [readonlyPool] - Postgres Pool for `find` and `findOne` operations. If not defined, `pool` will be used
- * @param {Object} [connections] - Key: name of the connection; Value: { pool, readonlyPool }
- * @param {function} expose - Used to expose model classes
+ * @param {object[]} modelSchemas - Model definitions
+ * @param {object} pool - Postgres Pool
+ * @param {object} [readonlyPool] - Postgres Pool for `find` and `findOne` operations. If not defined, `pool` will be used
+ * @param {object} [connections] - Key: name of the connection; Value: { pool, readonlyPool }
+ * @param {Function} expose - Used to expose model classes
  */
 export function initialize({
                              pool,
@@ -44,7 +44,7 @@ export function initialize({
   const metadataStorage = getMetadataStorage();
 
   // Add dictionary to quickly find a column by propertyName, for applying ColumnModifierMetadata records
-  const columnsByModelName: { [index: string]: { columns: ColumnMetadata[], columnsByPropertyName: { [index: string]: ColumnMetadata } } } = {};
+  const columnsByModelName: { [index: string]: { columns: ColumnMetadata[]; columnsByPropertyName: { [index: string]: ColumnMetadata } } } = {};
   for (const column of metadataStorage.columns) {
     columnsByModelName[column.name] = columnsByModelName[column.name] || {
       columns: [],

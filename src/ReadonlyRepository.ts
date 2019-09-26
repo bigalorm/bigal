@@ -1,4 +1,5 @@
 import _ from 'lodash';
+import { Pool } from 'postgres-pool';
 import { Entity, EntityStatic } from './Entity';
 import {
   CountResult,
@@ -10,14 +11,18 @@ import {
   PopulateArgs,
   WhereQuery,
 } from './query';
-import { SqlHelper } from './SqlHelper';
-import { Pool } from 'postgres-pool';
+// eslint-disable-next-line import/no-cycle
+import {
+  getCountQueryAndParams,
+  getSelectQueryAndParams,
+} from './SqlHelper';
 import {
   ColumnCollectionMetadata,
   ColumnModelMetadata,
   ColumnTypeMetadata,
   ModelMetadata,
 } from './metadata';
+// eslint-disable-next-line import/no-cycle
 import { RepositoriesByModelNameLowered } from './RepositoriesByModelNameLowered';
 
 export interface RepositoryOptions<T extends Entity> {
@@ -30,14 +35,20 @@ export interface RepositoryOptions<T extends Entity> {
 
 export class ReadonlyRepository<T extends Entity> {
   protected _type: EntityStatic<T>;
+
   protected _pool: Pool;
+
   protected _readonlyPool: Pool;
+
   protected _repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+
   protected _floatProperties: string[] = [];
+
   protected _intProperties: string[] = [];
+
   private readonly _modelMetadata: ModelMetadata;
 
-  constructor({
+  public constructor({
                 modelMetadata,
                 type,
                 pool,
@@ -59,16 +70,16 @@ export class ReadonlyRepository<T extends Entity> {
     }
   }
 
-  get model(): ModelMetadata {
+  public get model(): ModelMetadata {
     return this._modelMetadata;
   }
 
   /**
    * Gets a single object
-   * @param {Object} [args] - Arguments
+   * @param {object} [args] - Arguments
    * @param {string[]} [args.select] - Array of model property names to return from the query.
-   * @param {Object} [args.where] - Object representing the where query
-   * @param {string|Object|string[]|Object[]} [args.sort] - Property name(s) to sort by
+   * @param {object} [args.where] - Object representing the where query
+   * @param {string|object|string[]|object[]} [args.sort] - Property name(s) to sort by
    */
   public findOne(args: FindOneArgs | WhereQuery = {}): FindOneResult<T> {
     const {
@@ -116,13 +127,13 @@ export class ReadonlyRepository<T extends Entity> {
       sorts.push(sort);
     }
 
-    // tslint:disable-next-line:no-this-assignment
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
 
     return {
       /**
        * Filters the query
-       * @param {Object} value - Object representing the where query
+       * @param {object} value - Object representing the where query
        */
       where(value: WhereQuery) {
         where = value;
@@ -132,11 +143,11 @@ export class ReadonlyRepository<T extends Entity> {
       /**
        * Populates/hydrates relations
        * @param {string} propertyName - Name of property to join
-       * @param {Object} [where] - Object representing the where query
+       * @param {object} [where] - Object representing the where query
        * @param {string[]} [populateSelect] - Array of model property names to return from the query.
-       * @param {string|Object} [populateSort] - Property name(s) to sort by
-       * @param {string|Number} [populateSkip] - Number of records to skip
-       * @param {string|Number} [populateLimit] - Number of results to return
+       * @param {string|object} [populateSort] - Property name(s) to sort by
+       * @param {string|number} [populateSkip] - Number of records to skip
+       * @param {string|number} [populateLimit] - Number of results to return
        */
       populate(propertyName: Extract<keyof T, string>, {
         where: populateWhere,
@@ -158,14 +169,14 @@ export class ReadonlyRepository<T extends Entity> {
       },
       /**
        * Sorts the query
-       * @param {string|Object} value
+       * @param {string|object} value
        */
       sort(value: string | object) {
         sorts.push(value);
 
         return this;
       },
-      async then(resolve: (result: T | null) => void, reject: (err: Error) => void) {
+      async then(resolve: (result: T | null) => (T | Promise<T> | null), reject: (err: Error) => (void | Promise<void>) | undefined): Promise<T | null | Error | void | undefined> {
         try {
           if (_.isString(where)) {
             throw new Error('The query cannot be a string, it must be an object');
@@ -174,7 +185,7 @@ export class ReadonlyRepository<T extends Entity> {
           const {
             query,
             params,
-          } = SqlHelper.getSelectQueryAndParams({
+          } = getSelectQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
             select,
@@ -233,7 +244,7 @@ export class ReadonlyRepository<T extends Entity> {
                   throw new Error(`Unable to populate ${collectionColumn.collection} objects from ${column.target}.${column.propertyName}. There is no primary key defined in ${collectionColumn.collection}`);
                 }
 
-                const primaryKeyColumn = modelInstance.model.primaryKeyColumn;
+                const { primaryKeyColumn } = modelInstance.model;
                 if (!primaryKeyColumn) {
                   throw new Error(`Unable to populate ${column.target}.${column.propertyName}. There is no primary key defined in ${modelInstance.model.name}`);
                 }
@@ -252,7 +263,7 @@ export class ReadonlyRepository<T extends Entity> {
 
                   let relatedModelColumn: ColumnCollectionMetadata | undefined;
                   for (const populateModelColumn of populateRepository.model.columns) {
-                    const through = (populateModelColumn as ColumnCollectionMetadata).through;
+                    const { through } = populateModelColumn as ColumnCollectionMetadata;
                     if (through && through.toLowerCase() === collectionColumn.through.toLowerCase()) {
                       relatedModelColumn = populateModelColumn as ColumnCollectionMetadata;
                       break;
@@ -320,7 +331,7 @@ export class ReadonlyRepository<T extends Entity> {
           return resolve(null);
         } catch (ex) {
           ex.stack += stack;
-          reject(ex);
+          return reject(ex);
         }
       },
     };
@@ -328,12 +339,12 @@ export class ReadonlyRepository<T extends Entity> {
 
   /**
    * Gets a collection of objects
-   * @param {Object} [args] - Arguments
+   * @param {object} [args] - Arguments
    * @param {string[]} [args.select] - Array of model property names to return from the query.
-   * @param {Object} [args.where] - Object representing the where query
-   * @param {string|Object|string[]|Object[]} [args.sort] - Property name(s) to sort by
-   * @param {string|Number} [args.skip] - Number of records to skip
-   * @param {string|Number} [args.limit] - Number of results to return
+   * @param {object} [args.where] - Object representing the where query
+   * @param {string|object|string[]|object[]} [args.sort] - Property name(s) to sort by
+   * @param {string|number} [args.skip] - Number of records to skip
+   * @param {string|number} [args.limit] - Number of results to return
    */
   public find(args: FindArgs | WhereQuery = {}): FindResult<T> {
     const {
@@ -386,13 +397,13 @@ export class ReadonlyRepository<T extends Entity> {
       sorts.push(sort);
     }
 
-    // tslint:disable-next-line:no-this-assignment
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
 
     return {
       /**
        * Filters the query
-       * @param {Object} value - Object representing the where query
+       * @param {object} value - Object representing the where query
        */
       where(value: WhereQuery) {
         where = value;
@@ -401,7 +412,7 @@ export class ReadonlyRepository<T extends Entity> {
       },
       /**
        * Sorts the query
-       * @param {string|Object} value
+       * @param {string|object} value
        */
       sort(value: string | object) {
         sorts.push(value);
@@ -410,7 +421,7 @@ export class ReadonlyRepository<T extends Entity> {
       },
       /**
        * Limits results returned by the query
-       * @param {Number} value
+       * @param {number} value
        */
       limit(value: number) {
         limit = value;
@@ -419,7 +430,7 @@ export class ReadonlyRepository<T extends Entity> {
       },
       /**
        * Skips records returned by the query
-       * @param {Number} value
+       * @param {number} value
        */
       skip(value: number) {
         skip = value;
@@ -428,8 +439,8 @@ export class ReadonlyRepository<T extends Entity> {
       },
       /**
        * Pages records returned by the query
-       * @param {Number} [page=1] - Page to return - Starts at 1
-       * @param {Number} [limit=10] - Number of records to return
+       * @param {number} [page=1] - Page to return - Starts at 1
+       * @param {number} [limit=10] - Number of records to return
        */
       paginate({
                  page = 1,
@@ -450,7 +461,7 @@ export class ReadonlyRepository<T extends Entity> {
           const {
             query,
             params,
-          } = SqlHelper.getSelectQueryAndParams({
+          } = getSelectQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
             select,
@@ -472,24 +483,24 @@ export class ReadonlyRepository<T extends Entity> {
 
   /**
    * Gets a count of rows matching the where query
-   * @param {Object} [where] - Object representing the where query
-   * @returns {Number} Number of records matching the where criteria
+   * @param {object} [where] - Object representing the where query
+   * @returns {number} Number of records matching the where criteria
    */
   public count(where?: WhereQuery): CountResult<T> {
     const {
       stack,
     } = new Error(`${this.model.name}.count()`);
 
-    // tslint:disable-next-line:no-this-assignment
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
 
     return {
       /**
        * Filters the query
-       * @param {Object} value - Object representing the where query
+       * @param {object} value - Object representing the where query
        */
       where(value: WhereQuery) {
-        // tslint:disable-next-line:no-parameter-reassignment
+        // eslint-disable-next-line no-param-reassign
         where = value;
 
         return this;
@@ -499,7 +510,7 @@ export class ReadonlyRepository<T extends Entity> {
           const {
             query,
             params,
-          } = SqlHelper.getCountQueryAndParams({
+          } = getCountQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
             where,
@@ -517,13 +528,12 @@ export class ReadonlyRepository<T extends Entity> {
           return resolve(originalValue);
         } catch (ex) {
           ex.stack += stack;
-          reject(ex);
+          return reject(ex);
         }
       },
     };
   }
 
-  // tslint:disable-next-line:function-name
   protected _buildInstance(row: Partial<T>): T {
     const instance = new this._type() as T;
     Object.assign(instance, row);
@@ -567,7 +577,6 @@ export class ReadonlyRepository<T extends Entity> {
     return instance;
   }
 
-  // tslint:disable-next-line:function-name
   protected _buildInstances(rows: Array<Partial<T>>): T[] {
     if (_.isNil(rows)) {
       return rows;

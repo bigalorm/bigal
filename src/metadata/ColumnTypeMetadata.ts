@@ -20,10 +20,12 @@ export class ColumnTypeMetadata extends ColumnBaseMetadata {
    * Type of the column
    */
   public type: 'string' | 'integer' | 'float' | 'date' | 'datetime' | 'boolean' | 'array' | 'string[]' | 'integer[]' | 'float[]' | 'boolean[]' | 'json' | 'binary';
+
   /**
    * Default database value
    */
   public defaultsTo?: string | string[] | number | number[] | boolean | boolean[] | (() => string | number | boolean | Date | object) | [];
+
   /**
    * Array of possible enumerated values
    */

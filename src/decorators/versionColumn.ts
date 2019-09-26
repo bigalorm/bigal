@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import 'reflect-metadata';
 import {
   getMetadataStorage,
   ColumnModifierMetadata,
@@ -19,12 +18,12 @@ export function versionColumn(dbColumnNameOrOptions?: string | ColumnTypeOptions
         dbColumnName = dbColumnNameOrOptions;
       } else {
         dbColumnName = _.snakeCase(propertyName);
-        // tslint:disable-next-line:no-parameter-reassignment
+        // eslint-disable-next-line no-param-reassign
         options = dbColumnNameOrOptions;
       }
 
       if (!options) {
-        // tslint:disable-next-line:no-parameter-reassignment
+        // eslint-disable-next-line no-param-reassign
         options = {} as ColumnTypeOptions;
       }
 

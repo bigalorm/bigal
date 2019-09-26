@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import 'reflect-metadata';
 import {
   getMetadataStorage,
   ModelMetadata,
@@ -14,25 +13,22 @@ export function table(dbName: string, options: TableOptions): ReturnFunctionType
 export function table(dbNameOrTableOptions?: string | TableOptions, options?: TableOptions): ReturnFunctionType {
   return function tableDecorator<T extends Entity>(classObject: EntityStatic<T>) {
     const className = classObject.constructor.name;
-    if (!dbNameOrTableOptions) {
-      // tslint:disable-next-line:no-parameter-reassignment
-      dbNameOrTableOptions = _.snakeCase(className);
-    }
 
     let dbTableName: string | undefined;
     if (typeof dbNameOrTableOptions === 'string') {
       dbTableName = dbNameOrTableOptions;
     } else {
-      // tslint:disable-next-line:no-parameter-reassignment
+      // eslint-disable-next-line no-param-reassign
       options = dbNameOrTableOptions;
     }
 
     if (!options) {
-      // tslint:disable-next-line:no-parameter-reassignment
+      // eslint-disable-next-line no-param-reassign
       options = {} as TableOptions;
     }
 
     if (!options.name) {
+      // eslint-disable-next-line no-param-reassign
       options.name = dbTableName || _.snakeCase(className);
     }
 

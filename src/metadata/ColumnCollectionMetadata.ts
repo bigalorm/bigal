@@ -20,10 +20,12 @@ export class ColumnCollectionMetadata extends ColumnBaseMetadata {
    * Type of the items in the collection
    */
   public collection: string;
+
   /**
    * Property name of the on the collection item type
    */
   public via: string;
+
   /**
    * Name of the junction table for multi-multi associations
    */

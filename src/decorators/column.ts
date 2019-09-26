@@ -1,5 +1,4 @@
 import * as _ from 'lodash';
-import 'reflect-metadata';
 import { ColumnCollectionOptions } from './ColumnCollectionOptions';
 import { ColumnModelOptions } from './ColumnModelOptions';
 import { ColumnTypeOptions } from './ColumnTypeOptions';
@@ -18,7 +17,7 @@ export function column(dbColumnName: string, options?: ColumnOptions): ReturnFun
 export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?: ColumnOptions): ReturnFunctionType {
   return function columnDecorator(object: object, propertyName: string) {
     if (!dbColumnNameOrOptions) {
-      // tslint:disable-next-line:no-parameter-reassignment
+      // eslint-disable-next-line no-param-reassign
       dbColumnNameOrOptions = _.snakeCase(propertyName);
     }
 
@@ -26,12 +25,12 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
     if (typeof dbColumnNameOrOptions === 'string') {
       dbColumnName = dbColumnNameOrOptions;
     } else {
-      // tslint:disable-next-line:no-parameter-reassignment
+      // eslint-disable-next-line no-param-reassign
       options = dbColumnNameOrOptions;
     }
 
     if (!options) {
-      // tslint:disable-next-line:no-parameter-reassignment
+      // eslint-disable-next-line no-param-reassign
       options = {} as ColumnTypeOptions;
     }
 

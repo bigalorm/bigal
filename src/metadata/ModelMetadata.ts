@@ -5,7 +5,7 @@ import { ColumnCollectionMetadata } from './ColumnCollectionMetadata';
 import { Entity, EntityStatic } from '../Entity';
 
 type Column = ColumnTypeMetadata | ColumnModelMetadata | ColumnCollectionMetadata;
-interface ColumnByStringId { [index: string]: Column; }
+interface ColumnByStringId { [index: string]: Column }
 
 export interface ModelMetadataOptions<T extends Entity = Entity> {
   name: string;
@@ -50,29 +50,44 @@ export class ModelMetadata<T extends Entity = Entity> {
   public get primaryKeyColumn(): Column | undefined {
     return this._primaryKeyColumn;
   }
+
   public get createDateColumns(): ReadonlyArray<Column> {
     return this._createDateColumns;
   }
+
   public get updateDateColumns(): ReadonlyArray<Column> {
     return this._updateDateColumns;
   }
+
   public get versionColumns(): ReadonlyArray<Column> {
     return this._versionDateColumns;
   }
+
   public name: string;
+
   public type: EntityStatic<T>;
+
   public connection?: string;
+
   public tableName: string;
+
   public readonly: boolean;
+
   public columnsByColumnName: ColumnByStringId = {};
+
   public columnsByPropertyName: ColumnByStringId = {};
+
   private _columns: readonly Column[] = [];
+
   private _primaryKeyColumn: Column | undefined;
+
   private _createDateColumns: Column[] = [];
+
   private _updateDateColumns: Column[] = [];
+
   private _versionDateColumns: Column[] = [];
 
-  constructor({
+  public constructor({
     name,
     type,
     connection,

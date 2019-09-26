@@ -7,8 +7,6 @@ export interface FindResult<TEntity> {
   limit(value: number): FindResult<TEntity>;
   skip(value: number): FindResult<TEntity>;
   paginate(options: PaginateOptions): FindResult<TEntity>;
-  /* tslint:disable unified-signatures */
   then<U>(onFulfill: (value: TEntity[]) => U | PromiseLike<U>, onReject?: (error: Error) => U | PromiseLike<U>): Promise<U>;
   then<U>(onFulfill: (value: TEntity[]) => U | PromiseLike<U>, onReject?: (error: Error) => void | PromiseLike<void>): Promise<U>;
-  /* tslint:enable unified-signatures */
 }
