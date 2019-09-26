@@ -1,10 +1,11 @@
 import { ColumnBaseOptions } from './ColumnBaseOptions';
+import { Entity, EntityStatic } from '../Entity';
 
 export interface ColumnModelOptions extends ColumnBaseOptions {
   /**
    * Type of the entity represented by this column id
    */
-  model: string;
+  model: string | EntityStatic<Entity>;
 
   /**
    * Indicates if this column is a primary key

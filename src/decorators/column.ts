@@ -43,14 +43,23 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
     const columnCollectionOptions = options as ColumnCollectionOptions;
 
     if (columnCollectionOptions.collection) {
+      let through: string | undefined;
+      if (columnCollectionOptions.through) {
+        if (typeof columnCollectionOptions.through === 'string') {
+          through = columnCollectionOptions.through;
+        } else {
+          through = columnCollectionOptions.through.constructor.name;
+        }
+      }
+
       metadataStorage.columns.push(new ColumnCollectionMetadata({
         target: object.constructor.name,
         name: dbColumnName,
         propertyName,
         required: columnCollectionOptions.required,
-        collection: columnCollectionOptions.collection,
+        collection: typeof columnCollectionOptions.collection === 'string' ? columnCollectionOptions.collection : columnCollectionOptions.collection.constructor.name,
         via: columnCollectionOptions.via,
-        through: columnCollectionOptions.through,
+        through,
       }));
 
       return;
@@ -63,7 +72,7 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
         name: dbColumnName,
         propertyName,
         required: columnModelOptions.required,
-        model: columnModelOptions.model,
+        model: typeof columnModelOptions.model === 'string' ? columnModelOptions.model : columnModelOptions.model.constructor.name,
       }));
 
       return;
