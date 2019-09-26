@@ -14,7 +14,7 @@ type ColumnOptions = ColumnTypeOptions | ColumnCollectionOptions | ColumnModelOp
 type ReturnFunctionType = (object: object, propertyName: string) => void;
 
 export function column(options?: ColumnOptions): ReturnFunctionType;
-export function column(dbColumnName: string, options: ColumnOptions): ReturnFunctionType;
+export function column(dbColumnName: string, options?: ColumnOptions): ReturnFunctionType;
 export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?: ColumnOptions): ReturnFunctionType {
   return function columnDecorator(object: object, propertyName: string) {
     if (!dbColumnNameOrOptions) {
