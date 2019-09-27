@@ -85,6 +85,8 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
       propertyName,
       required: columnTypeOptions.required,
       type: columnTypeOptions.type,
+      defaultsTo: columnTypeOptions.defaultsTo,
+      enum: columnTypeOptions.enum,
     }));
   };
 }
