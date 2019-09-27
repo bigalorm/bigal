@@ -13,11 +13,10 @@ export function createDateColumn(dbColumnName: string, options?: ColumnTypeOptio
 export function createDateColumn(dbColumnNameOrOptions?: string | ColumnTypeOptions, options?: ColumnTypeOptions): ReturnFunctionType {
   return function createDateColumnDecorator(object: object, propertyName: string) {
     const metadataStorage = getMetadataStorage();
-    let dbColumnName;
+    let dbColumnName: string | undefined;
     if (typeof dbColumnNameOrOptions === 'string') {
       dbColumnName = dbColumnNameOrOptions;
     } else {
-      dbColumnName = _.snakeCase(propertyName);
       // eslint-disable-next-line no-param-reassign
       options = dbColumnNameOrOptions;
     }
@@ -26,6 +25,10 @@ export function createDateColumn(dbColumnNameOrOptions?: string | ColumnTypeOpti
       if (!options) {
         // eslint-disable-next-line no-param-reassign
         options = {} as ColumnTypeOptions;
+      }
+
+      if (!dbColumnName) {
+        dbColumnName = options.name || _.snakeCase(propertyName);
       }
 
       metadataStorage.columns.push(new ColumnTypeMetadata({
@@ -39,11 +42,11 @@ export function createDateColumn(dbColumnNameOrOptions?: string | ColumnTypeOpti
     } else {
       metadataStorage.columnModifiers.push({
         target: object.constructor.name,
-        name: dbColumnName,
+        name: dbColumnName || _.snakeCase(propertyName),
         propertyName,
         createDate: true,
         required: options ? options.required : undefined,
-        type: options? options.type : undefined,
+        type: options ? options.type : 'datetime',
       } as ColumnModifierMetadata);
     }
   };

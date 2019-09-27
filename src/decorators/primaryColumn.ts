@@ -12,19 +12,22 @@ export function primaryColumn(options?: ColumnTypeOptions): ReturnFunctionType;
 export function primaryColumn(dbColumnName: string, options?: ColumnTypeOptions): ReturnFunctionType;
 export function primaryColumn(dbColumnNameOrOptions?: string | ColumnTypeOptions, options?: ColumnTypeOptions): ReturnFunctionType {
   return function primaryColumnDecorator(object: object, propertyName: string) {
-    if (dbColumnNameOrOptions) {
-      let dbColumnName;
-      if (typeof dbColumnNameOrOptions === 'string') {
-        dbColumnName = dbColumnNameOrOptions;
-      } else {
-        dbColumnName = _.snakeCase(propertyName);
-        // eslint-disable-next-line no-param-reassign
-        options = dbColumnNameOrOptions;
-      }
+    let dbColumnName: string | undefined;
+    if (typeof dbColumnNameOrOptions === 'string') {
+      dbColumnName = dbColumnNameOrOptions;
+    } else {
+      // eslint-disable-next-line no-param-reassign
+      options = dbColumnNameOrOptions;
+    }
 
+    if (dbColumnNameOrOptions) {
       if (!options) {
         // eslint-disable-next-line no-param-reassign
         options = {} as ColumnTypeOptions;
+      }
+
+      if (!dbColumnName) {
+        dbColumnName = options.name || _.snakeCase(propertyName);
       }
 
       const metadataStorage = getMetadataStorage();
@@ -39,9 +42,12 @@ export function primaryColumn(dbColumnNameOrOptions?: string | ColumnTypeOptions
     } else {
       const metadataStorage = getMetadataStorage();
       metadataStorage.columnModifiers.push({
-        primary: true,
         target: object.constructor.name,
+        name: dbColumnName || _.snakeCase(propertyName),
         propertyName,
+        primary: true,
+        required: options ? options.required : undefined,
+        type: options ? options.type : undefined,
       } as ColumnModifierMetadata);
     }
   };
