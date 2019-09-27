@@ -11,6 +11,7 @@ import {
   Category,
   Product,
   ProductCategory,
+  ProductWithCreatedAt,
   ProductWithCreateUpdateDateTracking,
   ReadonlyProduct,
   Store,
@@ -21,6 +22,7 @@ describe('sqlHelper', () => {
   const mockedPool: Pool = mock(Pool);
   let repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
 
+  // eslint-disable-next-line @typescript-eslint/no-extraneous-class
   class TestEntity implements Entity {
   }
 
@@ -31,12 +33,14 @@ describe('sqlHelper', () => {
         Category,
         Product,
         ProductCategory,
+        ProductWithCreatedAt,
         ProductWithCreateUpdateDateTracking,
         ReadonlyProduct,
         Store,
       ],
       pool: mockedPool,
     });
+    should.exist(repositoriesByModelNameLowered);
   });
 
   describe('#getSelectQueryAndParams()', () => {
@@ -47,7 +51,7 @@ describe('sqlHelper', () => {
           params,
         } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.product.model,
+          model: repositoriesByModelNameLowered.productwithcreatedat.model,
           where: {},
           sorts: [],
           limit: 1,
@@ -100,7 +104,7 @@ describe('sqlHelper', () => {
           params,
         } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.product.model,
+          model: repositoriesByModelNameLowered.productwithcreatedat.model,
           where: {
             name,
           },
@@ -120,7 +124,7 @@ describe('sqlHelper', () => {
           params,
         } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.product.model,
+          model: repositoriesByModelNameLowered.productwithcreatedat.model,
           sorts: ['name'],
           where: {},
           limit: 1,
@@ -138,7 +142,7 @@ describe('sqlHelper', () => {
           params,
         } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.product.model,
+          model: repositoriesByModelNameLowered.productwithcreatedat.model,
           where: {},
           sorts: [],
           limit: 1,
@@ -156,7 +160,7 @@ describe('sqlHelper', () => {
           params,
         } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.product.model,
+          model: repositoriesByModelNameLowered.productwithcreatedat.model,
           where: {},
           sorts: [],
           skip: 0,
@@ -718,7 +722,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"`);
       params.should.deep.equal([
         name,
         [],
@@ -799,7 +803,7 @@ describe('sqlHelper', () => {
         returnRecords: true,
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"`);
       params.should.deep.equal([
         name,
         [],
@@ -905,7 +909,7 @@ describe('sqlHelper', () => {
         }],
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"`);
       params.should.deep.equal([
         name1,
         name2,
@@ -1103,7 +1107,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered: repositories,
-        model: repositoriesByModelNameLowered.product.model,
+        model,
         where: {},
         values: {
           name,
@@ -1192,7 +1196,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model,
         where: {},
         values: {
           name,
@@ -1277,7 +1281,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model,
         where: {
           store,
         },
@@ -1301,7 +1305,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model,
         where: {
           id: productId,
         },
@@ -1382,10 +1386,10 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model,
       });
 
-      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.product.model.tableName}" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([]);
     });
     it('should include where statement if defined', () => {
@@ -1399,13 +1403,13 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model,
         where: {
           store,
         },
       });
 
-      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "store_id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" WHERE "store_id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         store.id,
       ]);
@@ -1417,14 +1421,14 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model,
         where: {
           id: productId,
         },
         returnRecords: true,
       });
 
-      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" WHERE "id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         productId,
       ]);
@@ -1470,17 +1474,17 @@ describe('sqlHelper', () => {
     });
   });
  describe('#_getColumnsToSelect()', () => {
-    it('should include all columns if select is undefined', () => {
+    it('should include all columns if select is undefined (explicit)', () => {
       const query = sqlHelper._getColumnsToSelect({
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model,
         select: undefined,
       });
 
       query.should.equal('"id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
     });
-    it('should include all columns if select is undefined', () => {
+    it('should include all columns if select is undefined (implicit)', () => {
       const query = sqlHelper._getColumnsToSelect({
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model,
       });
 
       query.should.equal('"id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
@@ -1540,6 +1544,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "store_id"=$1');
       params.should.deep.equal([storeId]);
     });
@@ -1556,6 +1561,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name"=$1');
       params.should.deep.equal([name]);
     });
@@ -1574,6 +1580,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`${name}%`]);
     });
@@ -1593,6 +1600,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([
         [
@@ -1616,6 +1624,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`%${name}`]);
     });
@@ -1635,6 +1644,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([
         [
@@ -1658,6 +1668,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`%${name}%`]);
     });
@@ -1677,6 +1688,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([
         [
@@ -1700,6 +1712,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([name]);
     });
@@ -1720,6 +1733,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name" NOT ILIKE $1');
       params.should.deep.equal([name]);
     });
@@ -1737,6 +1751,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name" = \'\'');
       params.should.deep.equal([]);
     });
@@ -1756,6 +1771,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name" != \'\'');
       params.should.deep.equal([]);
     });
@@ -1774,6 +1790,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([name]);
     });
@@ -1794,6 +1811,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name" NOT ILIKE $1');
       params.should.deep.equal([name]);
     });
@@ -1813,6 +1831,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([
         [
@@ -1839,6 +1858,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE lower("name")<>ALL($1::TEXT[])');
       params.should.deep.equal([
         [
@@ -1861,6 +1881,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE 1<>1');
       params.should.deep.equal([]);
     });
@@ -1880,6 +1901,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE 1=1');
       params.should.deep.equal([]);
     });
@@ -1898,6 +1920,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
       params.should.deep.equal([name]);
     });
@@ -1918,6 +1941,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
       params.should.deep.equal([name]);
     });
@@ -1936,6 +1960,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
       params.should.deep.equal([name]);
     });
@@ -1956,6 +1981,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
       params.should.deep.equal([name]);
     });
@@ -1975,6 +2001,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")=ANY($1::TEXT[]))');
       params.should.deep.equal([
         [
@@ -2001,6 +2028,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")<>ALL($1::TEXT[]))');
       params.should.deep.equal([
         [
@@ -2016,7 +2044,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model,
         where: {
           createdAt: {
             '>': now,
@@ -2024,6 +2052,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "created_at">$1');
       params.should.deep.equal([now]);
     });
@@ -2048,6 +2077,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE (("name"=$1) OR ("name"<>$2 AND "store_id"=$3))');
       params.should.deep.equal([name, name, store]);
     });
@@ -2076,6 +2106,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "id"=$1 AND (("name"=$2) OR ("name"<>$3 AND "store_id"=$4)) AND "sku"=$5');
       params.should.deep.equal([
         id,
@@ -2098,6 +2129,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name"=ANY($1::TEXT[])');
       params.should.deep.equal([name]);
     });
@@ -2142,6 +2174,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "foo"=ANY($1::INTEGER[])');
       params.should.deep.equal([values]);
     });
@@ -2186,6 +2219,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "foo"=ANY($1::NUMERIC[])');
       params.should.deep.equal([values]);
     });
@@ -2228,6 +2262,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "foo"=\'{}\'');
       params.should.deep.equal([]);
     });
@@ -2270,6 +2305,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE ("foo" IS NULL OR "foo"=\'{}\')');
       params.should.deep.equal([]);
     });
@@ -2313,6 +2349,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE $1=ANY("foo")');
       params.should.deep.equal([
         value,
@@ -2360,6 +2397,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE $1<>ALL("foo")');
       params.should.deep.equal([
         value,
@@ -2408,6 +2446,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE ($1=ANY("foo") OR $2=ANY("foo"))');
       params.should.deep.equal([
         values[0],
@@ -2459,6 +2498,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE $1<>ALL("foo") AND $2<>ALL("foo")');
       params.should.deep.equal([
         values[0],
@@ -2477,6 +2517,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE 1<>1');
       params.should.deep.equal([]);
     });
@@ -2494,6 +2535,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE 1=1');
       params.should.deep.equal([]);
     });
@@ -2510,6 +2552,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name"=$1');
       params.should.deep.equal([name]);
     });
@@ -2525,6 +2568,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE ("name" IS NULL OR "name"=$1)');
       params.should.deep.equal(['']);
     });
@@ -2543,6 +2587,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name"<>ALL($1::TEXT[])');
       params.should.deep.equal([name]);
     });
@@ -2560,6 +2605,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE 1=1');
       params.should.deep.equal([]);
     });
@@ -2577,6 +2623,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "name" IS NOT NULL AND "name"<>$1');
       params.should.deep.equal(['']);
     });
@@ -2596,6 +2643,7 @@ describe('sqlHelper', () => {
         },
       });
 
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       whereStatement!.should.equal('WHERE "store_id"=$1');
       params.should.deep.equal([store.id]);
     });
@@ -2692,7 +2740,7 @@ describe('sqlHelper', () => {
 
       result.should.equal('ORDER BY "foobar" DESC');
     });
-    it('should handle multiple string order', () => {
+    it('should handle multiple string order (string array)', () => {
       const result = sqlHelper._buildOrderStatement({
         model,
         sorts: ['bar desc', 'foo'],
@@ -2720,7 +2768,7 @@ describe('sqlHelper', () => {
 
       result.should.equal('ORDER BY "foobar" DESC');
     });
-    it('should handle multiple string order', () => {
+    it('should handle multiple string order (object)', () => {
       const result = sqlHelper._buildOrderStatement({
         model,
         sorts: [{
