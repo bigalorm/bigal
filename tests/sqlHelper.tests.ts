@@ -1,12 +1,12 @@
 import chai from 'chai';
 import * as faker from 'faker';
 
+import { Pool } from 'postgres-pool';
+import { mock } from 'ts-mockito';
 import * as sqlHelper from '../src/SqlHelper';
-import {RepositoriesByModelNameLowered} from "../src/RepositoriesByModelNameLowered";
-import {initialize, Entity, Repository} from "../src";
-import {Pool} from "postgres-pool";
-import {mock} from "ts-mockito";
-import {ColumnCollectionMetadata, ColumnTypeMetadata, ModelMetadata} from "../src/metadata";
+import { RepositoriesByModelNameLowered } from '../src/RepositoriesByModelNameLowered';
+import { initialize, Entity, Repository } from '../src';
+import { ColumnCollectionMetadata, ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
 import {
   Category,
   Product,
@@ -14,7 +14,7 @@ import {
   ProductWithCreateUpdateDateTracking,
   ReadonlyProduct,
   Store,
-} from "./models";
+} from './models';
 
 describe('sqlHelper', () => {
   let should: Chai.Should;
@@ -36,25 +36,25 @@ describe('sqlHelper', () => {
         Store,
       ],
       pool: mockedPool,
-    })
+    });
   });
 
   describe('#getSelectQueryAndParams()', () => {
     describe('select', () => {
-      it.only('should include all columns if select is undefined', () => {
+      it('should include all columns if select is undefined', () => {
         const {
           query,
           params,
         } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered['product'].model,
+          model: repositoriesByModelNameLowered.product.model,
           where: {},
           sorts: [],
           limit: 1,
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
       it('should include primaryKey column if select is empty', () => {
@@ -63,7 +63,7 @@ describe('sqlHelper', () => {
           params,
         } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered['product'].model,
+          model: repositoriesByModelNameLowered.product.model,
           select: [],
           where: {},
           sorts: [],
@@ -71,7 +71,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "id" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
       it('should include primaryKey column if select does not include it', () => {
@@ -80,7 +80,7 @@ describe('sqlHelper', () => {
           params,
         } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered['product'].model,
+          model: repositoriesByModelNameLowered.product.model,
           select: ['name'],
           where: {},
           sorts: [],
@@ -88,7 +88,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "name","id" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "name","id" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
     });
@@ -100,7 +100,7 @@ describe('sqlHelper', () => {
           params,
         } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered['product'].model,
+          model: repositoriesByModelNameLowered.product.model,
           where: {
             name,
           },
@@ -109,7 +109,7 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" WHERE "name"=$1 LIMIT 1`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "name"=$1 LIMIT 1`);
         params.should.deep.equal([name]);
       });
     });
@@ -120,14 +120,14 @@ describe('sqlHelper', () => {
           params,
         } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered['product'].model,
+          model: repositoriesByModelNameLowered.product.model,
           sorts: ['name'],
           where: {},
           limit: 1,
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" ORDER BY "name" LIMIT 1`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" ORDER BY "name" LIMIT 1`);
         params.should.deep.equal([]);
       });
     });
@@ -138,14 +138,14 @@ describe('sqlHelper', () => {
           params,
         } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered['product'].model,
+          model: repositoriesByModelNameLowered.product.model,
           where: {},
           sorts: [],
           limit: 1,
           skip: 100,
         });
 
-        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" LIMIT 1 OFFSET 100`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1 OFFSET 100`);
         params.should.deep.equal([]);
       });
     });
@@ -156,14 +156,14 @@ describe('sqlHelper', () => {
           params,
         } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered['product'].model,
+          model: repositoriesByModelNameLowered.product.model,
           where: {},
           sorts: [],
           skip: 0,
           limit: 100,
         });
 
-        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" LIMIT 100`);
+        query.should.equal(`SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 100`);
         params.should.deep.equal([]);
       });
     });
@@ -175,10 +175,10 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getCountQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
       });
 
-      query.should.equal(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered['product'].model.tableName}"`);
+      query.should.equal(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered.product.model.tableName}"`);
       params.should.deep.equal([]);
     });
     it('should include where statement if defined', () => {
@@ -192,13 +192,13 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getCountQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           store,
         },
       });
 
-      query.should.equal(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered['product'].model.tableName}" WHERE "store_id"=$1`);
+      query.should.equal(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "store_id"=$1`);
       params.should.deep.equal([
         store.id,
       ]);
@@ -209,13 +209,13 @@ describe('sqlHelper', () => {
       (() => {
         sqlHelper.getInsertQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered['product'].model,
+          model: repositoriesByModelNameLowered.product.model,
           values: {
             store: faker.random.uuid(),
           },
           returnRecords: true,
         });
-      }).should.throw(Error, `Create statement for "${repositoriesByModelNameLowered['product'].model.name}" is missing value for required field: name`);
+      }).should.throw(Error, `Create statement for "${repositoriesByModelNameLowered.product.model.name}" is missing value for required field: name`);
     });
     it('should not throw if a required property has a defaultValue and an undefined initial value', () => {
       const model = new ModelMetadata({
@@ -711,14 +711,14 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         values: {
           name,
           store,
         },
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         [],
@@ -791,7 +791,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         values: {
           name,
           store: storeId,
@@ -799,7 +799,7 @@ describe('sqlHelper', () => {
         returnRecords: true,
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         [],
@@ -814,7 +814,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         values: {
           name,
           store: storeId,
@@ -823,7 +823,7 @@ describe('sqlHelper', () => {
         returnSelect: ['name'],
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "name","id"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "name","id"`);
       params.should.deep.equal([
         name,
         [],
@@ -838,7 +838,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         values: {
           name,
           store: storeId,
@@ -846,7 +846,7 @@ describe('sqlHelper', () => {
         returnRecords: false,
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3)`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3)`);
       params.should.deep.equal([
         name,
         [],
@@ -863,7 +863,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         values: [{
           name: name1,
           store: storeId1,
@@ -875,7 +875,7 @@ describe('sqlHelper', () => {
         returnSelect: ['store'],
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "store_id" AS "store","id"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "store_id" AS "store","id"`);
       params.should.deep.equal([
         name1,
         name2,
@@ -895,7 +895,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         values: [{
           name: name1,
           store: storeId1,
@@ -905,7 +905,7 @@ describe('sqlHelper', () => {
         }],
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name1,
         name2,
@@ -925,7 +925,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         values: [{
           name: name1,
           store: storeId1,
@@ -936,7 +936,7 @@ describe('sqlHelper', () => {
         returnRecords: false,
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered['product'].model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)`);
       params.should.deep.equal([
         name1,
         name2,
@@ -1103,7 +1103,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered: repositories,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {},
         values: {
           name,
@@ -1192,7 +1192,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {},
         values: {
           name,
@@ -1200,7 +1200,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${repositoriesByModelNameLowered['product'].model.tableName}" SET "name"=$1,"store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         store.id,
@@ -1277,7 +1277,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           store,
         },
@@ -1286,7 +1286,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${repositoriesByModelNameLowered['product'].model.tableName}" SET "name"=$1 WHERE "store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1 WHERE "store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         store.id,
@@ -1301,7 +1301,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           id: productId,
         },
@@ -1312,7 +1312,7 @@ describe('sqlHelper', () => {
         returnRecords: true,
       });
 
-      query.should.equal(`UPDATE "${repositoriesByModelNameLowered['product'].model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         name,
         storeId,
@@ -1328,7 +1328,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           id: productId,
         },
@@ -1340,7 +1340,7 @@ describe('sqlHelper', () => {
         returnSelect: ['name'],
       });
 
-      query.should.equal(`UPDATE "${repositoriesByModelNameLowered['product'].model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "name","id"`);
+      query.should.equal(`UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "name","id"`);
       params.should.deep.equal([
         name,
         storeId,
@@ -1356,7 +1356,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           id: productId,
         },
@@ -1367,7 +1367,7 @@ describe('sqlHelper', () => {
         returnRecords: false,
       });
 
-      query.should.equal(`UPDATE "${repositoriesByModelNameLowered['product'].model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3`);
+      query.should.equal(`UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3`);
       params.should.deep.equal([
         name,
         storeId,
@@ -1382,10 +1382,10 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
       });
 
-      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered['product'].model.tableName}" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.product.model.tableName}" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([]);
     });
     it('should include where statement if defined', () => {
@@ -1399,13 +1399,13 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           store,
         },
       });
 
-      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered['product'].model.tableName}" WHERE "store_id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "store_id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         store.id,
       ]);
@@ -1417,14 +1417,14 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           id: productId,
         },
         returnRecords: true,
       });
 
-      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered['product'].model.tableName}" WHERE "id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
       params.should.deep.equal([
         productId,
       ]);
@@ -1436,7 +1436,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           id: productId,
         },
@@ -1444,7 +1444,7 @@ describe('sqlHelper', () => {
         returnSelect: ['name'],
       });
 
-      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered['product'].model.tableName}" WHERE "id"=$1 RETURNING "name","id"`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "id"=$1 RETURNING "name","id"`);
       params.should.deep.equal([
         productId,
       ]);
@@ -1456,14 +1456,14 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           id: productId,
         },
         returnRecords: false,
       });
 
-      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered['product'].model.tableName}" WHERE "id"=$1`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "id"=$1`);
       params.should.deep.equal([
         productId,
       ]);
@@ -1472,7 +1472,7 @@ describe('sqlHelper', () => {
  describe('#_getColumnsToSelect()', () => {
     it('should include all columns if select is undefined', () => {
       const query = sqlHelper._getColumnsToSelect({
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         select: undefined,
       });
 
@@ -1480,14 +1480,14 @@ describe('sqlHelper', () => {
     });
     it('should include all columns if select is undefined', () => {
       const query = sqlHelper._getColumnsToSelect({
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
       });
 
       query.should.equal('"id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
     });
     it('should include primaryKey column if select is empty', () => {
       const query = sqlHelper._getColumnsToSelect({
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         select: [],
       });
 
@@ -1495,7 +1495,7 @@ describe('sqlHelper', () => {
     });
     it('should include primaryKey column if select does not include it', () => {
       const query = sqlHelper._getColumnsToSelect({
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         select: ['name'],
       });
 
@@ -1509,7 +1509,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
       });
 
       should.not.exist(whereStatement);
@@ -1519,13 +1519,13 @@ describe('sqlHelper', () => {
       (() => {
         sqlHelper._buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered['product'].model,
+          model: repositoriesByModelNameLowered.product.model,
           // @ts-ignore
           where: {
             store: undefined,
           },
         });
-      }).should.throw(Error, `Attempting to query with an undefined value. store on ${repositoriesByModelNameLowered['product'].model.name}`);
+      }).should.throw(Error, `Attempting to query with an undefined value. store on ${repositoriesByModelNameLowered.product.model.name}`);
     });
     it('should use column name if defined', () => {
       const storeId = faker.random.uuid();
@@ -1534,7 +1534,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           store: storeId,
         },
@@ -1550,7 +1550,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name,
         },
@@ -1566,7 +1566,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             startsWith: name,
@@ -1585,7 +1585,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             startsWith: [name1, name2],
@@ -1608,7 +1608,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             endsWith: name,
@@ -1627,7 +1627,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             endsWith: [name1, name2],
@@ -1650,7 +1650,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             contains: name,
@@ -1669,7 +1669,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             contains: [name1, name2],
@@ -1692,7 +1692,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             like: name,
@@ -1710,7 +1710,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             '!': {
@@ -1729,7 +1729,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             like: '',
@@ -1746,7 +1746,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             '!': {
@@ -1766,7 +1766,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             like: [name],
@@ -1784,7 +1784,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             '!': {
@@ -1805,7 +1805,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             like: [name1, name2],
@@ -1829,7 +1829,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             '!': {
@@ -1853,7 +1853,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             like: [],
@@ -1870,7 +1870,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             '!': {
@@ -1890,7 +1890,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           aliases: {
             like: [name],
@@ -1908,7 +1908,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           aliases: {
             '!': {
@@ -1928,7 +1928,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           aliases: {
             like: name,
@@ -1946,7 +1946,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           aliases: {
             '!': {
@@ -1967,7 +1967,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           aliases: {
             like: [name1, name2],
@@ -1991,7 +1991,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           aliases: {
             '!': {
@@ -2016,7 +2016,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           createdAt: {
             '>': now,
@@ -2035,7 +2035,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           or: [{
             name,
@@ -2061,7 +2061,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           id,
           or: [{
@@ -2092,7 +2092,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name,
         },
@@ -2471,7 +2471,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: [],
         },
@@ -2486,7 +2486,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             '!': [],
@@ -2504,7 +2504,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: [name],
         },
@@ -2519,7 +2519,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: [null, ''],
         },
@@ -2535,7 +2535,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             '!': name,
@@ -2552,7 +2552,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             '!': [],
@@ -2569,7 +2569,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           name: {
             '!': [null, ''],
@@ -2590,7 +2590,7 @@ describe('sqlHelper', () => {
         params,
       } = sqlHelper._buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered['product'].model,
+        model: repositoriesByModelNameLowered.product.model,
         where: {
           store,
         },

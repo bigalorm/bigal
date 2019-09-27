@@ -11,7 +11,7 @@ import { Product } from './Product';
   name: 'product__category',
 })
 export class ProductCategory implements Entity {
-  @primaryColumn()
+  @primaryColumn({ type: 'integer' })
   public id!: number;
 
   @column({
