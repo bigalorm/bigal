@@ -1,4 +1,4 @@
-import {Product} from "./Product";
+import { Product } from './Product';
 
 export class ProductWithCreateUpdateDateTracking extends Product {
   public static async beforeCreate(values: Partial<ProductWithCreateUpdateDateTracking>) {
@@ -6,9 +6,10 @@ export class ProductWithCreateUpdateDateTracking extends Product {
 
     return {
       ...values,
-      name: `beforeUpdate - ${values.name}`,
+      name: `beforeCreate - ${values.name}`,
     };
   }
+
   public static beforeUpdate(values: Partial<ProductWithCreateUpdateDateTracking>) {
     return {
       ...values,
