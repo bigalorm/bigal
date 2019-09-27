@@ -282,8 +282,10 @@ describe('Repository', () => {
         }]),
       );
 
+      const id = faker.random.number();
+
       await ProductWithCreateUpdateDateTrackingRepository.update({
-        id: faker.random.uuid(),
+        id,
       }, {
         name: 'foo',
       });
@@ -296,6 +298,7 @@ describe('Repository', () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         'beforeUpdate - foo',
+        id,
       ]);
     });
     it('should return array of updated objects if second parameter is not defined', async () => {
@@ -323,7 +326,7 @@ describe('Repository', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "product" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         product.name,
@@ -360,7 +363,7 @@ describe('Repository', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "product" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         product.name,
@@ -395,7 +398,7 @@ describe('Repository', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "product" SET "name"=$1,"store_id"=$2 WHERE "id"=$3');
+      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         product.name,
@@ -426,7 +429,7 @@ describe('Repository', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "product" RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('DELETE FROM "products" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
@@ -458,7 +461,7 @@ describe('Repository', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2 RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('DELETE FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         _.map(products, 'id'),
@@ -491,7 +494,7 @@ describe('Repository', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "product" WHERE "store_id"=$1 RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('DELETE FROM "products" WHERE "store_id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([store.id]);
     });
@@ -525,7 +528,7 @@ describe('Repository', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "product" WHERE "store_id"=$1 RETURNING "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('DELETE FROM "products" WHERE "store_id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([store.id]);
     });
@@ -554,7 +557,7 @@ describe('Repository', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "product" WHERE "id"=$1');
+      query.should.equal('DELETE FROM "products" WHERE "id"=$1');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         product.id,
