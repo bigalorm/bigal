@@ -1,10 +1,12 @@
 import _ from 'lodash';
 import { Pool } from 'postgres-pool';
 import { Repository } from './Repository';
-import {Entity, EntityStatic} from './Entity';
+import { Entity, EntityStatic } from './Entity';
 import { ReadonlyRepository } from './ReadonlyRepository';
 import {
-  ColumnMetadata, ColumnTypeMetadata,
+  ColumnMetadata,
+  ColumnModifierMetadata,
+  ColumnTypeMetadata,
   getMetadataStorage,
   ModelMetadata,
 } from './metadata';
@@ -23,6 +25,22 @@ export interface InitializeOptions extends Connection {
   models: EntityStatic<Entity>[];
   connections?: { [index: string]: Connection };
   expose?: (repository: ReadonlyRepository<Entity> | Repository<Entity>, tableMetadata: ModelMetadata) => void;
+}
+
+// This will build an inverted array of inherited classes ([grandparent, parent, item])
+function getInheritanceTree(model: Function): Function[] {
+  const tree = [model];
+  function getRecursivePrototypesOf(parentEntity: Function) {
+    const proto = Object.getPrototypeOf(parentEntity);
+    if (proto && proto.name && proto.name !== 'Function') {
+      tree.unshift(proto);
+      getRecursivePrototypesOf(proto);
+    }
+  }
+
+  getRecursivePrototypesOf(model);
+
+  return tree;
 }
 
 /**
@@ -45,55 +63,125 @@ export function initialize({
     throw new Error('Models need to be specified to read all model information from decorators');
   }
 
+  const inheritanceTreesByModelName: { [index: string]: Function[] } = {};
+  const modelNames: string[] = [];
+  for (const model of models) {
+    // Load inheritance hierarchy for each model. This will make sure that any decorators on inherited class files are
+    // added to metadata storage
+    inheritanceTreesByModelName[model.name] = getInheritanceTree(model);
+    modelNames.push(model.name);
+  }
+
   const repositoriesByModelNameLowered: RepositoriesByModelNameLowered = {};
 
   // Assemble all metadata for complete model and column definitions
-  const metadataByModelName: { [index: string]: ModelMetadata } = {};
   const metadataStorage = getMetadataStorage();
 
-  // Add dictionary to quickly find a column by propertyName, for applying ColumnModifierMetadata records
-  const columnsByModelName: { [index: string]: { columns: ColumnMetadata[]; columnsByPropertyName: { [index: string]: ColumnMetadata } } } = {};
-  for (const column of metadataStorage.columns) {
-    columnsByModelName[column.target] = columnsByModelName[column.target] || {
-      columns: [],
-      columnsByPropertyName: {},
-    };
-
-    columnsByModelName[column.target].columns.push(column);
-    columnsByModelName[column.target].columnsByPropertyName[column.propertyName] = column;
+  const modelMetadataByModelName: { [index: string]: ModelMetadata } = {};
+  for (const model of metadataStorage.models) {
+    modelMetadataByModelName[model.name] = model;
   }
 
+  type ColumnsByPropertyName = { [index: string]: ColumnMetadata };
+  // Add dictionary to quickly find a column by propertyName, for applying ColumnModifierMetadata records
+  const columnsByPropertyNameForModel: { [index: string]: ColumnsByPropertyName } = {};
+  for (const column of metadataStorage.columns) {
+    columnsByPropertyNameForModel[column.target] = columnsByPropertyNameForModel[column.target] || {};
+    columnsByPropertyNameForModel[column.target][column.propertyName] = column;
+  }
+
+  type ColumnModifiersByPropertyName = { [index: string]: ColumnModifierMetadata[] };
+  const columnModifiersByPropertyNameForModel: { [index: string]: ColumnModifiersByPropertyName } = {};
   for (const columnModifier of metadataStorage.columnModifiers) {
-    columnsByModelName[columnModifier.target] = columnsByModelName[columnModifier.target] || {
-      columns: [],
-      columnsByPropertyName: {},
-    };
+    columnModifiersByPropertyNameForModel[columnModifier.target] = columnModifiersByPropertyNameForModel[columnModifier.target] || {};
+    columnModifiersByPropertyNameForModel[columnModifier.target][columnModifier.propertyName] = columnModifiersByPropertyNameForModel[columnModifier.target][columnModifier.propertyName] || [];
+    columnModifiersByPropertyNameForModel[columnModifier.target][columnModifier.propertyName].push(columnModifier);
+  }
 
-    const columns = columnsByModelName[columnModifier.target];
+  // Aggregate columns from inherited classes
+  // NOTE: Inherited @columns will be replaced if found on a child class. Column modifiers, however, are additive.
+  // @column found on a child class will remove any previous modifier
+  for (const model of models) {
+    let modelMetadata: ModelMetadata | undefined;
+    let inheritedColumnsByPropertyName: ColumnsByPropertyName = {};
+    const inheritedColumnModifiersByPropertyName: ColumnModifiersByPropertyName = {};
+    for (const inheritedClass of inheritanceTreesByModelName[model.name]) {
+      modelMetadata = modelMetadataByModelName[inheritedClass.name] || modelMetadata;
+      const columnsByPropertyName = columnsByPropertyNameForModel[inheritedClass.name] || {};
 
-    const column = columns.columnsByPropertyName[columnModifier.propertyName];
-    if (column) {
-      Object.assign(column, _.omit(columnModifier, ['target', 'name', 'propertyName', 'type']));
-    } else {
-      if (!columnModifier.name) {
-        throw new Error(`Missing column name `)
+      inheritedColumnsByPropertyName = {
+        ...inheritedColumnsByPropertyName,
+        ...columnsByPropertyName,
+      };
+
+      // Remove any previously defined column modifiers for this property since a new @column was found
+      for (const [propertyName] of Object.entries(columnsByPropertyName)) {
+        delete inheritedColumnModifiersByPropertyName[propertyName];
       }
 
-      const columnModifierColumn = new ColumnTypeMetadata(columnModifier);
-      columns.columns.push(columnModifierColumn);
-      columns.columnsByPropertyName[columnModifierColumn.propertyName] = columnModifierColumn;
+      const columnModifiersByPropertyName = columnModifiersByPropertyNameForModel[inheritedClass.name] || {};
+      for (const [propertyName, columnModifiers] of Object.entries(columnModifiersByPropertyName)) {
+        inheritedColumnModifiersByPropertyName[propertyName] = [
+          ...(inheritedColumnModifiersByPropertyName[propertyName] || []),
+          ...(columnModifiers || []),
+        ];
+      }
+    }
+
+    if (!modelMetadata) {
+      throw new Error(`Unable to find @table() on ${model.name}`);
+    }
+
+    modelMetadataByModelName[model.name] = modelMetadata;
+    columnsByPropertyNameForModel[model.name] = inheritedColumnsByPropertyName;
+    columnModifiersByPropertyNameForModel[model.name] = inheritedColumnModifiersByPropertyName;
+  }
+
+  // Process all column modifiers to augment any @column definitions
+  for (const [modelName, columnModifiersByPropertyName] of Object.entries(columnModifiersByPropertyNameForModel)) {
+    columnsByPropertyNameForModel[modelName] = columnsByPropertyNameForModel[modelName] || {};
+    for (const [propertyName, columnModifiers] of Object.entries(columnModifiersByPropertyName)) {
+      const column = columnsByPropertyNameForModel[modelName][propertyName];
+      if (column) {
+        for (const columnModifier of columnModifiers) {
+          Object.assign(column, _.omit(columnModifier, ['target', 'name', 'propertyName', 'type']));
+        }
+      } else {
+        let columnDetails: ColumnModifierMetadata = {
+          target: modelName,
+          propertyName,
+        };
+        for (const columnModifier of columnModifiers) {
+          columnDetails = {
+            ...columnDetails,
+            ...columnModifier,
+          };
+        }
+
+        if (!columnDetails.name) {
+          throw new Error(`Missing column name for ${modelName}#${propertyName}`);
+        }
+
+        if (!columnDetails.type) {
+          throw new Error(`Missing column type for ${modelName}#${propertyName}`);
+        }
+
+        columnsByPropertyNameForModel[modelName][propertyName] = new ColumnTypeMetadata({
+          ...columnDetails,
+          name: columnDetails.name,
+          type: columnDetails.type,
+        });
+      }
     }
   }
 
-
-  for (const model of metadataStorage.models) {
-    const entityColumns = columnsByModelName[model.name];
-    if (!entityColumns) {
-      throw new Error(`Did not find any columns decorated with @column. Entity: ${model.name}`);
+  for (const [modelName, model] of Object.entries(modelMetadataByModelName)) {
+    const columnsByPropertyName = columnsByPropertyNameForModel[modelName];
+    if (!columnsByPropertyName) {
+      throw new Error(`Did not find any columns decorated with @column. Model: ${modelName}`);
     }
 
-    model.columns = entityColumns.columns;
-    metadataByModelName[model.name] = model;
+    model.columns = Object.values(columnsByPropertyName);
 
     let modelPool = pool;
     let modelReadonlyPool = readonlyPool;
