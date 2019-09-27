@@ -179,7 +179,12 @@ export function initialize({
     }
   }
 
-  for (const [modelName, model] of Object.entries(modelMetadataByModelName)) {
+  for (const modelName of modelNames) {
+    const model = modelMetadataByModelName[modelName];
+    if (!model) {
+      throw new Error(`Unable to find @table() on ${modelName}`);
+    }
+
     const columnsByPropertyName = columnsByPropertyNameForModel[modelName];
     if (!columnsByPropertyName) {
       throw new Error(`Did not find any columns decorated with @column. Model: ${modelName}`);
