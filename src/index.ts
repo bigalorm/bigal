@@ -53,7 +53,7 @@ function getInheritanceTree(model: Function): Function[] {
  * @param {Function} expose - Used to expose model classes
  */
 export function initialize({
-  models,
+                             models,
                              pool,
                              readonlyPool = pool,
                              connections = {},
@@ -132,7 +132,11 @@ export function initialize({
       throw new Error(`Unable to find @table() on ${model.name}`);
     }
 
-    modelMetadataByModelName[model.name] = modelMetadata;
+    modelMetadataByModelName[model.name] = new ModelMetadata({
+      ...modelMetadata,
+      name: model.name,
+      type: model,
+    });
     columnsByPropertyNameForModel[model.name] = inheritedColumnsByPropertyName;
     columnModifiersByPropertyNameForModel[model.name] = inheritedColumnModifiersByPropertyName;
   }
