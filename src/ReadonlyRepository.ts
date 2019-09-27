@@ -582,6 +582,6 @@ export class ReadonlyRepository<T extends Entity> {
       return rows;
     }
 
-    return rows.map(this._buildInstance);
+    return rows.map((row: Partial<T>) => this._buildInstance(row));
   }
 }
