@@ -4,7 +4,9 @@ import {
   primaryColumn,
   table,
 } from '../../src/decorators';
+// eslint-disable-next-line import/no-cycle
 import { Category } from './Category';
+// eslint-disable-next-line import/no-cycle
 import { Product } from './Product';
 
 @table({
@@ -15,13 +17,13 @@ export class ProductCategory implements Entity {
   public id!: number;
 
   @column({
-    model: Product,
+    model: () => Product.name,
     name: 'product_id',
   })
   public product!: number | Product;
 
   @column({
-    model: Category,
+    model: () => Category.name,
     name: 'category_id',
   })
   public category!: number | Category;

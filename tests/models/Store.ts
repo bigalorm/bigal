@@ -4,6 +4,7 @@ import {
   table,
 } from '../../src/decorators';
 import { ModelBase } from './ModelBase';
+// eslint-disable-next-line import/no-cycle
 import { Product } from './Product';
 
 @table({
@@ -16,7 +17,7 @@ export class Store extends ModelBase implements Entity {
   public name?: string;
 
   @column({
-    collection: Product,
+    collection: () => Product.name,
     via: 'store',
   })
   public products?: Product[];

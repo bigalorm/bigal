@@ -4,7 +4,7 @@ export interface ColumnCollectionMetadataOptions extends ColumnBaseMetadataOptio
   /**
    * Type of the items in the collection
    */
-  collection: string;
+  collection: string | (() => string);
   /**
    * Property name of the on the collection item type
    */
@@ -12,14 +12,34 @@ export interface ColumnCollectionMetadataOptions extends ColumnBaseMetadataOptio
   /**
    * Name of the junction table for multi-multi associations
    */
-  through?: string;
+  through?: string | (() => string);
 }
 
 export class ColumnCollectionMetadata extends ColumnBaseMetadata {
+  private _collectionString?: string;
+
+  private _collectionFn?: () => string;
+
+  private _throughString?: string;
+
+  private _throughFn?: () => string;
+
   /**
    * Type of the items in the collection
    */
-  public collection: string;
+  public get collection(): string {
+    if (this._collectionString) {
+      return this._collectionString;
+    }
+
+    if (!this._collectionFn) {
+      throw new Error(`Unable to determine collection type for ${this.target}#${this.propertyName}`);
+    }
+
+    // Need to defer evaluation until runtime to avoid cyclical dependency issues.
+    this._collectionString = this._collectionFn();
+    return this._collectionString;
+  }
 
   /**
    * Property name of the on the collection item type
@@ -29,7 +49,18 @@ export class ColumnCollectionMetadata extends ColumnBaseMetadata {
   /**
    * Name of the junction table for multi-multi associations
    */
-  public through?: string;
+  public get through(): string | undefined {
+    if (this._throughString) {
+      return this._throughString;
+    }
+
+    if (this._throughFn) {
+      this._throughString = this._throughFn();
+      return this._throughString;
+    }
+
+    return undefined;
+  }
 
   public constructor({
     target,
@@ -59,8 +90,18 @@ export class ColumnCollectionMetadata extends ColumnBaseMetadata {
       version,
     });
 
-    this.collection = collection;
     this.via = via;
-    this.through = through;
+
+    if (typeof collection === 'string') {
+      this._collectionString = collection;
+    } else {
+      this._collectionFn = collection;
+    }
+
+    if (typeof through === 'string') {
+      this._throughString = through;
+    } else if (through) {
+      this._throughFn = through;
+    }
   }
 }

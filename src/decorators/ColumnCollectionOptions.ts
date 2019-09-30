@@ -1,11 +1,10 @@
 import { ColumnBaseOptions } from './ColumnBaseOptions';
-import { Entity, EntityStatic } from '../Entity';
 
 export interface ColumnCollectionOptions extends ColumnBaseOptions {
   /**
    * Type of the items in the collection
    */
-  collection: string | EntityStatic<Entity>;
+  collection: string | (() => string);
 
   /**
    * Property name of the on the collection item type
@@ -15,5 +14,5 @@ export interface ColumnCollectionOptions extends ColumnBaseOptions {
   /**
    * Name of the junction table for multi-multi associations
    */
-  through?: string | EntityStatic<Entity>;
+  through?: string | (() => string);
 }

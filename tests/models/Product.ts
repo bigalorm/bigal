@@ -8,6 +8,8 @@ import {
 import { Store } from './Store';
 // eslint-disable-next-line import/no-cycle
 import { Category } from './Category';
+// eslint-disable-next-line import/no-cycle
+import { ProductCategory } from './ProductCategory';
 
 @table({
   name: 'products',
@@ -38,8 +40,8 @@ export class Product extends ModelBase implements Entity {
   public store!: number | Store;
 
   @column({
-    collection: 'Category',
-    through: 'ProductCategory',
+    collection: () => Category.name,
+    through: () => ProductCategory.name,
     via: 'product',
   })
   public categories!: Category[];

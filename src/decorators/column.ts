@@ -48,23 +48,14 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
         throw new Error('Unable to determine collection value. Please try specifying values as a strings to avoid circular dependency issues.');
       }
 
-      let through: string | undefined;
-      if (columnCollectionOptions.through) {
-        if (typeof columnCollectionOptions.through === 'string') {
-          through = columnCollectionOptions.through;
-        } else {
-          through = columnCollectionOptions.through.name;
-        }
-      }
-
       metadataStorage.columns.push(new ColumnCollectionMetadata({
         target: object.constructor.name,
         name: dbColumnName,
         propertyName,
         required: columnCollectionOptions.required,
-        collection: typeof columnCollectionOptions.collection === 'string' ? columnCollectionOptions.collection : columnCollectionOptions.collection.name,
+        collection: columnCollectionOptions.collection,
+        through: columnCollectionOptions.through,
         via: columnCollectionOptions.via,
-        through,
       }));
 
       return;
@@ -77,7 +68,7 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
         name: dbColumnName,
         propertyName,
         required: columnModelOptions.required,
-        model: typeof columnModelOptions.model === 'string' ? columnModelOptions.model : columnModelOptions.model.constructor.name,
+        model: columnModelOptions.model,
       }));
 
       return;
