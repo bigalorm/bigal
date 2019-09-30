@@ -24,69 +24,144 @@ $ npm install pg postgres-pool bigal
 
 ## Configuring
 
-#### Load schema definition files
-> Load model schema definition files from a directory and create global repositories for each model
+#### Defining database models
+```typescript
+import { Entity } from 'bigal';
+import {
+  column,
+  primaryColumn,
+  table,
+} from 'bigal/decorators';
+import { Store } from './Store';
+import { Category } from './Category';
+import { ProductCategory } from './ProductCategory';
 
-```js
-const _ = require('lodash');
-const fs = require('mz/fs');
-const path = require('path');
-const { Pool } = require('postgres-pool');
-const bigal = require('bigal');
+@table({
+  name: 'products',
+})
+export class Product implements Entity {
+  @primaryColumn({ type: 'integer' })
+  public id!: number;
 
-let pool;
-let readonlyPool;
+  @column({
+    type: 'string',
+    required: true,
+  })
+  public name!: string;
 
-module.exports = {
-  async startup({
-    connectionString,
-    readonlyConnectionString,
-  }) {
-    const models = {};
-    pool = new Pool(connectionString);
-    readonlyPool = new Pool(readonlyConnectionString);
+  @column({
+    type: 'string',
+  })
+  public sku?: string;
 
-    const modelsPath = path.join(__dirname, 'src/models');
-    const files = await fs.readdir(modelsPath);
-    const modelSchemas = files.filter((file) => /.(js|ts)$/i.test(file)).map((file) => {
-      const fileBasename = path.basename(file, '.js');
-      const schema = require(`${modelsPath}/${fileBasename}`);
+  @column({
+    type: 'string[]',
+    defaultsTo: [],
+    name: 'alias_names',
+  })
+  public aliases?: string[];
 
-      return _.merge({
-        globalId: fileBasename,
-        tableName: fileBasename.toLowerCase(),
-      }, schema);
-    });
+  @column({
+    model: () => Store.name,
+    name: 'store_id',
+  })
+  public store!: number | Store;
 
-    await bigal.initialize({
-      modelSchemas,
-      pool,
-      readonlyPool,
-      expose(repository, modelSchema) {
-        global[modelSchema.globalId] = repository;
-        models[modelSchema.globalId] = repository;
-      },
-    });
-    
-    return models;
-  },
-  shutdown() {
-    return Promise.all([
-      pool.end(),
-      readonlyPool.end(),
-    ]);
-  },
-};
+  @column({
+    collection: () => Category.name,
+    through: () => ProductCategory.name,
+    via: 'product',
+  })
+  public categories!: Category[];
+}
+
 ```
 
-## Model class methods
+#### Initialize repositories
+
+```typescript
+import {
+  initialize,
+  Repository,
+} from 'bigal';
+import { Pool } from 'postgres-pool';
+import {
+  Category,
+  Product,
+  ProductCategory,
+  Store,
+} from './models';
+
+let pool: Pool;
+let readonlyPool: Pool;
+
+export function startup({
+  connectionString,
+  readonlyConnectionString,
+}: {
+  connectionString: string,
+  readonlyConnectionString: string,
+}) {
+  pool = new Pool(connectionString);
+  readonlyPool = new Pool(readonlyConnectionString);
+
+  const repositoriesByLoweredName = initialize({
+    models: [
+      Category,
+      Product,
+      ProductCategory,
+      Store,
+    ],
+    pool,
+    readonlyPool,
+  });
+
+  let categoryRepository: Repository<Category>;
+  let productRepository: Repository<Category>;
+  let storeRepository: Repository<Category>;
+  for (const [loweredName, repository] = Object.entries(repositoriesByLoweredName)) {
+    switch (loweredName) {
+      case 'category':
+        categoryRepository = repository;
+        break;
+      case 'product':
+        productRepository = repository;
+        break;
+      case 'store':
+        storeRepository = repository;
+        break;
+    }
+  }
+
+  return {
+    categoryRepository,
+    productRepository,
+    storeRepository,
+  }
+}
+
+export function shutdown() {
+  const shutdownEvents = [];
+  if (pool) {
+    shutdownEvents.push(pool.end());
+  }
+
+  if (readonlyPool) {
+    shutdownEvents.push(readonlyPool.end());
+  }
+
+  return Promise.all(shutdownEvents);
+}
+```
+
+## Repository class methods
 
 ### `.findOne()` - Fetch a single object
 
 #### Where criteria specified as a chained method
 
 ```js
-const item = await MyModel.findOne().where({
+const item = await ProductRepository.findOne().where({
   id: context.params.id,
 });
 ```
@@ -94,7 +169,7 @@ const item = await MyModel.findOne().where({
 #### Restrict columns selected from db (query projection)
 
 ```js
-const item = await MyModel.findOne({
+const item = await ProductRepository.findOne({
   select: ['name'],
 }).where({
   id: context.params.id,
@@ -104,9 +179,9 @@ const item = await MyModel.findOne({
 #### Populate relation - Relations can be one-to-many (ether direction) or many-to-many
 
 ```js
-const item = await MyModel.findOne().where({
+const item = await ProductRepository.findOne().where({
   id: context.params.id,
-}).populate('parent', {
+}).populate('store', {
   select: ['name'],
 });
 ```
@@ -114,7 +189,7 @@ const item = await MyModel.findOne().where({
 #### Sorted query before returning result
 
 ```js
-const item = await MyModel.findOne().where({
+const item = await ProductRepository.findOne().where({
   foo: context.params.foo,
 }).sort('name asc');
 ```
@@ -126,7 +201,7 @@ const item = await MyModel.findOne().where({
 #### Where criteria specified as a chained method
 
 ```js
-const items = await MyModel.find().where({
+const items = await ProductRepository.find().where({
   foo: context.params.foo,
 });
 ```
@@ -134,7 +209,7 @@ const items = await MyModel.find().where({
 #### Restrict columns selected from db (query projection)
 
 ```js
-const items = await MyModel.find({
+const items = await ProductRepository.find({
   select: ['name'],
 }).where({
   foo: context.params.foo,
@@ -144,7 +219,7 @@ const items = await MyModel.find({
 #### Sorted query before returning result
 
 ```js
-const items = await MyModel.find().where({
+const items = await PersonRepository.find().where({
   firstName: {
     like: 'walter',
   },
@@ -160,7 +235,7 @@ const items = await MyModel.find().where({
 #### Limit number results returned
 
 ```js
-const items = await MyModel.find().where({
+const items = await PersonRepository.find().where({
   age: [22, 23, 24],
 }).limit(42);
 ```
@@ -168,7 +243,7 @@ const items = await MyModel.find().where({
 #### Skip `x` results
 
 ```js
-const items = await MyModel.find().where({
+const items = await FooRepository.find().where({
   or: [{
     foo: context.params.foo,
   }, {
@@ -180,7 +255,7 @@ const items = await MyModel.find().where({
 #### Page results using `skip()` & `limit()`
 
 ```js
-const items = await MyModel.find().where({
+const items = await FooRepository.find().where({
   foo: context.params.foo,
 }).skip(84).limit(42);
 ```
@@ -190,7 +265,7 @@ const items = await MyModel.find().where({
 ```js
 const page = 2;
 const pageSize = 42;
-const items = await MyModel.find().where({
+const items = await FooRepository.find().where({
   foo: context.params.foo,
 }).paginate(page, pageSize);
 ```
@@ -200,7 +275,7 @@ const items = await MyModel.find().where({
 ### `.count()` - Get the number of records matching the where criteria
 
 ```js
-const count = await MyModel.count().where({
+const count = await PersonRepository.count().where({
   name: {
     like: 'Karl',
   },
@@ -215,7 +290,7 @@ const count = await MyModel.count().where({
 #### Insert a single object
 
 ```js
-const item = await MyModel.create({
+const item = await PersonRepository.create({
   name: 'Karl',
 });
 // item = { id: 42, name: 'Karl', createdAt: ... }
@@ -224,7 +299,7 @@ const item = await MyModel.create({
 #### Insert a single object without returning results from the db
 
 ```js
-const success = await MyModel.create({
+const success = await PersonRepository.create({
   name: 'Karl',
 }, {
   returnRecords: false,
@@ -235,7 +310,7 @@ const success = await MyModel.create({
 #### Insert a single object but limit columns returned from db for inserted records (query projection)
 
 ```js
-const item = await MyModel.create({
+const item = await PersonRepository.create({
   name: 'Karl',
 }, {
   returnSelect: ['name']
@@ -247,7 +322,7 @@ const item = await MyModel.create({
 #### Insert a multiple object
 
 ```js
-const items = await MyModel.create([{
+const items = await PersonRepository.create([{
   name: 'LX',
 }, {
   name: 'Big Al',
@@ -258,7 +333,7 @@ const items = await MyModel.create([{
 #### Insert a multiple object without returning results from the db
 
 ```js
-const success = await MyModel.create([{
+const success = await PersonRepository.create([{
   name: 'LX',
 }, {
   name: 'Big Al',
@@ -271,7 +346,7 @@ const success = await MyModel.create([{
 #### Insert a multiple object
 
 ```js
-const items = await MyModel.create([{
+const items = await PersonRepository.create([{
   name: 'LX',
 }, {
   name: 'Big Al',
@@ -289,7 +364,7 @@ const items = await MyModel.create([{
 #### Update single record
 
 ```js
-const items = await MyModel.update({
+const items = await PersonRepository.update({
   id: 42,
 }, {
   name: 'Big Al',
@@ -302,7 +377,7 @@ const items = await MyModel.update({
 #### Update record without returning results from the db
 
 ```js
-const success = await MyModel.update({
+const success = await PersonRepository.update({
   id: 42,
 }, {
   name: 'Big Al',
@@ -315,7 +390,7 @@ const success = await MyModel.update({
 #### Update records and limit columns returned from db for affected records (query projection)
 
 ```js
-const items = await MyModel.update({
+const items = await PersonRepository.update({
   id: [42, 43],
 }, {
   occupation: 'Water Purification Engineer',
@@ -332,7 +407,7 @@ const items = await MyModel.update({
 #### Delete single record
 
 ```js
-const items = await MyModel.destroy({
+const items = await PersonRepository.destroy({
   id: 42,
 });
 // items = [{ id: 42, name: 'Big Al', createdAt: ... }]
@@ -343,7 +418,7 @@ const items = await MyModel.destroy({
 #### Delete record without returning row data from the db
 
 ```js
-const success = await MyModel.destroy({
+const success = await PersonRepository.destroy({
   id: 42,
 }, {
   returnRecords: false,
@@ -354,7 +429,7 @@ const success = await MyModel.destroy({
 #### Delete records and limit columns returned from db for affected records (query projection)
 
 ```js
-const items = await MyModel.destroy({
+const items = await PersonRepository.destroy({
   id: [24, 25],
 }, {
   returnSelect: ['name']
