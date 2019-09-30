@@ -42,7 +42,12 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
 
     const columnCollectionOptions = options as ColumnCollectionOptions;
 
-    if (columnCollectionOptions.collection) {
+    if (columnCollectionOptions.collection || columnCollectionOptions.via) {
+      // NOTE: https://github.com/Microsoft/TypeScript/issues/4521
+      if (!columnCollectionOptions.collection) {
+        throw new Error('Unable to determine collection value. Please try specifying values as a strings to avoid circular dependency issues.');
+      }
+
       let through: string | undefined;
       if (columnCollectionOptions.through) {
         if (typeof columnCollectionOptions.through === 'string') {
