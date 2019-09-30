@@ -48,7 +48,7 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
         if (typeof columnCollectionOptions.through === 'string') {
           through = columnCollectionOptions.through;
         } else {
-          through = columnCollectionOptions.through.constructor.name;
+          through = columnCollectionOptions.through.name;
         }
       }
 
@@ -57,7 +57,7 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
         name: dbColumnName,
         propertyName,
         required: columnCollectionOptions.required,
-        collection: typeof columnCollectionOptions.collection === 'string' ? columnCollectionOptions.collection : columnCollectionOptions.collection.constructor.name,
+        collection: typeof columnCollectionOptions.collection === 'string' ? columnCollectionOptions.collection : columnCollectionOptions.collection.name,
         via: columnCollectionOptions.via,
         through,
       }));

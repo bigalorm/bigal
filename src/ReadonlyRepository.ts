@@ -208,14 +208,14 @@ export class ReadonlyRepository<T extends Entity> {
 
               const modelColumn = column as ColumnModelMetadata;
               const collectionColumn = column as ColumnCollectionMetadata;
-              if (modelColumn.target) {
-                const populateRepository = modelInstance._repositoriesByModelNameLowered[modelColumn.target.toLowerCase()];
+              if (modelColumn.model) {
+                const populateRepository = modelInstance._repositoriesByModelNameLowered[modelColumn.model.toLowerCase()];
                 if (!populateRepository) {
-                  throw new Error(`Unable to find populate repository by entity name: ${modelColumn.target}. Column ${column.propertyName} on model: ${column.target}`);
+                  throw new Error(`Unable to find populate repository by entity name: ${modelColumn.model}. From ${column.target}#${column.propertyName}`);
                 }
 
                 if (!populateRepository.model.primaryKeyColumn) {
-                  throw new Error(`Unable to populate ${modelColumn.target} from ${column.target}.${column.propertyName}. There is no primary key defined in ${modelColumn.target}`);
+                  throw new Error(`Unable to populate ${modelColumn.model} from ${column.target}#${column.propertyName}. There is no primary key defined in ${modelColumn.model}`);
                 }
 
                 const populateWhere = _.merge({
@@ -223,7 +223,7 @@ export class ReadonlyRepository<T extends Entity> {
                   [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName],
                 }, populate.where);
 
-                populateQueries.push(async () => {
+                populateQueries.push(async function populateModel() {
                   const populateResult = await populateRepository.findOne({
                     select: populate.select,
                     where: populateWhere,
@@ -232,21 +232,21 @@ export class ReadonlyRepository<T extends Entity> {
 
                   // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
                   result[populate.propertyName] = populateResult;
-                });
+                }());
               } else if (collectionColumn.collection) {
                 const populateRepository = modelInstance._repositoriesByModelNameLowered[collectionColumn.collection.toLowerCase()];
                 if (!populateRepository) {
-                  throw new Error(`Unable to find populate repository for collection by name ${collectionColumn.collection}. For ${populate.propertyName} property on model: ${column.target}`);
+                  throw new Error(`Unable to find populate repository for collection by name ${collectionColumn.collection}. From ${column.target}#${populate.propertyName}`);
                 }
 
                 const populateModelPrimaryKeyColumn = populateRepository.model.primaryKeyColumn;
                 if (!populateModelPrimaryKeyColumn) {
-                  throw new Error(`Unable to populate ${collectionColumn.collection} objects from ${column.target}.${column.propertyName}. There is no primary key defined in ${collectionColumn.collection}`);
+                  throw new Error(`Unable to populate ${collectionColumn.collection} objects from ${column.target}#${column.propertyName}. There is no primary key defined in ${collectionColumn.collection}`);
                 }
 
                 const { primaryKeyColumn } = modelInstance.model;
                 if (!primaryKeyColumn) {
-                  throw new Error(`Unable to populate ${column.target}.${column.propertyName}. There is no primary key defined in ${modelInstance.model.name}`);
+                  throw new Error(`Unable to populate ${column.target}#${column.propertyName}. There is no primary key defined in ${modelInstance.model.name}`);
                 }
 
                 // @ts-ignore - Ignoring result does not have index signature for known field (primaryKeyColumn.propertyName)
@@ -258,7 +258,7 @@ export class ReadonlyRepository<T extends Entity> {
                 if (collectionColumn.through) {
                   const throughRepository = modelInstance._repositoriesByModelNameLowered[collectionColumn.through.toLowerCase()];
                   if (!throughRepository) {
-                    throw new Error(`Unable to find repository for multi-map collection: ${collectionColumn.through}. For ${populate.propertyName} property on model: ${column.target}`);
+                    throw new Error(`Unable to find repository for multi-map collection: ${collectionColumn.through}. From ${column.target}#${populate.propertyName}`);
                   }
 
                   let relatedModelColumn: ColumnCollectionMetadata | undefined;
@@ -271,10 +271,10 @@ export class ReadonlyRepository<T extends Entity> {
                   }
 
                   if (!relatedModelColumn) {
-                    throw new Error(`Unable to find property on related model for multi-map collection: ${collectionColumn.through}. Coming from ${populate.propertyName} property on model: ${column.target}`);
+                    throw new Error(`Unable to find property on related model for multi-map collection: ${collectionColumn.through}. From ${column.target}#${populate.propertyName}`);
                   }
 
-                  populateQueries.push(async () => {
+                  populateQueries.push(async function populateMultiMulti() {
                     if (relatedModelColumn) {
                       const mapRecords = await throughRepository.find({
                         select: [relatedModelColumn.via],
@@ -299,13 +299,13 @@ export class ReadonlyRepository<T extends Entity> {
                       // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
                       result[populate.propertyName] = populateResults;
                     }
-                  });
+                  }());
                 } else {
                   const populateWhere = _.merge({
                     [collectionColumn.via]: id,
                   }, populate.where);
 
-                  populateQueries.push(async () => {
+                  populateQueries.push(async function populateCollection() {
                     const populateResults = await populateRepository.find({
                       select: populate.select,
                       where: populateWhere,
@@ -316,7 +316,7 @@ export class ReadonlyRepository<T extends Entity> {
 
                     // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
                     result[populate.propertyName] = populateResults;
-                  });
+                  }());
                 }
               }
             }
@@ -535,13 +535,17 @@ export class ReadonlyRepository<T extends Entity> {
   }
 
   protected _buildInstance(row: Partial<T>): T {
+    if (_.isNil(row)) {
+      return row;
+    }
+
     const instance = new this._type() as T;
     Object.assign(instance, row);
 
     // NOTE: Number fields may be strings coming from the db. In those cases, try to convert the value to Number
     for (const name of this._floatProperties) {
       // @ts-ignore
-      const originalValue = (row[name]) as string | number | undefined | null;
+      const originalValue = row[name] as string | number | undefined | null;
       if (!_.isNil(originalValue) && typeof originalValue === 'string') {
         try {
           const value = Number(originalValue);
@@ -557,7 +561,7 @@ export class ReadonlyRepository<T extends Entity> {
 
     for (const name of this._intProperties) {
       // @ts-ignore
-      const originalValue = (row[name]) as string | number | undefined | null;
+      const originalValue = row[name] as string | number | undefined | null;
       if (!_.isNil(originalValue) && typeof originalValue === 'string') {
         try {
           const value = Number(originalValue);

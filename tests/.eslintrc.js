@@ -12,4 +12,7 @@ module.exports = {
     afterEach: true,
     it: true
   },
-}
+  rules: {
+    'max-classes-per-file': 'off',
+  },
+};

@@ -4,9 +4,10 @@ import {
   column,
   table,
 } from '../../src/decorators';
+// eslint-disable-next-line import/no-cycle
 import { Store } from './Store';
+// eslint-disable-next-line import/no-cycle
 import { Category } from './Category';
-import { ProductCategory } from './ProductCategory';
 
 @table({
   name: 'products',
@@ -37,9 +38,9 @@ export class Product extends ModelBase implements Entity {
   public store!: number | Store;
 
   @column({
-    collection: Category,
-    via: 'category',
-    through: ProductCategory,
+    collection: 'Category',
+    through: 'ProductCategory',
+    via: 'product',
   })
   public categories!: Category[];
 }

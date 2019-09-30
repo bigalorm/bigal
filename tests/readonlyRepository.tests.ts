@@ -1,9 +1,16 @@
-/*import chai from 'chai';
-import * as _ from 'lodash';
+import chai from 'chai';
+import _ from 'lodash';
 import * as faker from 'faker';
 import { Pool } from 'postgres-pool';
 import {
- anyString, anything, instance, mock, when, reset, capture, verify,
+  anyString,
+  anything,
+  capture,
+  instance,
+  mock,
+  reset,
+  verify,
+  when,
 } from 'ts-mockito';
 import {
   initialize,
@@ -11,10 +18,17 @@ import {
   ReadonlyRepository,
   Repository,
 } from '../src';
-import {Store} from "./models/Store";
-import {Product} from "./models/Product";
-import {ReadonlyProduct} from "./models/ReadonlyProduct";
+import {
+  Category,
+  Product,
+  ProductCategory,
+  ReadonlyProduct,
+  Store,
+} from './models';
+import { ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
+import { RepositoriesByModelNameLowered } from '../src/RepositoriesByModelNameLowered';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getQueryResult(rows: any[] = []) {
   return {
     command: 'select',
@@ -28,61 +42,61 @@ function getQueryResult(rows: any[] = []) {
 describe('model', () => {
   let should: Chai.Should;
   const mockedPool: Pool = mock(Pool);
-
-  before(() => {
-    should = chai.should();
-  });
-
   let ProductRepository: Repository<Product>;
   let ReadonlyProductRepository: ReadonlyRepository<ReadonlyProduct>;
   let StoreRepository: Repository<Store>;
 
-  beforeEach(async () => {
-    reset(mockedPool);
+  // eslint-disable-next-line @typescript-eslint/no-extraneous-class
+  class TestEntity implements Entity {
+  }
 
-    const repositories = await initialize({
+  before(() => {
+    should = chai.should();
+
+    const repositoriesByModelNameLowered = initialize({
+      models: [
+        Category,
+        Product,
+        ProductCategory,
+        ReadonlyProduct,
+        Store,
+      ],
       pool: instance(mockedPool),
     });
-    for (const [name, repository] of Object.entries(repositories)) {
-      switch (name) {
-        case 'Product':
-          ProductRepository = repository as Repository<Product>;
-          break;
-        case 'ReadonlyProduct':
-          ReadonlyProductRepository = repository as ReadonlyRepository<ReadonlyProduct>;
-          break;
-        case 'Store':
-          StoreRepository = repository as Repository<Store>;
-          break;
-        default:
-          // Skip other repositories that are not used here
-          break;
-      }
-    }
+
+    ProductRepository = repositoriesByModelNameLowered.product as Repository<Product>;
+    ReadonlyProductRepository = repositoriesByModelNameLowered.readonlyproduct as ReadonlyRepository<ReadonlyProduct>;
+    StoreRepository = repositoriesByModelNameLowered.store as Repository<Store>;
+  });
+
+  beforeEach(async () => {
+    reset(mockedPool);
   });
 
   describe('#findOne()', () => {
     it('should support call without constraints', async () => {
       const product = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
-      const result = await ProductRepository.findOne();
+      const result = await ReadonlyProductRepository.findOne();
       should.exist(result);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" LIMIT 1');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "readonly_products" LIMIT 1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support call with constraints as a parameter', async () => {
       const product = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       };
 
@@ -96,18 +110,20 @@ describe('model', () => {
         sort: 'name asc',
       });
       should.exist(result);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "name","id" FROM "product" WHERE "id"=$1 ORDER BY "name" LIMIT 1');
+      query.should.equal('SELECT "name","id" FROM "products" WHERE "id"=$1 ORDER BY "name" LIMIT 1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([product.id]);
     });
     it('should support call with where constraint as a parameter', async () => {
       const product = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       };
 
@@ -117,18 +133,20 @@ describe('model', () => {
         id: product.id,
       });
       should.exist(result);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([product.id]);
     });
     it('should support call with chained where constraints', async () => {
       const product = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       };
 
@@ -138,18 +156,20 @@ describe('model', () => {
         id: product.id,
       });
       should.exist(result);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([product.id]);
     });
     it('should support call with chained where constraints - Promise.all', async () => {
       const product = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       };
 
@@ -163,18 +183,20 @@ describe('model', () => {
         }),
       ]);
       should.exist(result);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "id"=$1 LIMIT 1');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([product.id]);
     });
     it('should support call with chained sort', async () => {
       const product = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       };
 
@@ -182,50 +204,58 @@ describe('model', () => {
 
       const result = await ProductRepository.findOne().sort('name asc');
       should.exist(result);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" ORDER BY "name" LIMIT 1');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "name" LIMIT 1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     describe('Parse number columns', () => {
-      it('should parse integer columns return as integer strings', async () => {
-        const schema: ModelSchema = {
-          globalId: faker.random.uuid(),
-          tableName: faker.random.uuid(),
-          attributes: {
-            id: {
-              type: 'integer',
-              primaryKey: true,
-            },
-            foo: {
-              type: 'integer',
-            },
-          },
-        };
-
-
-        let Model: Repository<Entity>;
-        initializeModelClasses({
-          modelSchemas: [schema],
-          pool: instance(mockedPool),
-          expose(model: Repository<Entity>) {
-            Model = model;
-          },
+      it('should parse integer columns from integer query value', async () => {
+        const model = new ModelMetadata({
+          name: 'foo',
+          type: TestEntity,
         });
+        model.columns = [
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'id',
+            propertyName: 'id',
+            primary: true,
+            type: 'integer',
+          }),
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'foo',
+            propertyName: 'foo',
+            type: 'integer',
+          }),
+        ];
+        const repositories: RepositoriesByModelNameLowered = {};
+        const repository = new ReadonlyRepository({
+          modelMetadata: model,
+          type: model.type,
+          pool: instance(mockedPool),
+          repositoriesByModelNameLowered: repositories,
+        });
+        repositories[model.name.toLowerCase()] = repository;
 
-        const id = faker.random.uuid();
+        const id = faker.random.number();
         const numberValue = 42;
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
           id,
           foo: `${numberValue}`,
         }]));
 
-        const result = await Model!.findOne();
+        const result = await repository.findOne();
         should.exist(result);
+
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: numberValue,
@@ -235,43 +265,49 @@ describe('model', () => {
           query,
           params,
         ] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
-      it('should parse integer columns return as float strings', async () => {
-        const schema: ModelSchema = {
-          globalId: faker.random.uuid(),
-          tableName: faker.random.uuid(),
-          attributes: {
-            id: {
-              type: 'integer',
-              primaryKey: true,
-            },
-            foo: {
-              type: 'integer',
-            },
-          },
-        };
-
-
-        let Model: Repository<Entity>;
-        initializeModelClasses({
-          modelSchemas: [schema],
-          pool: instance(mockedPool),
-          expose(model: Repository<Entity>) {
-            Model = model;
-          },
+      it('should parse integer columns from float strings query value', async () => {
+        const model = new ModelMetadata({
+          name: 'foo',
+          type: TestEntity,
         });
+        model.columns = [
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'id',
+            propertyName: 'id',
+            primary: true,
+            type: 'integer',
+          }),
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'foo',
+            propertyName: 'foo',
+            type: 'integer',
+          }),
+        ];
+        const repositories: RepositoriesByModelNameLowered = {};
+        const repository = new ReadonlyRepository({
+          modelMetadata: model,
+          type: model.type,
+          pool: instance(mockedPool),
+          repositoriesByModelNameLowered: repositories,
+        });
+        repositories[model.name.toLowerCase()] = repository;
 
-        const id = faker.random.uuid();
+        const id = faker.random.number();
         const numberValue = 42.24;
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
           id,
           foo: `${numberValue}`,
         }]));
 
-        const result = await Model!.findOne();
+        const result = await repository.findOne();
         should.exist(result);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: 42,
@@ -281,43 +317,49 @@ describe('model', () => {
           query,
           params,
         ] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
-      it('should parse integer columns return as number', async () => {
-        const schema: ModelSchema = {
-          globalId: faker.random.uuid(),
-          tableName: faker.random.uuid(),
-          attributes: {
-            id: {
-              type: 'integer',
-              primaryKey: true,
-            },
-            foo: {
-              type: 'integer',
-            },
-          },
-        };
-
-
-        let Model: Repository<Entity>;
-        initializeModelClasses({
-          modelSchemas: [schema],
-          pool: instance(mockedPool),
-          expose(model: Repository<Entity>) {
-            Model = model;
-          },
+      it('should parse integer columns that return as number', async () => {
+        const model = new ModelMetadata({
+          name: 'foo',
+          type: TestEntity,
         });
+        model.columns = [
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'id',
+            propertyName: 'id',
+            primary: true,
+            type: 'integer',
+          }),
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'foo',
+            propertyName: 'foo',
+            type: 'integer',
+          }),
+        ];
+        const repositories: RepositoriesByModelNameLowered = {};
+        const repository = new ReadonlyRepository({
+          modelMetadata: model,
+          type: model.type,
+          pool: instance(mockedPool),
+          repositoriesByModelNameLowered: repositories,
+        });
+        repositories[model.name.toLowerCase()] = repository;
 
-        const id = faker.random.uuid();
+        const id = faker.random.number();
         const numberValue = 42;
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
           id,
           foo: numberValue,
         }]));
 
-        const result = await Model!.findOne();
+        const result = await repository.findOne();
         should.exist(result);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: numberValue,
@@ -327,43 +369,49 @@ describe('model', () => {
           query,
           params,
         ] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
-      it('should ignore large integer columns', async () => {
-        const schema: ModelSchema = {
-          globalId: faker.random.uuid(),
-          tableName: faker.random.uuid(),
-          attributes: {
-            id: {
-              type: 'integer',
-              primaryKey: true,
-            },
-            foo: {
-              type: 'integer',
-            },
-          },
-        };
-
-
-        let Model: Repository<Entity>;
-        initializeModelClasses({
-          modelSchemas: [schema],
-          pool: instance(mockedPool),
-          expose(model: Repository<Entity>) {
-            Model = model;
-          },
+      it('should ignore large integer columns values', async () => {
+        const model = new ModelMetadata({
+          name: 'foo',
+          type: TestEntity,
         });
+        model.columns = [
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'id',
+            propertyName: 'id',
+            primary: true,
+            type: 'integer',
+          }),
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'foo',
+            propertyName: 'foo',
+            type: 'integer',
+          }),
+        ];
+        const repositories: RepositoriesByModelNameLowered = {};
+        const repository = new ReadonlyRepository({
+          modelMetadata: model,
+          type: model.type,
+          pool: instance(mockedPool),
+          repositoriesByModelNameLowered: repositories,
+        });
+        repositories[model.name.toLowerCase()] = repository;
 
-        const id = faker.random.uuid();
+        const id = faker.random.number();
         const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0`;
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
           id,
           foo: largeNumberValue,
         }]));
 
-        const result = await Model!.findOne();
+        const result = await repository.findOne();
         should.exist(result);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: largeNumberValue,
@@ -373,43 +421,49 @@ describe('model', () => {
           query,
           params,
         ] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
       it('should parse float columns return as float strings', async () => {
-        const schema: ModelSchema = {
-          globalId: faker.random.uuid(),
-          tableName: faker.random.uuid(),
-          attributes: {
-            id: {
-              type: 'integer',
-              primaryKey: true,
-            },
-            foo: {
-              type: 'float',
-            },
-          },
-        };
-
-
-        let Model: Repository<Entity>;
-        initializeModelClasses({
-          modelSchemas: [schema],
-          pool: instance(mockedPool),
-          expose(model: Repository<Entity>) {
-            Model = model;
-          },
+        const model = new ModelMetadata({
+          name: 'foo',
+          type: TestEntity,
         });
+        model.columns = [
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'id',
+            propertyName: 'id',
+            primary: true,
+            type: 'integer',
+          }),
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'foo',
+            propertyName: 'foo',
+            type: 'float',
+          }),
+        ];
+        const repositories: RepositoriesByModelNameLowered = {};
+        const repository = new ReadonlyRepository({
+          modelMetadata: model,
+          type: model.type,
+          pool: instance(mockedPool),
+          repositoriesByModelNameLowered: repositories,
+        });
+        repositories[model.name.toLowerCase()] = repository;
 
-        const id = faker.random.uuid();
+        const id = faker.random.number();
         const numberValue = 42.24;
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
           id,
           foo: `${numberValue}`,
         }]));
 
-        const result = await Model!.findOne();
+        const result = await repository.findOne();
         should.exist(result);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: numberValue,
@@ -419,43 +473,49 @@ describe('model', () => {
           query,
           params,
         ] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
       it('should parse float columns return as number', async () => {
-        const schema: ModelSchema = {
-          globalId: faker.random.uuid(),
-          tableName: faker.random.uuid(),
-          attributes: {
-            id: {
-              type: 'integer',
-              primaryKey: true,
-            },
-            foo: {
-              type: 'float',
-            },
-          },
-        };
-
-
-        let Model: Repository<Entity>;
-        initializeModelClasses({
-          modelSchemas: [schema],
-          pool: instance(mockedPool),
-          expose(model: Repository<Entity>) {
-            Model = model;
-          },
+        const model = new ModelMetadata({
+          name: 'foo',
+          type: TestEntity,
         });
+        model.columns = [
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'id',
+            propertyName: 'id',
+            primary: true,
+            type: 'integer',
+          }),
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'foo',
+            propertyName: 'foo',
+            type: 'float',
+          }),
+        ];
+        const repositories: RepositoriesByModelNameLowered = {};
+        const repository = new ReadonlyRepository({
+          modelMetadata: model,
+          type: model.type,
+          pool: instance(mockedPool),
+          repositoriesByModelNameLowered: repositories,
+        });
+        repositories[model.name.toLowerCase()] = repository;
 
-        const id = faker.random.uuid();
+        const id = faker.random.number();
         const numberValue = 42.24;
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
           id,
           foo: numberValue,
         }]));
 
-        const result = await Model!.findOne();
+        const result = await repository.findOne();
         should.exist(result);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: numberValue,
@@ -465,43 +525,49 @@ describe('model', () => {
           query,
           params,
         ] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
       it('should ignore large float columns', async () => {
-        const schema: ModelSchema = {
-          globalId: faker.random.uuid(),
-          tableName: faker.random.uuid(),
-          attributes: {
-            id: {
-              type: 'integer',
-              primaryKey: true,
-            },
-            foo: {
-              type: 'float',
-            },
-          },
-        };
-
-
-        let Model: Repository<Entity>;
-        initializeModelClasses({
-          modelSchemas: [schema],
-          pool: instance(mockedPool),
-          expose(model: Repository<Entity>) {
-            Model = model;
-          },
+        const model = new ModelMetadata({
+          name: 'foo',
+          type: TestEntity,
         });
+        model.columns = [
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'id',
+            propertyName: 'id',
+            primary: true,
+            type: 'integer',
+          }),
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'foo',
+            propertyName: 'foo',
+            type: 'float',
+          }),
+        ];
+        const repositories: RepositoriesByModelNameLowered = {};
+        const repository = new ReadonlyRepository({
+          modelMetadata: model,
+          type: model.type,
+          pool: instance(mockedPool),
+          repositoriesByModelNameLowered: repositories,
+        });
+        repositories[model.name.toLowerCase()] = repository;
 
-        const id = faker.random.uuid();
+        const id = faker.random.number();
         const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0.42`;
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
           id,
           foo: largeNumberValue,
         }]));
 
-        const result = await Model!.findOne();
+        const result = await repository.findOne();
         should.exist(result);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: largeNumberValue,
@@ -511,17 +577,18 @@ describe('model', () => {
           query,
           params,
         ] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${schema.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
     });
     it('should support populating a single relation', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const product = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
         store,
       };
@@ -538,33 +605,36 @@ describe('model', () => {
       const result = await ProductRepository.findOne().populate('store');
       verify(mockedPool.query(anyString(), anything())).twice();
       should.exist(result);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
         productQuery,
         productQueryParams,
       ] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" LIMIT 1');
+      productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       productQueryParams!.should.deep.equal([]);
       const [
         storeQuery,
         storeQueryParams,
       ] = capture(mockedPool.query).second();
-      storeQuery.should.equal('SELECT "id","name" FROM "store" WHERE "id"=$1 LIMIT 1');
+      storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1 LIMIT 1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       storeQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating collection', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const product1 = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
         store: store.id,
       };
       const product2 = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
         store: store.id,
       };
@@ -581,41 +651,44 @@ describe('model', () => {
       const result = await StoreRepository.findOne().populate('products');
       verify(mockedPool.query(anyString(), anything())).twice();
       should.exist(result);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(storeWithProducts);
 
       const [
         storeQuery,
         storeQueryParams,
       ] = capture(mockedPool.query).first();
-      storeQuery.should.equal('SELECT "id","name" FROM "store" LIMIT 1');
+      storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       storeQueryParams!.should.deep.equal([]);
       const [
         productQuery,
         productQueryParams,
       ] = capture(mockedPool.query).second();
-      productQuery.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
+      productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       productQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating multi-multi collection', async () => {
       const product = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       };
       const category1 = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `category - ${faker.random.uuid()}`,
       };
       const category2 = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `category - ${faker.random.uuid()}`,
       };
       const productCategory1Map = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         product: product.id,
         category: category1.id,
       };
       const productCategory2Map = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         product: product.id,
         category: category2.id,
       };
@@ -633,54 +706,58 @@ describe('model', () => {
       const result = await ProductRepository.findOne().populate('categories');
       verify(mockedPool.query(anyString(), anything())).thrice();
       should.exist(result);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(productWithCategories);
 
       const [
         productQuery,
         productQueryParams,
       ] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" LIMIT 1');
+      productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       productQueryParams!.should.deep.equal([]);
       const [
         productCategoryMapQuery,
         productCategoryMapQueryParams,
       ] = capture(mockedPool.query).second();
       productCategoryMapQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       productCategoryMapQueryParams!.should.deep.equal([product.id]);
       const [
         categoryQuery,
         categoryQueryParams,
       ] = capture(mockedPool.query).third();
-      categoryQuery.should.equal('SELECT "id","name" FROM "category" WHERE "id"=ANY($1::TEXT[])');
+      categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       categoryQueryParams!.should.deep.equal([
         [category1.id, category2.id],
       ]);
     });
     it('should support complex query with multiple chained modifiers', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const product = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
         store: store.id,
       };
       const category1 = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `category - ${faker.random.uuid()}`,
       };
       const category2 = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `category - ${faker.random.uuid()}`,
       };
       const productCategory1Map = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         product: product.id,
         category: category1.id,
       };
       const productCategory2Map = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         product: product.id,
         category: category2.id,
       };
@@ -714,65 +791,81 @@ describe('model', () => {
         .sort('store desc');
       verify(mockedPool.query(anyString(), anything())).times(4);
       should.exist(result);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(fullProduct);
 
       const [
         productQuery,
         productQueryParams,
       ] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 1');
+      productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       productQueryParams!.should.deep.equal([store.id]);
       const [
         storeQuery,
         storeQueryParams,
       ] = capture(mockedPool.query).second();
-      storeQuery.should.equal('SELECT "id","name" FROM "store" WHERE "id"=$1 LIMIT 1');
+      storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1 LIMIT 1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       storeQueryParams!.should.deep.equal([store.id]);
       const [
         productCategoryMapQuery,
         productCategoryMapQueryParams,
       ] = capture(mockedPool.query).third();
       productCategoryMapQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       productCategoryMapQueryParams!.should.deep.equal([product.id]);
       const [
         categoryQuery,
         categoryQueryParams,
       ] = capture(mockedPool.query).byCallIndex(3);
-      categoryQuery.should.equal('SELECT "id","name" FROM "category" WHERE "id"=ANY($1::TEXT[]) AND "name" ILIKE $2 ORDER BY "name" LIMIT 2');
+      categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) AND "name" ILIKE $2 ORDER BY "name" LIMIT 2');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       categoryQueryParams!.should.deep.equal([
         [category1.id, category2.id],
         'category%',
       ]);
     });
     it('should have instance functions be equal across multiple queries', async () => {
-      const schema: ModelSchema = {
-        globalId: faker.random.uuid(),
-        tableName: faker.random.uuid(),
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          foo: {
-            type: 'string',
-          },
-          toBar() {
-            return `${this.foo} bar!`;
-          },
-        },
-      };
+      // eslint-disable-next-line max-classes-per-file
+      class TestEntityWithInstanceFunction implements Entity {
+        public id!: number;
 
+        public foo: string | undefined;
 
-      let Model: Repository<Entity>;
-      initializeModelClasses({
-        modelSchemas: [schema],
-        pool: instance(mockedPool),
-        expose(model: Repository<Entity>) {
-          Model = model;
-        },
+        public toBar() {
+          return `${this.foo} bar!`;
+        }
+      }
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntityWithInstanceFunction,
       });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foo',
+          propertyName: 'foo',
+          type: 'string',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      const repository = new ReadonlyRepository({
+        modelMetadata: model,
+        type: model.type,
+        pool: instance(mockedPool),
+        repositoriesByModelNameLowered: repositories,
+      });
+      repositories[model.name.toLowerCase()] = repository;
 
-      const id = faker.random.uuid();
+      const id = faker.random.number();
       const foo = faker.random.uuid();
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([{
@@ -781,50 +874,64 @@ describe('model', () => {
         }]),
       );
 
-      const result1 = await Model!.findOne();
-      const result2 = await Model!.findOne();
+      const result1 = await repository.findOne();
+      const result2 = await repository.findOne();
 
       verify(mockedPool.query(anyString(), anything())).twice();
 
       should.exist(result1);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result1!.should.deep.equal(result2);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result1!.toBar().should.equal(`${foo} bar!`);
       should.exist(result2);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result2!.toBar().should.equal(`${foo} bar!`);
     });
     it('should not create an object/assign instance functions to null results', async () => {
-      const schema: ModelSchema = {
-        globalId: faker.random.uuid(),
-        tableName: faker.random.uuid(),
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          foo: {
-            type: 'string',
-          },
-          toBar() {
-            return `${this.foo} bar!`;
-          },
-        },
-      };
+      // eslint-disable-next-line max-classes-per-file
+      class TestEntityWithInstanceFunction implements Entity {
+        public id!: number;
 
+        public foo: string | undefined;
 
-      let Model: Repository<Entity>;
-      initializeModelClasses({
-        modelSchemas: [schema],
-        pool: instance(mockedPool),
-        expose(model: Repository<Entity>) {
-          Model = model;
-        },
+        public toBar() {
+          return `${this.foo} bar!`;
+        }
+      }
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntityWithInstanceFunction,
       });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foo',
+          propertyName: 'foo',
+          type: 'string',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      const repository = new ReadonlyRepository({
+        modelMetadata: model,
+        type: model.type,
+        pool: instance(mockedPool),
+        repositoriesByModelNameLowered: repositories,
+      });
+      repositories[model.name.toLowerCase()] = repository;
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([null]),
       );
 
-      const result = await Model!.findOne();
+      const result = await repository.findOne();
 
       verify(mockedPool.query(anyString(), anything())).once();
 
@@ -834,10 +941,10 @@ describe('model', () => {
   describe('#find()', () => {
     it('should support call without constraints', async () => {
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -852,19 +959,20 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product"');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support call with constraints as a parameter', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -888,7 +996,8 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "name","id" FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2 ORDER BY "name" LIMIT 24 OFFSET 5');
+      query.should.equal('SELECT "name","id" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2 ORDER BY "name" LIMIT 24 OFFSET 5');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         _.map(products, 'id'),
         store.id,
@@ -896,14 +1005,14 @@ describe('model', () => {
     });
     it('should support call with where constraint as a parameter', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -921,7 +1030,8 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         _.map(products, 'id'),
         store.id,
@@ -929,14 +1039,14 @@ describe('model', () => {
     });
     it('should support call with chained where constraints', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -953,16 +1063,17 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([store.id]);
     });
     it('should support call with chained where constraints - array ILIKE array of values', async () => {
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
         serialNumber: faker.random.uuid(),
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
         serialNumber: faker.random.uuid(),
       }];
@@ -991,7 +1102,8 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE (("name" ILIKE $1) OR ("name" ILIKE $2)) AND EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")=ANY($3::TEXT[]))');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE (("name" ILIKE $1) OR ("name" ILIKE $2)) AND EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")=ANY($3::TEXT[]))');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         'product',
         'Foo Bar',
@@ -1000,20 +1112,20 @@ describe('model', () => {
     });
     it('should support call with chained where constraints - NOT ILIKE array of values', async () => {
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
-        serialNumber: faker.random.uuid(),
+        sku: faker.random.uuid(),
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
-        serialNumber: faker.random.uuid(),
+        sku: faker.random.uuid(),
       }];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult(products),
       );
       const result = await ProductRepository.find().where({
-        serialNumber: {
+        sku: {
           '!': {
             like: ['Foo', 'BAR'],
           },
@@ -1026,19 +1138,20 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE lower("serial_number")<>ALL($1::TEXT[])');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE lower("sku")<>ALL($1::TEXT[])');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([['foo', 'bar']]);
     });
     it('should support call with chained where constraints - Promise.all', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -1059,15 +1172,16 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "store_id"=$1');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([store.id]);
     });
     it('should support call with chained sort', async () => {
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -1082,15 +1196,16 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" ORDER BY "name"');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "name"');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support call with chained limit', async () => {
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -1105,15 +1220,16 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" LIMIT 42');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 42');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support call with chained skip', async () => {
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -1128,15 +1244,16 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" OFFSET 24');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" OFFSET 24');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support call with chained paginate', async () => {
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -1154,19 +1271,20 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" LIMIT 100 OFFSET 200');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 100 OFFSET 200');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support complex query with multiple chained modifiers', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -1190,38 +1308,50 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","serial_number" AS "serialNumber","alias_names" AS "aliases","store_id" AS "store" FROM "product" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 42 OFFSET 24');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 42 OFFSET 24');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([store.id]);
     });
     it('should have instance functions be equal across multiple queries', async () => {
-      const schema: ModelSchema = {
-        globalId: faker.random.uuid(),
-        tableName: faker.random.uuid(),
-        attributes: {
-          id: {
-            type: 'integer',
-            primaryKey: true,
-          },
-          foo: {
-            type: 'string',
-          },
-          toBar() {
-            return `${this.foo} bar!`;
-          },
-        },
-      };
+      // eslint-disable-next-line max-classes-per-file
+      class TestEntityWithInstanceFunction implements Entity {
+        public id!: number;
 
+        public foo: string | undefined;
 
-      let Model: Repository<Entity>;
-      initializeModelClasses({
-        modelSchemas: [schema],
-        pool: instance(mockedPool),
-        expose(model: Repository<Entity>) {
-          Model = model;
-        },
+        public toBar() {
+          return `${this.foo} bar!`;
+        }
+      }
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntityWithInstanceFunction,
       });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'id',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foo',
+          propertyName: 'foo',
+          type: 'string',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      const repository = new ReadonlyRepository({
+        modelMetadata: model,
+        type: model.type,
+        pool: instance(mockedPool),
+        repositoriesByModelNameLowered: repositories,
+      });
+      repositories[model.name.toLowerCase()] = repository;
 
-      const id = faker.random.uuid();
+      const id = faker.random.number();
       const foo = faker.random.uuid();
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([{
@@ -1230,23 +1360,25 @@ describe('model', () => {
         }]),
       );
 
-      const result1 = await Model!.find();
-      const result2 = await Model!.find();
+      const result1 = await repository.find();
+      const result2 = await repository.find();
       verify(mockedPool.query(anyString(), anything())).twice();
       should.exist(result1);
       should.exist(result2);
       result1.should.deep.equal(result2);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result1![0].toBar().should.equal(`${foo} bar!`);
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result2![0].toBar().should.equal(`${foo} bar!`);
     });
   });
   describe('#count()', () => {
     it('should support call without constraints', async () => {
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -1264,19 +1396,20 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT count(*) AS "count" FROM "product"');
+      query.should.equal('SELECT count(*) AS "count" FROM "products"');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support call constraints as a parameter', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -1297,7 +1430,8 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT count(*) AS "count" FROM "product" WHERE "id"=ANY($1::TEXT[]) AND "store_id"=$2');
+      query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         _.map(products, 'id'),
         store.id,
@@ -1305,14 +1439,14 @@ describe('model', () => {
     });
     it('should support call with chained where constraints', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -1332,19 +1466,20 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT count(*) AS "count" FROM "product" WHERE "store_id"=$1');
+      query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([store.id]);
     });
     it('should support call with chained where constraints - Promise.all', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [{
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }, {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
       }];
 
@@ -1368,9 +1503,9 @@ describe('model', () => {
         query,
         params,
       ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT count(*) AS "count" FROM "product" WHERE "store_id"=$1');
+      query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([store.id]);
     });
   });
 });
-*/
