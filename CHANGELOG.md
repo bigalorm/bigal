@@ -1,3 +1,8 @@
+### 3.0.0
+  * Use classes and decorators to define database models
+  * Allow repositories to be strongly typed to their database model
+  * Split readonly repository functionality into a separate class from writeable repository functionality
+
 ### 2.2.1
   * Update npms
 
