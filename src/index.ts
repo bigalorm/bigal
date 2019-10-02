@@ -10,6 +10,7 @@ import {
   getMetadataStorage,
   ModelMetadata,
 } from './metadata';
+import { RepositoriesByModelName } from './RepositoriesByModelName';
 import { RepositoriesByModelNameLowered } from './RepositoriesByModelNameLowered';
 
 export * from './Entity';
@@ -50,7 +51,8 @@ function getInheritanceTree(model: Function): Function[] {
  * @param {object} pool - Postgres Pool
  * @param {object} [readonlyPool] - Postgres Pool for `find` and `findOne` operations. If not defined, `pool` will be used
  * @param {object} [connections] - Key: name of the connection; Value: { pool, readonlyPool }
- * @param {Function} expose - Used to expose model classes
+ * @param {Function} [expose] - Used to expose model classes
+ * @returns {object} Repositories by model name
  */
 export function initialize({
                              models,
@@ -58,7 +60,7 @@ export function initialize({
                              readonlyPool = pool,
                              connections = {},
                              expose,
-                           }: InitializeOptions): RepositoriesByModelNameLowered {
+                           }: InitializeOptions): RepositoriesByModelName {
   if (!models.length) {
     throw new Error('Models need to be specified to read all model information from decorators');
   }
@@ -71,8 +73,6 @@ export function initialize({
     inheritanceTreesByModelName[model.name] = getInheritanceTree(model);
     modelNames.push(model.name);
   }
-
-  const repositoriesByModelNameLowered: RepositoriesByModelNameLowered = {};
 
   // Assemble all metadata for complete model and column definitions
   const metadataStorage = getMetadataStorage();
@@ -179,6 +179,9 @@ export function initialize({
     }
   }
 
+  const repositoriesByModelNameLowered: RepositoriesByModelNameLowered = {};
+  const repositoriesByModelName: RepositoriesByModelName = {};
+
   for (const modelName of modelNames) {
     const model = modelMetadataByModelName[modelName];
     if (!model) {
@@ -216,6 +219,7 @@ export function initialize({
       });
 
       repositoriesByModelNameLowered[model.name.toLowerCase()] = repository;
+      repositoriesByModelName[model.name] = repository;
     } else {
       repository = new Repository({
         modelMetadata: model,
@@ -226,6 +230,7 @@ export function initialize({
       });
 
       repositoriesByModelNameLowered[model.name.toLowerCase()] = repository;
+      repositoriesByModelName[model.name] = repository;
     }
 
     if (expose) {
@@ -233,5 +238,5 @@ export function initialize({
     }
   }
 
-  return repositoriesByModelNameLowered;
+  return repositoriesByModelName;
 }

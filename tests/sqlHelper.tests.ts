@@ -20,7 +20,7 @@ import {
 describe('sqlHelper', () => {
   let should: Chai.Should;
   const mockedPool: Pool = mock(Pool);
-  let repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+  const repositoriesByModelNameLowered: RepositoriesByModelNameLowered = {};
 
   // eslint-disable-next-line @typescript-eslint/no-extraneous-class
   class TestEntity implements Entity {
@@ -28,7 +28,7 @@ describe('sqlHelper', () => {
 
   before(() => {
     should = chai.should();
-    repositoriesByModelNameLowered = initialize({
+    const repositoriesByModelName = initialize({
       models: [
         Category,
         Product,
@@ -40,7 +40,10 @@ describe('sqlHelper', () => {
       ],
       pool: mockedPool,
     });
-    should.exist(repositoriesByModelNameLowered);
+
+    for (const [modelName, repository] of Object.entries(repositoriesByModelName)) {
+      repositoriesByModelNameLowered[modelName.toLowerCase()] = repository;
+    }
   });
 
   describe('#getSelectQueryAndParams()', () => {

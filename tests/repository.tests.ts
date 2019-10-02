@@ -42,7 +42,7 @@ describe('Repository', () => {
   before(() => {
     should = chai.should();
 
-    const repositoriesByModelNameLowered = initialize({
+    const repositoriesByModelName = initialize({
       models: [
         Product,
         ProductWithCreateUpdateDateTracking,
@@ -51,8 +51,8 @@ describe('Repository', () => {
       pool: instance(mockedPool),
     });
 
-    ProductRepository = repositoriesByModelNameLowered.product as Repository<Product>;
-    ProductWithCreateUpdateDateTrackingRepository = repositoriesByModelNameLowered.productwithcreateupdatedatetracking as Repository<ProductWithCreateUpdateDateTracking>;
+    ProductRepository = repositoriesByModelName.Product as Repository<Product>;
+    ProductWithCreateUpdateDateTrackingRepository = repositoriesByModelName.ProductWithCreateUpdateDateTracking as Repository<ProductWithCreateUpdateDateTracking>;
   });
 
   beforeEach(async () => {

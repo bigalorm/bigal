@@ -105,7 +105,7 @@ export function startup({
   pool = new Pool(connectionString);
   readonlyPool = new Pool(readonlyConnectionString);
 
-  const repositoriesByLoweredName = initialize({
+  const repositoriesByName = initialize({
     models: [
       Category,
       Product,
@@ -119,15 +119,15 @@ export function startup({
   let categoryRepository: Repository<Category>;
   let productRepository: Repository<Category>;
   let storeRepository: Repository<Category>;
-  for (const [loweredName, repository] = Object.entries(repositoriesByLoweredName)) {
-    switch (loweredName) {
-      case 'category':
+  for (const [modelName, repository] = Object.entries(repositoriesByName)) {
+    switch (modelName) {
+      case 'Category':
         categoryRepository = repository;
         break;
-      case 'product':
+      case 'Product':
         productRepository = repository;
         break;
-      case 'store':
+      case 'Store':
         storeRepository = repository;
         break;
     }

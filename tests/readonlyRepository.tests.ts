@@ -53,7 +53,7 @@ describe('model', () => {
   before(() => {
     should = chai.should();
 
-    const repositoriesByModelNameLowered = initialize({
+    const repositoriesByModelName = initialize({
       models: [
         Category,
         Product,
@@ -64,9 +64,9 @@ describe('model', () => {
       pool: instance(mockedPool),
     });
 
-    ProductRepository = repositoriesByModelNameLowered.product as Repository<Product>;
-    ReadonlyProductRepository = repositoriesByModelNameLowered.readonlyproduct as ReadonlyRepository<ReadonlyProduct>;
-    StoreRepository = repositoriesByModelNameLowered.store as Repository<Store>;
+    ProductRepository = repositoriesByModelName.Product as Repository<Product>;
+    ReadonlyProductRepository = repositoriesByModelName.ReadonlyProduct as ReadonlyRepository<ReadonlyProduct>;
+    StoreRepository = repositoriesByModelName.Store as Repository<Store>;
   });
 
   beforeEach(async () => {
