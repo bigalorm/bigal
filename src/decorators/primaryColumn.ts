@@ -3,14 +3,18 @@ import {
   getMetadataStorage,
   ColumnModifierMetadata,
   ColumnTypeMetadata,
+  ColumnModelMetadata,
 } from '../metadata';
 import { ColumnTypeOptions } from './ColumnTypeOptions';
+import { ColumnModelOptions } from './ColumnModelOptions';
+
+type ColumnOptions = ColumnTypeOptions | ColumnModelOptions;
 
 type ReturnFunctionType = (object: object, propertyName: string) => void;
 
-export function primaryColumn(options?: ColumnTypeOptions): ReturnFunctionType;
-export function primaryColumn(dbColumnName: string, options?: ColumnTypeOptions): ReturnFunctionType;
-export function primaryColumn(dbColumnNameOrOptions?: string | ColumnTypeOptions, options?: ColumnTypeOptions): ReturnFunctionType {
+export function primaryColumn(options?: ColumnOptions): ReturnFunctionType;
+export function primaryColumn(dbColumnName: string, options?: ColumnOptions): ReturnFunctionType;
+export function primaryColumn(dbColumnNameOrOptions?: string | ColumnOptions, options?: ColumnOptions): ReturnFunctionType {
   return function primaryColumnDecorator(object: object, propertyName: string) {
     let dbColumnName: string | undefined;
     if (typeof dbColumnNameOrOptions === 'string') {
@@ -30,15 +34,30 @@ export function primaryColumn(dbColumnNameOrOptions?: string | ColumnTypeOptions
         dbColumnName = options.name || _.snakeCase(propertyName);
       }
 
+      const { type } = options as ColumnTypeOptions;
+      const { model } = options as ColumnModelOptions;
+
       const metadataStorage = getMetadataStorage();
-      metadataStorage.columns.push(new ColumnTypeMetadata({
-        target: object.constructor.name,
-        name: dbColumnName,
-        propertyName,
-        primary: true,
-        required: options.required,
-        type: options.type,
-      }));
+
+      if (model) {
+        metadataStorage.columns.push(new ColumnModelMetadata({
+          target: object.constructor.name,
+          name: dbColumnName,
+          propertyName,
+          primary: true,
+          required: options.required,
+          model,
+        }));
+      } else {
+        metadataStorage.columns.push(new ColumnTypeMetadata({
+          target: object.constructor.name,
+          name: dbColumnName,
+          propertyName,
+          primary: true,
+          required: options.required,
+          type,
+        }));
+      }
     } else {
       const metadataStorage = getMetadataStorage();
       metadataStorage.columnModifiers.push({
@@ -47,7 +66,8 @@ export function primaryColumn(dbColumnNameOrOptions?: string | ColumnTypeOptions
         propertyName,
         primary: true,
         required: options ? options.required : undefined,
-        type: options ? options.type : undefined,
+        type: options ? (options as ColumnTypeOptions).type : undefined,
+        model: options ? (options as ColumnModelOptions).model : undefined,
       } as ColumnModifierMetadata);
     }
   };

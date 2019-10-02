@@ -5,6 +5,7 @@ import { Entity, EntityStatic } from './Entity';
 import { ReadonlyRepository } from './ReadonlyRepository';
 import {
   ColumnMetadata,
+  ColumnModelMetadata,
   ColumnModifierMetadata,
   ColumnTypeMetadata,
   getMetadataStorage,
@@ -148,7 +149,7 @@ export function initialize({
       const column = columnsByPropertyNameForModel[modelName][propertyName];
       if (column) {
         for (const columnModifier of columnModifiers) {
-          Object.assign(column, _.omit(columnModifier, ['target', 'name', 'propertyName', 'type']));
+          Object.assign(column, _.omit(columnModifier, ['target', 'name', 'propertyName', 'type', 'model']));
         }
       } else {
         let columnDetails: ColumnModifierMetadata = {
@@ -166,15 +167,23 @@ export function initialize({
           throw new Error(`Missing column name for ${modelName}#${propertyName}`);
         }
 
-        if (!columnDetails.type) {
+        if (!columnDetails.type && !columnDetails.model) {
           throw new Error(`Missing column type for ${modelName}#${propertyName}`);
         }
 
-        columnsByPropertyNameForModel[modelName][propertyName] = new ColumnTypeMetadata({
-          ...columnDetails,
-          name: columnDetails.name,
-          type: columnDetails.type,
-        });
+        if (columnDetails.model) {
+          columnsByPropertyNameForModel[modelName][propertyName] = new ColumnModelMetadata({
+            ...columnDetails,
+            name: columnDetails.name,
+            model: columnDetails.model,
+          });
+        } else if (columnDetails.type) {
+          columnsByPropertyNameForModel[modelName][propertyName] = new ColumnTypeMetadata({
+            ...columnDetails,
+            name: columnDetails.name,
+            type: columnDetails.type,
+          });
+        }
       }
     }
   }

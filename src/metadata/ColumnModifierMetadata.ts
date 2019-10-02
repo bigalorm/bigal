@@ -39,4 +39,8 @@ export interface ColumnModifierMetadata {
    * Type of sql column
    */
   type?: 'string' | 'integer' | 'float' | 'date' | 'datetime' | 'boolean' | 'array' | 'string[]' | 'integer[]' | 'float[]' | 'boolean[]' | 'json' | 'binary';
+  /**
+   * Name of the model represented by this column id
+   */
+  model?: string | (() => string);
 }
