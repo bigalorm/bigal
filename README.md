@@ -13,7 +13,7 @@ This ORM does not:
 * Do much else than basic queries, inserts, updates, and deletes
 
 ## Compatibility
-- Node.js 8.10 or above
+- Node.js v10 or above
 - [PostgreSQL](http://www.postgresql.org/) 9.6 or above
 
 ## Install
