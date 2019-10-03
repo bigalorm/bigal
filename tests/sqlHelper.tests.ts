@@ -1476,7 +1476,7 @@ describe('sqlHelper', () => {
       ]);
     });
   });
- describe('#_getColumnsToSelect()', () => {
+  describe('#_getColumnsToSelect()', () => {
     it('should include all columns if select is undefined (explicit)', () => {
       const query = sqlHelper._getColumnsToSelect({
         model: repositoriesByModelNameLowered.productwithcreatedat.model,
