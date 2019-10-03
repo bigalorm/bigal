@@ -39,7 +39,7 @@ function getQueryResult(rows: any[] = []) {
   };
 }
 
-describe('model', () => {
+describe('ReadonlyRepository', () => {
   let should: Chai.Should;
   const mockedPool: Pool = mock(Pool);
   let ProductRepository: Repository<Product>;

@@ -13,6 +13,7 @@ import {
   when,
 } from 'ts-mockito';
 import {
+  Entity,
   initialize,
   Repository,
 } from '../src';
@@ -21,6 +22,8 @@ import {
   ProductWithCreateUpdateDateTracking,
   Store,
 } from './models';
+import { ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
+import { RepositoriesByModelNameLowered } from '../src/RepositoriesByModelNameLowered';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getQueryResult(rows: any[] = []) {
@@ -38,6 +41,10 @@ describe('Repository', () => {
   const mockedPool: Pool = mock(Pool);
   let ProductRepository: Repository<Product>;
   let ProductWithCreateUpdateDateTrackingRepository: Repository<ProductWithCreateUpdateDateTracking>;
+
+  // eslint-disable-next-line @typescript-eslint/no-extraneous-class
+  class TestEntity implements Entity {
+  }
 
   before(() => {
     should = chai.should();
@@ -430,6 +437,61 @@ describe('Repository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('DELETE FROM "products" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      params!.should.deep.equal([]);
+    });
+    it('should support call without constraints (non "id" primaryKey)', async () => {
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foobario',
+          propertyName: 'foobario',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          required: true,
+          defaultsTo: 'foobar',
+          type: 'string',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      const repository = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: instance(mockedPool),
+        repositoriesByModelNameLowered: repositories,
+      });
+      repositories[model.name.toLowerCase()] = repository;
+
+      const products = [{
+        foobario: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }, {
+        foobario: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+      }];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult(products),
+      );
+
+      const result = await repository.destroy();
+      should.exist(result);
+      result.should.deep.equal(products);
+
+      const [
+        query,
+        params,
+      ] = capture(mockedPool.query).first();
+      query.should.equal('DELETE FROM "foo" RETURNING "foobario","name"');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });

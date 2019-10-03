@@ -81,6 +81,98 @@ describe('sqlHelper', () => {
         query.should.equal(`SELECT "id" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
+      it('should include non "id" primaryKey column if select is empty', () => {
+        const model = new ModelMetadata({
+          name: 'foo',
+          type: TestEntity,
+        });
+        model.columns = [
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'foobario',
+            propertyName: 'foobario',
+            primary: true,
+            type: 'integer',
+          }),
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'name',
+            propertyName: 'name',
+            required: true,
+            defaultsTo: 'foobar',
+            type: 'string',
+          }),
+        ];
+        const repositories: RepositoriesByModelNameLowered = {};
+        repositories[model.name.toLowerCase()] = new Repository({
+          modelMetadata: model,
+          type: model.type,
+          pool: mockedPool,
+          repositoriesByModelNameLowered: repositories,
+        });
+
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          repositoriesByModelNameLowered: repositories,
+          model,
+          select: [],
+          where: {},
+          sorts: [],
+          limit: 1,
+          skip: 0,
+        });
+
+        query.should.equal(`SELECT "foobario" FROM "${model.tableName}" LIMIT 1`);
+        params.should.deep.equal([]);
+      });
+      it('should include non "id" primaryKey column name with id propertyName if select is empty', () => {
+        const model = new ModelMetadata({
+          name: 'foo',
+          type: TestEntity,
+        });
+        model.columns = [
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'foobario',
+            propertyName: 'id',
+            primary: true,
+            type: 'integer',
+          }),
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'name',
+            propertyName: 'name',
+            required: true,
+            defaultsTo: 'foobar',
+            type: 'string',
+          }),
+        ];
+        const repositories: RepositoriesByModelNameLowered = {};
+        repositories[model.name.toLowerCase()] = new Repository({
+          modelMetadata: model,
+          type: model.type,
+          pool: mockedPool,
+          repositoriesByModelNameLowered: repositories,
+        });
+
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          repositoriesByModelNameLowered: repositories,
+          model,
+          select: [],
+          where: {},
+          sorts: [],
+          limit: 1,
+          skip: 0,
+        });
+
+        query.should.equal(`SELECT "foobario" AS "id" FROM "${model.tableName}" LIMIT 1`);
+        params.should.deep.equal([]);
+      });
       it('should include primaryKey column if select does not include it', () => {
         const {
           query,
@@ -96,6 +188,98 @@ describe('sqlHelper', () => {
         });
 
         query.should.equal(`SELECT "name","id" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`);
+        params.should.deep.equal([]);
+      });
+      it('should include non "id" primaryKey column if select does not include it', () => {
+        const model = new ModelMetadata({
+          name: 'foo',
+          type: TestEntity,
+        });
+        model.columns = [
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'foobario',
+            propertyName: 'foobario',
+            primary: true,
+            type: 'integer',
+          }),
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'name',
+            propertyName: 'name',
+            required: true,
+            defaultsTo: 'foobar',
+            type: 'string',
+          }),
+        ];
+        const repositories: RepositoriesByModelNameLowered = {};
+        repositories[model.name.toLowerCase()] = new Repository({
+          modelMetadata: model,
+          type: model.type,
+          pool: mockedPool,
+          repositoriesByModelNameLowered: repositories,
+        });
+
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          repositoriesByModelNameLowered: repositories,
+          model,
+          select: ['name'],
+          where: {},
+          sorts: [],
+          limit: 1,
+          skip: 0,
+        });
+
+        query.should.equal(`SELECT "name","foobario" FROM "${model.tableName}" LIMIT 1`);
+        params.should.deep.equal([]);
+      });
+      it('should include non "id" primaryKey column with id propertyName if select does not include it', () => {
+        const model = new ModelMetadata({
+          name: 'foo',
+          type: TestEntity,
+        });
+        model.columns = [
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'foobario',
+            propertyName: 'id',
+            primary: true,
+            type: 'integer',
+          }),
+          new ColumnTypeMetadata({
+            target: 'foo',
+            name: 'name',
+            propertyName: 'name',
+            required: true,
+            defaultsTo: 'foobar',
+            type: 'string',
+          }),
+        ];
+        const repositories: RepositoriesByModelNameLowered = {};
+        repositories[model.name.toLowerCase()] = new Repository({
+          modelMetadata: model,
+          type: model.type,
+          pool: mockedPool,
+          repositoriesByModelNameLowered: repositories,
+        });
+
+        const {
+          query,
+          params,
+        } = sqlHelper.getSelectQueryAndParams({
+          repositoriesByModelNameLowered: repositories,
+          model,
+          select: ['name'],
+          where: {},
+          sorts: [],
+          limit: 1,
+          skip: 0,
+        });
+
+        query.should.equal(`SELECT "name","foobario" AS "id" FROM "${model.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
     });
@@ -1393,6 +1577,88 @@ describe('sqlHelper', () => {
       });
 
       query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`);
+      params.should.deep.equal([]);
+    });
+    it('should delete all records (non "id" primaryKey) if no where statement is defined', () => {
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foobario',
+          propertyName: 'foobario',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          required: true,
+          defaultsTo: 'foobar',
+          type: 'string',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
+
+      const {
+        query,
+        params,
+      } = sqlHelper.getDeleteQueryAndParams({
+        repositoriesByModelNameLowered: repositories,
+        model,
+      });
+
+      query.should.equal(`DELETE FROM "${model.tableName}" RETURNING "foobario","name"`);
+      params.should.deep.equal([]);
+    });
+    it('should delete all records (non "id" primaryKey with id propertyName) if no where statement is defined', () => {
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foobario',
+          propertyName: 'id',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          required: true,
+          defaultsTo: 'foobar',
+          type: 'string',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      repositories[model.name.toLowerCase()] = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: mockedPool,
+        repositoriesByModelNameLowered: repositories,
+      });
+
+      const {
+        query,
+        params,
+      } = sqlHelper.getDeleteQueryAndParams({
+        repositoriesByModelNameLowered: repositories,
+        model,
+      });
+
+      query.should.equal(`DELETE FROM "${model.tableName}" RETURNING "foobario" AS "id","name"`);
       params.should.deep.equal([]);
     });
     it('should include where statement if defined', () => {
