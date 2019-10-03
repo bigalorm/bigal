@@ -1132,7 +1132,7 @@ function _buildComparisonOperatorStatement({
 
       return `"${column.name}"${isNegated ? '<' : '>='}$${params.length}`;
     default:
-      if (columnType === 'array') {
+      if (columnType && (columnType === 'array' || columnType.endsWith('[]'))) {
         return `$${params.length}${isNegated ? '<>ALL(' : '=ANY('}"${column.name}")`;
       }
 
