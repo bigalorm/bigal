@@ -59,7 +59,7 @@ export class Product implements Entity {
     defaultsTo: [],
     name: 'alias_names',
   })
-  public aliases?: string[];
+  public aliases!: string[];
 
   @column({
     model: () => Store.name,
@@ -72,7 +72,7 @@ export class Product implements Entity {
     through: () => ProductCategory.name,
     via: 'product',
   })
-  public categories!: Category[];
+  public categories?: Category[];
 }
 
 ```
