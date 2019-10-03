@@ -1,7 +1,7 @@
 {
   "name": "bigal",
   "version": "3.0.0",
-  "description": "A fast and lightweight orm for postgres.",
+  "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
   "main": "index.js",
   "types": "index.d.ts",
   "scripts": {
@@ -26,7 +26,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mpirik/bigal.git"
+    "url": "git+https://github.com/bigalorm/bigal.git"
   },
   "keywords": [
     "orm",
@@ -36,9 +36,9 @@
   "author": "Jim Geurts <jim@biacreations.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mpirik/bigal/issues"
+    "url": "https://github.com/bigalorm/bigal/issues"
   },
-  "homepage": "https://github.com/mpirik/bigal#readme",
+  "homepage": "https://github.com/bigalorm/bigal#readme",
   "engines": {
     "node": ">=10"
   },
