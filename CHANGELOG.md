@@ -1,3 +1,7 @@
+### 3.1.0
+  * Update postgres-pool to v2.0.0
+  * Update npms
+
 ### 3.0.1
   * Remove returnSelect requirement when returnRecords=false
 
