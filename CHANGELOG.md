@@ -1,3 +1,6 @@
+### 3.0.1
+  * Remove returnSelect requirement when returnRecords=false
+
 ### 3.0.0
   * Use classes and decorators to define database models
   * Allow repositories to be strongly typed to their database model
