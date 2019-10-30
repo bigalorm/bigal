@@ -1,3 +1,7 @@
+### 3.1.1
+  * Throw error when invalid propertyName in query projection
+  * Update npms
+
 ### 3.1.0
   * Update postgres-pool to v2.0.0
   * Update npms

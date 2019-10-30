@@ -500,6 +500,10 @@ export function _getColumnsToSelect({
   let query = '';
   for (const [index, propertyName] of select.entries()) {
     const column = model.columnsByPropertyName[propertyName];
+    if (!column) {
+      throw new Error(`Unable to find column for property: ${propertyName} on ${model.tableName}`);
+    }
+
     if (index > 0) {
       query += ',';
     }
