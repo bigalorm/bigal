@@ -47,7 +47,7 @@
     "@types/node": "~10.14.22",
     "@types/pg": "~7.11.2",
     "lodash": "~4.17.15",
-    "pg": "~7.12.1",
+    "pg": "~7.13.0",
     "postgres-pool": "~2.0.2"
   },
   "devDependencies": {
