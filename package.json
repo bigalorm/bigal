@@ -60,7 +60,7 @@
     "eslint": "6.6.0",
     "eslint-config-airbnb-base": "14.0.0",
     "eslint-plugin-import": "2.18.2",
-    "eslint-plugin-jsdoc": "16.1.1",
+    "eslint-plugin-jsdoc": "18.1.4",
     "eslint-plugin-mocha": "6.2.1",
     "eslint-plugin-promise": "4.2.1",
     "eslint-plugin-security": "1.4.0",
