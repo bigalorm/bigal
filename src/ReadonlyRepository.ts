@@ -86,8 +86,8 @@ export class ReadonlyRepository<T extends Entity> {
       stack,
     } = new Error(`${this.model.name}.findOne()`);
 
-    let select: string[] | undefined;
-    let where = {};
+    let select: (keyof T)[] | undefined;
+    let where: WhereQuery = {};
     let sort: string | string[] | null = null;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
     for (const [name, value] of Object.entries(args)) {

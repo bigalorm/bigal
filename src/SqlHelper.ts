@@ -33,7 +33,7 @@ interface QueryAndParams {
  * @param {number} [limit] - Number of results to return
  * @returns {{query: string, params: Array}}
  */
-export function getSelectQueryAndParams({
+export function getSelectQueryAndParams<T extends Entity, K extends keyof T>({
                                           repositoriesByModelNameLowered,
                                           model,
                                           select,
@@ -43,8 +43,8 @@ export function getSelectQueryAndParams({
                                           limit,
                                         }: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
-  model: ModelMetadata;
-  select?: string[];
+  model: ModelMetadata<T, K>;
+  select?: K[];
   where?: WhereQuery;
   sorts: Array<string | object>;
   skip: number;
@@ -473,12 +473,12 @@ export function getDeleteQueryAndParams({
  * @returns {string} SQL columns
  * @private
  */
-export function _getColumnsToSelect({
+export function _getColumnsToSelect<T extends Entity, K extends keyof T>({
                                       model,
                                       select,
                                     }: {
-  model: ModelMetadata;
-  select?: Array<Extract<keyof Entity, string>>;
+  model: ModelMetadata<T, K>;
+  select?: K[];
 }): string {
   if (select) {
     const { primaryKeyColumn } = model;

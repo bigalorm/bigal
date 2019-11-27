@@ -6,6 +6,24 @@ import { Entity, EntityStatic } from '../Entity';
 
 type Column = ColumnTypeMetadata | ColumnModelMetadata | ColumnCollectionMetadata;
 interface ColumnByStringId { [index: string]: Column }
+type ColumnsByPropertyName<T extends Entity, K extends keyof T> = {
+  [P in Extract<keyof T, K>]: Column;
+}
+
+export type Identity<T> = T;
+export type Pick2<T, K extends keyof T> = Identity<
+  {
+    [P in K]: T[P];
+  }
+>;
+
+function isKeyOf<T, K extends keyof any>(obj: T, key: K): asserts K is Extract<keyof T, K> {
+  return typeof obj[key] !== undefined;
+}
+
+// function isKeyOf<T, K extends keyof T>(obj: T): asserts  {
+//
+// }
 
 export interface ModelMetadataOptions<T extends Entity = Entity> {
   name: string;
@@ -15,11 +33,11 @@ export interface ModelMetadataOptions<T extends Entity = Entity> {
   readonly?: boolean;
 }
 
-export class ModelMetadata<T extends Entity = Entity> {
+export class ModelMetadata<T extends Entity, K extends keyof T> {
   public set columns(columns: readonly Column[]) {
     this._columns = columns;
     this.columnsByColumnName = {};
-    this.columnsByPropertyName = {};
+    this.columnsByPropertyName = {} as ColumnsByPropertyName<T, K>;
 
     for (const column of columns) {
       this.columnsByColumnName[column.name] = column;
@@ -75,7 +93,7 @@ export class ModelMetadata<T extends Entity = Entity> {
 
   public columnsByColumnName: ColumnByStringId = {};
 
-  public columnsByPropertyName: ColumnByStringId = {};
+  public columnsByPropertyName: ColumnsByPropertyName<T, K> = {} as ColumnsByPropertyName<T, K>;
 
   private _columns: readonly Column[] = [];
 
