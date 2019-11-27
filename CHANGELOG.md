@@ -1,3 +1,7 @@
+### 3.2.0
+  * Fix CreateUpdateDelete type to be strict about either returnRecords=false or defined returnSelect
+  * Update npms
+
 ### 3.1.1
   * Throw error when invalid propertyName in query projection
   * Update npms

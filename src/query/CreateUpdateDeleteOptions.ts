@@ -1,4 +1,4 @@
-export interface CreateUpdateDeleteOptions {
-  returnRecords: boolean;
-  returnSelect?: string[];
-}
+import { DoNotReturnRecords } from './DoNotReturnRecords';
+import { ReturnSelect } from './ReturnSelect';
+
+export type CreateUpdateDeleteOptions = DoNotReturnRecords | ReturnSelect;

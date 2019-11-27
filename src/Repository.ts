@@ -6,6 +6,7 @@ import {
   CreateUpdateDeleteOptions,
   DestroyResult,
   DoNotReturnRecords,
+  ReturnSelect,
   WhereQuery,
 } from './query';
 // eslint-disable-next-line import/no-cycle
@@ -50,12 +51,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object} Return value from the db
    */
-  public async create(values: Partial<T> | Array<Partial<T>>, {
-    returnRecords = true,
-    returnSelect,
-  }: CreateUpdateDeleteOptions = {
-    returnRecords: true,
-  }): Promise<T | T[] | boolean> {
+  public async create(values: Partial<T> | Array<Partial<T>>, options?: CreateUpdateDeleteOptions): Promise<T | T[] | boolean> {
     if (this.model.readonly) {
       throw new Error(`${this.model.name} is readonly.`);
     }
@@ -71,6 +67,16 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
       } else {
         // eslint-disable-next-line no-param-reassign
         values = await this._type.beforeCreate(values) as Partial<T>;
+      }
+    }
+
+    let returnRecords = true;
+    let returnSelect: string[] | undefined;
+    if (options) {
+      if ((options as DoNotReturnRecords).returnRecords === false) {
+        returnRecords = false;
+      } else if ((options as ReturnSelect).returnSelect) {
+        returnSelect = (options as ReturnSelect).returnSelect;
       }
     }
 
@@ -125,16 +131,12 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
    * Updates object(s) matching the where query, with the specified values
    * @param {object} where - Object representing the where query
    * @param {object} values - Values to update
-   * @param {boolean} [returnRecords=true] - Determines if inserted records should be returned
-   * @param {string[]} [returnSelect] - Array of model property names to return from the query.
+   * @param {object} [options]
+   * @param {boolean} [options.returnRecords=true] - Determines if inserted records should be returned
+   * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]} Return values from the db or `true` if returnRecords=false
    */
-  public async update(where: WhereQuery, values: Partial<T>, {
-    returnRecords = true,
-    returnSelect,
-  }: CreateUpdateDeleteOptions = {
-    returnRecords: true,
-  }): Promise<T[] | boolean> {
+  public async update(where: WhereQuery, values: Partial<T>, options?: CreateUpdateDeleteOptions): Promise<T[] | boolean> {
     if (this.model.readonly) {
       throw new Error(`${this.model.name} is readonly.`);
     }
@@ -146,6 +148,16 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
     if (this._type.beforeUpdate) {
       // eslint-disable-next-line no-param-reassign
       values = await this._type.beforeUpdate(values) as Partial<T>;
+    }
+
+    let returnRecords = true;
+    let returnSelect: string[] | undefined;
+    if (options) {
+      if ((options as DoNotReturnRecords).returnRecords === false) {
+        returnRecords = false;
+      } else if ((options as ReturnSelect).returnSelect) {
+        returnSelect = (options as ReturnSelect).returnSelect;
+      }
     }
 
     const {
@@ -189,16 +201,12 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
   /**
    * Destroys object(s) matching the where query
    * @param {object} where - Object representing the where query
-   * @param {boolean} [returnRecords=true] - Determines if inserted records should be returned
-   * @param {string[]} [returnSelect] - Array of model property names to return from the query.
+   * @param {object} [options]
+   * @param {boolean} [options.returnRecords=true] - Determines if inserted records should be returned
+   * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|boolean} Records affected or `true` if returnRecords=false
    */
-  public destroy(where: WhereQuery = {}, {
-    returnRecords = true,
-    returnSelect,
-  }: CreateUpdateDeleteOptions = {
-    returnRecords: true,
-  }): DestroyResult<T, T[] | boolean> {
+  public destroy(where: WhereQuery = {}, options?: CreateUpdateDeleteOptions): DestroyResult<T, T[] | boolean> {
     if (this.model.readonly) {
       throw new Error(`${this.model.name} is readonly.`);
     }
@@ -209,6 +217,16 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
+
+    let returnRecords = true;
+    let returnSelect: string[] | undefined;
+    if (options) {
+      if ((options as DoNotReturnRecords).returnRecords === false) {
+        returnRecords = false;
+      } else if ((options as ReturnSelect).returnSelect) {
+        returnSelect = (options as ReturnSelect).returnSelect;
+      }
+    }
 
     return {
       /**
