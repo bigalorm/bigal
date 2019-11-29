@@ -70,7 +70,7 @@
     "mocha": "6.2.2",
     "strict-event-emitter-types": "2.0.0",
     "ts-mockito": "2.5.0",
-    "ts-node": "8.5.2",
+    "ts-node": "8.5.4",
     "typescript": "3.7.2"
   }
 }
