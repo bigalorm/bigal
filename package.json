@@ -51,7 +51,7 @@
     "postgres-pool": "~2.0.2"
   },
   "devDependencies": {
-    "@types/chai": "4.2.5",
+    "@types/chai": "4.2.6",
     "@types/faker": "4.1.7",
     "@types/mocha": "5.2.7",
     "@typescript-eslint/eslint-plugin": "2.9.0",
