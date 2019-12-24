@@ -54,7 +54,7 @@
     "@types/chai": "4.2.5",
     "@types/faker": "4.1.7",
     "@types/mocha": "5.2.7",
-    "@typescript-eslint/eslint-plugin": "2.9.0",
+    "@typescript-eslint/eslint-plugin": "2.13.0",
     "@typescript-eslint/parser": "2.9.0",
     "chai": "4.2.0",
     "eslint": "6.7.1",
