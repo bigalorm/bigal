@@ -162,12 +162,12 @@ module.exports = {
       '**/*.tests.ts',
     ],
     rules: {
-      "mocha/no-async-describe": "error",
-      "mocha/no-exclusive-tests": "error",
-      "mocha/no-global-tests": "error",
-      "mocha/no-identical-title": "error",
-      "mocha/no-nested-tests": "error",
-      "mocha/no-pending-tests": "error",
+      'mocha/no-async-describe': 'error',
+      'mocha/no-exclusive-tests': 'error',
+      'mocha/no-global-tests': 'error',
+      'mocha/no-identical-title': 'error',
+      'mocha/no-nested-tests': 'error',
+      'mocha/no-pending-tests': 'error',
     }
   }, {
     files: [
@@ -214,7 +214,7 @@ module.exports = {
       '@typescript-eslint/consistent-type-definitions': 'error',
       '@typescript-eslint/no-extraneous-class': 'error',
       '@typescript-eslint/explicit-function-return-type': 'error',
-      '@typescript-eslint/explicit-member-accessibility': ["error"],
+      '@typescript-eslint/explicit-member-accessibility': ['error'],
       '@typescript-eslint/generic-type-naming': 'error',
       '@typescript-eslint/interface-name-prefix': ['error', 'never'],
       '@typescript-eslint/member-ordering': ['error', {
