@@ -1,7 +1,6 @@
 import { WhereQuery } from './WhereQuery';
+import { ChainablePromiseLike } from '../ChainablePromiseLike';
 
-export interface CountResult<TEntity> {
+export interface CountResult<TEntity> extends ChainablePromiseLike<number> {
   where(args: WhereQuery): CountResult<TEntity> | number;
-  then<U>(onFulfill: (value: number) => U | PromiseLike<U>, onReject?: (error: Error) => U | PromiseLike<U>): Promise<U>;
-  then<U>(onFulfill: (value: number) => U | PromiseLike<U>, onReject?: (error: Error) => void | PromiseLike<void>): Promise<U>;
 }

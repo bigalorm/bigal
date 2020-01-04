@@ -46,7 +46,7 @@ export function getSelectQueryAndParams({
   model: ModelMetadata;
   select?: string[];
   where?: WhereQuery;
-  sorts: Array<string | object>;
+  sorts: (string | object)[];
   skip: number;
   limit: number;
 }): QueryAndParams {
@@ -168,9 +168,9 @@ export function getInsertQueryAndParams({
                                         }: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   model: ModelMetadata;
-  values: Partial<Entity> | Array<Partial<Entity>>;
+  values: Partial<Entity> | Partial<Entity>[];
   returnRecords?: boolean;
-  returnSelect?: Array<Extract<keyof Entity, string>>;
+  returnSelect?: Extract<keyof Entity, string>[];
 }): QueryAndParams {
   const entitiesToInsert = _.isArray(values) ? values : [values];
   const columnsToInsert = [];
@@ -315,7 +315,7 @@ export function getUpdateQueryAndParams({
   where: WhereQuery;
   values: Partial<Entity>;
   returnRecords?: boolean;
-  returnSelect?: Array<Extract<keyof Entity, string>>;
+  returnSelect?: Extract<keyof Entity, string>[];
 }): QueryAndParams {
   for (const column of model.updateDateColumns) {
     if (_.isUndefined(values[column.propertyName])) {
@@ -435,7 +435,7 @@ export function getDeleteQueryAndParams({
   model: ModelMetadata;
   where?: WhereQuery;
   returnRecords?: boolean;
-  returnSelect?: Array<Extract<keyof Entity, string>>;
+  returnSelect?: Extract<keyof Entity, string>[];
 }): QueryAndParams {
   let query = `DELETE FROM "${model.tableName}"`;
 
@@ -478,7 +478,7 @@ export function _getColumnsToSelect({
                                       select,
                                     }: {
   model: ModelMetadata;
-  select?: Array<Extract<keyof Entity, string>>;
+  select?: Extract<keyof Entity, string>[];
 }): string {
   if (select) {
     const { primaryKeyColumn } = model;
@@ -576,17 +576,17 @@ export function _buildOrderStatement({
                                        sorts,
                                      }: {
   model: ModelMetadata;
-  sorts: Array<string | object>;
+  sorts: (string | object)[];
 }): string {
   if (_.isNil(sorts) || !_.some(sorts)) {
     return '';
   }
 
   let orderStatement = 'ORDER BY ';
-  const orderProperties: Array<{
+  const orderProperties: {
     propertyName: string;
     order: number | string;
-  }> = [];
+  }[] = [];
   for (const sortStatement of sorts) {
     if (_.isString(sortStatement)) {
       for (const sort of sortStatement.split(',')) {
@@ -787,7 +787,8 @@ function _buildWhere({
     case 'like':
       return _buildLikeOperatorStatement({
         model,
-        propertyName,
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        propertyName: propertyName!,
         isNegated,
         value,
         params,
@@ -982,7 +983,7 @@ function _buildOrOperatorStatement({
   value: string[] | number[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params: any[];
-}) {
+}): string {
   const orClauses = [];
   for (const constraint of value) {
     const orClause = _buildWhere({
@@ -1007,21 +1008,23 @@ function _buildOrOperatorStatement({
   return `(${orClauses.join(' OR ')})`;
 }
 
+interface ComparisonOperatorStatementParams {
+  model: ModelMetadata;
+  propertyName: string;
+  comparer?: Comparer | string;
+  isNegated: boolean;
+  value?: WhereClauseValue;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  params: any[];
+}
+
 function _buildLikeOperatorStatement({
                                        model,
                                        propertyName,
                                        isNegated,
                                        value,
                                        params,
-                                     }: {
-  model: ModelMetadata;
-  propertyName?: string;
-  comparer?: Comparer | string;
-  isNegated: boolean;
-  value?: WhereClauseValue;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: any[];
-}) {
+                                     }: ComparisonOperatorStatementParams): string {
   if (_.isArray(value)) {
     if (!value.length) {
       if (isNegated) {
@@ -1037,8 +1040,7 @@ function _buildLikeOperatorStatement({
       // NOTE: This is doing a case-insensitive pattern match
       params.push(lowerValues);
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const column = model.columnsByPropertyName[propertyName!];
+      const column = model.columnsByPropertyName[propertyName];
       if (!column) {
         throw new Error(`Unable to find property ${propertyName} on model ${model.name}`);
       }
@@ -1057,7 +1059,7 @@ function _buildLikeOperatorStatement({
 
   if (_.isString(value)) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const column = model.columnsByPropertyName[propertyName!];
+    const column = model.columnsByPropertyName[propertyName];
     if (!column) {
       throw new Error(`Unable to find property ${propertyName} on model ${model.name}`);
     }
@@ -1087,15 +1089,7 @@ function _buildComparisonOperatorStatement({
                                              isNegated,
                                              value,
                                              params = [],
-                                           }: {
-  model: ModelMetadata;
-  propertyName: string;
-  comparer?: Comparer | string;
-  isNegated: boolean;
-  value: string | number | Date | boolean | WhereQuery | null | Entity;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: any[];
-}) {
+                                           }: ComparisonOperatorStatementParams): string {
   const column = model.columnsByPropertyName[propertyName];
   if (!column) {
     throw new Error(`Unable to find property ${propertyName} on model ${model.name}`);

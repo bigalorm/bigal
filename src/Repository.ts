@@ -31,7 +31,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
    * @param {{returnRecords: false}} options
    * @returns {boolean}
    */
-  public async create(values: Partial<T> | Array<Partial<T>>, options: DoNotReturnRecords): Promise<boolean>;
+  public async create(values: Partial<T> | Partial<T>[], options: DoNotReturnRecords): Promise<boolean>;
 
   /**
    * Creates a objects using the specified values
@@ -41,7 +41,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {boolean}
    */
-  public async create(values: Array<Partial<T>>, options?: CreateUpdateDeleteOptions): Promise<T[]>;
+  public async create(values: Partial<T>[], options?: CreateUpdateDeleteOptions): Promise<T[]>;
 
   /**
    * Creates an object using the specified values
@@ -51,7 +51,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object} Return value from the db
    */
-  public async create(values: Partial<T> | Array<Partial<T>>, options?: CreateUpdateDeleteOptions): Promise<T | T[] | boolean> {
+  public async create(values: Partial<T> | Partial<T>[], options?: CreateUpdateDeleteOptions): Promise<T | T[] | boolean> {
     if (this.model.readonly) {
       throw new Error(`${this.model.name} is readonly.`);
     }
@@ -63,10 +63,10 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
     if (this._type.beforeCreate) {
       if (Array.isArray(values)) {
         // eslint-disable-next-line no-param-reassign
-        values = await Promise.all(values.map(this._type.beforeCreate)) as Array<Partial<T>>;
+        values = await Promise.all(values.map(this._type.beforeCreate));
       } else {
         // eslint-disable-next-line no-param-reassign
-        values = await this._type.beforeCreate(values) as Partial<T>;
+        values = await this._type.beforeCreate(values);
       }
     }
 
@@ -147,7 +147,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
 
     if (this._type.beforeUpdate) {
       // eslint-disable-next-line no-param-reassign
-      values = await this._type.beforeUpdate(values) as Partial<T>;
+      values = await this._type.beforeUpdate(values);
     }
 
     let returnRecords = true;
@@ -233,15 +233,16 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
        * Filters the query
        * @param {object} value - Object representing the where query
        */
-      where(value: WhereQuery) {
+      where(value: WhereQuery): DestroyResult<T, T[] | boolean> {
         // eslint-disable-next-line no-param-reassign
         where = value;
 
         return this;
       },
-      async then(resolve: (result: T[] | boolean) => void, reject: (err: Error) => void) {
+      async then(resolve: (result: T[] | boolean) => T[] | boolean, reject: (err: Error) => void): Promise<T[] | boolean> {
         if (_.isString(where)) {
           reject(new Error('The query cannot be a string, it must be an object'));
+          return false;
         }
 
         try {
@@ -265,7 +266,8 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
           return resolve(true);
         } catch (ex) {
           ex.stack += stack;
-          return reject(ex);
+          reject(ex);
+          return false;
         }
       },
     };

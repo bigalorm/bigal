@@ -14,5 +14,7 @@ module.exports = {
   },
   rules: {
     'max-classes-per-file': 'off',
+    '@typescript-eslint/no-non-null-assertion': 'off',
+    '@typescript-eslint/unbound-method': 'off',
   },
 };

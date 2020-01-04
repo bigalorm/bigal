@@ -11,7 +11,7 @@ type ReturnFunctionType = (object: object, propertyName: string) => void;
 export function updateDateColumn(options?: ColumnTypeOptions): ReturnFunctionType;
 export function updateDateColumn(dbColumnName: string, options?: ColumnTypeOptions): ReturnFunctionType;
 export function updateDateColumn(dbColumnNameOrOptions?: string | ColumnTypeOptions, options?: ColumnTypeOptions): ReturnFunctionType {
-  return function updateDateColumnDecorator(object: object, propertyName: string) {
+  return function updateDateColumnDecorator(object: object, propertyName: string): void {
     let dbColumnName: string | undefined;
     if (typeof dbColumnNameOrOptions === 'string') {
       dbColumnName = dbColumnNameOrOptions;

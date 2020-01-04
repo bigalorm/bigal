@@ -11,7 +11,7 @@ type ReturnFunctionType<T extends Entity = Entity> = (object: EntityStatic<T>) =
 export function table(options?: TableOptions): ReturnFunctionType;
 export function table(dbName: string, options: TableOptions): ReturnFunctionType;
 export function table(dbNameOrTableOptions?: string | TableOptions, options?: TableOptions): ReturnFunctionType {
-  return function tableDecorator<T extends Entity>(classObject: EntityStatic<T>) {
+  return function tableDecorator<T extends Entity>(classObject: EntityStatic<T>): void {
     const className = classObject.name;
 
     let dbTableName: string | undefined;

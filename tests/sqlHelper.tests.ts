@@ -397,7 +397,7 @@ describe('sqlHelper', () => {
   });
   describe('#getInsertQueryAndParams()', () => {
     it('should throw if a required property has an undefined value', () => {
-      (() => {
+      ((): void => {
         sqlHelper.getInsertQueryAndParams({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model,
@@ -444,7 +444,7 @@ describe('sqlHelper', () => {
         repositoriesByModelNameLowered: repositories,
       });
 
-      (() => {
+      ((): void => {
         sqlHelper.getInsertQueryAndParams({
           repositoriesByModelNameLowered: repositories,
           model,
@@ -566,7 +566,7 @@ describe('sqlHelper', () => {
           target: 'foo',
           name: 'name',
           propertyName: 'name',
-          defaultsTo: () => 'foobar',
+          defaultsTo: (): string => 'foobar',
           type: 'string',
         }),
         new ColumnTypeMetadata({
@@ -1789,11 +1789,12 @@ describe('sqlHelper', () => {
       params.should.deep.equal([]);
     });
     it('should throw if query value is undefined', () => {
-      (() => {
+      ((): void => {
         sqlHelper._buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model,
-          // @ts-ignore
+          // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+          // @ts-ignore - testing a value not allowed by type definition
           where: {
             store: undefined,
           },
@@ -3429,7 +3430,8 @@ describe('sqlHelper', () => {
     it('should return empty if there are orders is null', () => {
       const result = sqlHelper._buildOrderStatement({
         model,
-        // @ts-ignore
+        // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+        // @ts-ignore - testing a value that isn't allowed by typescript
         sorts: null,
       });
 

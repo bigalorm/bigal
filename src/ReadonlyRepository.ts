@@ -34,6 +34,8 @@ export interface RepositoryOptions<T extends Entity> {
 }
 
 export class ReadonlyRepository<T extends Entity> {
+  private readonly _modelMetadata: ModelMetadata;
+
   protected _type: EntityStatic<T>;
 
   protected _pool: Pool;
@@ -45,8 +47,6 @@ export class ReadonlyRepository<T extends Entity> {
   protected _floatProperties: string[] = [];
 
   protected _intProperties: string[] = [];
-
-  private readonly _modelMetadata: ModelMetadata;
 
   public constructor({
                 modelMetadata,
@@ -120,7 +120,7 @@ export class ReadonlyRepository<T extends Entity> {
     }
 
     const populates: Populate[] = [];
-    const sorts: Array<string | object> = [];
+    const sorts: (string | object)[] = [];
     if (_.isArray(sort)) {
       sorts.push(...sort);
     } else if (sort) {
@@ -135,7 +135,7 @@ export class ReadonlyRepository<T extends Entity> {
        * Filters the query
        * @param {object} value - Object representing the where query
        */
-      where(value: WhereQuery) {
+      where(value: WhereQuery): FindOneResult<T> {
         where = value;
 
         return this;
@@ -155,7 +155,7 @@ export class ReadonlyRepository<T extends Entity> {
         sort: populateSort,
         skip: populateSkip,
         limit: populateLimit,
-      }: PopulateArgs = {}) {
+      }: PopulateArgs = {}): FindOneResult<T> {
         populates.push({
           propertyName,
           where: populateWhere,
@@ -171,12 +171,12 @@ export class ReadonlyRepository<T extends Entity> {
        * Sorts the query
        * @param {string|object} value
        */
-      sort(value: string | object) {
+      sort(value: string | object): FindOneResult<T> {
         sorts.push(value);
 
         return this;
       },
-      async then(resolve: (result: T | null) => (T | Promise<T> | null), reject: (err: Error) => (void | Promise<void>) | undefined): Promise<T | null | Error | void | undefined> {
+      async then(resolve: (result: T | null) => (T | Promise<T> | null), reject: (err: Error) => void): Promise<T | null> {
         try {
           if (_.isString(where)) {
             throw new Error('The query cannot be a string, it must be an object');
@@ -219,17 +219,19 @@ export class ReadonlyRepository<T extends Entity> {
                 }
 
                 const populateWhere = _.merge({
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
                   // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
                   [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName],
                 }, populate.where);
 
-                populateQueries.push(async function populateModel() {
+                populateQueries.push(async function populateModel(): Promise<void> {
                   const populateResult = await populateRepository.findOne({
                     select: populate.select,
                     where: populateWhere,
                     sort: populate.sort,
                   });
 
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
                   // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
                   result[populate.propertyName] = populateResult;
                 }());
@@ -249,6 +251,7 @@ export class ReadonlyRepository<T extends Entity> {
                   throw new Error(`Unable to populate ${column.target}#${column.propertyName}. There is no primary key defined in ${modelInstance.model.name}`);
                 }
 
+                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
                 // @ts-ignore - Ignoring result does not have index signature for known field (primaryKeyColumn.propertyName)
                 const id = result[primaryKeyColumn.propertyName];
                 if (_.isNil(id)) {
@@ -274,7 +277,7 @@ export class ReadonlyRepository<T extends Entity> {
                     throw new Error(`Unable to find property on related model for multi-map collection: ${collectionColumn.through}. From ${column.target}#${populate.propertyName}`);
                   }
 
-                  populateQueries.push(async function populateMultiMulti() {
+                  populateQueries.push(async function populateMultiMulti(): Promise<void> {
                     if (relatedModelColumn) {
                       const mapRecords = await throughRepository.find({
                         select: [relatedModelColumn.via],
@@ -296,6 +299,7 @@ export class ReadonlyRepository<T extends Entity> {
                         limit: populate.limit,
                       });
 
+                      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
                       // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
                       result[populate.propertyName] = populateResults;
                     }
@@ -305,7 +309,7 @@ export class ReadonlyRepository<T extends Entity> {
                     [collectionColumn.via]: id,
                   }, populate.where);
 
-                  populateQueries.push(async function populateCollection() {
+                  populateQueries.push(async function populateCollection(): Promise<void> {
                     const populateResults = await populateRepository.find({
                       select: populate.select,
                       where: populateWhere,
@@ -314,6 +318,7 @@ export class ReadonlyRepository<T extends Entity> {
                       limit: populate.limit,
                     });
 
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
                     // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
                     result[populate.propertyName] = populateResults;
                   }());
@@ -325,13 +330,15 @@ export class ReadonlyRepository<T extends Entity> {
               await Promise.all(populateQueries);
             }
 
-            return resolve(result as T);
+            return resolve(result);
           }
 
           return resolve(null);
         } catch (ex) {
           ex.stack += stack;
-          return reject(ex);
+          reject(ex);
+
+          return null;
         }
       },
     };
@@ -390,7 +397,7 @@ export class ReadonlyRepository<T extends Entity> {
       }
     }
 
-    const sorts: Array<string | object> = [];
+    const sorts: (string | object)[] = [];
     if (_.isArray(sort)) {
       sorts.push(...sort);
     } else if (sort) {
@@ -405,7 +412,7 @@ export class ReadonlyRepository<T extends Entity> {
        * Filters the query
        * @param {object} value - Object representing the where query
        */
-      where(value: WhereQuery) {
+      where(value: WhereQuery): FindResult<T> {
         where = value;
 
         return this;
@@ -414,7 +421,7 @@ export class ReadonlyRepository<T extends Entity> {
        * Sorts the query
        * @param {string|object} value
        */
-      sort(value: string | object) {
+      sort(value: string | object): FindResult<T> {
         sorts.push(value);
 
         return this;
@@ -423,7 +430,7 @@ export class ReadonlyRepository<T extends Entity> {
        * Limits results returned by the query
        * @param {number} value
        */
-      limit(value: number) {
+      limit(value: number): FindResult<T> {
         limit = value;
 
         return this;
@@ -432,7 +439,7 @@ export class ReadonlyRepository<T extends Entity> {
        * Skips records returned by the query
        * @param {number} value
        */
-      skip(value: number) {
+      skip(value: number): FindResult<T> {
         skip = value;
 
         return this;
@@ -445,17 +452,17 @@ export class ReadonlyRepository<T extends Entity> {
       paginate({
                  page = 1,
                  limit: paginateLimit = 10,
-               }: PaginateOptions) {
+               }: PaginateOptions): FindResult<T> {
         const safePage = Math.max(page, 1);
-        this.skip((safePage * paginateLimit) - paginateLimit);
-        this.limit(paginateLimit);
-
-        return this;
+        return this
+          .skip((safePage * paginateLimit) - paginateLimit)
+          .limit(paginateLimit);
       },
-      async then(resolve: (result: T[]) => void, reject: (err: Error) => void) {
+      async then(resolve: (result: T[]) => T[], reject: (err: Error) => void): Promise<T[]> {
         try {
           if (_.isString(where)) {
             reject(new Error('The query cannot be a string, it must be an object'));
+            return [];
           }
 
           const {
@@ -472,10 +479,11 @@ export class ReadonlyRepository<T extends Entity> {
           });
 
           const results = await modelInstance._readonlyPool.query(query, params);
-          resolve(modelInstance._buildInstances(results.rows));
+          return resolve(modelInstance._buildInstances(results.rows));
         } catch (ex) {
           ex.stack += stack;
           reject(ex);
+          return [];
         }
       },
     };
@@ -499,13 +507,13 @@ export class ReadonlyRepository<T extends Entity> {
        * Filters the query
        * @param {object} value - Object representing the where query
        */
-      where(value: WhereQuery) {
+      where(value: WhereQuery): CountResult<T> | number {
         // eslint-disable-next-line no-param-reassign
         where = value;
 
         return this;
       },
-      async then(resolve: (result: number) => void, reject: (err: Error) => void) {
+      async then(resolve: (result: number) => number, reject: (err: Error) => void): Promise<number> {
         try {
           const {
             query,
@@ -528,7 +536,8 @@ export class ReadonlyRepository<T extends Entity> {
           return resolve(originalValue);
         } catch (ex) {
           ex.stack += stack;
-          return reject(ex);
+          reject(ex);
+          return 0;
         }
       },
     };
@@ -539,18 +548,18 @@ export class ReadonlyRepository<T extends Entity> {
       return row;
     }
 
-    const instance = new this._type() as T;
+    const instance = new this._type();
     Object.assign(instance, row);
 
     // NOTE: Number fields may be strings coming from the db. In those cases, try to convert the value to Number
     for (const name of this._floatProperties) {
-      // @ts-ignore
       const originalValue = row[name] as string | number | undefined | null;
       if (!_.isNil(originalValue) && typeof originalValue === 'string') {
         try {
           const value = Number(originalValue);
           if (_.isFinite(value) && value.toString() === originalValue) {
-            // @ts-ignore
+            // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+            // @ts-ignore - string cannot be used to index type T
             instance[name] = value;
           }
         } catch (ex) {
@@ -560,7 +569,6 @@ export class ReadonlyRepository<T extends Entity> {
     }
 
     for (const name of this._intProperties) {
-      // @ts-ignore
       const originalValue = row[name] as string | number | undefined | null;
       if (!_.isNil(originalValue) && typeof originalValue === 'string') {
         try {
@@ -568,7 +576,8 @@ export class ReadonlyRepository<T extends Entity> {
           if (_.isFinite(value) && value.toString() === originalValue) {
             const valueAsInt = _.toInteger(value);
             if (Number.isSafeInteger(valueAsInt)) {
-              // @ts-ignore
+              // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+              // @ts-ignore - string cannot be used to index type T
               instance[name] = valueAsInt;
             }
           }
@@ -581,7 +590,7 @@ export class ReadonlyRepository<T extends Entity> {
     return instance;
   }
 
-  protected _buildInstances(rows: Array<Partial<T>>): T[] {
+  protected _buildInstances(rows: Partial<T>[]): T[] {
     if (_.isNil(rows)) {
       return rows;
     }

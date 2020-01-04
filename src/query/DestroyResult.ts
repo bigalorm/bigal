@@ -1,7 +1,6 @@
 import { WhereQuery } from './WhereQuery';
+import { ChainablePromiseLike } from '../ChainablePromiseLike';
 
-export interface DestroyResult<TEntity, TReturn> {
+export interface DestroyResult<TEntity, TReturn> extends ChainablePromiseLike<TReturn> {
   where(args: WhereQuery): DestroyResult<TEntity, TReturn>;
-  then<U>(onFulfill: (value: TReturn) => U | PromiseLike<U>, onReject?: (error: Error) => U | PromiseLike<U>): Promise<U>;
-  then<U>(onFulfill: (value: TReturn) => U | PromiseLike<U>, onReject?: (error: Error) => void | PromiseLike<void>): Promise<U>;
 }

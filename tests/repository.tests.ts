@@ -2,6 +2,7 @@ import chai from 'chai';
 import * as _ from 'lodash';
 import * as faker from 'faker';
 import { Pool } from 'postgres-pool';
+import { QueryResult } from 'pg';
 import {
   anyString,
   anything,
@@ -25,8 +26,7 @@ import {
 import { ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
 import { RepositoriesByModelNameLowered } from '../src/RepositoriesByModelNameLowered';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getQueryResult(rows: any[] = []) {
+function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
   return {
     command: 'select',
     rowCount: 1,
@@ -62,7 +62,7 @@ describe('Repository', () => {
     ProductWithCreateUpdateDateTrackingRepository = repositoriesByModelName.ProductWithCreateUpdateDateTracking as Repository<ProductWithCreateUpdateDateTracking>;
   });
 
-  beforeEach(async () => {
+  beforeEach(() => {
     reset(mockedPool);
   });
 

@@ -1,3 +1,7 @@
+### 3.3.0
+  * Make typescript lint rules more strict
+  * Update npms
+
 ### 3.2.0
   * Fix CreateUpdateDelete type to be strict about either returnRecords=false or defined returnSelect
   * Update npms

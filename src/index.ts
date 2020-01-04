@@ -32,7 +32,7 @@ export interface InitializeOptions extends Connection {
 // This will build an inverted array of inherited classes ([grandparent, parent, item])
 function getInheritanceTree(model: Function): Function[] {
   const tree = [model];
-  function getRecursivePrototypesOf(parentEntity: Function) {
+  function getRecursivePrototypesOf(parentEntity: Function): void {
     const proto = Object.getPrototypeOf(parentEntity);
     if (proto && proto.name && proto.name !== 'Function') {
       tree.unshift(proto);
@@ -83,7 +83,7 @@ export function initialize({
     modelMetadataByModelName[model.name] = model;
   }
 
-  type ColumnsByPropertyName = { [index: string]: ColumnMetadata };
+  interface ColumnsByPropertyName { [index: string]: ColumnMetadata }
   // Add dictionary to quickly find a column by propertyName, for applying ColumnModifierMetadata records
   const columnsByPropertyNameForModel: { [index: string]: ColumnsByPropertyName } = {};
   for (const column of metadataStorage.columns) {
@@ -91,7 +91,7 @@ export function initialize({
     columnsByPropertyNameForModel[column.target][column.propertyName] = column;
   }
 
-  type ColumnModifiersByPropertyName = { [index: string]: ColumnModifierMetadata[] };
+  interface ColumnModifiersByPropertyName { [index: string]: ColumnModifierMetadata[] }
   const columnModifiersByPropertyNameForModel: { [index: string]: ColumnModifiersByPropertyName } = {};
   for (const columnModifier of metadataStorage.columnModifiers) {
     columnModifiersByPropertyNameForModel[columnModifier.target] = columnModifiersByPropertyNameForModel[columnModifier.target] || {};

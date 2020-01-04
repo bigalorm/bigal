@@ -2,6 +2,7 @@ import chai from 'chai';
 import _ from 'lodash';
 import * as faker from 'faker';
 import { Pool } from 'postgres-pool';
+import { QueryResult } from 'pg';
 import {
   anyString,
   anything,
@@ -28,8 +29,7 @@ import {
 import { ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
 import { RepositoriesByModelNameLowered } from '../src/RepositoriesByModelNameLowered';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getQueryResult(rows: any[] = []) {
+function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
   return {
     command: 'select',
     rowCount: 1,
@@ -69,7 +69,7 @@ describe('ReadonlyRepository', () => {
     StoreRepository = repositoriesByModelName.Store as Repository<Store>;
   });
 
-  beforeEach(async () => {
+  beforeEach(() => {
     reset(mockedPool);
   });
 
@@ -83,7 +83,6 @@ describe('ReadonlyRepository', () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
       const result = await ReadonlyProductRepository.findOne();
       should.exist(result);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
@@ -91,7 +90,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "readonly_products" LIMIT 1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support call with constraints as a parameter', async () => {
@@ -110,7 +108,6 @@ describe('ReadonlyRepository', () => {
         sort: 'name asc',
       });
       should.exist(result);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
@@ -118,7 +115,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "name","id" FROM "products" WHERE "id"=$1 ORDER BY "name" LIMIT 1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([product.id]);
     });
     it('should support call with where constraint as a parameter', async () => {
@@ -133,7 +129,6 @@ describe('ReadonlyRepository', () => {
         id: product.id,
       });
       should.exist(result);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
@@ -141,7 +136,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([product.id]);
     });
     it('should support call with chained where constraints', async () => {
@@ -156,7 +150,6 @@ describe('ReadonlyRepository', () => {
         id: product.id,
       });
       should.exist(result);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
@@ -164,7 +157,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([product.id]);
     });
     it('should support call with chained where constraints - Promise.all', async () => {
@@ -183,7 +175,6 @@ describe('ReadonlyRepository', () => {
         }),
       ]);
       should.exist(result);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
@@ -191,7 +182,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([product.id]);
     });
     it('should support call with chained sort', async () => {
@@ -204,7 +194,6 @@ describe('ReadonlyRepository', () => {
 
       const result = await ProductRepository.findOne().sort('name asc');
       should.exist(result);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
@@ -212,7 +201,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "name" LIMIT 1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     describe('Parse number columns', () => {
@@ -255,7 +243,6 @@ describe('ReadonlyRepository', () => {
         const result = await repository.findOne();
         should.exist(result);
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: numberValue,
@@ -266,7 +253,6 @@ describe('ReadonlyRepository', () => {
           params,
         ] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
       it('should parse integer columns from float strings query value', async () => {
@@ -307,7 +293,6 @@ describe('ReadonlyRepository', () => {
 
         const result = await repository.findOne();
         should.exist(result);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: 42,
@@ -318,7 +303,6 @@ describe('ReadonlyRepository', () => {
           params,
         ] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
       it('should parse integer columns that return as number', async () => {
@@ -359,7 +343,6 @@ describe('ReadonlyRepository', () => {
 
         const result = await repository.findOne();
         should.exist(result);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: numberValue,
@@ -370,7 +353,6 @@ describe('ReadonlyRepository', () => {
           params,
         ] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
       it('should ignore large integer columns values', async () => {
@@ -411,7 +393,6 @@ describe('ReadonlyRepository', () => {
 
         const result = await repository.findOne();
         should.exist(result);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: largeNumberValue,
@@ -422,7 +403,6 @@ describe('ReadonlyRepository', () => {
           params,
         ] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
       it('should parse float columns return as float strings', async () => {
@@ -463,7 +443,6 @@ describe('ReadonlyRepository', () => {
 
         const result = await repository.findOne();
         should.exist(result);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: numberValue,
@@ -474,7 +453,6 @@ describe('ReadonlyRepository', () => {
           params,
         ] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
       it('should parse float columns return as number', async () => {
@@ -515,7 +493,6 @@ describe('ReadonlyRepository', () => {
 
         const result = await repository.findOne();
         should.exist(result);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: numberValue,
@@ -526,7 +503,6 @@ describe('ReadonlyRepository', () => {
           params,
         ] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
       it('should ignore large float columns', async () => {
@@ -567,7 +543,6 @@ describe('ReadonlyRepository', () => {
 
         const result = await repository.findOne();
         should.exist(result);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         result!.should.deep.equal({
           id,
           foo: largeNumberValue,
@@ -578,7 +553,6 @@ describe('ReadonlyRepository', () => {
           params,
         ] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         params!.should.deep.equal([]);
       });
     });
@@ -605,7 +579,6 @@ describe('ReadonlyRepository', () => {
       const result = await ProductRepository.findOne().populate('store');
       verify(mockedPool.query(anyString(), anything())).twice();
       should.exist(result);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(product);
 
       const [
@@ -613,14 +586,12 @@ describe('ReadonlyRepository', () => {
         productQueryParams,
       ] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       productQueryParams!.should.deep.equal([]);
       const [
         storeQuery,
         storeQueryParams,
       ] = capture(mockedPool.query).second();
       storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1 LIMIT 1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       storeQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating collection', async () => {
@@ -651,7 +622,6 @@ describe('ReadonlyRepository', () => {
       const result = await StoreRepository.findOne().populate('products');
       verify(mockedPool.query(anyString(), anything())).twice();
       should.exist(result);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(storeWithProducts);
 
       const [
@@ -659,14 +629,12 @@ describe('ReadonlyRepository', () => {
         storeQueryParams,
       ] = capture(mockedPool.query).first();
       storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       storeQueryParams!.should.deep.equal([]);
       const [
         productQuery,
         productQueryParams,
       ] = capture(mockedPool.query).second();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       productQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating multi-multi collection', async () => {
@@ -706,7 +674,6 @@ describe('ReadonlyRepository', () => {
       const result = await ProductRepository.findOne().populate('categories');
       verify(mockedPool.query(anyString(), anything())).thrice();
       should.exist(result);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(productWithCategories);
 
       const [
@@ -714,21 +681,18 @@ describe('ReadonlyRepository', () => {
         productQueryParams,
       ] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       productQueryParams!.should.deep.equal([]);
       const [
         productCategoryMapQuery,
         productCategoryMapQueryParams,
       ] = capture(mockedPool.query).second();
       productCategoryMapQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       productCategoryMapQueryParams!.should.deep.equal([product.id]);
       const [
         categoryQuery,
         categoryQueryParams,
       ] = capture(mockedPool.query).third();
       categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       categoryQueryParams!.should.deep.equal([
         [category1.id, category2.id],
       ]);
@@ -791,7 +755,6 @@ describe('ReadonlyRepository', () => {
         .sort('store desc');
       verify(mockedPool.query(anyString(), anything())).times(4);
       should.exist(result);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result!.should.deep.equal(fullProduct);
 
       const [
@@ -799,28 +762,24 @@ describe('ReadonlyRepository', () => {
         productQueryParams,
       ] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       productQueryParams!.should.deep.equal([store.id]);
       const [
         storeQuery,
         storeQueryParams,
       ] = capture(mockedPool.query).second();
       storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1 LIMIT 1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       storeQueryParams!.should.deep.equal([store.id]);
       const [
         productCategoryMapQuery,
         productCategoryMapQueryParams,
       ] = capture(mockedPool.query).third();
       productCategoryMapQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       productCategoryMapQueryParams!.should.deep.equal([product.id]);
       const [
         categoryQuery,
         categoryQueryParams,
       ] = capture(mockedPool.query).byCallIndex(3);
       categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) AND "name" ILIKE $2 ORDER BY "name" LIMIT 2');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       categoryQueryParams!.should.deep.equal([
         [category1.id, category2.id],
         'category%',
@@ -833,7 +792,7 @@ describe('ReadonlyRepository', () => {
 
         public foo: string | undefined;
 
-        public toBar() {
+        public toBar(): string {
           return `${this.foo} bar!`;
         }
       }
@@ -880,12 +839,9 @@ describe('ReadonlyRepository', () => {
       verify(mockedPool.query(anyString(), anything())).twice();
 
       should.exist(result1);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result1!.should.deep.equal(result2);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result1!.toBar().should.equal(`${foo} bar!`);
       should.exist(result2);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       result2!.toBar().should.equal(`${foo} bar!`);
     });
     it('should not create an object/assign instance functions to null results', async () => {
@@ -895,7 +851,7 @@ describe('ReadonlyRepository', () => {
 
         public foo: string | undefined;
 
-        public toBar() {
+        public toBar(): string {
           return `${this.foo} bar!`;
         }
       }
@@ -960,7 +916,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support call with constraints as a parameter', async () => {
@@ -997,7 +952,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "name","id" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2 ORDER BY "name" LIMIT 24 OFFSET 5');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         _.map(products, 'id'),
         store.id,
@@ -1031,7 +985,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         _.map(products, 'id'),
         store.id,
@@ -1064,7 +1017,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([store.id]);
     });
     it('should support call with chained where constraints - array ILIKE array of values', async () => {
@@ -1103,7 +1055,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE (("name" ILIKE $1) OR ("name" ILIKE $2)) AND EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")=ANY($3::TEXT[]))');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         'product',
         'Foo Bar',
@@ -1139,7 +1090,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE lower("sku")<>ALL($1::TEXT[])');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([['foo', 'bar']]);
     });
     it('should support call with chained where constraints - Promise.all', async () => {
@@ -1173,7 +1123,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([store.id]);
     });
     it('should support call with chained sort', async () => {
@@ -1197,7 +1146,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "name"');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support call with chained limit', async () => {
@@ -1221,7 +1169,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 42');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support call with chained skip', async () => {
@@ -1245,7 +1192,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" OFFSET 24');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support call with chained paginate', async () => {
@@ -1272,7 +1218,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 100 OFFSET 200');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support complex query with multiple chained modifiers', async () => {
@@ -1309,7 +1254,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 42 OFFSET 24');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([store.id]);
     });
     it('should have instance functions be equal across multiple queries', async () => {
@@ -1319,7 +1263,7 @@ describe('ReadonlyRepository', () => {
 
         public foo: string | undefined;
 
-        public toBar() {
+        public toBar(): string {
           return `${this.foo} bar!`;
         }
       }
@@ -1366,10 +1310,8 @@ describe('ReadonlyRepository', () => {
       should.exist(result1);
       should.exist(result2);
       result1.should.deep.equal(result2);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      result1![0].toBar().should.equal(`${foo} bar!`);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      result2![0].toBar().should.equal(`${foo} bar!`);
+      result1[0].toBar().should.equal(`${foo} bar!`);
+      result2[0].toBar().should.equal(`${foo} bar!`);
     });
   });
   describe('#count()', () => {
@@ -1397,7 +1339,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT count(*) AS "count" FROM "products"');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
     it('should support call constraints as a parameter', async () => {
@@ -1431,7 +1372,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([
         _.map(products, 'id'),
         store.id,
@@ -1467,7 +1407,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([store.id]);
     });
     it('should support call with chained where constraints - Promise.all', async () => {
@@ -1504,7 +1443,6 @@ describe('ReadonlyRepository', () => {
         params,
       ] = capture(mockedPool.query).first();
       query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([store.id]);
     });
   });

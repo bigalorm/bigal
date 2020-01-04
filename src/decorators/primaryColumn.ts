@@ -15,7 +15,7 @@ type ReturnFunctionType = (object: object, propertyName: string) => void;
 export function primaryColumn(options?: ColumnOptions): ReturnFunctionType;
 export function primaryColumn(dbColumnName: string, options?: ColumnOptions): ReturnFunctionType;
 export function primaryColumn(dbColumnNameOrOptions?: string | ColumnOptions, options?: ColumnOptions): ReturnFunctionType {
-  return function primaryColumnDecorator(object: object, propertyName: string) {
+  return function primaryColumnDecorator(object: object, propertyName: string): void {
     let dbColumnName: string | undefined;
     if (typeof dbColumnNameOrOptions === 'string') {
       dbColumnName = dbColumnNameOrOptions;
