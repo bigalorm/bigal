@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
   "main": "index.js",
   "types": "index.d.ts",
@@ -48,14 +48,14 @@
     "@types/pg": "~7.14.1",
     "lodash": "~4.17.15",
     "pg": "~7.17.0",
-    "postgres-pool": "~2.0.3"
+    "postgres-pool": "2.0.4"
   },
   "devDependencies": {
     "@types/chai": "4.2.7",
     "@types/faker": "4.1.8",
     "@types/mocha": "5.2.7",
-    "@typescript-eslint/eslint-plugin": "2.14.0",
-    "@typescript-eslint/parser": "2.14.0",
+    "@typescript-eslint/eslint-plugin": "2.15.0",
+    "@typescript-eslint/parser": "2.15.0",
     "chai": "4.2.0",
     "eslint": "6.8.0",
     "eslint-config-airbnb-base": "14.0.0",

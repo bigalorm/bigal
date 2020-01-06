@@ -1,3 +1,6 @@
+### 3.3.1
+  * Update npms
+
 ### 3.3.0
   * Make typescript lint rules more strict
   * Update npms
