@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "3.3.1",
+  "version": "3.3.2",
   "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
   "main": "index.js",
   "types": "index.d.ts",
@@ -47,30 +47,30 @@
     "@types/node": "~10.14.22",
     "@types/pg": "~7.14.1",
     "lodash": "~4.17.15",
-    "pg": "~7.17.0",
-    "postgres-pool": "2.0.4"
+    "pg": "~7.17.1",
+    "postgres-pool": "~2.0.5"
   },
   "devDependencies": {
     "@types/chai": "4.2.7",
-    "@types/faker": "4.1.8",
+    "@types/faker": "4.1.9",
     "@types/mocha": "5.2.7",
-    "@typescript-eslint/eslint-plugin": "2.15.0",
-    "@typescript-eslint/parser": "2.15.0",
+    "@typescript-eslint/eslint-plugin": "2.18.0",
+    "@typescript-eslint/parser": "2.18.0",
     "chai": "4.2.0",
     "eslint": "6.8.0",
     "eslint-config-airbnb-base": "14.0.0",
-    "eslint-plugin-import": "2.19.1",
-    "eslint-plugin-jsdoc": "20.0.0",
+    "eslint-plugin-import": "2.20.0",
+    "eslint-plugin-jsdoc": "21.0.0",
     "eslint-plugin-mocha": "6.2.2",
     "eslint-plugin-promise": "4.2.1",
     "eslint-plugin-security": "1.4.0",
     "faker": "4.1.0",
     "husky": "3.1.0",
     "lint-staged": "9.5.0",
-    "mocha": "6.2.2",
+    "mocha": "7.0.1",
     "strict-event-emitter-types": "2.0.0",
     "ts-mockito": "2.5.0",
-    "ts-node": "8.5.4",
-    "typescript": "3.7.4"
+    "ts-node": "8.6.2",
+    "typescript": "3.7.5"
   }
 }
