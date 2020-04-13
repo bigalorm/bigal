@@ -1793,9 +1793,9 @@ describe('sqlHelper', () => {
         sqlHelper._buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model,
-          // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-          // @ts-ignore - testing a value not allowed by type definition
           where: {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+            // @ts-ignore - testing a value not allowed by type definition
             store: undefined,
           },
         });
