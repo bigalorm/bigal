@@ -24,13 +24,14 @@ interface QueryAndParams {
 
 /**
  * Gets the select syntax for the specified model and filters
- * @param {object} repositoriesByModelNameLowered - All model schemas organized by model name
- * @param {object} model - Model schema
- * @param {string[]} [select] - Array of model property names to return from the query.
- * @param {object} [where] - Object representing the where query
- * @param {string[]|object[]} [sorts] - Property name(s) to sort by
- * @param {number} [skip] - Number of records to skip
- * @param {number} [limit] - Number of results to return
+ * @param {object} args - Arguments
+ * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by model name
+ * @param {object} args.model - Model schema
+ * @param {string[]} [args.select] - Array of model property names to return from the query.
+ * @param {object} [args.where] - Object representing the where query
+ * @param {string[]|object[]} [args.sorts] - Property name(s) to sort by
+ * @param {number} [args.skip] - Number of records to skip
+ * @param {number} [args.limit] - Number of results to return
  * @returns {{query: string, params: Array}}
  */
 export function getSelectQueryAndParams({
@@ -115,9 +116,10 @@ export function getSelectQueryAndParams({
 
 /**
  * Gets the count syntax for the specified model and values
- * @param {object} repositoriesByModelNameLowered - All model schemas organized by model name
- * @param {object} model - Model schema
- * @param {object} [where] - Object representing the where query
+ * @param {object} args - Arguments
+ * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by model name
+ * @param {object} args.model - Model schema
+ * @param {object} [args.where] - Object representing the where query
  * @returns {{query: string, params: Array}}
  */
 export function getCountQueryAndParams({
@@ -152,11 +154,12 @@ export function getCountQueryAndParams({
 
 /**
  * Gets the insert syntax for the specified model and values
- * @param {object} repositoriesByModelNameLowered - All model schemas organized by model name
- * @param {object} model - Model schema
- * @param {object|object[]} values - Values to insert. Insert multiple records by passing an array of values.
- * @param {boolean} [returnRecords=true] - Determines if inserted records should be returned
- * @param {string[]} [returnSelect] - Array of model property names to return from the query.
+ * @param {object} args - Arguments
+ * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by model name
+ * @param {object} args.model - Model schema
+ * @param {object|object[]} args.values - Values to insert. Insert multiple records by passing an array of values.
+ * @param {boolean} [args.returnRecords=true] - Determines if inserted records should be returned
+ * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: Array}}
  */
 export function getInsertQueryAndParams({
@@ -294,12 +297,13 @@ export function getInsertQueryAndParams({
 
 /**
  * Gets the update syntax for the specified model and values
- * @param {object} repositoriesByModelNameLowered - All model schemas organized by global id
- * @param {object} model - Model schema
- * @param {object} [where] - Object representing the where query
- * @param {object} values - Values to set.
- * @param {boolean} [returnRecords=true] - Determines if inserted records should be returned
- * @param {string[]} [returnSelect] - Array of model property names to return from the query.
+ * @param {object} args - Arguments
+ * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by global id
+ * @param {object} args.model - Model schema
+ * @param {object} [args.where] - Object representing the where query
+ * @param {object} args.values - Values to set.
+ * @param {boolean} [args.returnRecords=true] - Determines if inserted records should be returned
+ * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: Array}}
  */
 export function getUpdateQueryAndParams({
@@ -417,11 +421,12 @@ export function getUpdateQueryAndParams({
 
 /**
  * Gets the delete syntax for the specified model and where criteria
- * @param {object} repositoriesByModelNameLowered - All model schemas organized by global id
- * @param {object} model - Model schema
- * @param {object} [where] - Object representing the where query
- * @param {boolean} [returnRecords=true] - Determines if inserted records should be returned
- * @param {string[]} [returnSelect] - Array of model property names to return from the query.
+ * @param {object} args - Arguments
+ * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by global id
+ * @param {object} args.model - Model schema
+ * @param {object} [args.where] - Object representing the where query
+ * @param {boolean} [args.returnRecords=true] - Determines if inserted records should be returned
+ * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: Array}}
  */
 export function getDeleteQueryAndParams({
@@ -468,8 +473,9 @@ export function getDeleteQueryAndParams({
 
 /**
  * Gets SQL representing columns to select
- * @param {object} model - Model schema
- * @param {string[]} [select] - Array of model property names to return from the query.
+ * @param {object} args - Arguments
+ * @param {object} args.model - Model schema
+ * @param {string[]} [args.select] - Array of model property names to return from the query.
  * @returns {string} SQL columns
  * @private
  */
@@ -520,10 +526,11 @@ export function _getColumnsToSelect({
 
 /**
  * Builds the SQL where statement based on the where expression
- * @param {object} repositoriesByModelNameLowered - All model schemas organized by global id
- * @param {object} model - Model schema
- * @param {object} [where]
- * @param {Array<number|string|object|null>} [params] - Objects to pass as parameters for the query
+ * @param {object} args - Arguments
+ * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by global id
+ * @param {object} args.model - Model schema
+ * @param {object} [args.where]
+ * @param {Array<number|string|object|null>} [args.params] - Objects to pass as parameters for the query
  * @returns {object} {{whereStatement?: string, params: Array}}
  * @private
  */
@@ -566,8 +573,9 @@ export function _buildWhereStatement({
 
 /**
  * Builds the SQL order by statement based on the array of sortable expressions
- * @param {object} model - Model schema
- * @param {string[]|object[]} sorts - Property name(s) to sort by
+ * @param {object} args - Arguments
+ * @param {object} args.model - Model schema
+ * @param {string[]|object[]} args.sorts - Property name(s) to sort by
  * @returns {string} SQL order by statement
  * @private
  */
@@ -635,13 +643,14 @@ export function _buildOrderStatement({
 
 /**
  * Builds a portion of the where statement based on the propertyName
- * @param {object} repositoriesByModelNameLowered - All model schemas organized by global id
- * @param {object} model - Model schema
- * @param {string} [propertyName] - Name of property to query by
- * @param {string} [comparer] - Comparison operator
- * @param {boolean} [isNegated=false] - If it is negated comparison
- * @param {object|string|number|boolean} [value] - Value to compare. Can also represent a complex where query
- * @param {Array} params - Objects to pass as parameters for the query
+ * @param {object} args - Arguments
+ * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by global id
+ * @param {object} args.model - Model schema
+ * @param {string} [args.propertyName] - Name of property to query by
+ * @param {string} [args.comparer] - Comparison operator
+ * @param {boolean} [args.isNegated=false] - If it is negated comparison
+ * @param {object|string|number|boolean} [args.value] - Value to compare. Can also represent a complex where query
+ * @param {Array} args.params - Objects to pass as parameters for the query
  * @returns {string} - Query text
  * @private
  */

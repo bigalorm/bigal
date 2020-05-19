@@ -143,11 +143,12 @@ export class ReadonlyRepository<T extends Entity> {
       /**
        * Populates/hydrates relations
        * @param {string} propertyName - Name of property to join
-       * @param {object} [where] - Object representing the where query
-       * @param {string[]} [populateSelect] - Array of model property names to return from the query.
-       * @param {string|object} [populateSort] - Property name(s) to sort by
-       * @param {string|number} [populateSkip] - Number of records to skip
-       * @param {string|number} [populateLimit] - Number of results to return
+       * @param {object} [options] - Populate options
+       * @param {object} [options.where] - Object representing the where query
+       * @param {string[]} [options.select] - Array of model property names to return from the query.
+       * @param {string|object} [options.sort] - Property name(s) to sort by
+       * @param {string|number} [options.skip] - Number of records to skip
+       * @param {string|number} [options.limit] - Number of results to return
        */
       populate(propertyName: Extract<keyof T, string>, {
         where: populateWhere,
