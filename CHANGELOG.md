@@ -1,3 +1,6 @@
+### 3.4.1
+  * Update npms
+
 ### 3.4.0
   * Update npms
   * Fix jsdoc comments for .populate()

@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "3.4.0",
+  "version": "3.4.1",
   "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
   "main": "index.js",
   "types": "index.d.ts",
@@ -43,12 +43,12 @@
     "node": ">=10"
   },
   "dependencies": {
-    "@types/lodash": "4.14.151",
+    "@types/lodash": "4.14.152",
     "@types/node": "~10.17.19",
     "@types/pg": "~7.14.3",
     "lodash": "~4.17.15",
     "pg": "8.2.1",
-    "postgres-pool": "3.1.0"
+    "postgres-pool": "3.1.1"
   },
   "devDependencies": {
     "@types/chai": "4.2.11",
@@ -71,6 +71,6 @@
     "strict-event-emitter-types": "2.0.0",
     "ts-mockito": "2.5.0",
     "ts-node": "8.10.1",
-    "typescript": "3.9.2"
+    "typescript": "3.9.3"
   }
 }
