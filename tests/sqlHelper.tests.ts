@@ -1794,7 +1794,7 @@ describe('sqlHelper', () => {
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model,
           where: {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore - testing a value not allowed by type definition
             store: undefined,
           },
@@ -3430,7 +3430,7 @@ describe('sqlHelper', () => {
     it('should return empty if there are orders is null', () => {
       const result = sqlHelper._buildOrderStatement({
         model,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore - testing a value that isn't allowed by typescript
         sorts: null,
       });

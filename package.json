@@ -1,38 +1,10 @@
 {
   "name": "bigal",
-  "version": "3.4.1",
+  "version": "4.0.0",
   "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
   "main": "index.js",
   "types": "index.d.ts",
-  "scripts": {
-    "build": "tsc",
-    "test": "mocha -r ts-node/register tests/**/*.tests.ts",
-    "lint": "eslint --fix --ext .ts src tests",
-    "dist": "if [ -d \"src\" ]; then rm -rf dist && npm run build && npm run lint && npm run test && cp package.json dist && cp *.md dist && cp LICENSE dist && cp .npmignore dist && cd dist && npm publish; fi",
-    "prepublishOnly": "if [ -d \"src\" ]; then echo \"Please use: npm run dist\" && exit 125; fi"
-  },
-  "lint-staged": {
-    "*.js": [
-      "eslint --fix"
-    ],
-    "*.ts": [
-      "eslint --fix"
-    ]
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/bigalorm/bigal.git"
-  },
-  "keywords": [
-    "orm",
-    "postgres",
-    "postgresql"
-  ],
+  "keywords": ["orm", "postgres", "postgresql"],
   "author": "Jim Geurts <jim@biacreations.com>",
   "license": "MIT",
   "bugs": {
@@ -43,34 +15,54 @@
     "node": ">=10"
   },
   "dependencies": {
-    "@types/lodash": "4.14.152",
-    "@types/node": "~10.17.19",
-    "@types/pg": "~7.14.3",
+    "@types/lodash": "^4.14.155",
+    "@types/node": "^14.0.12",
+    "@types/pg": "^7.14.3",
     "lodash": "~4.17.15",
-    "pg": "8.2.1",
-    "postgres-pool": "3.1.1"
+    "pg": "~8.2.1",
+    "postgres-pool": "~3.1.2"
   },
   "devDependencies": {
     "@types/chai": "4.2.11",
     "@types/faker": "4.1.12",
     "@types/mocha": "7.0.2",
-    "@typescript-eslint/eslint-plugin": "2.34.0",
-    "@typescript-eslint/parser": "2.34.0",
+    "@typescript-eslint/eslint-plugin": "3.2.0",
+    "@typescript-eslint/parser": "3.2.0",
     "chai": "4.2.0",
-    "eslint": "7.0.0",
+    "eslint": "7.2.0",
     "eslint-config-airbnb-base": "14.1.0",
-    "eslint-plugin-import": "2.20.2",
-    "eslint-plugin-jsdoc": "25.4.2",
-    "eslint-plugin-mocha": "7.0.0",
+    "eslint-plugin-import": "2.21.1",
+    "eslint-plugin-jsdoc": "27.0.5",
+    "eslint-plugin-mocha": "7.0.1",
     "eslint-plugin-promise": "4.2.1",
     "eslint-plugin-security": "1.4.0",
     "faker": "4.1.0",
     "husky": "3.1.0",
-    "lint-staged": "10.2.4",
-    "mocha": "7.1.2",
+    "lint-staged": "10.2.9",
+    "mocha": "7.2.0",
     "strict-event-emitter-types": "2.0.0",
-    "ts-mockito": "2.5.0",
-    "ts-node": "8.10.1",
-    "typescript": "3.9.3"
+    "ts-mockito": "2.6.1",
+    "ts-node": "8.10.2",
+    "typescript": "3.9.5"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "mocha -r ts-node/register tests/**/*.tests.ts",
+    "lint": "eslint --fix --ext .ts src tests",
+    "dist": "if [ -d \"src\" ]; then rm -rf dist && npm run build && npm run lint && npm run test && cp package.json dist && cp *.md dist && cp LICENSE dist && cp .npmignore dist && cd dist && npm publish; fi",
+    "prepublishOnly": "if [ -d \"src\" ]; then echo \"Please use: npm run dist\" && exit 125; fi"
+  },
+  "lint-staged": {
+    "*.js": ["eslint --fix"],
+    "*.ts": ["eslint --fix"]
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bigalorm/bigal.git"
   }
 }

@@ -29,11 +29,16 @@ export interface InitializeOptions extends Connection {
   expose?: (repository: ReadonlyRepository<Entity> | Repository<Entity>, tableMetadata: ModelMetadata) => void;
 }
 
+type ModelClass = EntityStatic<Entity> & {
+  name: string;
+};
+
 // This will build an inverted array of inherited classes ([grandparent, parent, item])
-function getInheritanceTree(model: Function): Function[] {
+function getInheritanceTree(model: ModelClass): ModelClass[] {
   const tree = [model];
-  function getRecursivePrototypesOf(parentEntity: Function): void {
-    const proto = Object.getPrototypeOf(parentEntity);
+
+  function getRecursivePrototypesOf(parentEntity: ModelClass): void {
+    const proto = Object.getPrototypeOf(parentEntity) as ModelClass;
     if (proto && proto.name && proto.name !== 'Function') {
       tree.unshift(proto);
       getRecursivePrototypesOf(proto);
@@ -66,7 +71,7 @@ export function initialize({
     throw new Error('Models need to be specified to read all model information from decorators');
   }
 
-  const inheritanceTreesByModelName: { [index: string]: Function[] } = {};
+  const inheritanceTreesByModelName: { [index: string]: ModelClass[] } = {};
   const modelNames: string[] = [];
   for (const model of models) {
     // Load inheritance hierarchy for each model. This will make sure that any decorators on inherited class files are

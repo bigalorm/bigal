@@ -1,5 +1,5 @@
 import * as _ from 'lodash';
-import { Entity } from './Entity';
+import { Entity, EntityFieldValue } from './Entity';
 import {
   Comparer,
   WhereClauseValue,
@@ -32,7 +32,7 @@ interface QueryAndParams {
  * @param {string[]|object[]} [args.sorts] - Property name(s) to sort by
  * @param {number} [args.skip] - Number of records to skip
  * @param {number} [args.limit] - Number of results to return
- * @returns {{query: string, params: Array}}
+ * @returns {{query: string, params: object[]}}
  */
 export function getSelectQueryAndParams({
                                           repositoriesByModelNameLowered,
@@ -47,7 +47,7 @@ export function getSelectQueryAndParams({
   model: ModelMetadata;
   select?: string[];
   where?: WhereQuery;
-  sorts: (string | object)[];
+  sorts: (string | Record<string, number | string>)[];
   skip: number;
   limit: number;
 }): QueryAndParams {
@@ -120,7 +120,7 @@ export function getSelectQueryAndParams({
  * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by model name
  * @param {object} args.model - Model schema
  * @param {object} [args.where] - Object representing the where query
- * @returns {{query: string, params: Array}}
+ * @returns {{query: string, params: object[]}}
  */
 export function getCountQueryAndParams({
                                          repositoriesByModelNameLowered,
@@ -160,7 +160,7 @@ export function getCountQueryAndParams({
  * @param {object|object[]} args.values - Values to insert. Insert multiple records by passing an array of values.
  * @param {boolean} [args.returnRecords=true] - Determines if inserted records should be returned
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
- * @returns {{query: string, params: Array}}
+ * @returns {{query: string, params: object[]}}
  */
 export function getInsertQueryAndParams({
                                           repositoriesByModelNameLowered,
@@ -230,7 +230,7 @@ export function getInsertQueryAndParams({
 
     for (const [entityIndex, entity] of entitiesToInsert.entries()) {
       let value;
-      const entityValue = entity[column.propertyName];
+      const entityValue = entity[column.propertyName] as EntityFieldValue;
       if (_.isNil(entityValue)) {
         value = 'NULL';
       } else {
@@ -248,7 +248,7 @@ export function getInsertQueryAndParams({
             throw new Error(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`);
           }
 
-          const primaryKeyValue = (entityValue as Partial<Entity>)[relatedModelPrimaryKey.propertyName];
+          const primaryKeyValue = (entityValue as Partial<Entity>)[relatedModelPrimaryKey.propertyName] as EntityFieldValue;
           if (_.isNil(primaryKeyValue)) {
             throw new Error(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`);
           }
@@ -304,7 +304,7 @@ export function getInsertQueryAndParams({
  * @param {object} args.values - Values to set.
  * @param {boolean} [args.returnRecords=true] - Determines if inserted records should be returned
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
- * @returns {{query: string, params: Array}}
+ * @returns {{query: string, params: object[]}}
  */
 export function getUpdateQueryAndParams({
                                           repositoriesByModelNameLowered,
@@ -356,7 +356,7 @@ export function getUpdateQueryAndParams({
             throw new Error(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`);
           }
 
-          const primaryKeyValue = (value as Partial<Entity>)[relatedModelPrimaryKey.propertyName];
+          const primaryKeyValue = (value as Partial<Entity>)[relatedModelPrimaryKey.propertyName] as EntityFieldValue;
           if (_.isNil(primaryKeyValue)) {
             throw new Error(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`);
           }
@@ -427,7 +427,7 @@ export function getUpdateQueryAndParams({
  * @param {object} [args.where] - Object representing the where query
  * @param {boolean} [args.returnRecords=true] - Determines if inserted records should be returned
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
- * @returns {{query: string, params: Array}}
+ * @returns {{query: string, params: object[]}}
  */
 export function getDeleteQueryAndParams({
                                           repositoriesByModelNameLowered,
@@ -514,10 +514,10 @@ export function _getColumnsToSelect({
       query += ',';
     }
 
-    if (column.name !== propertyName) {
-      query += `"${column.name}" AS "${propertyName}"`;
-    } else {
+    if (column.name === propertyName) {
       query += `"${propertyName}"`;
+    } else {
+      query += `"${column.name}" AS "${propertyName}"`;
     }
   }
 
@@ -530,7 +530,7 @@ export function _getColumnsToSelect({
  * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by global id
  * @param {object} args.model - Model schema
  * @param {object} [args.where]
- * @param {Array<number|string|object|null>} [args.params] - Objects to pass as parameters for the query
+ * @param {(number|string|object|null)[]} [args.params] - Objects to pass as parameters for the query
  * @returns {object} {{whereStatement?: string, params: Array}}
  * @private
  */
@@ -584,7 +584,7 @@ export function _buildOrderStatement({
                                        sorts,
                                      }: {
   model: ModelMetadata;
-  sorts: (string | object)[];
+  sorts: (string | Record<string, number | string>)[];
 }): string {
   if (_.isNil(sorts) || !_.some(sorts)) {
     return '';
@@ -650,7 +650,7 @@ export function _buildOrderStatement({
  * @param {string} [args.comparer] - Comparison operator
  * @param {boolean} [args.isNegated=false] - If it is negated comparison
  * @param {object|string|number|boolean} [args.value] - Value to compare. Can also represent a complex where query
- * @param {Array} args.params - Objects to pass as parameters for the query
+ * @param {object[]} args.params - Objects to pass as parameters for the query
  * @returns {string} - Query text
  * @private
  */
@@ -695,7 +695,7 @@ function _buildWhere({
       if (_.isArray(value)) {
         const values = (value as string[]).map((val) => {
           if (!_.isString(val)) {
-            throw new Error(`Expected all array values to be strings for "contains" constraint. Property (${propertyName}) in model (${model.name}).`);
+            throw new Error(`Expected all array values to be strings for "contains" constraint. Property (${propertyName || ''}) in model (${model.name}).`);
           }
 
           return `%${val}%`;
@@ -724,12 +724,12 @@ function _buildWhere({
         });
       }
 
-      throw new Error(`Expected value to be a string for "contains" constraint. Property (${propertyName}) in model (${model.name}).`);
+      throw new Error(`Expected value to be a string for "contains" constraint. Property (${propertyName || ''}) in model (${model.name}).`);
     case 'startsWith':
       if (_.isArray(value)) {
         const values = (value as string[]).map((val) => {
           if (!_.isString(val)) {
-            throw new Error(`Expected all array values to be strings for "startsWith" constraint. Property (${propertyName}) in model (${model.name}).`);
+            throw new Error(`Expected all array values to be strings for "startsWith" constraint. Property (${propertyName || ''}) in model (${model.name}).`);
           }
 
           return `${val}%`;
@@ -758,12 +758,12 @@ function _buildWhere({
         });
       }
 
-      throw new Error(`Expected value to be a string for "startsWith" constraint. Property (${propertyName}) in model (${model.name}).`);
+      throw new Error(`Expected value to be a string for "startsWith" constraint. Property (${propertyName || ''}) in model (${model.name}).`);
     case 'endsWith':
       if (_.isArray(value)) {
         const values = (value as string[]).map((val) => {
           if (!_.isString(val)) {
-            throw new Error(`Expected all array values to be strings for "endsWith" constraint. Property (${propertyName}) in model (${model.name}).`);
+            throw new Error(`Expected all array values to be strings for "endsWith" constraint. Property (${propertyName || ''}) in model (${model.name}).`);
           }
 
           return `%${val}`;
@@ -792,7 +792,7 @@ function _buildWhere({
         });
       }
 
-      throw new Error(`Expected value to be a string for "endsWith" constraint. Property (${propertyName}) in model (${model.name}).`);
+      throw new Error(`Expected value to be a string for "endsWith" constraint. Property (${propertyName || ''}) in model (${model.name}).`);
     case 'like':
       return _buildLikeOperatorStatement({
         model,
@@ -821,7 +821,7 @@ function _buildWhere({
             throw new Error(`Unable to find primary key column for ${column.model} specified in where clause for ${model.name}.${column.propertyName}`);
           }
 
-          const primaryKeyValue = (value as Partial<Entity>)[relatedModelPrimaryKey.propertyName];
+          const primaryKeyValue = (value as Partial<Entity>)[relatedModelPrimaryKey.propertyName] as EntityFieldValue;
           if (!_.isNil(primaryKeyValue)) {
             // Treat `value` as a hydrated object
             return _buildWhere({
@@ -880,7 +880,7 @@ function _buildWhere({
             model,
             propertyName,
             isNegated,
-            value: valueWithoutNull[0],
+            value: valueWithoutNull[0] as EntityFieldValue,
             params,
           }));
         } else if (valueWithoutNull.length) {
@@ -897,12 +897,13 @@ function _buildWhere({
                   model,
                   propertyName,
                   isNegated,
-                  value: val,
+                  value: val as EntityFieldValue,
                   params,
                 }));
               }
             } else {
               let castType;
+
               switch (columnTypeLowered) {
                 case 'int':
                 case 'integer':

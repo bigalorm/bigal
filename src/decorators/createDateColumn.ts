@@ -6,11 +6,13 @@ import {
 } from '../metadata';
 import { ColumnTypeOptions } from './ColumnTypeOptions';
 
+// eslint-disable-next-line @typescript-eslint/ban-types
 type ReturnFunctionType = (object: object, propertyName: string) => void;
 
 export function createDateColumn(options?: ColumnTypeOptions): ReturnFunctionType;
 export function createDateColumn(dbColumnName: string, options?: ColumnTypeOptions): ReturnFunctionType;
 export function createDateColumn(dbColumnNameOrOptions?: string | ColumnTypeOptions, options?: ColumnTypeOptions): ReturnFunctionType {
+  // eslint-disable-next-line @typescript-eslint/ban-types
   return function createDateColumnDecorator(object: object, propertyName: string): void {
     const metadataStorage = getMetadataStorage();
     let dbColumnName: string | undefined;

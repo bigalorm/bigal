@@ -39,7 +39,9 @@ function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
 describe('Repository', () => {
   let should: Chai.Should;
   const mockedPool: Pool = mock(Pool);
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   let ProductRepository: Repository<Product>;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   let ProductWithCreateUpdateDateTrackingRepository: Repository<ProductWithCreateUpdateDateTracking>;
 
   // eslint-disable-next-line @typescript-eslint/no-extraneous-class

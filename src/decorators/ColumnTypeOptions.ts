@@ -8,7 +8,7 @@ export interface ColumnTypeOptions extends ColumnBaseOptions {
   /**
    * Default database value
    */
-  defaultsTo?: string | string[] | number | number[] | boolean | boolean[] | (() => string | number | boolean | Date | object) | [];
+  defaultsTo?: string | string[] | number | number[] | boolean | boolean[] | (() => string | number | boolean | Date | Record<string, unknown>) | [];
   /**
    * Array of possible enumerated values
    */

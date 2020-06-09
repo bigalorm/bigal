@@ -42,8 +42,11 @@ function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
 describe('ReadonlyRepository', () => {
   let should: Chai.Should;
   const mockedPool: Pool = mock(Pool);
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   let ProductRepository: Repository<Product>;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   let ReadonlyProductRepository: ReadonlyRepository<ReadonlyProduct>;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   let StoreRepository: Repository<Store>;
 
   // eslint-disable-next-line @typescript-eslint/no-extraneous-class
@@ -793,9 +796,10 @@ describe('ReadonlyRepository', () => {
         public foo: string | undefined;
 
         public toBar(): string {
-          return `${this.foo} bar!`;
+          return `${this.foo || ''} bar!`;
         }
       }
+
       const model = new ModelMetadata({
         name: 'foo',
         type: TestEntityWithInstanceFunction,
@@ -855,6 +859,7 @@ describe('ReadonlyRepository', () => {
           return `${this.foo} bar!`;
         }
       }
+
       const model = new ModelMetadata({
         name: 'foo',
         type: TestEntityWithInstanceFunction,
@@ -1267,6 +1272,7 @@ describe('ReadonlyRepository', () => {
           return `${this.foo} bar!`;
         }
       }
+
       const model = new ModelMetadata({
         name: 'foo',
         type: TestEntityWithInstanceFunction,

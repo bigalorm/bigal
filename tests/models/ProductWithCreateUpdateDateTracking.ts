@@ -6,6 +6,7 @@ export class ProductWithCreateUpdateDateTracking extends Product {
 
     return {
       ...values,
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       name: `beforeCreate - ${values.name}`,
     };
   }
@@ -13,6 +14,7 @@ export class ProductWithCreateUpdateDateTracking extends Product {
   public static beforeUpdate(values: Partial<ProductWithCreateUpdateDateTracking>): Partial<ProductWithCreateUpdateDateTracking> {
     return {
       ...values,
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       name: `beforeUpdate - ${values.name}`,
     };
   }

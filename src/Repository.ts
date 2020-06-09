@@ -265,8 +265,14 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
 
           return resolve(true);
         } catch (ex) {
-          ex.stack += stack;
-          reject(ex);
+          const typedException = ex as Error;
+          if (typedException.stack) {
+            typedException.stack += stack;
+          } else {
+            typedException.stack = stack;
+          }
+
+          reject(typedException);
           return false;
         }
       },

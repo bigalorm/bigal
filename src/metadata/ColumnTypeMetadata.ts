@@ -8,7 +8,7 @@ export interface ColumnTypeMetadataOptions extends ColumnBaseMetadataOptions {
   /**
    * Default database value
    */
-  defaultsTo?: string | string[] | number | number[] | boolean | boolean[] | (() => string | number | boolean | Date | object) | [];
+  defaultsTo?: string | string[] | number | number[] | boolean | boolean[] | (() => string | number | boolean | Date | Record<string, unknown>) | [];
   /**
    * Array of possible enumerated values
    */
@@ -24,7 +24,7 @@ export class ColumnTypeMetadata extends ColumnBaseMetadata {
   /**
    * Default database value
    */
-  public defaultsTo?: string | string[] | number | number[] | boolean | boolean[] | (() => string | number | boolean | Date | object) | [];
+  public defaultsTo?: string | string[] | number | number[] | boolean | boolean[] | (() => string | number | boolean | Date | Record<string, unknown>) | [];
 
   /**
    * Array of possible enumerated values

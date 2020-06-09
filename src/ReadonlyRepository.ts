@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import { Pool } from 'postgres-pool';
-import { Entity, EntityStatic } from './Entity';
+import { Entity, EntityFieldValue, EntityStatic } from './Entity';
 import {
   CountResult,
   FindArgs,
@@ -87,24 +87,25 @@ export class ReadonlyRepository<T extends Entity> {
     } = new Error(`${this.model.name}.findOne()`);
 
     let select: string[] | undefined;
-    let where = {};
+    let where: WhereQuery = {};
     let sort: string | string[] | null = null;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
     for (const [name, value] of Object.entries(args)) {
       let isWhereCriteria = false;
+
       switch (name) {
         case 'select':
-          select = value;
+          select = value as string[] | undefined;
           break;
         case 'where':
-          where = value;
+          where = value as WhereQuery;
           break;
         case 'sort':
-          sort = value;
+          sort = value as string | string[] | null;
           break;
         default:
           select = undefined;
-          where = args;
+          where = args as WhereQuery;
           sort = null;
           isWhereCriteria = true;
           break;
@@ -120,7 +121,7 @@ export class ReadonlyRepository<T extends Entity> {
     }
 
     const populates: Populate[] = [];
-    const sorts: (string | object)[] = [];
+    const sorts: (string | Record<string, number | string>)[] = [];
     if (_.isArray(sort)) {
       sorts.push(...sort);
     } else if (sort) {
@@ -172,7 +173,7 @@ export class ReadonlyRepository<T extends Entity> {
        * Sorts the query
        * @param {string|object} value
        */
-      sort(value: string | object): FindOneResult<T> {
+      sort(value: string | Record<string, number | string>): FindOneResult<T> {
         sorts.push(value);
 
         return this;
@@ -219,11 +220,10 @@ export class ReadonlyRepository<T extends Entity> {
                   throw new Error(`Unable to populate ${modelColumn.model} from ${column.target}#${column.propertyName}. There is no primary key defined in ${modelColumn.model}`);
                 }
 
-                const populateWhere = _.merge({
-                  // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-                  // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
-                  [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName],
-                }, populate.where);
+                const populateWhere = {
+                  [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName] as EntityFieldValue,
+                  ...populate.where,
+                };
 
                 populateQueries.push(async function populateModel(): Promise<void> {
                   const populateResult = await populateRepository.findOne({
@@ -232,7 +232,7 @@ export class ReadonlyRepository<T extends Entity> {
                     sort: populate.sort,
                   });
 
-                  // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                   // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
                   result[populate.propertyName] = populateResult;
                 }());
@@ -252,9 +252,7 @@ export class ReadonlyRepository<T extends Entity> {
                   throw new Error(`Unable to populate ${column.target}#${column.propertyName}. There is no primary key defined in ${modelInstance.model.name}`);
                 }
 
-                // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
-                // @ts-ignore - Ignoring result does not have index signature for known field (primaryKeyColumn.propertyName)
-                const id = result[primaryKeyColumn.propertyName];
+                const id = result[primaryKeyColumn.propertyName] as EntityFieldValue;
                 if (_.isNil(id)) {
                   throw new Error(`Primary key (${primaryKeyColumn.propertyName}) has no value for entity ${column.target}.`);
                 }
@@ -300,15 +298,16 @@ export class ReadonlyRepository<T extends Entity> {
                         limit: populate.limit,
                       });
 
-                      // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+                      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                       // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
                       result[populate.propertyName] = populateResults;
                     }
                   }());
                 } else {
-                  const populateWhere = _.merge({
+                  const populateWhere = {
                     [collectionColumn.via]: id,
-                  }, populate.where);
+                    ...populate.where,
+                  };
 
                   populateQueries.push(async function populateCollection(): Promise<void> {
                     const populateResults = await populateRepository.find({
@@ -319,7 +318,7 @@ export class ReadonlyRepository<T extends Entity> {
                       limit: populate.limit,
                     });
 
-                    // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                     // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
                     result[populate.propertyName] = populateResults;
                   }());
@@ -336,8 +335,14 @@ export class ReadonlyRepository<T extends Entity> {
 
           return resolve(null);
         } catch (ex) {
-          ex.stack += stack;
-          reject(ex);
+          const typedException = ex as Error;
+          if (typedException.stack) {
+            typedException.stack += stack;
+          } else {
+            typedException.stack = stack;
+          }
+
+          reject(typedException);
 
           return null;
         }
@@ -360,32 +365,33 @@ export class ReadonlyRepository<T extends Entity> {
     } = new Error(`${this.model.name}.find()`);
 
     let select: string[] | undefined;
-    let where = {};
+    let where: WhereQuery = {};
     let sort: string | string[] | null = null;
     let skip: number | null = null;
     let limit: number | null = null;
     // Args can be a FindArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
     for (const [name, value] of Object.entries(args)) {
       let isWhereCriteria = false;
+
       switch (name) {
         case 'select':
-          select = value;
+          select = value as string[];
           break;
         case 'where':
-          where = value;
+          where = value as WhereQuery;
           break;
         case 'sort':
-          sort = value;
+          sort = value as string | string[] | null;
           break;
         case 'skip':
-          skip = value;
+          skip = value as number | null;
           break;
         case 'limit':
-          limit = value;
+          limit = value as number | null;
           break;
         default:
           select = undefined;
-          where = args;
+          where = args as WhereQuery;
           sort = null;
           skip = null;
           limit = null;
@@ -398,7 +404,7 @@ export class ReadonlyRepository<T extends Entity> {
       }
     }
 
-    const sorts: (string | object)[] = [];
+    const sorts: (string | Record<string, number | string>)[] = [];
     if (_.isArray(sort)) {
       sorts.push(...sort);
     } else if (sort) {
@@ -422,7 +428,7 @@ export class ReadonlyRepository<T extends Entity> {
        * Sorts the query
        * @param {string|object} value
        */
-      sort(value: string | object): FindResult<T> {
+      sort(value: string | Record<string, number | string>): FindResult<T> {
         sorts.push(value);
 
         return this;
@@ -482,8 +488,14 @@ export class ReadonlyRepository<T extends Entity> {
           const results = await modelInstance._readonlyPool.query(query, params);
           return resolve(modelInstance._buildInstances(results.rows));
         } catch (ex) {
-          ex.stack += stack;
-          reject(ex);
+          const typedException = ex as Error;
+          if (typedException.stack) {
+            typedException.stack += stack;
+          } else {
+            typedException.stack = stack;
+          }
+
+          reject(typedException);
           return [];
         }
       },
@@ -525,19 +537,19 @@ export class ReadonlyRepository<T extends Entity> {
             where,
           });
 
-          const result = await modelInstance._pool.query(query, params);
+          const result = await modelInstance._pool.query<{count: string}>(query, params);
 
           const originalValue = result.rows[0].count;
-          const value = Number(originalValue);
-          if (_.isFinite(value) && Number.isSafeInteger(value)) {
-            return resolve(value);
+          return resolve(Number(originalValue));
+        } catch (ex) {
+          const typedException = ex as Error;
+          if (typedException.stack) {
+            typedException.stack += stack;
+          } else {
+            typedException.stack = stack;
           }
 
-          // If the count is greater than MAX_SAFE_INT, return value as a string
-          return resolve(originalValue);
-        } catch (ex) {
-          ex.stack += stack;
-          reject(ex);
+          reject(typedException);
           return 0;
         }
       },
@@ -559,7 +571,7 @@ export class ReadonlyRepository<T extends Entity> {
         try {
           const value = Number(originalValue);
           if (_.isFinite(value) && value.toString() === originalValue) {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore - string cannot be used to index type T
             instance[name] = value;
           }
@@ -577,7 +589,7 @@ export class ReadonlyRepository<T extends Entity> {
           if (_.isFinite(value) && value.toString() === originalValue) {
             const valueAsInt = _.toInteger(value);
             if (Number.isSafeInteger(valueAsInt)) {
-              // eslint-disable-next-line @typescript-eslint/ban-ts-ignore
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
               // @ts-ignore - string cannot be used to index type T
               instance[name] = valueAsInt;
             }

@@ -10,11 +10,13 @@ import { ColumnModelOptions } from './ColumnModelOptions';
 
 type ColumnOptions = ColumnTypeOptions | ColumnModelOptions;
 
+// eslint-disable-next-line @typescript-eslint/ban-types
 type ReturnFunctionType = (object: object, propertyName: string) => void;
 
 export function primaryColumn(options?: ColumnOptions): ReturnFunctionType;
 export function primaryColumn(dbColumnName: string, options?: ColumnOptions): ReturnFunctionType;
 export function primaryColumn(dbColumnNameOrOptions?: string | ColumnOptions, options?: ColumnOptions): ReturnFunctionType {
+  // eslint-disable-next-line @typescript-eslint/ban-types
   return function primaryColumnDecorator(object: object, propertyName: string): void {
     let dbColumnName: string | undefined;
     if (typeof dbColumnNameOrOptions === 'string') {
