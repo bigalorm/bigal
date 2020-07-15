@@ -1,3 +1,6 @@
+### 4.0.1
+  * Update npms
+
 ### 4.0.0
   * Tightened up type definitions for "object" to Record<string, unknown> or more strict definition
   * Do not return a string from .count() if the number is greater than safe int
