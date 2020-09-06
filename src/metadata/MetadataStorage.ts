@@ -1,13 +1,14 @@
 import { ModelMetadata } from './ModelMetadata';
 import { ColumnModifierMetadata } from './ColumnModifierMetadata';
 import { ColumnMetadata } from './ColumnMetadata';
+import { Entity } from '../Entity';
 
 /**
  * This represents an object to store all of the decorator data. Since there can be multiple decorators per
  * class/property, things will be reconciled when entities are initialized
  */
-export class MetadataStorage {
-  public readonly models: ModelMetadata[] = [];
+export class MetadataStorage<T extends Entity> {
+  public readonly models: ModelMetadata<T>[] = [];
 
   // All columns for all models. This data only represents @column specifics, not additional column modifiers
   public readonly columns: ColumnMetadata[] = [];

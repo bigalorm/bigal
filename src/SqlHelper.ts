@@ -34,7 +34,7 @@ interface QueryAndParams {
  * @param {number} [args.limit] - Number of results to return
  * @returns {{query: string, params: object[]}}
  */
-export function getSelectQueryAndParams({
+export function getSelectQueryAndParams<T extends Entity>({
                                           repositoriesByModelNameLowered,
                                           model,
                                           select,
@@ -44,7 +44,7 @@ export function getSelectQueryAndParams({
                                           limit,
                                         }: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
-  model: ModelMetadata;
+  model: ModelMetadata<T>;
   select?: string[];
   where?: WhereQuery;
   sorts: (string | Record<string, number | string>)[];
@@ -122,13 +122,13 @@ export function getSelectQueryAndParams({
  * @param {object} [args.where] - Object representing the where query
  * @returns {{query: string, params: object[]}}
  */
-export function getCountQueryAndParams({
+export function getCountQueryAndParams<T extends Entity>({
                                          repositoriesByModelNameLowered,
                                          model,
                                          where,
                                        }: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
-  model: ModelMetadata;
+  model: ModelMetadata<T>;
   where?: WhereQuery;
 }): QueryAndParams {
   let query = `SELECT count(*) AS "count" FROM "${model.tableName}"`;
@@ -162,7 +162,7 @@ export function getCountQueryAndParams({
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: object[]}}
  */
-export function getInsertQueryAndParams({
+export function getInsertQueryAndParams<T extends Entity>({
                                           repositoriesByModelNameLowered,
                                           model,
                                           values,
@@ -170,7 +170,7 @@ export function getInsertQueryAndParams({
                                           returnSelect,
                                         }: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
-  model: ModelMetadata;
+  model: ModelMetadata<T>;
   values: Partial<Entity> | Partial<Entity>[];
   returnRecords?: boolean;
   returnSelect?: Extract<keyof Entity, string>[];
@@ -306,7 +306,7 @@ export function getInsertQueryAndParams({
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: object[]}}
  */
-export function getUpdateQueryAndParams({
+export function getUpdateQueryAndParams<T extends Entity>({
                                           repositoriesByModelNameLowered,
                                           model,
                                           where,
@@ -315,7 +315,7 @@ export function getUpdateQueryAndParams({
                                           returnSelect,
                                         }: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
-  model: ModelMetadata;
+  model: ModelMetadata<T>;
   where: WhereQuery;
   values: Partial<Entity>;
   returnRecords?: boolean;
@@ -429,7 +429,7 @@ export function getUpdateQueryAndParams({
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: object[]}}
  */
-export function getDeleteQueryAndParams({
+export function getDeleteQueryAndParams<T extends Entity>({
                                           repositoriesByModelNameLowered,
                                           model,
                                           where,
@@ -437,7 +437,7 @@ export function getDeleteQueryAndParams({
                                           returnSelect,
                                         }: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
-  model: ModelMetadata;
+  model: ModelMetadata<T>;
   where?: WhereQuery;
   returnRecords?: boolean;
   returnSelect?: Extract<keyof Entity, string>[];
@@ -479,11 +479,11 @@ export function getDeleteQueryAndParams({
  * @returns {string} SQL columns
  * @private
  */
-export function _getColumnsToSelect({
+export function _getColumnsToSelect<T extends Entity>({
                                       model,
                                       select,
                                     }: {
-  model: ModelMetadata;
+  model: ModelMetadata<T>;
   select?: Extract<keyof Entity, string>[];
 }): string {
   if (select) {
@@ -534,14 +534,14 @@ export function _getColumnsToSelect({
  * @returns {object} {{whereStatement?: string, params: Array}}
  * @private
  */
-export function _buildWhereStatement({
+export function _buildWhereStatement<T extends Entity>({
                                        repositoriesByModelNameLowered,
                                        model,
                                        where,
                                        params = [],
                                      }: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
-  model: ModelMetadata;
+  model: ModelMetadata<T>;
   where?: WhereQuery;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params?: any[];
@@ -579,11 +579,11 @@ export function _buildWhereStatement({
  * @returns {string} SQL order by statement
  * @private
  */
-export function _buildOrderStatement({
+export function _buildOrderStatement<T extends Entity>({
                                        model,
                                        sorts,
                                      }: {
-  model: ModelMetadata;
+  model: ModelMetadata<T>;
   sorts: (string | Record<string, number | string>)[];
 }): string {
   if (_.isNil(sorts) || !_.some(sorts)) {
@@ -654,7 +654,7 @@ export function _buildOrderStatement({
  * @returns {string} - Query text
  * @private
  */
-function _buildWhere({
+function _buildWhere<T extends Entity>({
                               repositoriesByModelNameLowered,
                               model,
                               propertyName,
@@ -664,7 +664,7 @@ function _buildWhere({
                               params = [],
                             }: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
-  model: ModelMetadata;
+  model: ModelMetadata<T>;
   propertyName?: string;
   comparer?: Comparer | string;
   isNegated?: boolean;
@@ -980,7 +980,7 @@ function _buildWhere({
   }
 }
 
-function _buildOrOperatorStatement({
+function _buildOrOperatorStatement<T extends Entity>({
                                      repositoriesByModelNameLowered,
                                      model,
                                      isNegated,
@@ -988,7 +988,7 @@ function _buildOrOperatorStatement({
                                      params = [],
                                    }: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
-  model: ModelMetadata;
+  model: ModelMetadata<T>;
   isNegated: boolean;
   value: string[] | number[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1018,8 +1018,8 @@ function _buildOrOperatorStatement({
   return `(${orClauses.join(' OR ')})`;
 }
 
-interface ComparisonOperatorStatementParams {
-  model: ModelMetadata;
+interface ComparisonOperatorStatementParams<T extends Entity> {
+  model: ModelMetadata<T>;
   propertyName: string;
   comparer?: Comparer | string;
   isNegated: boolean;
@@ -1028,13 +1028,13 @@ interface ComparisonOperatorStatementParams {
   params: any[];
 }
 
-function _buildLikeOperatorStatement({
+function _buildLikeOperatorStatement<T extends Entity>({
                                        model,
                                        propertyName,
                                        isNegated,
                                        value,
                                        params,
-                                     }: ComparisonOperatorStatementParams): string {
+                                     }: ComparisonOperatorStatementParams<T>): string {
   if (_.isArray(value)) {
     if (!value.length) {
       if (isNegated) {
@@ -1092,14 +1092,14 @@ function _buildLikeOperatorStatement({
   throw new Error(`Expected value to be a string for "like" constraint. Property (${propertyName}) in model (${model.name}).`);
 }
 
-function _buildComparisonOperatorStatement({
+function _buildComparisonOperatorStatement<T extends Entity>({
                                              model,
                                              propertyName,
                                              comparer,
                                              isNegated,
                                              value,
                                              params = [],
-                                           }: ComparisonOperatorStatementParams): string {
+                                           }: ComparisonOperatorStatementParams<T>): string {
   const column = model.columnsByPropertyName[propertyName];
   if (!column) {
     throw new Error(`Unable to find property ${propertyName} on model ${model.name}`);

@@ -1,17 +1,18 @@
 import { MetadataStorage } from './MetadataStorage';
+import { Entity } from '../Entity';
 
-interface GlobalWithBigAlMetadataArgsStorage {
-  bigAlMetadataArgsStorage: MetadataStorage;
+interface GlobalWithBigAlMetadataArgsStorage<T extends Entity> {
+  bigAlMetadataArgsStorage: MetadataStorage<T>;
 }
 
-declare const global: GlobalWithBigAlMetadataArgsStorage;
+declare const global: GlobalWithBigAlMetadataArgsStorage<Entity>;
 
-export function getMetadataStorage(): MetadataStorage {
+export function getMetadataStorage<T extends Entity>(): MetadataStorage<T> {
   if (!global.bigAlMetadataArgsStorage) {
     global.bigAlMetadataArgsStorage = new MetadataStorage();
   }
 
-  return global.bigAlMetadataArgsStorage;
+  return global.bigAlMetadataArgsStorage as MetadataStorage<T>;
 }
 
 export * from './ColumnCollectionMetadata';

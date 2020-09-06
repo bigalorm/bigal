@@ -26,7 +26,7 @@ export interface Connection {
 export interface InitializeOptions extends Connection {
   models: EntityStatic<Entity>[];
   connections?: { [index: string]: Connection };
-  expose?: (repository: ReadonlyRepository<Entity> | Repository<Entity>, tableMetadata: ModelMetadata) => void;
+  expose?: (repository: ReadonlyRepository<Entity> | Repository<Entity>, tableMetadata: ModelMetadata<Entity>) => void;
 }
 
 type ModelClass = EntityStatic<Entity> & {
@@ -83,7 +83,7 @@ export function initialize({
   // Assemble all metadata for complete model and column definitions
   const metadataStorage = getMetadataStorage();
 
-  const modelMetadataByModelName: { [index: string]: ModelMetadata } = {};
+  const modelMetadataByModelName: { [index: string]: ModelMetadata<Entity> } = {};
   for (const model of metadataStorage.models) {
     modelMetadataByModelName[model.name] = model;
   }
@@ -108,7 +108,7 @@ export function initialize({
   // NOTE: Inherited @columns will be replaced if found on a child class. Column modifiers, however, are additive.
   // @column found on a child class will remove any previous modifier
   for (const model of models) {
-    let modelMetadata: ModelMetadata | undefined;
+    let modelMetadata: ModelMetadata<Entity> | undefined;
     let inheritedColumnsByPropertyName: ColumnsByPropertyName = {};
     const inheritedColumnModifiersByPropertyName: ColumnModifiersByPropertyName = {};
     for (const inheritedClass of inheritanceTreesByModelName[model.name]) {

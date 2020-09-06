@@ -15,7 +15,7 @@ export interface ModelMetadataOptions<T extends Entity = Entity> {
   readonly?: boolean;
 }
 
-export class ModelMetadata<T extends Entity = Entity> {
+export class ModelMetadata<T extends Entity> {
   private _columns: readonly Column[] = [];
 
   private _primaryKeyColumn: Column | undefined;

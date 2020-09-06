@@ -32,7 +32,7 @@ export function table(dbNameOrTableOptions?: string | TableOptions, options?: Ta
       options.name = dbTableName || _.snakeCase(className);
     }
 
-    const metadataStorage = getMetadataStorage();
+    const metadataStorage = getMetadataStorage<T>();
     const modelMetadata = new ModelMetadata({
       name: className,
       type: classObject,

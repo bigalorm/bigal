@@ -26,7 +26,7 @@ import {
 import { RepositoriesByModelNameLowered } from './RepositoriesByModelNameLowered';
 
 export interface RepositoryOptions<T extends Entity> {
-  modelMetadata: ModelMetadata;
+  modelMetadata: ModelMetadata<T>;
   type: EntityStatic<T>;
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   pool: Pool;
@@ -34,7 +34,7 @@ export interface RepositoryOptions<T extends Entity> {
 }
 
 export class ReadonlyRepository<T extends Entity> {
-  private readonly _modelMetadata: ModelMetadata;
+  private readonly _modelMetadata: ModelMetadata<T>;
 
   protected _type: EntityStatic<T>;
 
@@ -70,7 +70,7 @@ export class ReadonlyRepository<T extends Entity> {
     }
   }
 
-  public get model(): ModelMetadata {
+  public get model(): ModelMetadata<T> {
     return this._modelMetadata;
   }
 
