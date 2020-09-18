@@ -1,3 +1,8 @@
+### 4.1.0
+  * Fix issues with `like` and array containing null or empty string.
+    Specifically support negated array type value with null and empty string.
+  * Fix `like` constraint with null value
+
 ### 4.0.2
   * Update npms
 

@@ -4,9 +4,9 @@
 [![node version](https://img.shields.io/node/v/bigal.svg?style=flat)](https://nodejs.org)
 [![Known Vulnerabilities](https://snyk.io/test/npm/bigal/badge.svg)](https://snyk.io/test/npm/bigal)
 
-A fast, lightweight ORM for PostgreSQL and node.js, written in Typescript. 
+A fast, lightweight ORM for PostgreSQL and node.js, written in Typescript.
 
-This ORM does not: 
+This ORM does not:
 
 * Create or update db schemas for you
 * Handle associations/joins
@@ -213,6 +213,28 @@ const items = await ProductRepository.find({
   select: ['name'],
 }).where({
   foo: context.params.foo,
+});
+```
+
+#### Example of an OR statement
+
+```js
+const items = await PersonRepository.find().where({
+  firstName: {
+    like: ['walter', 'Jess%'],
+  },
+});
+```
+
+#### Example of an AND statement
+
+```js
+const items = await PersonRepository.find().where({
+  lastName: {
+    '!': {
+      lastName: [null, '', 'Whi%'],
+    },
+  },
 });
 ```
 

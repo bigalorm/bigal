@@ -2110,6 +2110,25 @@ describe('sqlHelper', () => {
         ],
       ]);
     });
+    it('should handle like with an array of null, empty string, and single value', () => {
+      const name = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model,
+        where: {
+          name: {
+            like: [null, '', name],
+          },
+        },
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      whereStatement!.should.equal('WHERE ("name" IS NULL OR "name" = \'\' OR "name" ILIKE $1)');
+      params.should.deep.equal([name]);
+    });
     it('should handle not like with an array of values', () => {
       const name1 = 'TestUpper';
       const name2 = faker.random.uuid();
@@ -2136,6 +2155,27 @@ describe('sqlHelper', () => {
           name2.toLowerCase(),
         ],
       ]);
+    });
+    it('should handle not like with an array of null, empty string, and single value', () => {
+      const name = faker.random.uuid();
+      const {
+        whereStatement,
+        params,
+      } = sqlHelper._buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model,
+        where: {
+          name: {
+            '!': {
+              like: [null, '', name],
+            },
+          },
+        },
+      });
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      whereStatement!.should.equal('WHERE "name" IS NOT NULL AND "name" != \'\' AND "name" NOT ILIKE $1');
+      params.should.deep.equal([name]);
     });
     it('should handle like with an empty array', () => {
       const {

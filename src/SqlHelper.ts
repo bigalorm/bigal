@@ -869,6 +869,15 @@ function _buildWhere<T extends Entity>({
               value: null,
               params,
             }));
+          } else if (item === '') {
+            orConstraints.push(_buildWhere({
+              repositoriesByModelNameLowered,
+              model,
+              propertyName,
+              isNegated,
+              value: '',
+              params,
+            }));
           } else {
             valueWithoutNull.push(item);
           }
@@ -1045,6 +1054,52 @@ function _buildLikeOperatorStatement<T extends Entity>({
     }
 
     if (value.length > 1) {
+      const orConstraints = [];
+      const valueWithoutNullOrEmpty = [];
+      for (const item of value) {
+        if (_.isNull(item)) {
+          orConstraints.push(_buildLikeOperatorStatement({
+            model,
+            propertyName,
+            isNegated,
+            value: null,
+            params,
+          }));
+        } else if (item === '') {
+          orConstraints.push(_buildLikeOperatorStatement({
+            model,
+            propertyName,
+            isNegated,
+            value: '',
+            params,
+          }));
+        } else {
+          valueWithoutNullOrEmpty.push(item);
+        }
+      }
+
+      if (orConstraints.length) {
+        if (valueWithoutNullOrEmpty.length) {
+          orConstraints.push(_buildLikeOperatorStatement({
+            model,
+            propertyName,
+            isNegated,
+            value: valueWithoutNullOrEmpty,
+            params,
+          }));
+        }
+
+        if (orConstraints.length === 1) {
+          return orConstraints[0];
+        }
+
+        if (isNegated) {
+          return orConstraints.join(' AND ');
+        }
+
+        return `(${orConstraints.join(' OR ')})`;
+      }
+
       const lowerValues = (value as string[]).map((val) => val.toLowerCase());
 
       // NOTE: This is doing a case-insensitive pattern match
@@ -1067,13 +1122,17 @@ function _buildLikeOperatorStatement<T extends Entity>({
     value = _.first(value as string[]);
   }
 
-  if (_.isString(value)) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const column = model.columnsByPropertyName[propertyName];
-    if (!column) {
-      throw new Error(`Unable to find property ${propertyName} on model ${model.name}`);
-    }
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+  const column = model.columnsByPropertyName[propertyName];
+  if (!column) {
+    throw new Error(`Unable to find property ${propertyName} on model ${model.name}`);
+  }
 
+  if (_.isNull(value)) {
+    return `"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
+  }
+
+  if (_.isString(value)) {
     if (value) {
       // NOTE: This is doing a case-insensitive pattern match
       params.push(value);
