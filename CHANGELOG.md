@@ -1,3 +1,13 @@
+### 5.0.0
+  * Update npms
+  * Use prettier to format files
+  * Create interfaces for Repository and ReadonlyRepository
+  * Remove interfaces for RepositoriesByModelName and RepositoriesByModelNameLowered
+
+### 4.1.1
+  * Update npms
+  * Use prettier to format files
+
 ### 4.1.0
   * Fix issues with `like` and array containing null or empty string.
     Specifically support negated array type value with null and empty string.
