@@ -2,7 +2,6 @@ import _ from 'lodash';
 import { Pool } from 'postgres-pool';
 import { Entity, EntityFieldValue, EntityStatic } from './Entity';
 import { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, PaginateOptions, PopulateArgs, WhereQuery } from './query';
-// eslint-disable-next-line import/no-cycle
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
 import { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
 import { IReadonlyRepository } from './IReadonlyRepository';

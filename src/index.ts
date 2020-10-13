@@ -15,6 +15,8 @@ import { IReadonlyRepository } from './IReadonlyRepository';
 import { IRepository } from './IRepository';
 
 export * from './Entity';
+export * from './IReadonlyRepository';
+export * from './IRepository';
 export * from './ReadonlyRepository';
 export * from './Repository';
 

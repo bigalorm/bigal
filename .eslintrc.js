@@ -1,6 +1,13 @@
 module.exports = {
   root: true,
-  plugins: ['jsdoc', 'mocha', 'promise', 'security', 'import', '@typescript-eslint'],
+  plugins: [
+    'jsdoc', //
+    'mocha',
+    'promise',
+    'security',
+    'import',
+    '@typescript-eslint',
+  ],
   extends: ['eslint:recommended', 'airbnb-base'],
   env: {
     node: true,
@@ -201,7 +208,13 @@ module.exports = {
         '@typescript-eslint/no-extraneous-class': 'error',
         '@typescript-eslint/explicit-function-return-type': 'error',
         '@typescript-eslint/explicit-member-accessibility': ['error'],
-        '@typescript-eslint/naming-convention': 'error',
+        '@typescript-eslint/naming-convention': [
+          'error',
+          {
+            selector: 'enumMember',
+            format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
+          },
+        ],
         '@typescript-eslint/member-ordering': [
           'error',
           {

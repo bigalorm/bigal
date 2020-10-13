@@ -7,7 +7,6 @@ import {
   ReturnSelect,
   WhereQuery,
 } from './query';
-// eslint-disable-next-line import/no-cycle
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper';
 import { IRepository } from './IRepository';
 import { ReadonlyRepository } from './ReadonlyRepository';
