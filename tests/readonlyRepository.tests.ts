@@ -4,10 +4,11 @@ import * as faker from 'faker';
 import { Pool } from 'postgres-pool';
 import { QueryResult } from 'pg';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
-import { initialize, Entity, ReadonlyRepository, Repository } from '../src';
+import { initialize, Entity, ReadonlyRepository, Repository, IReadonlyRepository, IRepository } from '../src';
 import { Category, Product, ProductCategory, ReadonlyProduct, Store } from './models';
 import { ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
-import { RepositoriesByModelNameLowered } from '../src/RepositoriesByModelNameLowered';
+
+type RepositoriesByModelNameLowered = Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
 
 function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
   return {

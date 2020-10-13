@@ -4,10 +4,11 @@ import * as faker from 'faker';
 import { Pool } from 'postgres-pool';
 import { mock } from 'ts-mockito';
 import * as sqlHelper from '../src/SqlHelper';
-import { RepositoriesByModelNameLowered } from '../src/RepositoriesByModelNameLowered';
-import { initialize, Entity, Repository } from '../src';
+import { initialize, Entity, Repository, IReadonlyRepository, IRepository } from '../src';
 import { ColumnCollectionMetadata, ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
 import { Category, Product, ProductCategory, ProductWithCreatedAt, ProductWithCreateUpdateDateTracking, ReadonlyProduct, Store } from './models';
+
+type RepositoriesByModelNameLowered = Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
 
 describe('sqlHelper', () => {
   let should: Chai.Should;
