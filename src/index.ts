@@ -11,21 +11,21 @@ import {
   getMetadataStorage,
   ModelMetadata,
 } from './metadata';
-import { RepositoriesByModelName } from './RepositoriesByModelName';
-import { RepositoriesByModelNameLowered } from './RepositoriesByModelNameLowered';
+import { IReadonlyRepository } from './IReadonlyRepository';
+import { IRepository } from './IRepository';
 
 export * from './Entity';
 export * from './ReadonlyRepository';
 export * from './Repository';
 
-export interface Connection {
+export interface IConnection {
   pool: Pool;
   readonlyPool?: Pool;
 }
 
-export interface InitializeOptions extends Connection {
+export interface InitializeOptions extends IConnection {
   models: EntityStatic<Entity>[];
-  connections?: { [index: string]: Connection };
+  connections?: { [index: string]: IConnection };
   expose?: (repository: ReadonlyRepository<Entity> | Repository<Entity>, tableMetadata: ModelMetadata<Entity>) => void;
 }
 
@@ -60,7 +60,7 @@ function getInheritanceTree(model: ModelClass): ModelClass[] {
  * @param {Function} [expose] - Used to expose model classes
  * @returns {object} Repositories by model name
  */
-export function initialize({ models, pool, readonlyPool = pool, connections = {}, expose }: InitializeOptions): RepositoriesByModelName {
+export function initialize({ models, pool, readonlyPool = pool, connections = {}, expose }: InitializeOptions): Record<string, IReadonlyRepository<Entity> | IRepository<Entity>> {
   if (!models.length) {
     throw new Error('Models need to be specified to read all model information from decorators');
   }
@@ -188,8 +188,8 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
     }
   }
 
-  const repositoriesByModelNameLowered: RepositoriesByModelNameLowered = {};
-  const repositoriesByModelName: RepositoriesByModelName = {};
+  const repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>> = {};
+  const repositoriesByModelName: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>> = {};
 
   for (const modelName of modelNames) {
     const model = modelMetadataByModelName[modelName];

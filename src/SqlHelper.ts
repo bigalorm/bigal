@@ -1,14 +1,14 @@
 import * as _ from 'lodash';
 import { Entity, EntityFieldValue } from './Entity';
 import { Comparer, WhereClauseValue, WhereQuery } from './query';
-// eslint-disable-next-line import/no-cycle
-import { RepositoriesByModelNameLowered } from './RepositoriesByModelNameLowered';
 import {
   ColumnCollectionMetadata, //
   ColumnModelMetadata,
   ColumnTypeMetadata,
   ModelMetadata,
 } from './metadata';
+import { IReadonlyRepository } from './IReadonlyRepository';
+import { IRepository } from './IRepository';
 
 interface QueryAndParams {
   query: string;
@@ -39,7 +39,7 @@ export function getSelectQueryAndParams<T extends Entity>({
   skip,
   limit,
 }: {
-  repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
   select?: string[];
   where?: WhereQuery;
@@ -120,7 +120,7 @@ export function getCountQueryAndParams<T extends Entity>({
   model,
   where,
 }: {
-  repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
   where?: WhereQuery;
 }): QueryAndParams {
@@ -159,7 +159,7 @@ export function getInsertQueryAndParams<T extends Entity>({
   returnRecords = true,
   returnSelect,
 }: {
-  repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
   values: Partial<Entity> | Partial<Entity>[];
   returnRecords?: boolean;
@@ -304,7 +304,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
   returnRecords = true,
   returnSelect,
 }: {
-  repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
   where: WhereQuery;
   values: Partial<Entity>;
@@ -424,7 +424,7 @@ export function getDeleteQueryAndParams<T extends Entity>({
   returnRecords = true,
   returnSelect,
 }: {
-  repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
   where?: WhereQuery;
   returnRecords?: boolean;
@@ -519,7 +519,7 @@ export function buildWhereStatement<T extends Entity>({
   where,
   params = [],
 }: {
-  repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
   where?: WhereQuery;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -633,7 +633,7 @@ function buildWhere<T extends Entity>({
   value,
   params = [],
 }: {
-  repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
   propertyName?: string;
   comparer?: Comparer | string;
@@ -976,7 +976,7 @@ function buildOrOperatorStatement<T extends Entity>({
   value,
   params = [],
 }: {
-  repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
   isNegated: boolean;
   value: string[] | number[];

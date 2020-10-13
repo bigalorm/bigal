@@ -1,6 +1,4 @@
 import _ from 'lodash';
-// eslint-disable-next-line import/no-cycle
-import { ReadonlyRepository } from './ReadonlyRepository';
 import { Entity } from './Entity';
 import {
   CreateUpdateDeleteOptions, //
@@ -11,8 +9,10 @@ import {
 } from './query';
 // eslint-disable-next-line import/no-cycle
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper';
+import { IRepository } from './IRepository';
+import { ReadonlyRepository } from './ReadonlyRepository';
 
-export class Repository<T extends Entity> extends ReadonlyRepository<T> {
+export class Repository<T extends Entity> extends ReadonlyRepository<T> implements IRepository<T> {
   /**
    * Creates a objects using the specified values
    * @param {object} values - Values to insert as multiple new objects.

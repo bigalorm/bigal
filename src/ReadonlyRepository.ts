@@ -1,36 +1,22 @@
 import _ from 'lodash';
 import { Pool } from 'postgres-pool';
 import { Entity, EntityFieldValue, EntityStatic } from './Entity';
-import {
-  CountResult, //
-  FindArgs,
-  FindOneArgs,
-  FindOneResult,
-  FindResult,
-  PaginateOptions,
-  PopulateArgs,
-  WhereQuery,
-} from './query';
+import { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, PaginateOptions, PopulateArgs, WhereQuery } from './query';
 // eslint-disable-next-line import/no-cycle
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
-import {
-  ColumnCollectionMetadata, //
-  ColumnModelMetadata,
-  ColumnTypeMetadata,
-  ModelMetadata,
-} from './metadata';
-// eslint-disable-next-line import/no-cycle
-import { RepositoriesByModelNameLowered } from './RepositoriesByModelNameLowered';
+import { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
+import { IReadonlyRepository } from './IReadonlyRepository';
+import { IRepository } from './IRepository';
 
-export interface RepositoryOptions<T extends Entity> {
+export interface IRepositoryOptions<T extends Entity> {
   modelMetadata: ModelMetadata<T>;
   type: EntityStatic<T>;
-  repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   pool: Pool;
   readonlyPool?: Pool;
 }
 
-export class ReadonlyRepository<T extends Entity> {
+export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository<T> {
   private readonly _modelMetadata: ModelMetadata<T>;
 
   protected _type: EntityStatic<T>;
@@ -39,13 +25,13 @@ export class ReadonlyRepository<T extends Entity> {
 
   protected _readonlyPool: Pool;
 
-  protected _repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
+  protected _repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
 
   protected _floatProperties: string[] = [];
 
   protected _intProperties: string[] = [];
 
-  public constructor({ modelMetadata, type, pool, readonlyPool, repositoriesByModelNameLowered }: RepositoryOptions<T>) {
+  public constructor({ modelMetadata, type, pool, readonlyPool, repositoriesByModelNameLowered }: IRepositoryOptions<T>) {
     this._modelMetadata = modelMetadata;
     this._type = type;
     this._pool = pool;
