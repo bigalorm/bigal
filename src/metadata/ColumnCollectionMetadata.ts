@@ -63,7 +63,7 @@ export class ColumnCollectionMetadata extends ColumnBaseMetadata {
   }
 
   public constructor({
-    target,
+    target, //
     name,
     propertyName,
     required,

@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import {
-  getMetadataStorage,
+  getMetadataStorage, //
   ColumnModifierMetadata,
   ColumnTypeMetadata,
 } from '../metadata';
@@ -33,14 +33,16 @@ export function updateDateColumn(dbColumnNameOrOptions?: string | ColumnTypeOpti
       }
 
       const metadataStorage = getMetadataStorage();
-      metadataStorage.columns.push(new ColumnTypeMetadata({
-        target: object.constructor.name,
-        name: dbColumnName,
-        propertyName,
-        updateDate: true,
-        required: options.required,
-        type: options.type,
-      }));
+      metadataStorage.columns.push(
+        new ColumnTypeMetadata({
+          target: object.constructor.name,
+          name: dbColumnName,
+          propertyName,
+          updateDate: true,
+          required: options.required,
+          type: options.type,
+        }),
+      );
     } else {
       const metadataStorage = getMetadataStorage();
       metadataStorage.columnModifiers.push({

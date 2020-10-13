@@ -3,29 +3,9 @@ import _ from 'lodash';
 import * as faker from 'faker';
 import { Pool } from 'postgres-pool';
 import { QueryResult } from 'pg';
-import {
-  anyString,
-  anything,
-  capture,
-  instance,
-  mock,
-  reset,
-  verify,
-  when,
-} from 'ts-mockito';
-import {
-  initialize,
-  Entity,
-  ReadonlyRepository,
-  Repository,
-} from '../src';
-import {
-  Category,
-  Product,
-  ProductCategory,
-  ReadonlyProduct,
-  Store,
-} from './models';
+import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
+import { initialize, Entity, ReadonlyRepository, Repository } from '../src';
+import { Category, Product, ProductCategory, ReadonlyProduct, Store } from './models';
 import { ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
 import { RepositoriesByModelNameLowered } from '../src/RepositoriesByModelNameLowered';
 
@@ -50,20 +30,13 @@ describe('ReadonlyRepository', () => {
   let StoreRepository: Repository<Store>;
 
   // eslint-disable-next-line @typescript-eslint/no-extraneous-class
-  class TestEntity implements Entity {
-  }
+  class TestEntity implements Entity {}
 
   before(() => {
     should = chai.should();
 
     const repositoriesByModelName = initialize({
-      models: [
-        Category,
-        Product,
-        ProductCategory,
-        ReadonlyProduct,
-        Store,
-      ],
+      models: [Category, Product, ProductCategory, ReadonlyProduct, Store],
       pool: instance(mockedPool),
     });
 
@@ -88,10 +61,7 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result!.should.deep.equal(product);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "readonly_products" LIMIT 1');
       params!.should.deep.equal([]);
     });
@@ -113,10 +83,7 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result!.should.deep.equal(product);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "name","id" FROM "products" WHERE "id"=$1 ORDER BY "name" LIMIT 1');
       params!.should.deep.equal([product.id]);
     });
@@ -134,10 +101,7 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result!.should.deep.equal(product);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
       params!.should.deep.equal([product.id]);
     });
@@ -155,10 +119,7 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result!.should.deep.equal(product);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
       params!.should.deep.equal([product.id]);
     });
@@ -170,9 +131,7 @@ describe('ReadonlyRepository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
-      const [
-        result,
-      ] = await Promise.all([
+      const [result] = await Promise.all([
         ProductRepository.findOne().where({
           id: product.id,
         }),
@@ -180,10 +139,7 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result!.should.deep.equal(product);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
       params!.should.deep.equal([product.id]);
     });
@@ -199,10 +155,7 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result!.should.deep.equal(product);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "name" LIMIT 1');
       params!.should.deep.equal([]);
     });
@@ -238,10 +191,14 @@ describe('ReadonlyRepository', () => {
 
         const id = faker.random.number();
         const numberValue = 42;
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
-          id,
-          foo: `${numberValue}`,
-        }]));
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([
+            {
+              id,
+              foo: `${numberValue}`,
+            },
+          ]),
+        );
 
         const result = await repository.findOne();
         should.exist(result);
@@ -251,10 +208,7 @@ describe('ReadonlyRepository', () => {
           foo: numberValue,
         });
 
-        const [
-          query,
-          params,
-        ] = capture(mockedPool.query).first();
+        const [query, params] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
         params!.should.deep.equal([]);
       });
@@ -289,10 +243,14 @@ describe('ReadonlyRepository', () => {
 
         const id = faker.random.number();
         const numberValue = 42.24;
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
-          id,
-          foo: `${numberValue}`,
-        }]));
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([
+            {
+              id,
+              foo: `${numberValue}`,
+            },
+          ]),
+        );
 
         const result = await repository.findOne();
         should.exist(result);
@@ -301,10 +259,7 @@ describe('ReadonlyRepository', () => {
           foo: 42,
         });
 
-        const [
-          query,
-          params,
-        ] = capture(mockedPool.query).first();
+        const [query, params] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
         params!.should.deep.equal([]);
       });
@@ -339,10 +294,14 @@ describe('ReadonlyRepository', () => {
 
         const id = faker.random.number();
         const numberValue = 42;
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
-          id,
-          foo: numberValue,
-        }]));
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([
+            {
+              id,
+              foo: numberValue,
+            },
+          ]),
+        );
 
         const result = await repository.findOne();
         should.exist(result);
@@ -351,10 +310,7 @@ describe('ReadonlyRepository', () => {
           foo: numberValue,
         });
 
-        const [
-          query,
-          params,
-        ] = capture(mockedPool.query).first();
+        const [query, params] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
         params!.should.deep.equal([]);
       });
@@ -389,10 +345,14 @@ describe('ReadonlyRepository', () => {
 
         const id = faker.random.number();
         const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0`;
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
-          id,
-          foo: largeNumberValue,
-        }]));
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([
+            {
+              id,
+              foo: largeNumberValue,
+            },
+          ]),
+        );
 
         const result = await repository.findOne();
         should.exist(result);
@@ -401,10 +361,7 @@ describe('ReadonlyRepository', () => {
           foo: largeNumberValue,
         });
 
-        const [
-          query,
-          params,
-        ] = capture(mockedPool.query).first();
+        const [query, params] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
         params!.should.deep.equal([]);
       });
@@ -439,10 +396,14 @@ describe('ReadonlyRepository', () => {
 
         const id = faker.random.number();
         const numberValue = 42.24;
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
-          id,
-          foo: `${numberValue}`,
-        }]));
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([
+            {
+              id,
+              foo: `${numberValue}`,
+            },
+          ]),
+        );
 
         const result = await repository.findOne();
         should.exist(result);
@@ -451,10 +412,7 @@ describe('ReadonlyRepository', () => {
           foo: numberValue,
         });
 
-        const [
-          query,
-          params,
-        ] = capture(mockedPool.query).first();
+        const [query, params] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
         params!.should.deep.equal([]);
       });
@@ -489,10 +447,14 @@ describe('ReadonlyRepository', () => {
 
         const id = faker.random.number();
         const numberValue = 42.24;
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
-          id,
-          foo: numberValue,
-        }]));
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([
+            {
+              id,
+              foo: numberValue,
+            },
+          ]),
+        );
 
         const result = await repository.findOne();
         should.exist(result);
@@ -501,10 +463,7 @@ describe('ReadonlyRepository', () => {
           foo: numberValue,
         });
 
-        const [
-          query,
-          params,
-        ] = capture(mockedPool.query).first();
+        const [query, params] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
         params!.should.deep.equal([]);
       });
@@ -539,10 +498,14 @@ describe('ReadonlyRepository', () => {
 
         const id = faker.random.number();
         const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0.42`;
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{
-          id,
-          foo: largeNumberValue,
-        }]));
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([
+            {
+              id,
+              foo: largeNumberValue,
+            },
+          ]),
+        );
 
         const result = await repository.findOne();
         should.exist(result);
@@ -551,10 +514,7 @@ describe('ReadonlyRepository', () => {
           foo: largeNumberValue,
         });
 
-        const [
-          query,
-          params,
-        ] = capture(mockedPool.query).first();
+        const [query, params] = capture(mockedPool.query).first();
         query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
         params!.should.deep.equal([]);
       });
@@ -571,11 +531,13 @@ describe('ReadonlyRepository', () => {
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([{
-          id: product.id,
-          name: product.name,
-          store: store.id,
-        }]),
+        getQueryResult([
+          {
+            id: product.id,
+            name: product.name,
+            store: store.id,
+          },
+        ]),
         getQueryResult([store]),
       );
 
@@ -584,16 +546,10 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result!.should.deep.equal(product);
 
-      const [
-        productQuery,
-        productQueryParams,
-      ] = capture(mockedPool.query).first();
+      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
       productQueryParams!.should.deep.equal([]);
-      const [
-        storeQuery,
-        storeQueryParams,
-      ] = capture(mockedPool.query).second();
+      const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
       storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1 LIMIT 1');
       storeQueryParams!.should.deep.equal([store.id]);
     });
@@ -613,30 +569,24 @@ describe('ReadonlyRepository', () => {
         store: store.id,
       };
 
-      const storeWithProducts = _.extend({
-        products: [product1, product2],
-      }, store);
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([store]),
-        getQueryResult([product1, product2]),
+      const storeWithProducts = _.extend(
+        {
+          products: [product1, product2],
+        },
+        store,
       );
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1, product2]));
 
       const result = await StoreRepository.findOne().populate('products');
       verify(mockedPool.query(anyString(), anything())).twice();
       should.exist(result);
       result!.should.deep.equal(storeWithProducts);
 
-      const [
-        storeQuery,
-        storeQueryParams,
-      ] = capture(mockedPool.query).first();
+      const [storeQuery, storeQueryParams] = capture(mockedPool.query).first();
       storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
       storeQueryParams!.should.deep.equal([]);
-      const [
-        productQuery,
-        productQueryParams,
-      ] = capture(mockedPool.query).second();
+      const [productQuery, productQueryParams] = capture(mockedPool.query).second();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
       productQueryParams!.should.deep.equal([store.id]);
     });
@@ -664,41 +614,29 @@ describe('ReadonlyRepository', () => {
         category: category2.id,
       };
 
-      const productWithCategories = _.extend({
-        categories: [category1, category2],
-      }, product);
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([product]),
-        getQueryResult([productCategory1Map, productCategory2Map]),
-        getQueryResult([category1, category2]),
+      const productWithCategories = _.extend(
+        {
+          categories: [category1, category2],
+        },
+        product,
       );
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory1Map, productCategory2Map]), getQueryResult([category1, category2]));
 
       const result = await ProductRepository.findOne().populate('categories');
       verify(mockedPool.query(anyString(), anything())).thrice();
       should.exist(result);
       result!.should.deep.equal(productWithCategories);
 
-      const [
-        productQuery,
-        productQueryParams,
-      ] = capture(mockedPool.query).first();
+      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
       productQueryParams!.should.deep.equal([]);
-      const [
-        productCategoryMapQuery,
-        productCategoryMapQueryParams,
-      ] = capture(mockedPool.query).second();
+      const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).second();
       productCategoryMapQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
       productCategoryMapQueryParams!.should.deep.equal([product.id]);
-      const [
-        categoryQuery,
-        categoryQueryParams,
-      ] = capture(mockedPool.query).third();
+      const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
       categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
-      categoryQueryParams!.should.deep.equal([
-        [category1.id, category2.id],
-      ]);
+      categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
     });
     it('should support complex query with multiple chained modifiers', async () => {
       const store = {
@@ -729,10 +667,13 @@ describe('ReadonlyRepository', () => {
         category: category2.id,
       };
 
-      const fullProduct = _.defaults({
-        store,
-        categories: [category1, category2],
-      }, product);
+      const fullProduct = _.defaults(
+        {
+          store,
+          categories: [category1, category2],
+        },
+        product,
+      );
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([product]),
@@ -760,33 +701,18 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result!.should.deep.equal(fullProduct);
 
-      const [
-        productQuery,
-        productQueryParams,
-      ] = capture(mockedPool.query).first();
+      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 1');
       productQueryParams!.should.deep.equal([store.id]);
-      const [
-        storeQuery,
-        storeQueryParams,
-      ] = capture(mockedPool.query).second();
+      const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
       storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1 LIMIT 1');
       storeQueryParams!.should.deep.equal([store.id]);
-      const [
-        productCategoryMapQuery,
-        productCategoryMapQueryParams,
-      ] = capture(mockedPool.query).third();
+      const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).third();
       productCategoryMapQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
       productCategoryMapQueryParams!.should.deep.equal([product.id]);
-      const [
-        categoryQuery,
-        categoryQueryParams,
-      ] = capture(mockedPool.query).byCallIndex(3);
+      const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).byCallIndex(3);
       categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) AND "name" ILIKE $2 ORDER BY "name" LIMIT 2');
-      categoryQueryParams!.should.deep.equal([
-        [category1.id, category2.id],
-        'category%',
-      ]);
+      categoryQueryParams!.should.deep.equal([[category1.id, category2.id], 'category%']);
     });
     it('should have instance functions be equal across multiple queries', async () => {
       // eslint-disable-next-line max-classes-per-file
@@ -831,10 +757,12 @@ describe('ReadonlyRepository', () => {
       const id = faker.random.number();
       const foo = faker.random.uuid();
       when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([{
-          id,
-          foo,
-        }]),
+        getQueryResult([
+          {
+            id,
+            foo,
+          },
+        ]),
       );
 
       const result1 = await repository.findOne();
@@ -888,9 +816,7 @@ describe('ReadonlyRepository', () => {
       });
       repositories[model.name.toLowerCase()] = repository;
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([null]),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([null]));
 
       const result = await repository.findOne();
 
@@ -901,25 +827,23 @@ describe('ReadonlyRepository', () => {
   });
   describe('#find()', () => {
     it('should support call without constraints', async () => {
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult(products),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find();
       should.exist(result);
       result.should.deep.equal(products);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
       params!.should.deep.equal([]);
     });
@@ -928,17 +852,18 @@ describe('ReadonlyRepository', () => {
         id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult(products),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find({
         select: ['name'],
         where: {
@@ -952,32 +877,27 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result.should.deep.equal(products);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "name","id" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2 ORDER BY "name" LIMIT 24 OFFSET 5');
-      params!.should.deep.equal([
-        _.map(products, 'id'),
-        store.id,
-      ]);
+      params!.should.deep.equal([_.map(products, 'id'), store.id]);
     });
     it('should support call with where constraint as a parameter', async () => {
       const store = {
         id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult(products),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find({
         id: _.map(products, 'id'),
         store,
@@ -985,69 +905,65 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result.should.deep.equal(products);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
-      params!.should.deep.equal([
-        _.map(products, 'id'),
-        store.id,
-      ]);
+      params!.should.deep.equal([_.map(products, 'id'), store.id]);
     });
     it('should support call with chained where constraints', async () => {
       const store = {
         id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult(products),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find().where({
         store: store.id,
       });
       should.exist(result);
       result.should.deep.equal(products);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
       params!.should.deep.equal([store.id]);
     });
     it('should support call with chained where constraints - array ILIKE array of values', async () => {
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-        serialNumber: faker.random.uuid(),
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-        serialNumber: faker.random.uuid(),
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+          serialNumber: faker.random.uuid(),
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+          serialNumber: faker.random.uuid(),
+        },
+      ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult(products),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find().where({
-        or: [{
-          name: {
-            like: 'product',
+        or: [
+          {
+            name: {
+              like: 'product',
+            },
           },
-        }, {
-          name: {
-            like: 'Foo Bar',
+          {
+            name: {
+              like: 'Foo Bar',
+            },
           },
-        }],
+        ],
         aliases: {
           like: ['Foo', 'BAR'],
         },
@@ -1055,31 +971,27 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result.should.deep.equal(products);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE (("name" ILIKE $1) OR ("name" ILIKE $2)) AND EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")=ANY($3::TEXT[]))');
-      params!.should.deep.equal([
-        'product',
-        'Foo Bar',
-        ['foo', 'bar'],
-      ]);
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal(
+        'SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE (("name" ILIKE $1) OR ("name" ILIKE $2)) AND EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")=ANY($3::TEXT[]))',
+      );
+      params!.should.deep.equal(['product', 'Foo Bar', ['foo', 'bar']]);
     });
     it('should support call with chained where constraints - NOT ILIKE array of values', async () => {
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-        sku: faker.random.uuid(),
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-        sku: faker.random.uuid(),
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+          sku: faker.random.uuid(),
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+          sku: faker.random.uuid(),
+        },
+      ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult(products),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find().where({
         sku: {
           '!': {
@@ -1090,10 +1002,7 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result.should.deep.equal(products);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE lower("sku")<>ALL($1::TEXT[])');
       params!.should.deep.equal([['foo', 'bar']]);
     });
@@ -1102,20 +1011,19 @@ describe('ReadonlyRepository', () => {
         id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult(products),
-      );
-      const [
-        result,
-      ] = await Promise.all([
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      const [result] = await Promise.all([
         ProductRepository.find().where({
           store: store.id,
         }),
@@ -1123,94 +1031,86 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result.should.deep.equal(products);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
       params!.should.deep.equal([store.id]);
     });
     it('should support call with chained sort', async () => {
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult(products),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find().sort('name asc');
       should.exist(result);
       result.should.deep.equal(products);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "name"');
       params!.should.deep.equal([]);
     });
     it('should support call with chained limit', async () => {
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult(products),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find().limit(42);
       should.exist(result);
       result.should.deep.equal(products);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 42');
       params!.should.deep.equal([]);
     });
     it('should support call with chained skip', async () => {
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult(products),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find().skip(24);
       should.exist(result);
       result.should.deep.equal(products);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" OFFSET 24');
       params!.should.deep.equal([]);
     });
     it('should support call with chained paginate', async () => {
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult(products),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find().paginate({
         page: 3,
         limit: 100,
@@ -1218,10 +1118,7 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result.should.deep.equal(products);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 100 OFFSET 200');
       params!.should.deep.equal([]);
     });
@@ -1230,17 +1127,18 @@ describe('ReadonlyRepository', () => {
         id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult(products),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
       const result = await ProductRepository.find()
         .where({
@@ -1254,10 +1152,7 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result.should.deep.equal(products);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 42 OFFSET 24');
       params!.should.deep.equal([store.id]);
     });
@@ -1304,10 +1199,12 @@ describe('ReadonlyRepository', () => {
       const id = faker.random.number();
       const foo = faker.random.uuid();
       when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([{
-          id,
-          foo,
-        }]),
+        getQueryResult([
+          {
+            id,
+            foo,
+          },
+        ]),
       );
 
       const result1 = await repository.find();
@@ -1322,28 +1219,30 @@ describe('ReadonlyRepository', () => {
   });
   describe('#count()', () => {
     it('should support call without constraints', async () => {
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([{
-          count: products.length,
-        }]),
+        getQueryResult([
+          {
+            count: products.length,
+          },
+        ]),
       );
 
       const result = await ProductRepository.count();
       should.exist(result);
       result.should.equal(products.length);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT count(*) AS "count" FROM "products"');
       params!.should.deep.equal([]);
     });
@@ -1352,18 +1251,23 @@ describe('ReadonlyRepository', () => {
         id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([{
-          count: products.length,
-        }]),
+        getQueryResult([
+          {
+            count: products.length,
+          },
+        ]),
       );
 
       const result = await ProductRepository.count({
@@ -1373,33 +1277,32 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result.should.equal(products.length);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
-      params!.should.deep.equal([
-        _.map(products, 'id'),
-        store.id,
-      ]);
+      params!.should.deep.equal([_.map(products, 'id'), store.id]);
     });
     it('should support call with chained where constraints', async () => {
       const store = {
         id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([{
-          count: products.length,
-        }]),
+        getQueryResult([
+          {
+            count: products.length,
+          },
+        ]),
       );
 
       const result = await ProductRepository.count().where({
@@ -1408,10 +1311,7 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result.should.equal(products.length);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
       params!.should.deep.equal([store.id]);
     });
@@ -1420,23 +1320,26 @@ describe('ReadonlyRepository', () => {
         id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
-      const products = [{
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }, {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-      }];
+      const products = [
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.number(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([{
-          count: products.length,
-        }]),
+        getQueryResult([
+          {
+            count: products.length,
+          },
+        ]),
       );
 
-      const [
-        result,
-      ] = await Promise.all([
+      const [result] = await Promise.all([
         ProductRepository.count().where({
           store: store.id,
         }),
@@ -1444,10 +1347,7 @@ describe('ReadonlyRepository', () => {
       should.exist(result);
       result.should.equal(products.length);
 
-      const [
-        query,
-        params,
-      ] = capture(mockedPool.query).first();
+      const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
       params!.should.deep.equal([store.id]);
     });

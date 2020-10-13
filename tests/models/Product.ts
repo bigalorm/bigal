@@ -1,9 +1,6 @@
 import { Entity } from '../../src';
 import { ModelBase } from './ModelBase';
-import {
-  column,
-  table,
-} from '../../src/decorators';
+import { column, table } from '../../src/decorators';
 // eslint-disable-next-line import/no-cycle
 import { Store } from './Store';
 // eslint-disable-next-line import/no-cycle

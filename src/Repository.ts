@@ -3,18 +3,14 @@ import _ from 'lodash';
 import { ReadonlyRepository } from './ReadonlyRepository';
 import { Entity } from './Entity';
 import {
-  CreateUpdateDeleteOptions,
+  CreateUpdateDeleteOptions, //
   DestroyResult,
   DoNotReturnRecords,
   ReturnSelect,
   WhereQuery,
 } from './query';
 // eslint-disable-next-line import/no-cycle
-import {
-  getDeleteQueryAndParams,
-  getInsertQueryAndParams,
-  getUpdateQueryAndParams,
-} from './SqlHelper';
+import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper';
 
 export class Repository<T extends Entity> extends ReadonlyRepository<T> {
   /**
@@ -80,10 +76,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
       }
     }
 
-    const {
-      query,
-      params,
-    } = getInsertQueryAndParams({
+    const { query, params } = getInsertQueryAndParams({
       repositoriesByModelNameLowered: this._repositoriesByModelNameLowered,
       model: this.model,
       values,
@@ -101,7 +94,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
         return this._buildInstance(results.rows[0]);
       }
 
-      throw new Error(('Unknown error getting created rows back from the database'));
+      throw new Error('Unknown error getting created rows back from the database');
     }
 
     return true;
@@ -160,10 +153,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
       }
     }
 
-    const {
-      query,
-      params,
-    } = getUpdateQueryAndParams({
+    const { query, params } = getUpdateQueryAndParams({
       repositoriesByModelNameLowered: this._repositoriesByModelNameLowered,
       model: this.model,
       where,
@@ -211,9 +201,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
       throw new Error(`${this.model.name} is readonly.`);
     }
 
-    const {
-      stack,
-    } = new Error(`${this.model.name}.destroy()`);
+    const { stack } = new Error(`${this.model.name}.destroy()`);
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
@@ -246,10 +234,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> {
         }
 
         try {
-          const {
-            query,
-            params,
-          } = getDeleteQueryAndParams({
+          const { query, params } = getDeleteQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
             where,

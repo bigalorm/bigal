@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import {
-  getMetadataStorage,
+  getMetadataStorage, //
   ColumnModifierMetadata,
   ColumnTypeMetadata,
   ColumnModelMetadata,
@@ -42,23 +42,27 @@ export function primaryColumn(dbColumnNameOrOptions?: string | ColumnOptions, op
       const metadataStorage = getMetadataStorage();
 
       if (model) {
-        metadataStorage.columns.push(new ColumnModelMetadata({
-          target: object.constructor.name,
-          name: dbColumnName,
-          propertyName,
-          primary: true,
-          required: options.required,
-          model,
-        }));
+        metadataStorage.columns.push(
+          new ColumnModelMetadata({
+            target: object.constructor.name,
+            name: dbColumnName,
+            propertyName,
+            primary: true,
+            required: options.required,
+            model,
+          }),
+        );
       } else {
-        metadataStorage.columns.push(new ColumnTypeMetadata({
-          target: object.constructor.name,
-          name: dbColumnName,
-          propertyName,
-          primary: true,
-          required: options.required,
-          type,
-        }));
+        metadataStorage.columns.push(
+          new ColumnTypeMetadata({
+            target: object.constructor.name,
+            name: dbColumnName,
+            propertyName,
+            primary: true,
+            required: options.required,
+            type,
+          }),
+        );
       }
     } else {
       const metadataStorage = getMetadataStorage();

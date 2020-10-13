@@ -5,5 +5,4 @@ import { table } from '../../src/decorators';
   name: 'readonly_products',
   readonly: true,
 })
-export class ReadonlyProduct extends Product {
-}
+export class ReadonlyProduct extends Product {}

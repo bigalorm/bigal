@@ -1,9 +1,5 @@
 import { Entity } from '../../src';
-import {
-  column,
-  primaryColumn,
-  table,
-} from '../../src/decorators';
+import { column, primaryColumn, table } from '../../src/decorators';
 // eslint-disable-next-line import/no-cycle
 import { Category } from './Category';
 // eslint-disable-next-line import/no-cycle

@@ -2,7 +2,7 @@ import _ from 'lodash';
 import { Pool } from 'postgres-pool';
 import { Entity, EntityFieldValue, EntityStatic } from './Entity';
 import {
-  CountResult,
+  CountResult, //
   FindArgs,
   FindOneArgs,
   FindOneResult,
@@ -12,12 +12,9 @@ import {
   WhereQuery,
 } from './query';
 // eslint-disable-next-line import/no-cycle
+import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
 import {
-  getCountQueryAndParams,
-  getSelectQueryAndParams,
-} from './SqlHelper';
-import {
-  ColumnCollectionMetadata,
+  ColumnCollectionMetadata, //
   ColumnModelMetadata,
   ColumnTypeMetadata,
   ModelMetadata,
@@ -48,13 +45,7 @@ export class ReadonlyRepository<T extends Entity> {
 
   protected _intProperties: string[] = [];
 
-  public constructor({
-                modelMetadata,
-                type,
-                pool,
-                readonlyPool,
-                repositoriesByModelNameLowered,
-              }: RepositoryOptions<T>) {
+  public constructor({ modelMetadata, type, pool, readonlyPool, repositoriesByModelNameLowered }: RepositoryOptions<T>) {
     this._modelMetadata = modelMetadata;
     this._type = type;
     this._pool = pool;
@@ -82,9 +73,7 @@ export class ReadonlyRepository<T extends Entity> {
    * @param {string|object|string[]|object[]} [args.sort] - Property name(s) to sort by
    */
   public findOne(args: FindOneArgs | WhereQuery = {}): FindOneResult<T> {
-    const {
-      stack,
-    } = new Error(`${this.model.name}.findOne()`);
+    const { stack } = new Error(`${this.model.name}.findOne()`);
 
     let select: string[] | undefined;
     let where: WhereQuery = {};
@@ -151,13 +140,16 @@ export class ReadonlyRepository<T extends Entity> {
        * @param {string|number} [options.skip] - Number of records to skip
        * @param {string|number} [options.limit] - Number of results to return
        */
-      populate(propertyName: Extract<keyof T, string>, {
-        where: populateWhere,
-        select: populateSelect,
-        sort: populateSort,
-        skip: populateSkip,
-        limit: populateLimit,
-      }: PopulateArgs = {}): FindOneResult<T> {
+      populate(
+        propertyName: Extract<keyof T, string>,
+        {
+          where: populateWhere, //
+          select: populateSelect,
+          sort: populateSort,
+          skip: populateSkip,
+          limit: populateLimit,
+        }: PopulateArgs = {},
+      ): FindOneResult<T> {
         populates.push({
           propertyName,
           where: populateWhere,
@@ -178,16 +170,13 @@ export class ReadonlyRepository<T extends Entity> {
 
         return this;
       },
-      async then(resolve: (result: T | null) => (T | Promise<T> | null), reject: (err: Error) => void): Promise<T | null> {
+      async then(resolve: (result: T | null) => T | Promise<T> | null, reject: (err: Error) => void): Promise<T | null> {
         try {
           if (_.isString(where)) {
             throw new Error('The query cannot be a string, it must be an object');
           }
 
-          const {
-            query,
-            params,
-          } = getSelectQueryAndParams({
+          const { query, params } = getSelectQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
             select,
@@ -225,17 +214,19 @@ export class ReadonlyRepository<T extends Entity> {
                   ...populate.where,
                 };
 
-                populateQueries.push(async function populateModel(): Promise<void> {
-                  const populateResult = await populateRepository.findOne({
-                    select: populate.select,
-                    where: populateWhere,
-                    sort: populate.sort,
-                  });
+                populateQueries.push(
+                  (async function populateModel(): Promise<void> {
+                    const populateResult = await populateRepository.findOne({
+                      select: populate.select,
+                      where: populateWhere,
+                      sort: populate.sort,
+                    });
 
-                  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                  // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
-                  result[populate.propertyName] = populateResult;
-                }());
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                    // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
+                    result[populate.propertyName] = populateResult;
+                  })(),
+                );
               } else if (collectionColumn.collection) {
                 const populateRepository = modelInstance._repositoriesByModelNameLowered[collectionColumn.collection.toLowerCase()];
                 if (!populateRepository) {
@@ -244,7 +235,9 @@ export class ReadonlyRepository<T extends Entity> {
 
                 const populateModelPrimaryKeyColumn = populateRepository.model.primaryKeyColumn;
                 if (!populateModelPrimaryKeyColumn) {
-                  throw new Error(`Unable to populate ${collectionColumn.collection} objects from ${column.target}#${column.propertyName}. There is no primary key defined in ${collectionColumn.collection}`);
+                  throw new Error(
+                    `Unable to populate ${collectionColumn.collection} objects from ${column.target}#${column.propertyName}. There is no primary key defined in ${collectionColumn.collection}`,
+                  );
                 }
 
                 const { primaryKeyColumn } = modelInstance.model;
@@ -276,20 +269,46 @@ export class ReadonlyRepository<T extends Entity> {
                     throw new Error(`Unable to find property on related model for multi-map collection: ${collectionColumn.through}. From ${column.target}#${populate.propertyName}`);
                   }
 
-                  populateQueries.push(async function populateMultiMulti(): Promise<void> {
-                    if (relatedModelColumn) {
-                      const mapRecords = await throughRepository.find({
-                        select: [relatedModelColumn.via],
-                        where: {
-                          [collectionColumn.via]: id,
-                        },
-                      });
-                      const ids = _.map(mapRecords, relatedModelColumn.via);
+                  populateQueries.push(
+                    (async function populateMultiMulti(): Promise<void> {
+                      if (relatedModelColumn) {
+                        const mapRecords = await throughRepository.find({
+                          select: [relatedModelColumn.via],
+                          where: {
+                            [collectionColumn.via]: id,
+                          },
+                        });
+                        const ids = _.map(mapRecords, relatedModelColumn.via);
 
-                      const populateWhere = _.merge({
-                        [populateModelPrimaryKeyColumn.propertyName]: ids,
-                      }, populate.where);
+                        const populateWhere = _.merge(
+                          {
+                            [populateModelPrimaryKeyColumn.propertyName]: ids,
+                          },
+                          populate.where,
+                        );
 
+                        const populateResults = await populateRepository.find({
+                          select: populate.select,
+                          where: populateWhere,
+                          sort: populate.sort,
+                          skip: populate.skip,
+                          limit: populate.limit,
+                        });
+
+                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                        // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
+                        result[populate.propertyName] = populateResults;
+                      }
+                    })(),
+                  );
+                } else {
+                  const populateWhere = {
+                    [collectionColumn.via]: id,
+                    ...populate.where,
+                  };
+
+                  populateQueries.push(
+                    (async function populateCollection(): Promise<void> {
                       const populateResults = await populateRepository.find({
                         select: populate.select,
                         where: populateWhere,
@@ -301,27 +320,8 @@ export class ReadonlyRepository<T extends Entity> {
                       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                       // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
                       result[populate.propertyName] = populateResults;
-                    }
-                  }());
-                } else {
-                  const populateWhere = {
-                    [collectionColumn.via]: id,
-                    ...populate.where,
-                  };
-
-                  populateQueries.push(async function populateCollection(): Promise<void> {
-                    const populateResults = await populateRepository.find({
-                      select: populate.select,
-                      where: populateWhere,
-                      sort: populate.sort,
-                      skip: populate.skip,
-                      limit: populate.limit,
-                    });
-
-                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                    // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
-                    result[populate.propertyName] = populateResults;
-                  }());
+                    })(),
+                  );
                 }
               }
             }
@@ -360,9 +360,7 @@ export class ReadonlyRepository<T extends Entity> {
    * @param {string|number} [args.limit] - Number of results to return
    */
   public find(args: FindArgs | WhereQuery = {}): FindResult<T> {
-    const {
-      stack,
-    } = new Error(`${this.model.name}.find()`);
+    const { stack } = new Error(`${this.model.name}.find()`);
 
     let select: string[] | undefined;
     let where: WhereQuery = {};
@@ -456,14 +454,9 @@ export class ReadonlyRepository<T extends Entity> {
        * @param {number} [page=1] - Page to return - Starts at 1
        * @param {number} [limit=10] - Number of records to return
        */
-      paginate({
-                 page = 1,
-                 limit: paginateLimit = 10,
-               }: PaginateOptions): FindResult<T> {
+      paginate({ page = 1, limit: paginateLimit = 10 }: PaginateOptions): FindResult<T> {
         const safePage = Math.max(page, 1);
-        return this
-          .skip((safePage * paginateLimit) - paginateLimit)
-          .limit(paginateLimit);
+        return this.skip(safePage * paginateLimit - paginateLimit).limit(paginateLimit);
       },
       async then(resolve: (result: T[]) => T[], reject: (err: Error) => void): Promise<T[]> {
         try {
@@ -472,10 +465,7 @@ export class ReadonlyRepository<T extends Entity> {
             return [];
           }
 
-          const {
-            query,
-            params,
-          } = getSelectQueryAndParams({
+          const { query, params } = getSelectQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
             select,
@@ -508,9 +498,7 @@ export class ReadonlyRepository<T extends Entity> {
    * @returns {number} Number of records matching the where criteria
    */
   public count(where?: WhereQuery): CountResult<T> {
-    const {
-      stack,
-    } = new Error(`${this.model.name}.count()`);
+    const { stack } = new Error(`${this.model.name}.count()`);
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
@@ -528,16 +516,13 @@ export class ReadonlyRepository<T extends Entity> {
       },
       async then(resolve: (result: number) => number, reject: (err: Error) => void): Promise<number> {
         try {
-          const {
-            query,
-            params,
-          } = getCountQueryAndParams({
+          const { query, params } = getCountQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
             where,
           });
 
-          const result = await modelInstance._pool.query<{count: string}>(query, params);
+          const result = await modelInstance._pool.query<{ count: string }>(query, params);
 
           const originalValue = result.rows[0].count;
           return resolve(Number(originalValue));

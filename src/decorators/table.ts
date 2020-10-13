@@ -1,8 +1,5 @@
 import _ from 'lodash';
-import {
-  getMetadataStorage,
-  ModelMetadata,
-} from '../metadata';
+import { getMetadataStorage, ModelMetadata } from '../metadata';
 import { TableOptions } from './TableOptions';
 import { Entity, EntityStatic } from '../Entity';
 

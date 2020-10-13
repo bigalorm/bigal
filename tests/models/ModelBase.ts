@@ -1,6 +1,4 @@
-import {
-  primaryColumn,
-} from '../../src/decorators';
+import { primaryColumn } from '../../src/decorators';
 
 export abstract class ModelBase {
   @primaryColumn({ type: 'integer' })

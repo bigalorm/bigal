@@ -3,7 +3,7 @@ import { ColumnCollectionOptions } from './ColumnCollectionOptions';
 import { ColumnModelOptions } from './ColumnModelOptions';
 import { ColumnTypeOptions } from './ColumnTypeOptions';
 import {
-  getMetadataStorage,
+  getMetadataStorage, //
   ColumnCollectionMetadata,
   ColumnModelMetadata,
   ColumnTypeMetadata,
@@ -50,41 +50,47 @@ export function column(dbColumnNameOrOptions?: string | ColumnOptions, options?:
         throw new Error('Unable to determine collection value. Please try specifying values as a strings to avoid circular dependency issues.');
       }
 
-      metadataStorage.columns.push(new ColumnCollectionMetadata({
-        target: object.constructor.name,
-        name: dbColumnName,
-        propertyName,
-        required: columnCollectionOptions.required,
-        collection: columnCollectionOptions.collection,
-        through: columnCollectionOptions.through,
-        via: columnCollectionOptions.via,
-      }));
+      metadataStorage.columns.push(
+        new ColumnCollectionMetadata({
+          target: object.constructor.name,
+          name: dbColumnName,
+          propertyName,
+          required: columnCollectionOptions.required,
+          collection: columnCollectionOptions.collection,
+          through: columnCollectionOptions.through,
+          via: columnCollectionOptions.via,
+        }),
+      );
 
       return;
     }
 
     const columnModelOptions = options as ColumnModelOptions;
     if (columnModelOptions.model) {
-      metadataStorage.columns.push(new ColumnModelMetadata({
-        target: object.constructor.name,
-        name: dbColumnName,
-        propertyName,
-        required: columnModelOptions.required,
-        model: columnModelOptions.model,
-      }));
+      metadataStorage.columns.push(
+        new ColumnModelMetadata({
+          target: object.constructor.name,
+          name: dbColumnName,
+          propertyName,
+          required: columnModelOptions.required,
+          model: columnModelOptions.model,
+        }),
+      );
 
       return;
     }
 
     const columnTypeOptions = options as ColumnTypeOptions;
-    metadataStorage.columns.push(new ColumnTypeMetadata({
-      target: object.constructor.name,
-      name: dbColumnName,
-      propertyName,
-      required: columnTypeOptions.required,
-      type: columnTypeOptions.type,
-      defaultsTo: columnTypeOptions.defaultsTo,
-      enum: columnTypeOptions.enum,
-    }));
+    metadataStorage.columns.push(
+      new ColumnTypeMetadata({
+        target: object.constructor.name,
+        name: dbColumnName,
+        propertyName,
+        required: columnTypeOptions.required,
+        type: columnTypeOptions.type,
+        defaultsTo: columnTypeOptions.defaultsTo,
+        enum: columnTypeOptions.enum,
+      }),
+    );
   };
 }

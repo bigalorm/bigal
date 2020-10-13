@@ -1,14 +1,10 @@
 import * as _ from 'lodash';
 import { Entity, EntityFieldValue } from './Entity';
-import {
-  Comparer,
-  WhereClauseValue,
-  WhereQuery,
-} from './query';
+import { Comparer, WhereClauseValue, WhereQuery } from './query';
 // eslint-disable-next-line import/no-cycle
 import { RepositoriesByModelNameLowered } from './RepositoriesByModelNameLowered';
 import {
-  ColumnCollectionMetadata,
+  ColumnCollectionMetadata, //
   ColumnModelMetadata,
   ColumnTypeMetadata,
   ModelMetadata,
@@ -35,14 +31,14 @@ interface QueryAndParams {
  * @returns {{query: string, params: object[]}}
  */
 export function getSelectQueryAndParams<T extends Entity>({
-                                          repositoriesByModelNameLowered,
-                                          model,
-                                          select,
-                                          where,
-                                          sorts,
-                                          skip,
-                                          limit,
-                                        }: {
+  repositoriesByModelNameLowered,
+  model,
+  select,
+  where,
+  sorts,
+  skip,
+  limit,
+}: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   model: ModelMetadata<T>;
   select?: string[];
@@ -53,17 +49,14 @@ export function getSelectQueryAndParams<T extends Entity>({
 }): QueryAndParams {
   let query = 'SELECT ';
 
-  query += _getColumnsToSelect({
+  query += getColumnsToSelect({
     model,
     select,
   });
 
   query += ` FROM "${model.tableName}"`;
 
-  const {
-    whereStatement,
-    params,
-  } = _buildWhereStatement({
+  const { whereStatement, params } = buildWhereStatement({
     repositoriesByModelNameLowered,
     model,
     where,
@@ -73,7 +66,7 @@ export function getSelectQueryAndParams<T extends Entity>({
     query += ` ${whereStatement}`;
   }
 
-  const orderStatement = _buildOrderStatement({
+  const orderStatement = buildOrderStatement({
     model,
     sorts,
   });
@@ -123,20 +116,17 @@ export function getSelectQueryAndParams<T extends Entity>({
  * @returns {{query: string, params: object[]}}
  */
 export function getCountQueryAndParams<T extends Entity>({
-                                         repositoriesByModelNameLowered,
-                                         model,
-                                         where,
-                                       }: {
+  repositoriesByModelNameLowered,
+  model,
+  where,
+}: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   model: ModelMetadata<T>;
   where?: WhereQuery;
 }): QueryAndParams {
   let query = `SELECT count(*) AS "count" FROM "${model.tableName}"`;
 
-  const {
-    whereStatement,
-    params,
-  } = _buildWhereStatement({
+  const { whereStatement, params } = buildWhereStatement({
     repositoriesByModelNameLowered,
     model,
     where,
@@ -163,12 +153,12 @@ export function getCountQueryAndParams<T extends Entity>({
  * @returns {{query: string, params: object[]}}
  */
 export function getInsertQueryAndParams<T extends Entity>({
-                                          repositoriesByModelNameLowered,
-                                          model,
-                                          values,
-                                          returnRecords = true,
-                                          returnSelect,
-                                        }: {
+  repositoriesByModelNameLowered,
+  model,
+  values,
+  returnRecords = true,
+  returnSelect,
+}: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   model: ModelMetadata<T>;
   values: Partial<Entity> | Partial<Entity>[];
@@ -283,7 +273,7 @@ export function getInsertQueryAndParams<T extends Entity>({
 
   if (returnRecords) {
     query += ' RETURNING ';
-    query += _getColumnsToSelect({
+    query += getColumnsToSelect({
       model,
       select: returnSelect,
     });
@@ -307,13 +297,13 @@ export function getInsertQueryAndParams<T extends Entity>({
  * @returns {{query: string, params: object[]}}
  */
 export function getUpdateQueryAndParams<T extends Entity>({
-                                          repositoriesByModelNameLowered,
-                                          model,
-                                          where,
-                                          values = {},
-                                          returnRecords = true,
-                                          returnSelect,
-                                        }: {
+  repositoriesByModelNameLowered,
+  model,
+  where,
+  values = {},
+  returnRecords = true,
+  returnSelect,
+}: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   model: ModelMetadata<T>;
   where: WhereQuery;
@@ -392,9 +382,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
     }
   }
 
-  const {
-    whereStatement,
-  } = _buildWhereStatement({
+  const { whereStatement } = buildWhereStatement({
     repositoriesByModelNameLowered,
     model,
     where,
@@ -407,7 +395,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
 
   if (returnRecords) {
     query += ' RETURNING ';
-    query += _getColumnsToSelect({
+    query += getColumnsToSelect({
       model,
       select: returnSelect,
     });
@@ -430,12 +418,12 @@ export function getUpdateQueryAndParams<T extends Entity>({
  * @returns {{query: string, params: object[]}}
  */
 export function getDeleteQueryAndParams<T extends Entity>({
-                                          repositoriesByModelNameLowered,
-                                          model,
-                                          where,
-                                          returnRecords = true,
-                                          returnSelect,
-                                        }: {
+  repositoriesByModelNameLowered,
+  model,
+  where,
+  returnRecords = true,
+  returnSelect,
+}: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   model: ModelMetadata<T>;
   where?: WhereQuery;
@@ -444,10 +432,7 @@ export function getDeleteQueryAndParams<T extends Entity>({
 }): QueryAndParams {
   let query = `DELETE FROM "${model.tableName}"`;
 
-  const {
-    whereStatement,
-    params,
-  } = _buildWhereStatement({
+  const { whereStatement, params } = buildWhereStatement({
     repositoriesByModelNameLowered,
     model,
     where,
@@ -459,7 +444,7 @@ export function getDeleteQueryAndParams<T extends Entity>({
 
   if (returnRecords) {
     query += ' RETURNING ';
-    query += _getColumnsToSelect({
+    query += getColumnsToSelect({
       model,
       select: returnSelect,
     });
@@ -479,13 +464,7 @@ export function getDeleteQueryAndParams<T extends Entity>({
  * @returns {string} SQL columns
  * @private
  */
-export function _getColumnsToSelect<T extends Entity>({
-                                      model,
-                                      select,
-                                    }: {
-  model: ModelMetadata<T>;
-  select?: Extract<keyof Entity, string>[];
-}): string {
+export function getColumnsToSelect<T extends Entity>({ model, select }: { model: ModelMetadata<T>; select?: Extract<keyof Entity, string>[] }): string {
   if (select) {
     const { primaryKeyColumn } = model;
 
@@ -534,12 +513,12 @@ export function _getColumnsToSelect<T extends Entity>({
  * @returns {object} {{whereStatement?: string, params: Array}}
  * @private
  */
-export function _buildWhereStatement<T extends Entity>({
-                                       repositoriesByModelNameLowered,
-                                       model,
-                                       where,
-                                       params = [],
-                                     }: {
+export function buildWhereStatement<T extends Entity>({
+  repositoriesByModelNameLowered,
+  model,
+  where,
+  params = [],
+}: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   model: ModelMetadata<T>;
   where?: WhereQuery;
@@ -552,7 +531,7 @@ export function _buildWhereStatement<T extends Entity>({
 } {
   let whereStatement;
   if (_.isObject(where)) {
-    whereStatement = _buildWhere({
+    whereStatement = buildWhere({
       repositoriesByModelNameLowered,
       model,
       comparer: 'and',
@@ -579,13 +558,7 @@ export function _buildWhereStatement<T extends Entity>({
  * @returns {string} SQL order by statement
  * @private
  */
-export function _buildOrderStatement<T extends Entity>({
-                                       model,
-                                       sorts,
-                                     }: {
-  model: ModelMetadata<T>;
-  sorts: (string | Record<string, number | string>)[];
-}): string {
+export function buildOrderStatement<T extends Entity>({ model, sorts }: { model: ModelMetadata<T>; sorts: (string | Record<string, number | string>)[] }): string {
   if (_.isNil(sorts) || !_.some(sorts)) {
     return '';
   }
@@ -622,10 +595,7 @@ export function _buildOrderStatement<T extends Entity>({
       orderStatement += ',';
     }
 
-    const {
-      propertyName,
-      order,
-    } = orderProperty;
+    const { propertyName, order } = orderProperty;
     const column = model.columnsByPropertyName[propertyName];
     if (!column) {
       throw new Error(`Property (${propertyName}) not found in model (${model.name}).`);
@@ -654,15 +624,15 @@ export function _buildOrderStatement<T extends Entity>({
  * @returns {string} - Query text
  * @private
  */
-function _buildWhere<T extends Entity>({
-                              repositoriesByModelNameLowered,
-                              model,
-                              propertyName,
-                              comparer,
-                              isNegated = false,
-                              value,
-                              params = [],
-                            }: {
+function buildWhere<T extends Entity>({
+  repositoriesByModelNameLowered,
+  model,
+  propertyName,
+  comparer,
+  isNegated = false,
+  value,
+  params = [],
+}: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   model: ModelMetadata<T>;
   propertyName?: string;
@@ -675,7 +645,7 @@ function _buildWhere<T extends Entity>({
   switch (comparer || propertyName) {
     case '!':
     case 'not':
-      return _buildWhere({
+      return buildWhere({
         repositoriesByModelNameLowered,
         model,
         propertyName,
@@ -684,7 +654,7 @@ function _buildWhere<T extends Entity>({
         params,
       });
     case 'or':
-      return _buildOrOperatorStatement({
+      return buildOrOperatorStatement({
         repositoriesByModelNameLowered,
         model,
         isNegated,
@@ -701,7 +671,7 @@ function _buildWhere<T extends Entity>({
           return `%${val}%`;
         });
 
-        return _buildWhere({
+        return buildWhere({
           repositoriesByModelNameLowered,
           model,
           propertyName,
@@ -713,7 +683,7 @@ function _buildWhere<T extends Entity>({
       }
 
       if (_.isString(value)) {
-        return _buildWhere({
+        return buildWhere({
           repositoriesByModelNameLowered,
           model,
           propertyName,
@@ -735,7 +705,7 @@ function _buildWhere<T extends Entity>({
           return `${val}%`;
         });
 
-        return _buildWhere({
+        return buildWhere({
           repositoriesByModelNameLowered,
           model,
           propertyName,
@@ -747,7 +717,7 @@ function _buildWhere<T extends Entity>({
       }
 
       if (_.isString(value)) {
-        return _buildWhere({
+        return buildWhere({
           repositoriesByModelNameLowered,
           model,
           propertyName,
@@ -769,7 +739,7 @@ function _buildWhere<T extends Entity>({
           return `%${val}`;
         });
 
-        return _buildWhere({
+        return buildWhere({
           repositoriesByModelNameLowered,
           model,
           propertyName,
@@ -781,7 +751,7 @@ function _buildWhere<T extends Entity>({
       }
 
       if (_.isString(value)) {
-        return _buildWhere({
+        return buildWhere({
           repositoriesByModelNameLowered,
           model,
           propertyName,
@@ -794,7 +764,7 @@ function _buildWhere<T extends Entity>({
 
       throw new Error(`Expected value to be a string for "endsWith" constraint. Property (${propertyName || ''}) in model (${model.name}).`);
     case 'like':
-      return _buildLikeOperatorStatement({
+      return buildLikeOperatorStatement({
         model,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         propertyName: propertyName!,
@@ -824,7 +794,7 @@ function _buildWhere<T extends Entity>({
           const primaryKeyValue = (value as Partial<Entity>)[relatedModelPrimaryKey.propertyName] as EntityFieldValue;
           if (!_.isNil(primaryKeyValue)) {
             // Treat `value` as a hydrated object
-            return _buildWhere({
+            return buildWhere({
               repositoriesByModelNameLowered,
               model,
               propertyName,
@@ -839,8 +809,8 @@ function _buildWhere<T extends Entity>({
 
       if (_.isArray(value)) {
         if (!value.length) {
-          const columnTypeFromPropertyName = propertyName ? model.columnsByPropertyName[propertyName] as ColumnTypeMetadata : null;
-          const columnTypeFromComparer = comparer ? model.columnsByPropertyName[comparer] as ColumnTypeMetadata : null;
+          const columnTypeFromPropertyName = propertyName ? (model.columnsByPropertyName[propertyName] as ColumnTypeMetadata) : null;
+          const columnTypeFromComparer = comparer ? (model.columnsByPropertyName[comparer] as ColumnTypeMetadata) : null;
           const arrayColumn = columnTypeFromPropertyName || columnTypeFromComparer;
 
           if (arrayColumn) {
@@ -861,54 +831,62 @@ function _buildWhere<T extends Entity>({
         const valueWithoutNull = [];
         for (const item of value) {
           if (_.isNull(item)) {
-            orConstraints.push(_buildWhere({
-              repositoriesByModelNameLowered,
-              model,
-              propertyName,
-              isNegated,
-              value: null,
-              params,
-            }));
+            orConstraints.push(
+              buildWhere({
+                repositoriesByModelNameLowered,
+                model,
+                propertyName,
+                isNegated,
+                value: null,
+                params,
+              }),
+            );
           } else if (item === '') {
-            orConstraints.push(_buildWhere({
-              repositoriesByModelNameLowered,
-              model,
-              propertyName,
-              isNegated,
-              value: '',
-              params,
-            }));
+            orConstraints.push(
+              buildWhere({
+                repositoriesByModelNameLowered,
+                model,
+                propertyName,
+                isNegated,
+                value: '',
+                params,
+              }),
+            );
           } else {
             valueWithoutNull.push(item);
           }
         }
 
         if (valueWithoutNull.length === 1) {
-          orConstraints.push(_buildWhere({
-            repositoriesByModelNameLowered,
-            model,
-            propertyName,
-            isNegated,
-            value: valueWithoutNull[0] as EntityFieldValue,
-            params,
-          }));
+          orConstraints.push(
+            buildWhere({
+              repositoriesByModelNameLowered,
+              model,
+              propertyName,
+              isNegated,
+              value: valueWithoutNull[0] as EntityFieldValue,
+              params,
+            }),
+          );
         } else if (valueWithoutNull.length) {
-          const columnTypeFromPropertyName = propertyName ? model.columnsByPropertyName[propertyName] as ColumnTypeMetadata : null;
-          const columnTypeFromComparer = comparer ? model.columnsByPropertyName[comparer] as ColumnTypeMetadata : null;
+          const columnTypeFromPropertyName = propertyName ? (model.columnsByPropertyName[propertyName] as ColumnTypeMetadata) : null;
+          const columnTypeFromComparer = comparer ? (model.columnsByPropertyName[comparer] as ColumnTypeMetadata) : null;
           const columnType = columnTypeFromPropertyName || columnTypeFromComparer;
 
           if (columnType) {
             const columnTypeLowered = columnType.type ? columnType.type.toLowerCase() : '';
             if (columnTypeLowered === 'array' || columnTypeLowered === 'string[]' || columnTypeLowered === 'integer[]' || columnTypeLowered === 'float[]' || columnTypeLowered === 'boolean[]') {
               for (const val of valueWithoutNull) {
-                orConstraints.push(_buildWhere({
-                  repositoriesByModelNameLowered,
-                  model,
-                  propertyName,
-                  isNegated,
-                  value: val as EntityFieldValue,
-                  params,
-                }));
+                orConstraints.push(
+                  buildWhere({
+                    repositoriesByModelNameLowered,
+                    model,
+                    propertyName,
+                    isNegated,
+                    value: val as EntityFieldValue,
+                    params,
+                  }),
+                );
               }
             } else {
               let castType;
@@ -954,29 +932,31 @@ function _buildWhere<T extends Entity>({
       if (_.isObject(value) && !_.isDate(value)) {
         const andValues = [];
         for (const [key, where] of Object.entries(value as WhereQuery)) {
-          let subQueryComparer: (Comparer | string | undefined);
-          if (_isComparer(key)) {
+          let subQueryComparer: Comparer | string | undefined;
+          if (isComparer(key)) {
             subQueryComparer = key;
           } else {
             // eslint-disable-next-line no-param-reassign
             propertyName = key;
           }
 
-          andValues.push(_buildWhere({
-            repositoriesByModelNameLowered,
-            model,
-            propertyName,
-            comparer: subQueryComparer,
-            isNegated,
-            value: where,
-            params,
-          }));
+          andValues.push(
+            buildWhere({
+              repositoriesByModelNameLowered,
+              model,
+              propertyName,
+              comparer: subQueryComparer,
+              isNegated,
+              value: where,
+              params,
+            }),
+          );
         }
 
         return andValues.join(' AND ');
       }
 
-      return _buildComparisonOperatorStatement({
+      return buildComparisonOperatorStatement({
         model,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         propertyName: propertyName!,
@@ -989,13 +969,13 @@ function _buildWhere<T extends Entity>({
   }
 }
 
-function _buildOrOperatorStatement<T extends Entity>({
-                                     repositoriesByModelNameLowered,
-                                     model,
-                                     isNegated,
-                                     value,
-                                     params = [],
-                                   }: {
+function buildOrOperatorStatement<T extends Entity>({
+  repositoriesByModelNameLowered,
+  model,
+  isNegated,
+  value,
+  params = [],
+}: {
   repositoriesByModelNameLowered: RepositoriesByModelNameLowered;
   model: ModelMetadata<T>;
   isNegated: boolean;
@@ -1005,7 +985,7 @@ function _buildOrOperatorStatement<T extends Entity>({
 }): string {
   const orClauses = [];
   for (const constraint of value) {
-    const orClause = _buildWhere({
+    const orClause = buildWhere({
       repositoriesByModelNameLowered,
       model,
       isNegated,
@@ -1037,13 +1017,7 @@ interface ComparisonOperatorStatementParams<T extends Entity> {
   params: any[];
 }
 
-function _buildLikeOperatorStatement<T extends Entity>({
-                                       model,
-                                       propertyName,
-                                       isNegated,
-                                       value,
-                                       params,
-                                     }: ComparisonOperatorStatementParams<T>): string {
+function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isNegated, value, params }: ComparisonOperatorStatementParams<T>): string {
   if (_.isArray(value)) {
     if (!value.length) {
       if (isNegated) {
@@ -1058,21 +1032,25 @@ function _buildLikeOperatorStatement<T extends Entity>({
       const valueWithoutNullOrEmpty = [];
       for (const item of value) {
         if (_.isNull(item)) {
-          orConstraints.push(_buildLikeOperatorStatement({
-            model,
-            propertyName,
-            isNegated,
-            value: null,
-            params,
-          }));
+          orConstraints.push(
+            buildLikeOperatorStatement({
+              model,
+              propertyName,
+              isNegated,
+              value: null,
+              params,
+            }),
+          );
         } else if (item === '') {
-          orConstraints.push(_buildLikeOperatorStatement({
-            model,
-            propertyName,
-            isNegated,
-            value: '',
-            params,
-          }));
+          orConstraints.push(
+            buildLikeOperatorStatement({
+              model,
+              propertyName,
+              isNegated,
+              value: '',
+              params,
+            }),
+          );
         } else {
           valueWithoutNullOrEmpty.push(item);
         }
@@ -1080,13 +1058,15 @@ function _buildLikeOperatorStatement<T extends Entity>({
 
       if (orConstraints.length) {
         if (valueWithoutNullOrEmpty.length) {
-          orConstraints.push(_buildLikeOperatorStatement({
-            model,
-            propertyName,
-            isNegated,
-            value: valueWithoutNullOrEmpty,
-            params,
-          }));
+          orConstraints.push(
+            buildLikeOperatorStatement({
+              model,
+              propertyName,
+              isNegated,
+              value: valueWithoutNullOrEmpty,
+              params,
+            }),
+          );
         }
 
         if (orConstraints.length === 1) {
@@ -1112,7 +1092,9 @@ function _buildLikeOperatorStatement<T extends Entity>({
 
       const columnType = (column as ColumnTypeMetadata).type && (column as ColumnTypeMetadata).type.toLowerCase();
       if (columnType === 'array' || columnType === 'string[]') {
-        return `EXISTS(SELECT 1 FROM (SELECT unnest("${column.name}") AS "unnested_${column.name}") __unnested WHERE lower("unnested_${column.name}")${isNegated ? '<>ALL' : '=ANY'}($${params.length}::TEXT[]))`;
+        return `EXISTS(SELECT 1 FROM (SELECT unnest("${column.name}") AS "unnested_${column.name}") __unnested WHERE lower("unnested_${column.name}")${isNegated ? '<>ALL' : '=ANY'}($${
+          params.length
+        }::TEXT[]))`;
       }
 
       return `lower("${column.name}")${isNegated ? '<>ALL' : '=ANY'}($${params.length}::TEXT[])`;
@@ -1151,14 +1133,7 @@ function _buildLikeOperatorStatement<T extends Entity>({
   throw new Error(`Expected value to be a string for "like" constraint. Property (${propertyName}) in model (${model.name}).`);
 }
 
-function _buildComparisonOperatorStatement<T extends Entity>({
-                                             model,
-                                             propertyName,
-                                             comparer,
-                                             isNegated,
-                                             value,
-                                             params = [],
-                                           }: ComparisonOperatorStatementParams<T>): string {
+function buildComparisonOperatorStatement<T extends Entity>({ model, propertyName, comparer, isNegated, value, params = [] }: ComparisonOperatorStatementParams<T>): string {
   const column = model.columnsByPropertyName[propertyName];
   if (!column) {
     throw new Error(`Unable to find property ${propertyName} on model ${model.name}`);
@@ -1213,7 +1188,7 @@ function _buildComparisonOperatorStatement<T extends Entity>({
  * @returns {boolean}
  * @private
  */
-function _isComparer(value: string): boolean {
+function isComparer(value: string): boolean {
   switch (value) {
     case '!':
     case 'not':

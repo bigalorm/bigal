@@ -30,7 +30,7 @@ export class ColumnModelMetadata extends ColumnBaseMetadata {
   }
 
   public constructor({
-    target,
+    target, //
     name,
     propertyName,
     required,

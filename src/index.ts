@@ -4,7 +4,7 @@ import { Repository } from './Repository';
 import { Entity, EntityStatic } from './Entity';
 import { ReadonlyRepository } from './ReadonlyRepository';
 import {
-  ColumnMetadata,
+  ColumnMetadata, //
   ColumnModelMetadata,
   ColumnModifierMetadata,
   ColumnTypeMetadata,
@@ -60,13 +60,7 @@ function getInheritanceTree(model: ModelClass): ModelClass[] {
  * @param {Function} [expose] - Used to expose model classes
  * @returns {object} Repositories by model name
  */
-export function initialize({
-                             models,
-                             pool,
-                             readonlyPool = pool,
-                             connections = {},
-                             expose,
-                           }: InitializeOptions): RepositoriesByModelName {
+export function initialize({ models, pool, readonlyPool = pool, connections = {}, expose }: InitializeOptions): RepositoriesByModelName {
   if (!models.length) {
     throw new Error('Models need to be specified to read all model information from decorators');
   }
@@ -88,7 +82,9 @@ export function initialize({
     modelMetadataByModelName[model.name] = model;
   }
 
-  interface ColumnsByPropertyName { [index: string]: ColumnMetadata }
+  interface ColumnsByPropertyName {
+    [index: string]: ColumnMetadata;
+  }
   // Add dictionary to quickly find a column by propertyName, for applying ColumnModifierMetadata records
   const columnsByPropertyNameForModel: { [index: string]: ColumnsByPropertyName } = {};
   for (const column of metadataStorage.columns) {
@@ -96,7 +92,9 @@ export function initialize({
     columnsByPropertyNameForModel[column.target][column.propertyName] = column;
   }
 
-  interface ColumnModifiersByPropertyName { [index: string]: ColumnModifierMetadata[] }
+  interface ColumnModifiersByPropertyName {
+    [index: string]: ColumnModifierMetadata[];
+  }
   const columnModifiersByPropertyNameForModel: { [index: string]: ColumnModifiersByPropertyName } = {};
   for (const columnModifier of metadataStorage.columnModifiers) {
     columnModifiersByPropertyNameForModel[columnModifier.target] = columnModifiersByPropertyNameForModel[columnModifier.target] || {};
@@ -127,10 +125,7 @@ export function initialize({
 
       const columnModifiersByPropertyName = columnModifiersByPropertyNameForModel[inheritedClass.name] || {};
       for (const [propertyName, columnModifiers] of Object.entries(columnModifiersByPropertyName)) {
-        inheritedColumnModifiersByPropertyName[propertyName] = [
-          ...(inheritedColumnModifiersByPropertyName[propertyName] || []),
-          ...(columnModifiers || []),
-        ];
+        inheritedColumnModifiersByPropertyName[propertyName] = [...(inheritedColumnModifiersByPropertyName[propertyName] || []), ...(columnModifiers || [])];
       }
     }
 

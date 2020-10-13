@@ -5,7 +5,9 @@ import { ColumnCollectionMetadata } from './ColumnCollectionMetadata';
 import { Entity, EntityStatic } from '../Entity';
 
 type Column = ColumnTypeMetadata | ColumnModelMetadata | ColumnCollectionMetadata;
-interface ColumnByStringId { [index: string]: Column }
+interface ColumnByStringId {
+  [index: string]: Column;
+}
 
 export interface ModelMetadataOptions<T extends Entity = Entity> {
   name: string;
@@ -88,7 +90,7 @@ export class ModelMetadata<T extends Entity> {
   public columnsByPropertyName: ColumnByStringId = {};
 
   public constructor({
-    name,
+    name, //
     type,
     connection,
     tableName,
