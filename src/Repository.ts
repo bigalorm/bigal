@@ -9,7 +9,7 @@ import type {
   ReturnSelect,
   WhereQuery,
 } from './query';
-import type { ReadonlyRepository } from './ReadonlyRepository';
+import { ReadonlyRepository } from './ReadonlyRepository';
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper';
 
 export class Repository<T extends Entity> extends ReadonlyRepository<T> implements IRepository<T> {
