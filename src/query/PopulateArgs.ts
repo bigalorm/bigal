@@ -1,4 +1,4 @@
-import { WhereQuery } from './WhereQuery';
+import type { WhereQuery } from './WhereQuery';
 
 export interface PopulateArgs {
   where?: WhereQuery;

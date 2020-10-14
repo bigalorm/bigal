@@ -1,5 +1,6 @@
-import { Entity } from '../../src';
+import type { Entity } from '../../src';
 import { column, table } from '../../src/decorators';
+
 import { ModelBase } from './ModelBase';
 // eslint-disable-next-line import/no-cycle
 import { Product } from './Product';

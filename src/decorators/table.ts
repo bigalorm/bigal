@@ -1,7 +1,9 @@
 import _ from 'lodash';
-import { getMetadataStorage, ModelMetadata } from '../metadata';
-import { TableOptions } from './TableOptions';
-import { Entity, EntityStatic } from '../Entity';
+
+import type { Entity, EntityStatic } from '../Entity';
+import { ModelMetadata, getMetadataStorage } from '../metadata';
+
+import type { TableOptions } from './TableOptions';
 
 type ReturnFunctionType<T extends Entity = Entity> = (object: EntityStatic<T>) => void;
 

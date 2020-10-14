@@ -1,5 +1,6 @@
+import type { Entity } from '../Entity';
+
 import { MetadataStorage } from './MetadataStorage';
-import { Entity } from '../Entity';
 
 interface GlobalWithBigAlMetadataArgsStorage<T extends Entity> {
   bigAlMetadataArgsStorage: MetadataStorage<T>;

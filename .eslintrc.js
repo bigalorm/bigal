@@ -80,6 +80,13 @@ module.exports = {
 
     'import/extensions': ['error', 'never'],
     'import/no-unresolved': 'off',
+    'import/order': [
+      'error',
+      {
+        'newlines-between': 'always',
+        alphabetize: { order: 'asc', caseInsensitive: true },
+      },
+    ],
 
     'jsdoc/check-alignment': 'error',
     'jsdoc/check-indentation': 'off',
@@ -199,12 +206,20 @@ module.exports = {
         'import/no-cycle': 'off',
         'import/no-extraneous-dependencies': 'off',
         'import/extensions': ['error', 'never'],
+        'import/order': [
+          'error',
+          {
+            'newlines-between': 'always',
+            alphabetize: { order: 'asc', caseInsensitive: true },
+          },
+        ],
 
         '@typescript-eslint/array-type': ['error', { default: 'array' }],
         '@typescript-eslint/await-thenable': 'error',
         '@typescript-eslint/adjacent-overload-signatures': 'error',
         '@typescript-eslint/consistent-type-assertions': 'error',
         '@typescript-eslint/consistent-type-definitions': 'error',
+        '@typescript-eslint/consistent-type-imports': 'error',
         '@typescript-eslint/no-extraneous-class': 'error',
         '@typescript-eslint/explicit-function-return-type': 'error',
         '@typescript-eslint/explicit-member-accessibility': ['error'],

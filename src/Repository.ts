@@ -1,15 +1,16 @@
 import _ from 'lodash';
-import { Entity } from './Entity';
-import {
+
+import type { Entity } from './Entity';
+import type { IRepository } from './IRepository';
+import type {
   CreateUpdateDeleteOptions, //
   DestroyResult,
   DoNotReturnRecords,
   ReturnSelect,
   WhereQuery,
 } from './query';
+import type { ReadonlyRepository } from './ReadonlyRepository';
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper';
-import { IRepository } from './IRepository';
-import { ReadonlyRepository } from './ReadonlyRepository';
 
 export class Repository<T extends Entity> extends ReadonlyRepository<T> implements IRepository<T> {
   /**

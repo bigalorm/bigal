@@ -1,13 +1,15 @@
 import * as _ from 'lodash';
-import { ColumnCollectionOptions } from './ColumnCollectionOptions';
-import { ColumnModelOptions } from './ColumnModelOptions';
-import { ColumnTypeOptions } from './ColumnTypeOptions';
+
 import {
   getMetadataStorage, //
   ColumnCollectionMetadata,
   ColumnModelMetadata,
   ColumnTypeMetadata,
 } from '../metadata';
+
+import type { ColumnCollectionOptions } from './ColumnCollectionOptions';
+import type { ColumnModelOptions } from './ColumnModelOptions';
+import type { ColumnTypeOptions } from './ColumnTypeOptions';
 
 type ColumnOptions = ColumnTypeOptions | ColumnCollectionOptions | ColumnModelOptions;
 // eslint-disable-next-line @typescript-eslint/ban-types

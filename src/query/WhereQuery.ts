@@ -1,4 +1,4 @@
-import { Entity, EntityFieldValue } from '../Entity';
+import type { Entity, EntityFieldValue } from '../Entity';
 
 export type WhereClauseValue = EntityFieldValue | Entity | WhereQuery;
 

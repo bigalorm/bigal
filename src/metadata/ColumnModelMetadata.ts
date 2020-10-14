@@ -1,4 +1,5 @@
-import { ColumnBaseMetadata, ColumnBaseMetadataOptions } from './ColumnBaseMetadata';
+import type { ColumnBaseMetadataOptions } from './ColumnBaseMetadata';
+import { ColumnBaseMetadata } from './ColumnBaseMetadata';
 
 export interface ColumnModelMetadataOptions extends ColumnBaseMetadataOptions {
   /**

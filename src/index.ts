@@ -1,18 +1,13 @@
 import _ from 'lodash';
-import { Pool } from 'postgres-pool';
-import { Repository } from './Repository';
-import { Entity, EntityStatic } from './Entity';
+import type { Pool } from 'postgres-pool';
+
+import type { Entity, EntityStatic } from './Entity';
+import type { IReadonlyRepository } from './IReadonlyRepository';
+import type { IRepository } from './IRepository';
+import type { ColumnMetadata, ColumnModifierMetadata } from './metadata';
+import { ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata, getMetadataStorage } from './metadata';
 import { ReadonlyRepository } from './ReadonlyRepository';
-import {
-  ColumnMetadata, //
-  ColumnModelMetadata,
-  ColumnModifierMetadata,
-  ColumnTypeMetadata,
-  getMetadataStorage,
-  ModelMetadata,
-} from './metadata';
-import { IReadonlyRepository } from './IReadonlyRepository';
-import { IRepository } from './IRepository';
+import { Repository } from './Repository';
 
 export * from './Entity';
 export * from './IReadonlyRepository';

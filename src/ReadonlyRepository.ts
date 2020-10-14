@@ -1,11 +1,12 @@
 import _ from 'lodash';
-import { Pool } from 'postgres-pool';
-import { Entity, EntityFieldValue, EntityStatic } from './Entity';
-import { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, PaginateOptions, PopulateArgs, WhereQuery } from './query';
+import type { Pool } from 'postgres-pool';
+
+import type { Entity, EntityFieldValue, EntityStatic } from './Entity';
+import type { IReadonlyRepository } from './IReadonlyRepository';
+import type { IRepository } from './IRepository';
+import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
+import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, PaginateOptions, PopulateArgs, WhereQuery } from './query';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
-import { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
-import { IReadonlyRepository } from './IReadonlyRepository';
-import { IRepository } from './IRepository';
 
 export interface IRepositoryOptions<T extends Entity> {
   modelMetadata: ModelMetadata<T>;

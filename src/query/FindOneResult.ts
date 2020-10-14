@@ -1,7 +1,8 @@
-import { WhereQuery } from './WhereQuery';
-import { PopulateArgs } from './PopulateArgs';
-import { Entity } from '../Entity';
-import { ChainablePromiseLike } from '../ChainablePromiseLike';
+import type { ChainablePromiseLike } from '../ChainablePromiseLike';
+import type { Entity } from '../Entity';
+
+import type { PopulateArgs } from './PopulateArgs';
+import type { WhereQuery } from './WhereQuery';
 
 export interface FindOneResult<TEntity extends Entity> extends ChainablePromiseLike<TEntity | null> {
   where(args: WhereQuery): FindOneResult<TEntity>;

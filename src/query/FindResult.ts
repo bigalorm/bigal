@@ -1,6 +1,7 @@
-import { PaginateOptions } from './PaginateOptions';
-import { WhereQuery } from './WhereQuery';
-import { ChainablePromiseLike } from '../ChainablePromiseLike';
+import type { ChainablePromiseLike } from '../ChainablePromiseLike';
+
+import type { PaginateOptions } from './PaginateOptions';
+import type { WhereQuery } from './WhereQuery';
 
 export interface FindResult<TEntity> extends ChainablePromiseLike<TEntity[]> {
   where(args: WhereQuery): FindResult<TEntity>;

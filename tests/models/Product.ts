@@ -1,12 +1,13 @@
-import { Entity } from '../../src';
-import { ModelBase } from './ModelBase';
+import type { Entity } from '../../src';
 import { column, table } from '../../src/decorators';
+
 // eslint-disable-next-line import/no-cycle
-import { Store } from './Store';
 // eslint-disable-next-line import/no-cycle
 import { Category } from './Category';
+import { ModelBase } from './ModelBase';
 // eslint-disable-next-line import/no-cycle
 import { ProductCategory } from './ProductCategory';
+import type { Store } from './Store';
 
 @table({
   name: 'products',

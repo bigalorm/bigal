@@ -1,11 +1,11 @@
-import {
+import type { Entity } from './Entity';
+import type { IReadonlyRepository } from './IReadonlyRepository';
+import type {
   CreateUpdateDeleteOptions, //
   DestroyResult,
   DoNotReturnRecords,
   WhereQuery,
 } from './query';
-import { Entity } from './Entity';
-import { IReadonlyRepository } from './IReadonlyRepository';
 
 export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
   /**

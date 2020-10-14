@@ -1,14 +1,15 @@
 import * as _ from 'lodash';
-import { Entity, EntityFieldValue } from './Entity';
-import { Comparer, WhereClauseValue, WhereQuery } from './query';
-import {
+
+import type { Entity, EntityFieldValue } from './Entity';
+import type { IReadonlyRepository } from './IReadonlyRepository';
+import type { IRepository } from './IRepository';
+import type {
   ColumnCollectionMetadata, //
   ColumnModelMetadata,
   ColumnTypeMetadata,
   ModelMetadata,
 } from './metadata';
-import { IReadonlyRepository } from './IReadonlyRepository';
-import { IRepository } from './IRepository';
+import type { Comparer, WhereClauseValue, WhereQuery } from './query';
 
 interface QueryAndParams {
   query: string;

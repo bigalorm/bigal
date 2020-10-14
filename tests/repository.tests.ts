@@ -1,12 +1,15 @@
 import chai from 'chai';
-import * as _ from 'lodash';
 import * as faker from 'faker';
+import * as _ from 'lodash';
+import type { QueryResult } from 'pg';
 import { Pool } from 'postgres-pool';
-import { QueryResult } from 'pg';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
-import { Entity, initialize, IReadonlyRepository, IRepository, Repository } from '../src';
-import { Product, ProductWithCreateUpdateDateTracking, Store } from './models';
+
+import type { Entity, IReadonlyRepository, IRepository } from '../src';
+import { Repository, initialize } from '../src';
 import { ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
+
+import { Product, ProductWithCreateUpdateDateTracking, Store } from './models';
 
 type RepositoriesByModelNameLowered = Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
 

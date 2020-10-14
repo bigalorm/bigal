@@ -1,8 +1,10 @@
 import * as _ from 'lodash';
-import { ColumnTypeMetadata } from './ColumnTypeMetadata';
-import { ColumnModelMetadata } from './ColumnModelMetadata';
-import { ColumnCollectionMetadata } from './ColumnCollectionMetadata';
-import { Entity, EntityStatic } from '../Entity';
+
+import type { Entity, EntityStatic } from '../Entity';
+
+import type { ColumnCollectionMetadata } from './ColumnCollectionMetadata';
+import type { ColumnModelMetadata } from './ColumnModelMetadata';
+import type { ColumnTypeMetadata } from './ColumnTypeMetadata';
 
 type Column = ColumnTypeMetadata | ColumnModelMetadata | ColumnCollectionMetadata;
 interface ColumnByStringId {

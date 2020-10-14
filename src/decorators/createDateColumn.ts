@@ -1,10 +1,9 @@
 import _ from 'lodash';
-import {
-  getMetadataStorage, //
-  ColumnModifierMetadata,
-  ColumnTypeMetadata,
-} from '../metadata';
-import { ColumnTypeOptions } from './ColumnTypeOptions';
+
+import type { ColumnModifierMetadata } from '../metadata';
+import { ColumnTypeMetadata, getMetadataStorage } from '../metadata';
+
+import type { ColumnTypeOptions } from './ColumnTypeOptions';
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 type ReturnFunctionType = (object: object, propertyName: string) => void;

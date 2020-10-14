@@ -1,7 +1,8 @@
-import { ModelMetadata } from './ModelMetadata';
-import { ColumnModifierMetadata } from './ColumnModifierMetadata';
-import { ColumnMetadata } from './ColumnMetadata';
-import { Entity } from '../Entity';
+import type { Entity } from '../Entity';
+
+import type { ColumnMetadata } from './ColumnMetadata';
+import type { ColumnModifierMetadata } from './ColumnModifierMetadata';
+import type { ModelMetadata } from './ModelMetadata';
 
 /**
  * This represents an object to store all of the decorator data. Since there can be multiple decorators per

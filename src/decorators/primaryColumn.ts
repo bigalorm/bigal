@@ -1,12 +1,10 @@
 import _ from 'lodash';
-import {
-  getMetadataStorage, //
-  ColumnModifierMetadata,
-  ColumnTypeMetadata,
-  ColumnModelMetadata,
-} from '../metadata';
-import { ColumnTypeOptions } from './ColumnTypeOptions';
-import { ColumnModelOptions } from './ColumnModelOptions';
+
+import type { ColumnModifierMetadata } from '../metadata';
+import { ColumnModelMetadata, ColumnTypeMetadata, getMetadataStorage } from '../metadata';
+
+import type { ColumnModelOptions } from './ColumnModelOptions';
+import type { ColumnTypeOptions } from './ColumnTypeOptions';
 
 type ColumnOptions = ColumnTypeOptions | ColumnModelOptions;
 
