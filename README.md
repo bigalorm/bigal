@@ -321,12 +321,11 @@ const item = await PersonRepository.create({
 #### Insert a single object without returning results from the db
 
 ```js
-const success = await PersonRepository.create({
+await PersonRepository.create({
   name: 'Karl',
 }, {
   returnRecords: false,
 });
-// success = true
 ```
 
 #### Insert a single object but limit columns returned from db for inserted records (query projection)
@@ -355,14 +354,13 @@ const items = await PersonRepository.create([{
 #### Insert a multiple object without returning results from the db
 
 ```js
-const success = await PersonRepository.create([{
+await PersonRepository.create([{
   name: 'LX',
 }, {
   name: 'Big Al',
 }], {
   returnRecords: false,
 });
-// success = true
 ```
 
 #### Insert a multiple object
@@ -399,14 +397,13 @@ const items = await PersonRepository.update({
 #### Update record without returning results from the db
 
 ```js
-const success = await PersonRepository.update({
+await PersonRepository.update({
   id: 42,
 }, {
   name: 'Big Al',
 }, {
   returnRecords: false,
 });
-// success = true
 ```
 
 #### Update records and limit columns returned from db for affected records (query projection)
@@ -440,12 +437,11 @@ const items = await PersonRepository.destroy({
 #### Delete record without returning row data from the db
 
 ```js
-const success = await PersonRepository.destroy({
+await PersonRepository.destroy({
   id: 42,
 }, {
   returnRecords: false,
 });
-// success = true
 ```
 
 #### Delete records and limit columns returned from db for affected records (query projection)
