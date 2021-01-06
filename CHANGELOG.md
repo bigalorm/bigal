@@ -1,3 +1,8 @@
+### 6.0.0
+  * Update npms
+  * Change `.destroy()` to not return records by default. Use `.destroy({}, { returnRecords: true })` for previous behavior
+  * Return `void` instead of `boolean` when not returning records
+
 ### 5.0.3
   * Update npms
 

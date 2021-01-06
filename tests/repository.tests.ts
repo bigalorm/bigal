@@ -118,7 +118,7 @@ describe('Repository', () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([product.name, [], product.store]);
     });
-    it('should return true if single value is specified and returnRecords=false', async () => {
+    it('should return void if single value is specified and returnRecords=false', async () => {
       const product = {
         id: faker.random.uuid(),
         name: `product - ${faker.random.uuid()}`,
@@ -138,8 +138,7 @@ describe('Repository', () => {
       );
 
       verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.equal(true);
+      should.not.exist(result);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3)');
@@ -186,7 +185,7 @@ describe('Repository', () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([products[0].name, products[1].name, [], [], products[0].store, products[1].store]);
     });
-    it('should return true if multiple values are specified and returnRecords=false', async () => {
+    it('should return void if multiple values are specified and returnRecords=false', async () => {
       const products = [
         {
           id: faker.random.uuid(),
@@ -213,7 +212,7 @@ describe('Repository', () => {
       );
 
       verify(mockedPool.query(anyString(), anything())).once();
-      result.should.equal(true);
+      should.not.exist(result);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)');
@@ -304,7 +303,7 @@ describe('Repository', () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([product.name, product.store, product.id]);
     });
-    it('should return true if returnRecords=false', async () => {
+    it('should return void if returnRecords=false', async () => {
       const product = {
         id: faker.random.uuid(),
         name: `product - ${faker.random.uuid()}`,
@@ -327,7 +326,7 @@ describe('Repository', () => {
       );
 
       verify(mockedPool.query(anyString(), anything())).once();
-      result.should.equal(true);
+      should.not.exist(result);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3');
@@ -336,7 +335,7 @@ describe('Repository', () => {
     });
   });
   describe('#destroy()', () => {
-    it('should support call without constraints', async () => {
+    it('should delete all records and return void if there are no constraints', async () => {
       const products = [
         {
           id: faker.random.uuid(),
@@ -351,11 +350,79 @@ describe('Repository', () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
       const result = await ProductRepository.destroy();
+      should.not.exist(result);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('DELETE FROM "products"');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      params!.should.deep.equal([]);
+    });
+    it('should delete all records if empty constraint and return all data if returnRecords=true', async () => {
+      const products = [
+        {
+          id: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+      const result = await ProductRepository.destroy({}, { returnRecords: true });
       should.exist(result);
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('DELETE FROM "products" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      params!.should.deep.equal([]);
+    });
+    it('should delete all records if empty constraint and return specific columns if returnSelect is specified', async () => {
+      const products = [
+        {
+          id: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+      const result = await ProductRepository.destroy({}, { returnSelect: ['name'] });
+      should.exist(result);
+      result.should.deep.equal(products);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('DELETE FROM "products" RETURNING "name","id"');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      params!.should.deep.equal([]);
+    });
+    it('should delete all records if empty constraint and return id column if returnSelect is empty', async () => {
+      const products = [
+        {
+          id: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+      const result = await ProductRepository.destroy({}, { returnSelect: [] });
+      should.exist(result);
+      result.should.deep.equal(products);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('DELETE FROM "products" RETURNING "id"');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
@@ -404,6 +471,58 @@ describe('Repository', () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
       const result = await repository.destroy();
+      should.not.exist(result);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('DELETE FROM "foo"');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      params!.should.deep.equal([]);
+    });
+    it('should support call without constraints (non "id" primaryKey) if returnRecords=true', async () => {
+      const model = new ModelMetadata({
+        name: 'foo',
+        type: TestEntity,
+      });
+      model.columns = [
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'foobario',
+          propertyName: 'foobario',
+          primary: true,
+          type: 'integer',
+        }),
+        new ColumnTypeMetadata({
+          target: 'foo',
+          name: 'name',
+          propertyName: 'name',
+          required: true,
+          defaultsTo: 'foobar',
+          type: 'string',
+        }),
+      ];
+      const repositories: RepositoriesByModelNameLowered = {};
+      const repository = new Repository({
+        modelMetadata: model,
+        type: model.type,
+        pool: instance(mockedPool),
+        repositoriesByModelNameLowered: repositories,
+      });
+      repositories[model.name.toLowerCase()] = repository;
+
+      const products = [
+        {
+          foobario: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          foobario: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+      const result = await repository.destroy({}, { returnRecords: true });
       should.exist(result);
       result.should.deep.equal(products);
 
@@ -434,6 +553,38 @@ describe('Repository', () => {
         id: _.map(products, 'id'),
         store,
       });
+      should.not.exist(result);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('DELETE FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      params!.should.deep.equal([_.map(products, 'id'), store.id]);
+    });
+    it('should support call constraints as a parameter if returnRecords=true', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [
+        {
+          id: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+      const result = await ProductRepository.destroy(
+        {
+          id: _.map(products, 'id'),
+          store,
+        },
+        { returnRecords: true },
+      );
       should.exist(result);
       result.should.deep.equal(products);
 
@@ -460,6 +611,33 @@ describe('Repository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.destroy().where({
+        store: store.id,
+      });
+      should.not.exist(result);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('DELETE FROM "products" WHERE "store_id"=$1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      params!.should.deep.equal([store.id]);
+    });
+    it('should support call with chained where constraints if returnRecords=true', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [
+        {
+          id: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      const result = await ProductRepository.destroy({}, { returnRecords: true }).where({
         store: store.id,
       });
       should.exist(result);
@@ -492,6 +670,35 @@ describe('Repository', () => {
           store: store.id,
         }),
       ]);
+      should.not.exist(result);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('DELETE FROM "products" WHERE "store_id"=$1');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      params!.should.deep.equal([store.id]);
+    });
+    it('should support call with chained where constraints if returnRecords=true - Promise.all', async () => {
+      const store = {
+        id: faker.random.uuid(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const products = [
+        {
+          id: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+        {
+          id: faker.random.uuid(),
+          name: `product - ${faker.random.uuid()}`,
+        },
+      ];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      const [result] = await Promise.all([
+        ProductRepository.destroy({}, { returnRecords: true }).where({
+          store: store.id,
+        }),
+      ]);
       should.exist(result);
       result.should.deep.equal(products);
 
@@ -499,33 +706,6 @@ describe('Repository', () => {
       query.should.equal('DELETE FROM "products" WHERE "store_id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([store.id]);
-    });
-    it('should return true if returnRecords=false', async () => {
-      const product = {
-        id: faker.random.uuid(),
-        name: `product - ${faker.random.uuid()}`,
-        store: faker.random.number(),
-      };
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
-
-      const result = await ProductRepository.destroy(
-        {
-          id: product.id,
-        },
-        {
-          returnRecords: false,
-        },
-      );
-
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.equal(true);
-
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" WHERE "id"=$1');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      params!.should.deep.equal([product.id]);
     });
   });
 });
