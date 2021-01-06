@@ -17,7 +17,8 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
   /**
    * Creates a objects using the specified values
    * @param {object} values - Values to insert as multiple new objects.
-   * @param {{returnRecords: false}} options
+   * @param {object} [options]
+   * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object}
    */
   public create(values: Partial<T>, options?: ReturnSelect): Promise<T>;
@@ -25,7 +26,8 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
   /**
    * Creates a objects using the specified values
    * @param {object|object[]} values - Values to insert as multiple new objects.
-   * @param {{returnRecords: false}} options
+   * @param {object} options
+   * @param {boolean} options.returnRecords - Determines if inserted records should be returned
    * @returns {void}
    */
   public create(values: Partial<T> | Partial<T>[], options: DoNotReturnRecords): Promise<void>;
@@ -34,7 +36,6 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * Creates a objects using the specified values
    * @param {object[]} values - Values to insert as multiple new objects.
    * @param {object} [options]
-   * @param {boolean} [options.returnRecords=true] - Determines if inserted records should be returned
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
@@ -105,7 +106,8 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * Updates object(s) matching the where query, with the specified values
    * @param {object} where - Object representing the where query
    * @param {object} values - Values to update
-   * @param {{returnRecords: false}} options
+   * @param {object} options
+   * @param {boolean} options.returnRecords - Determines if inserted records should be returned
    * @returns {void}
    */
   public update(where: WhereQuery, values: Partial<T>, options: DoNotReturnRecords): Promise<void>;
@@ -115,7 +117,6 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {object} where - Object representing the where query
    * @param {object} values - Values to update
    * @param {object} [options] - Values to update
-   * @param {boolean} [options.returnRecords=true] - Determines if inserted records should be returned
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */

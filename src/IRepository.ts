@@ -13,7 +13,8 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
   /**
    * Creates a objects using the specified values
    * @param {object} values - Values to insert as multiple new objects.
-   * @param {{returnRecords: false}} options
+   * @param {object} [options]
+   * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object}
    */
   create(values: Partial<T>, options?: ReturnSelect): Promise<T>;
@@ -21,7 +22,8 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
   /**
    * Creates a objects using the specified values
    * @param {object|object[]} values - Values to insert as multiple new objects.
-   * @param {{returnRecords: false}} options
+   * @param {object} options
+   * @param {boolean} options.returnRecords - Determines if inserted records should be returned
    * @returns {void}
    */
   create(values: Partial<T> | Partial<T>[], options: DoNotReturnRecords): Promise<void>;
@@ -50,6 +52,8 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * Updates object(s) matching the where query, with the specified values
    * @param {object} where - Object representing the where query
    * @param {object} values - Values to update
+   * @param {object} options
+   * @param {boolean} options.returnRecords - Determines if inserted records should be returned
    * @param {{returnRecords: false}} options
    * @returns {void}
    */
@@ -60,7 +64,6 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {object} where - Object representing the where query
    * @param {object} values - Values to update
    * @param {object} [options] - Values to update
-   * @param {boolean} [options.returnRecords=true] - Determines if inserted records should be returned
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */

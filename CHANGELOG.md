@@ -1,3 +1,6 @@
+### 6.0.1
+  * Fix jsdocs for create and update
+
 ### 6.0.0
   * Update npms
   * Change `.destroy()` to not return records by default. Use `.destroy({}, { returnRecords: true })` for previous behavior
