@@ -1,3 +1,7 @@
+### 6.0.2
+  * Update npms
+  * Sort union/intersection members
+
 ### 6.0.1
   * Fix jsdocs for create and update
 

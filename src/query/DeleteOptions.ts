@@ -8,4 +8,4 @@ interface ReturnRecords {
   returnSelect?: string[];
 }
 
-export type DeleteOptions = ReturnSelect | ReturnRecords;
+export type DeleteOptions = ReturnRecords | ReturnSelect;

@@ -1,1 +1,1 @@
-export type Comparer = '!' | 'not' | 'or' | 'and' | 'contains' | 'startsWith' | 'endsWith' | 'like' | '<' | '<=' | '>' | '>=';
+export type Comparer = '!' | '<' | '<=' | '>' | '>=' | 'and' | 'contains' | 'endsWith' | 'like' | 'not' | 'or' | 'startsWith';

@@ -63,7 +63,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
     let select: string[] | undefined;
     let where: WhereQuery = {};
-    let sort: string | string[] | null = null;
+    let sort: string[] | string | null = null;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
     for (const [name, value] of Object.entries(args)) {
       let isWhereCriteria = false;
@@ -76,7 +76,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           where = value as WhereQuery;
           break;
         case 'sort':
-          sort = value as string | string[] | null;
+          sort = value as string[] | string | null;
           break;
         default:
           select = undefined;
@@ -96,7 +96,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     }
 
     const populates: Populate[] = [];
-    const sorts: (string | Record<string, number | string>)[] = [];
+    const sorts: (Record<string, number | string> | string)[] = [];
     if (_.isArray(sort)) {
       sorts.push(...sort);
     } else if (sort) {
@@ -151,12 +151,12 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * Sorts the query
        * @param {string|object} value
        */
-      sort(value: string | Record<string, number | string>): FindOneResult<T> {
+      sort(value: Record<string, number | string> | string): FindOneResult<T> {
         sorts.push(value);
 
         return this;
       },
-      async then(resolve: (result: T | null) => T | Promise<T> | null, reject: (err: Error) => void): Promise<T | null> {
+      async then(resolve: (result: T | null) => Promise<T> | T | null, reject: (err: Error) => void): Promise<T | null> {
         try {
           if (_.isString(where)) {
             throw new Error('The query cannot be a string, it must be an object');
@@ -350,7 +350,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
     let select: string[] | undefined;
     let where: WhereQuery = {};
-    let sort: string | string[] | null = null;
+    let sort: string[] | string | null = null;
     let skip: number | null = null;
     let limit: number | null = null;
     // Args can be a FindArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
@@ -365,7 +365,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           where = value as WhereQuery;
           break;
         case 'sort':
-          sort = value as string | string[] | null;
+          sort = value as string[] | string | null;
           break;
         case 'skip':
           skip = value as number | null;
@@ -388,7 +388,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       }
     }
 
-    const sorts: (string | Record<string, number | string>)[] = [];
+    const sorts: (Record<string, number | string> | string)[] = [];
     if (_.isArray(sort)) {
       sorts.push(...sort);
     } else if (sort) {
@@ -412,7 +412,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * Sorts the query
        * @param {string|object} value
        */
-      sort(value: string | Record<string, number | string>): FindResult<T> {
+      sort(value: Record<string, number | string> | string): FindResult<T> {
         sorts.push(value);
 
         return this;
@@ -537,7 +537,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
     // NOTE: Number fields may be strings coming from the db. In those cases, try to convert the value to Number
     for (const name of this._floatProperties) {
-      const originalValue = row[name] as string | number | undefined | null;
+      const originalValue = row[name] as number | string | null | undefined;
       if (!_.isNil(originalValue) && typeof originalValue === 'string') {
         try {
           const value = Number(originalValue);
@@ -553,7 +553,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     }
 
     for (const name of this._intProperties) {
-      const originalValue = row[name] as string | number | undefined | null;
+      const originalValue = row[name] as number | string | null | undefined;
       if (!_.isNil(originalValue) && typeof originalValue === 'string') {
         try {
           const value = Number(originalValue);

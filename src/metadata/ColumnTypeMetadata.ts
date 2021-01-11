@@ -5,11 +5,11 @@ export interface ColumnTypeMetadataOptions extends ColumnBaseMetadataOptions {
   /**
    * Type of sql column
    */
-  type: 'string' | 'integer' | 'float' | 'date' | 'datetime' | 'boolean' | 'array' | 'string[]' | 'integer[]' | 'float[]' | 'boolean[]' | 'json' | 'binary';
+  type: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]';
   /**
    * Default database value
    */
-  defaultsTo?: string | string[] | number | number[] | boolean | boolean[] | (() => string | number | boolean | Date | Record<string, unknown>) | [];
+  defaultsTo?: boolean[] | number[] | string[] | boolean | number | string | (() => Date | Record<string, unknown> | boolean | number | string) | [];
   /**
    * Array of possible enumerated values
    */
@@ -20,12 +20,12 @@ export class ColumnTypeMetadata extends ColumnBaseMetadata {
   /**
    * Type of the column
    */
-  public type: 'string' | 'integer' | 'float' | 'date' | 'datetime' | 'boolean' | 'array' | 'string[]' | 'integer[]' | 'float[]' | 'boolean[]' | 'json' | 'binary';
+  public type: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]';
 
   /**
    * Default database value
    */
-  public defaultsTo?: string | string[] | number | number[] | boolean | boolean[] | (() => string | number | boolean | Date | Record<string, unknown>) | [];
+  public defaultsTo?: boolean[] | number[] | string[] | boolean | number | string | (() => Date | Record<string, unknown> | boolean | number | string) | [];
 
   /**
    * Array of possible enumerated values

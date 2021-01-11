@@ -1,4 +1,4 @@
-export type EntityFieldValue = string | string[] | number | number[] | Date | boolean | boolean[] | Record<string, unknown> | null | unknown;
+export type EntityFieldValue = boolean[] | Date | number[] | Record<string, unknown> | string[] | boolean | number | string | unknown | null;
 
 export interface Entity {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

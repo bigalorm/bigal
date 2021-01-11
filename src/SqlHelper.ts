@@ -44,7 +44,7 @@ export function getSelectQueryAndParams<T extends Entity>({
   model: ModelMetadata<T>;
   select?: string[];
   where?: WhereQuery;
-  sorts: (string | Record<string, number | string>)[];
+  sorts: (Record<string, number | string> | string)[];
   skip: number;
   limit: number;
 }): QueryAndParams {
@@ -559,7 +559,7 @@ export function buildWhereStatement<T extends Entity>({
  * @returns {string} SQL order by statement
  * @private
  */
-export function buildOrderStatement<T extends Entity>({ model, sorts }: { model: ModelMetadata<T>; sorts: (string | Record<string, number | string>)[] }): string {
+export function buildOrderStatement<T extends Entity>({ model, sorts }: { model: ModelMetadata<T>; sorts: (Record<string, number | string> | string)[] }): string {
   if (_.isNil(sorts) || !_.some(sorts)) {
     return '';
   }
@@ -659,7 +659,7 @@ function buildWhere<T extends Entity>({
         repositoriesByModelNameLowered,
         model,
         isNegated,
-        value: value as string[] | number[],
+        value: value as number[] | string[],
         params,
       });
     case 'contains':
@@ -980,7 +980,7 @@ function buildOrOperatorStatement<T extends Entity>({
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
   isNegated: boolean;
-  value: string[] | number[];
+  value: number[] | string[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params: any[];
 }): string {

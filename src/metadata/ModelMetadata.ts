@@ -6,7 +6,7 @@ import type { ColumnCollectionMetadata } from './ColumnCollectionMetadata';
 import type { ColumnModelMetadata } from './ColumnModelMetadata';
 import type { ColumnTypeMetadata } from './ColumnTypeMetadata';
 
-type Column = ColumnTypeMetadata | ColumnModelMetadata | ColumnCollectionMetadata;
+type Column = ColumnCollectionMetadata | ColumnModelMetadata | ColumnTypeMetadata;
 interface ColumnByStringId {
   [index: string]: Column;
 }

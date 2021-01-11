@@ -35,7 +35,7 @@ export class Product extends ModelBase implements Entity {
     model: 'store', // NOTE: Lower case to test that case doesn't matter
     name: 'store_id',
   })
-  public store!: number | Store;
+  public store!: Store | number;
 
   @column({
     collection: () => Category.name,

@@ -17,11 +17,11 @@ export class ProductCategory implements Entity {
     model: () => Product.name,
     name: 'product_id',
   })
-  public product!: number | Product;
+  public product!: Product | number;
 
   @column({
     model: () => Category.name,
     name: 'category_id',
   })
-  public category!: number | Category;
+  public category!: Category | number;
 }
