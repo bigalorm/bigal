@@ -5,8 +5,8 @@ import type {
   DeleteOptions,
   DestroyResult,
   DoNotReturnRecords,
-  WhereQuery,
   ReturnSelect,
+  WhereQueryTyped,
 } from './query';
 
 export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
@@ -57,7 +57,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {{returnRecords: false}} options
    * @returns {void}
    */
-  update(where: WhereQuery, values: Partial<T>, options: DoNotReturnRecords): Promise<void>;
+  update(where: WhereQueryTyped<T>, values: Partial<T>, options: DoNotReturnRecords): Promise<void>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -67,7 +67,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  update(where: WhereQuery, values: Partial<T>, options?: ReturnSelect): Promise<T[]>;
+  update(where: WhereQueryTyped<T>, values: Partial<T>, options?: ReturnSelect): Promise<T[]>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -78,14 +78,14 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} Return values from the db or `true` if returnRecords=false
    */
-  update(where: WhereQuery, values: Partial<T>, options?: CreateUpdateOptions): Promise<T[] | void>;
+  update(where: WhereQueryTyped<T>, values: Partial<T>, options?: CreateUpdateOptions): Promise<T[] | void>;
 
   /**
    * Destroys object(s) matching the where query
    * @param {object} [where] - Object representing the where query
    * @returns {void}
    */
-  destroy(where?: WhereQuery): DestroyResult<T, void>;
+  destroy(where?: WhereQueryTyped<T>): DestroyResult<T, void>;
 
   /**
    * Destroys object(s) matching the where query
@@ -95,7 +95,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  destroy(where: WhereQuery, options: DeleteOptions): DestroyResult<T, T[]>;
+  destroy(where: WhereQueryTyped<T>, options: DeleteOptions): DestroyResult<T, T[]>;
 
   /**
    * Destroys object(s) matching the where query
@@ -105,5 +105,5 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} `void` or records affected if returnRecords=true
    */
-  destroy<TOptions extends DeleteOptions = DeleteOptions>(where: WhereQuery, options?: TOptions): DestroyResult<T, TOptions extends DeleteOptions ? void : T[]>;
+  destroy<TOptions extends DeleteOptions = DeleteOptions>(where: WhereQueryTyped<T>, options?: TOptions): DestroyResult<T, TOptions extends DeleteOptions ? void : T[]>;
 }

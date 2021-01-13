@@ -1,14 +1,14 @@
 import _ from 'lodash';
 import type { Pool } from 'postgres-pool';
 
-import type { Entity, EntityFieldValue, EntityStatic } from './Entity';
+import type { EntityFieldValue, EntityStatic } from './Entity';
 import type { IReadonlyRepository } from './IReadonlyRepository';
 import type { IRepository } from './IRepository';
 import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
-import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, PaginateOptions, PopulateArgs, WhereQuery } from './query';
+import type { CountResult, FindArgsTyped, FindOneArgsTyped, FindOneResult, FindResult, PaginateOptions, PopulateArgs, WhereQuery, WhereQueryTyped } from './query';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
 
-export interface IRepositoryOptions<T extends Entity> {
+export interface IRepositoryOptions<T> {
   modelMetadata: ModelMetadata<T>;
   type: EntityStatic<T>;
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
@@ -16,7 +16,7 @@ export interface IRepositoryOptions<T extends Entity> {
   readonlyPool?: Pool;
 }
 
-export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository<T> {
+export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
   private readonly _modelMetadata: ModelMetadata<T>;
 
   protected _type: EntityStatic<T>;
@@ -58,7 +58,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
    * @param {object} [args.where] - Object representing the where query
    * @param {string|object|string[]|object[]} [args.sort] - Property name(s) to sort by
    */
-  public findOne(args: FindOneArgs | WhereQuery = {}): FindOneResult<T> {
+  public findOne(args: FindOneArgsTyped<T> | WhereQueryTyped<T> = {}): FindOneResult<T> {
     const { stack } = new Error(`${this.model.name}.findOne()`);
 
     let select: string[] | undefined;
@@ -111,7 +111,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * Filters the query
        * @param {object} value - Object representing the where query
        */
-      where(value: WhereQuery): FindOneResult<T> {
+      where(value: WhereQueryTyped<T>): FindOneResult<T> {
         where = value;
 
         return this;
@@ -196,15 +196,15 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
                 }
 
                 const populateWhere = {
-                  [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName] as EntityFieldValue,
+                  [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName as keyof T] as EntityFieldValue,
                   ...populate.where,
                 };
 
                 populateQueries.push(
                   (async function populateModel(): Promise<void> {
                     const populateResult = await populateRepository.findOne({
-                      select: populate.select,
-                      where: populateWhere,
+                      select: populate.select as (string & keyof T)[],
+                      where: populateWhere as WhereQueryTyped<T>,
                       sort: populate.sort,
                     });
 
@@ -231,7 +231,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
                   throw new Error(`Unable to populate ${column.target}#${column.propertyName}. There is no primary key defined in ${modelInstance.model.name}`);
                 }
 
-                const id = result[primaryKeyColumn.propertyName] as EntityFieldValue;
+                const id = result[primaryKeyColumn.propertyName as keyof T] as EntityFieldValue;
                 if (_.isNil(id)) {
                   throw new Error(`Primary key (${primaryKeyColumn.propertyName}) has no value for entity ${column.target}.`);
                 }
@@ -259,10 +259,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
                     (async function populateMultiMulti(): Promise<void> {
                       if (relatedModelColumn) {
                         const mapRecords = await throughRepository.find({
-                          select: [relatedModelColumn.via],
+                          select: [relatedModelColumn.via] as (string & keyof T)[],
                           where: {
                             [collectionColumn.via]: id,
-                          },
+                          } as WhereQueryTyped<T>,
                         });
                         const ids = _.map(mapRecords, relatedModelColumn.via);
 
@@ -274,8 +274,8 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
                         );
 
                         const populateResults = await populateRepository.find({
-                          select: populate.select,
-                          where: populateWhere,
+                          select: populate.select as (string & keyof T)[],
+                          where: populateWhere as WhereQueryTyped<T>,
                           sort: populate.sort,
                           skip: populate.skip,
                           limit: populate.limit,
@@ -296,8 +296,8 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
                   populateQueries.push(
                     (async function populateCollection(): Promise<void> {
                       const populateResults = await populateRepository.find({
-                        select: populate.select,
-                        where: populateWhere,
+                        select: populate.select as (string & keyof T)[],
+                        where: populateWhere as WhereQueryTyped<T>,
                         sort: populate.sort,
                         skip: populate.skip,
                         limit: populate.limit,
@@ -345,7 +345,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
    * @param {string|number} [args.skip] - Number of records to skip
    * @param {string|number} [args.limit] - Number of results to return
    */
-  public find(args: FindArgs | WhereQuery = {}): FindResult<T> {
+  public find(args: FindArgsTyped<T> | WhereQueryTyped<T> = {}): FindResult<T> {
     const { stack } = new Error(`${this.model.name}.find()`);
 
     let select: string[] | undefined;
@@ -403,7 +403,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * Filters the query
        * @param {object} value - Object representing the where query
        */
-      where(value: WhereQuery): FindResult<T> {
+      where(value: WhereQueryTyped<T>): FindResult<T> {
         where = value;
 
         return this;
@@ -483,7 +483,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
    * @param {object} [where] - Object representing the where query
    * @returns {number} Number of records matching the where criteria
    */
-  public count(where?: WhereQuery): CountResult<T> {
+  public count(where?: WhereQueryTyped<T>): CountResult<T> {
     const { stack } = new Error(`${this.model.name}.count()`);
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -494,7 +494,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * Filters the query
        * @param {object} value - Object representing the where query
        */
-      where(value: WhereQuery): CountResult<T> | number {
+      where(value: WhereQueryTyped<T>): CountResult<T> | number {
         // eslint-disable-next-line no-param-reassign
         where = value;
 
@@ -537,7 +537,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
     // NOTE: Number fields may be strings coming from the db. In those cases, try to convert the value to Number
     for (const name of this._floatProperties) {
-      const originalValue = row[name] as number | string | null | undefined;
+      const originalValue = row[name as keyof T] as number | string | null | undefined;
       if (!_.isNil(originalValue) && typeof originalValue === 'string') {
         try {
           const value = Number(originalValue);
@@ -553,7 +553,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     }
 
     for (const name of this._intProperties) {
-      const originalValue = row[name] as number | string | null | undefined;
+      const originalValue = row[name as keyof T] as number | string | null | undefined;
       if (!_.isNil(originalValue) && typeof originalValue === 'string') {
         try {
           const value = Number(originalValue);
