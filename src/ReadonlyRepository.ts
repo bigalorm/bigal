@@ -5,7 +5,7 @@ import type { EntityFieldValue, EntityStatic } from './Entity';
 import type { IReadonlyRepository } from './IReadonlyRepository';
 import type { IRepository } from './IRepository';
 import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
-import type { CountResult, FindArgsTyped, FindOneArgsTyped, FindOneResult, FindResult, PaginateOptions, PopulateArgs, WhereQuery, WhereQueryTyped } from './query';
+import type { CountResult, FindArgsTyped, FindOneArgsTyped, FindOneResult, FindResult, PaginateOptions, PopulateArgsTyped, WhereQuery, WhereQueryTyped } from './query';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
 
 export interface IRepositoryOptions<T> {
@@ -91,8 +91,8 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
       }
     }
 
-    interface Populate extends PopulateArgs {
-      propertyName: string;
+    interface Populate extends PopulateArgsTyped<T> {
+      propertyName: string & keyof T;
     }
 
     const populates: Populate[] = [];
@@ -134,7 +134,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
           sort: populateSort,
           skip: populateSkip,
           limit: populateLimit,
-        }: PopulateArgs = {},
+        }: PopulateArgsTyped<T> = {},
       ): FindOneResult<T> {
         populates.push({
           propertyName,
@@ -196,15 +196,15 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
                 }
 
                 const populateWhere = {
-                  [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName as keyof T] as EntityFieldValue,
+                  [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName] as EntityFieldValue,
                   ...populate.where,
                 };
 
                 populateQueries.push(
                   (async function populateModel(): Promise<void> {
                     const populateResult = await populateRepository.findOne({
-                      select: populate.select as (string & keyof T)[],
-                      where: populateWhere as WhereQueryTyped<T>,
+                      select: populate.select,
+                      where: populateWhere,
                       sort: populate.sort,
                     });
 
@@ -274,8 +274,8 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
                         );
 
                         const populateResults = await populateRepository.find({
-                          select: populate.select as (string & keyof T)[],
-                          where: populateWhere as WhereQueryTyped<T>,
+                          select: populate.select,
+                          where: populateWhere,
                           sort: populate.sort,
                           skip: populate.skip,
                           limit: populate.limit,
@@ -296,8 +296,8 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
                   populateQueries.push(
                     (async function populateCollection(): Promise<void> {
                       const populateResults = await populateRepository.find({
-                        select: populate.select as (string & keyof T)[],
-                        where: populateWhere as WhereQueryTyped<T>,
+                        select: populate.select,
+                        where: populateWhere,
                         sort: populate.sort,
                         skip: populate.skip,
                         limit: populate.limit,
