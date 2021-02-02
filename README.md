@@ -8,11 +8,12 @@ A fast, lightweight ORM for PostgreSQL and node.js, written in Typescript.
 
 This ORM does not:
 
-* Create or update db schemas for you
-* Handle associations/joins
-* Do much else than basic queries, inserts, updates, and deletes
+- Create or update db schemas for you
+- Handle associations/joins
+- Do much else than basic queries, inserts, updates, and deletes
 
 ## Compatibility
+
 - Node.js v10 or above
 - [PostgreSQL](http://www.postgresql.org/) 9.6 or above
 
@@ -25,13 +26,10 @@ $ npm install pg postgres-pool bigal
 ## Configuring
 
 #### Defining database models
+
 ```typescript
 import { Entity } from 'bigal';
-import {
-  column,
-  primaryColumn,
-  table,
-} from 'bigal/decorators';
+import { column, primaryColumn, table } from 'bigal/decorators';
 import { Store } from './Store';
 import { Category } from './Category';
 import { ProductCategory } from './ProductCategory';
@@ -74,7 +72,6 @@ export class Product implements Entity {
   })
   public categories?: Category[];
 }
-
 ```
 
 #### Initialize repositories
@@ -179,22 +176,26 @@ const item = await ProductRepository.findOne({
 #### Populate relation - Relations can be one-to-many (ether direction) or many-to-many
 
 ```js
-const item = await ProductRepository.findOne().where({
-  id: context.params.id,
-}).populate('store', {
-  select: ['name'],
-});
+const item = await ProductRepository.findOne()
+  .where({
+    id: context.params.id,
+  })
+  .populate('store', {
+    select: ['name'],
+  });
 ```
 
 #### Sorted query before returning result
 
 ```js
-const item = await ProductRepository.findOne().where({
-  foo: context.params.foo,
-}).sort('name asc');
+const item = await ProductRepository.findOne()
+  .where({
+    foo: context.params.foo,
+  })
+  .sort('name asc');
 ```
 
--------------------------------------------------
+---
 
 ### `.find()` - Fetch a multiple objects
 
@@ -241,45 +242,57 @@ const items = await PersonRepository.find().where({
 #### Sorted query before returning result
 
 ```js
-const items = await PersonRepository.find().where({
-  firstName: {
-    like: 'walter',
-  },
-  lastName: {
-    like: 'white',
-  },
-}).sort({
-  age: 1,
-  occupation: -1,
-});
+const items = await PersonRepository.find()
+  .where({
+    firstName: {
+      like: 'walter',
+    },
+    lastName: {
+      like: 'white',
+    },
+  })
+  .sort({
+    age: 1,
+    occupation: -1,
+  });
 ```
 
 #### Limit number results returned
 
 ```js
-const items = await PersonRepository.find().where({
-  age: [22, 23, 24],
-}).limit(42);
+const items = await PersonRepository.find()
+  .where({
+    age: [22, 23, 24],
+  })
+  .limit(42);
 ```
 
 #### Skip `x` results
 
 ```js
-const items = await FooRepository.find().where({
-  or: [{
-    foo: context.params.foo,
-  }, {
-    bar: context.params.foo,
-  }]
-}).skip(42);
+const items = await FooRepository.find()
+  .where({
+    or: [
+      {
+        foo: context.params.foo,
+      },
+      {
+        bar: context.params.foo,
+      },
+    ],
+  })
+  .skip(42);
 ```
 
 #### Page results using `skip()` & `limit()`
 
 ```js
-const items = await FooRepository.find().where({
-  foo: context.params.foo,
-}).skip(84).limit(42);
+const items = await FooRepository.find()
+  .where({
+    foo: context.params.foo,
+  })
+  .skip(84)
+  .limit(42);
 ```
 
 #### Page results using `paginate`
@@ -287,12 +300,14 @@ const items = await FooRepository.find().where({
 ```js
 const page = 2;
 const pageSize = 42;
-const items = await FooRepository.find().where({
-  foo: context.params.foo,
-}).paginate(page, pageSize);
+const items = await FooRepository.find()
+  .where({
+    foo: context.params.foo,
+  })
+  .paginate(page, pageSize);
 ```
 
--------------------------------------------------
+---
 
 ### `.count()` - Get the number of records matching the where criteria
 
@@ -305,7 +320,7 @@ const count = await PersonRepository.count().where({
 // count = 3
 ```
 
--------------------------------------------------
+---
 
 ### `.create()` - Insert one or multiple objects
 
@@ -321,105 +336,139 @@ const item = await PersonRepository.create({
 #### Insert a single object without returning results from the db
 
 ```js
-await PersonRepository.create({
-  name: 'Karl',
-}, {
-  returnRecords: false,
-});
+await PersonRepository.create(
+  {
+    name: 'Karl',
+  },
+  {
+    returnRecords: false,
+  },
+);
 ```
 
 #### Insert a single object but limit columns returned from db for inserted records (query projection)
 
 ```js
-const item = await PersonRepository.create({
-  name: 'Karl',
-}, {
-  returnSelect: ['name']
-});
+const item = await PersonRepository.create(
+  {
+    name: 'Karl',
+  },
+  {
+    returnSelect: ['name'],
+  },
+);
 // item = { id: 42, name: 'Karl' }
 ```
+
 > Note: The primary key will always be included. To only return the primary key value, pass an empty array
 
 #### Insert a multiple object
 
 ```js
-const items = await PersonRepository.create([{
-  name: 'LX',
-}, {
-  name: 'Big Al',
-}]);
+const items = await PersonRepository.create([
+  {
+    name: 'LX',
+  },
+  {
+    name: 'Big Al',
+  },
+]);
 // items = [{ id: 24, name: 'LX', createdAt: ... }, { id: 25, name: 'Big Al', createdAt: ... }]
 ```
 
 #### Insert a multiple object without returning results from the db
 
 ```js
-await PersonRepository.create([{
-  name: 'LX',
-}, {
-  name: 'Big Al',
-}], {
-  returnRecords: false,
-});
+await PersonRepository.create(
+  [
+    {
+      name: 'LX',
+    },
+    {
+      name: 'Big Al',
+    },
+  ],
+  {
+    returnRecords: false,
+  },
+);
 ```
 
 #### Insert a multiple object
 
 ```js
-const items = await PersonRepository.create([{
-  name: 'LX',
-}, {
-  name: 'Big Al',
-}], {
-  returnSelect: ['id']
-});
+const items = await PersonRepository.create(
+  [
+    {
+      name: 'LX',
+    },
+    {
+      name: 'Big Al',
+    },
+  ],
+  {
+    returnSelect: ['id'],
+  },
+);
 // items = [{ id: 24 }, { id: 25 }]
 ```
+
 > Note: The primary key will always be included. To only return the primary key value, pass an empty array
 
--------------------------------------------------
+---
 
 ### `.update()` - Update objects
 
 #### Update single record
 
 ```js
-const items = await PersonRepository.update({
-  id: 42,
-}, {
-  name: 'Big Al',
-});
+const items = await PersonRepository.update(
+  {
+    id: 42,
+  },
+  {
+    name: 'Big Al',
+  },
+);
 // items = [{ id: 42, name: 'Big Al', createdAt: ... }]
 ```
-> Note: This method will return an array, regardless of how many records were affected
 
+> Note: This method will return an array, regardless of how many records were affected
 
 #### Update record without returning results from the db
 
 ```js
-await PersonRepository.update({
-  id: 42,
-}, {
-  name: 'Big Al',
-}, {
-  returnRecords: false,
-});
+await PersonRepository.update(
+  {
+    id: 42,
+  },
+  {
+    name: 'Big Al',
+  },
+  {
+    returnRecords: false,
+  },
+);
 ```
 
 #### Update records and limit columns returned from db for affected records (query projection)
 
 ```js
-const items = await PersonRepository.update({
-  id: [42, 43],
-}, {
-  occupation: 'Water Purification Engineer',
-}, {
-  returnSelect: ['id']
-});
+const items = await PersonRepository.update(
+  {
+    id: [42, 43],
+  },
+  {
+    occupation: 'Water Purification Engineer',
+  },
+  {
+    returnSelect: ['id'],
+  },
+);
 // items = [{ id: 42 }, { id: 43 }]
 ```
 
--------------------------------------------------
+---
 
 ### `.destroy()` - Delete objects from the db
 
@@ -431,32 +480,44 @@ const items = await PersonRepository.destroy({
 });
 // items = [{ id: 42, name: 'Big Al', createdAt: ... }]
 ```
-> Note: This method will return an array, regardless of how many records were affected
 
+> Note: This method will return an array, regardless of how many records were affected
 
 #### Delete record without returning row data from the db
 
 ```js
-await PersonRepository.destroy({
-  id: 42,
-}, {
-  returnRecords: false,
-});
+await PersonRepository.destroy(
+  {
+    id: 42,
+  },
+  {
+    returnRecords: false,
+  },
+);
 ```
 
 #### Delete records and limit columns returned from db for affected records (query projection)
 
 ```js
-const items = await PersonRepository.destroy({
-  id: [24, 25],
-}, {
-  returnSelect: ['name']
-});
+const items = await PersonRepository.destroy(
+  {
+    id: [24, 25],
+  },
+  {
+    returnSelect: ['name'],
+  },
+);
 // items = [{ id: 24, name: 'LX' }, { id: 25, name: 'Big Al' }]
 ```
+
 > Note: The primary key will always be included. To only return the primary key value, pass an empty array
 
+### Debugging
 
+Debugging can be enabled by passing the `DEBUG_BIGAL` environment flag with a value of `true`.
+
+> Debugging will print the generated SQL code in the console.
 
 ## License
+
 MIT
