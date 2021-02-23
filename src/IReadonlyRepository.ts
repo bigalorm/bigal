@@ -1,8 +1,7 @@
-import type { Entity } from './Entity';
 import type { ModelMetadata } from './metadata';
-import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, WhereQuery } from './query';
+import type { CountResult, FindArgsTyped, FindOneArgsTyped, FindOneResult, FindResult, WhereQueryTyped } from './query';
 
-export interface IReadonlyRepository<T extends Entity> {
+export interface IReadonlyRepository<T> {
   readonly model: ModelMetadata<T>;
 
   /**
@@ -12,7 +11,7 @@ export interface IReadonlyRepository<T extends Entity> {
    * @param {object} [args.where] - Object representing the where query
    * @param {string|object|string[]|object[]} [args.sort] - Property name(s) to sort by
    */
-  findOne(args: FindOneArgs | WhereQuery): FindOneResult<T>;
+  findOne(args: FindOneArgsTyped<T> | WhereQueryTyped<T>): FindOneResult<T>;
 
   /**
    * Gets a collection of objects
@@ -23,12 +22,12 @@ export interface IReadonlyRepository<T extends Entity> {
    * @param {string|number} [args.skip] - Number of records to skip
    * @param {string|number} [args.limit] - Number of results to return
    */
-  find(args: FindArgs | WhereQuery): FindResult<T>;
+  find(args: FindArgsTyped<T> | WhereQueryTyped<T>): FindResult<T>;
 
   /**
    * Gets a count of rows matching the where query
    * @param {object} [where] - Object representing the where query
    * @returns {number} Number of records matching the where criteria
    */
-  count(where?: WhereQuery): CountResult<T>;
+  count(where?: WhereQueryTyped<T>): CountResult<T>;
 }

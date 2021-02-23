@@ -1,4 +1,4 @@
-import type { WhereQuery } from './WhereQuery';
+import type { WhereQuery, WhereQueryTyped } from './WhereQuery';
 
 export interface PopulateArgs {
   where?: WhereQuery;
@@ -6,4 +6,9 @@ export interface PopulateArgs {
   sort?: string[] | string;
   skip?: number;
   limit?: number;
+}
+
+export interface PopulateArgsTyped<T> extends PopulateArgs {
+  where?: WhereQueryTyped<T>;
+  select?: (string & keyof T)[];
 }
