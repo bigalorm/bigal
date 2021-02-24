@@ -317,10 +317,10 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
               await Promise.all(populateQueries);
             }
 
-            return resolve(result);
+            return await resolve(result);
           }
 
-          return resolve(null);
+          return await resolve(null);
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
