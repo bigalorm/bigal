@@ -16,6 +16,7 @@ export function getMetadataStorage<T extends Entity>(): MetadataStorage<T> {
   return global.bigAlMetadataArgsStorage as MetadataStorage<T>;
 }
 
+export * from './ColumnBaseMetadata';
 export * from './ColumnCollectionMetadata';
 export * from './ColumnMetadata';
 export * from './ColumnModelMetadata';

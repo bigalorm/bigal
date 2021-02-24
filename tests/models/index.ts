@@ -1,4 +1,5 @@
 export * from './Category';
+export * from './KitchenSink';
 export * from './Product';
 export * from './ProductCategory';
 export * from './ProductWithCreatedAt';

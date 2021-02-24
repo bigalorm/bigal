@@ -1,3 +1,3 @@
-export interface ReturnSelect {
-  returnSelect: string[];
+export interface ReturnSelect<T> {
+  returnSelect: (string & keyof T)[];
 }

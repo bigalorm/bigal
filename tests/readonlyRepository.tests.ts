@@ -690,7 +690,13 @@ describe('ReadonlyRepository', () => {
         .where({
           store: store.id,
         })
-        .populate('store')
+        .populate('store', {
+          where: {
+            name: {
+              like: 'store%',
+            },
+          },
+        })
         .populate('categories', {
           where: {
             name: {
@@ -709,8 +715,8 @@ describe('ReadonlyRepository', () => {
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 1');
       productQueryParams!.should.deep.equal([store.id]);
       const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
-      storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1 LIMIT 1');
-      storeQueryParams!.should.deep.equal([store.id]);
+      storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1 AND "name" ILIKE $2 LIMIT 1');
+      storeQueryParams!.should.deep.equal([store.id, 'store%']);
       const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).third();
       productCategoryMapQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
       productCategoryMapQueryParams!.should.deep.equal([product.id]);

@@ -8,7 +8,7 @@ import { Repository, initialize } from '../src';
 import { ColumnCollectionMetadata, ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
 import * as sqlHelper from '../src/SqlHelper';
 
-import { Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, ProductWithCreatedAt, ReadonlyProduct, Store } from './models';
+import { Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, ProductWithCreatedAt, ReadonlyProduct, Store, KitchenSink } from './models';
 
 type RepositoriesByModelNameLowered = Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
 
@@ -23,7 +23,7 @@ describe('sqlHelper', () => {
   before(() => {
     should = chai.should();
     const repositoriesByModelName = initialize({
-      models: [Category, Product, ProductCategory, ProductWithCreatedAt, ProductWithCreateUpdateDateTracking, ReadonlyProduct, Store],
+      models: [Category, KitchenSink, Product, ProductCategory, ProductWithCreatedAt, ProductWithCreateUpdateDateTracking, ReadonlyProduct, Store],
       pool: mockedPool,
     });
 
@@ -275,7 +275,11 @@ describe('sqlHelper', () => {
         const { query, params } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.productwithcreatedat.model,
-          sorts: ['name'],
+          sorts: [
+            {
+              propertyName: 'name',
+            },
+          ],
           where: {},
           limit: 1,
           skip: 0,
@@ -593,9 +597,10 @@ describe('sqlHelper', () => {
       const afterTime = new Date();
       for (const [index, value] of params.entries()) {
         if (index === 0) {
-          value.should.equal(name);
+          (value as string).should.equal(name);
         } else if (index === 1) {
-          (beforeTime <= value && value <= afterTime).should.equal(true);
+          const valueDate = value as Date;
+          (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
         }
       }
     });
@@ -698,9 +703,10 @@ describe('sqlHelper', () => {
       const afterTime = new Date();
       for (const [index, value] of params.entries()) {
         if (index === 0) {
-          value.should.equal(name);
+          (value as string).should.equal(name);
         } else if (index === 1) {
-          (beforeTime <= value && value <= afterTime).should.equal(true);
+          const valueDate = value as Date;
+          (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
         }
       }
     });
@@ -1111,9 +1117,10 @@ describe('sqlHelper', () => {
       const afterTime = new Date();
       for (const [index, value] of params.entries()) {
         if (index === 0) {
-          value.should.equal(name);
+          (value as string).should.equal(name);
         } else if (index === 1) {
-          (beforeTime <= value && value <= afterTime).should.equal(true);
+          const valueDate = value as Date;
+          (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
         }
       }
     });
@@ -2116,754 +2123,268 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name]);
     });
     it('should treat integer type with array values as an =ANY() statement', () => {
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'foo',
-          propertyName: 'foo',
-          type: 'integer',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const values = [42, 24];
 
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.kitchensink.model,
         where: {
-          foo: values,
+          intColumn: values,
         },
       });
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "foo"=ANY($1::INTEGER[])');
+      whereStatement!.should.equal('WHERE "int_column"=ANY($1::INTEGER[])');
       params.should.deep.equal([values]);
     });
     it('should treat float type with array values as an =ANY() statement', () => {
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'foo',
-          propertyName: 'foo',
-          type: 'float',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const values = [42.42, 24.24];
 
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.kitchensink.model,
         where: {
-          foo: values,
+          floatColumn: values,
         },
       });
 
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "foo"=ANY($1::NUMERIC[])');
+      whereStatement!.should.equal('WHERE "float_column"=ANY($1::NUMERIC[])');
       params.should.deep.equal([values]);
     });
     describe('type: "array"', () => {
       it('should handle empty array value with array type column', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'array',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: [],
+            arrayColumn: [],
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE "foo"=\'{}\'');
+        whereStatement!.should.equal('WHERE "array_column"=\'{}\'');
         params.should.deep.equal([]);
       });
       it('should handle comparing array type as an array of null or empty', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'array',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: [null, []],
+            arrayColumn: [null, []],
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE ("foo" IS NULL OR "foo"=\'{}\')');
+        whereStatement!.should.equal('WHERE ("array_column" IS NULL OR "array_column"=\'{}\')');
         params.should.deep.equal([]);
       });
       it('should handle comparing array type with single value as =ANY()', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'array',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: value,
+            arrayColumn: value,
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1=ANY("foo")');
+        whereStatement!.should.equal('WHERE $1=ANY("array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with array of a single value as =ANY()', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'array',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: [value],
+            arrayColumn: [value],
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1=ANY("foo")');
+        whereStatement!.should.equal('WHERE $1=ANY("array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with negated single value as <>ALL()', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'array',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: {
+            arrayColumn: {
               '!': value,
             },
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1<>ALL("foo")');
+        whereStatement!.should.equal('WHERE $1<>ALL("array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with negated array of a single value as <>ALL()', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'array',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: {
+            arrayColumn: {
               '!': [value],
             },
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1<>ALL("foo")');
+        whereStatement!.should.equal('WHERE $1<>ALL("array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with array value as separate =ANY() statements', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'array',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const values = [faker.random.uuid(), faker.random.uuid()];
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: values,
+            arrayColumn: values,
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE ($1=ANY("foo") OR $2=ANY("foo"))');
+        whereStatement!.should.equal('WHERE ($1=ANY("array_column") OR $2=ANY("array_column"))');
         params.should.deep.equal([values[0], values[1]]);
       });
       it('should handle comparing array type with negated array value as separate <>ALL() statements', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'array',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const values = [faker.random.uuid(), faker.random.uuid()];
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: {
+            arrayColumn: {
               '!': values,
             },
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1<>ALL("foo") AND $2<>ALL("foo")');
+        whereStatement!.should.equal('WHERE $1<>ALL("array_column") AND $2<>ALL("array_column")');
         params.should.deep.equal([values[0], values[1]]);
       });
     });
     describe('type: "string[]"', () => {
       it('should handle empty array value with array type column', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'string[]',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: [],
+            stringArrayColumn: [],
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE "foo"=\'{}\'');
+        whereStatement!.should.equal('WHERE "string_array_column"=\'{}\'');
         params.should.deep.equal([]);
       });
       it('should handle comparing array type as an array of null or empty', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'string[]',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: [null, []],
+            stringArrayColumn: [null, []],
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE ("foo" IS NULL OR "foo"=\'{}\')');
+        whereStatement!.should.equal('WHERE ("string_array_column" IS NULL OR "string_array_column"=\'{}\')');
         params.should.deep.equal([]);
       });
       it('should handle comparing array type with single value as =ANY()', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'string[]',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: value,
+            stringArrayColumn: value,
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1=ANY("foo")');
+        whereStatement!.should.equal('WHERE $1=ANY("string_array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with array of a single value as =ANY()', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'string[]',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: [value],
+            stringArrayColumn: [value],
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1=ANY("foo")');
+        whereStatement!.should.equal('WHERE $1=ANY("string_array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with negated single value as <>ALL()', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'string[]',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: {
+            stringArrayColumn: {
               '!': value,
             },
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1<>ALL("foo")');
+        whereStatement!.should.equal('WHERE $1<>ALL("string_array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with negated array of a single value as <>ALL()', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'string[]',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: {
+            stringArrayColumn: {
               '!': [value],
             },
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1<>ALL("foo")');
+        whereStatement!.should.equal('WHERE $1<>ALL("string_array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with array value as separate =ANY() statements', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'string[]',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const values = [faker.random.uuid(), faker.random.uuid()];
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: values,
+            stringArrayColumn: values,
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE ($1=ANY("foo") OR $2=ANY("foo"))');
+        whereStatement!.should.equal('WHERE ($1=ANY("string_array_column") OR $2=ANY("string_array_column"))');
         params.should.deep.equal([values[0], values[1]]);
       });
       it('should handle comparing array type with negated array value as separate <>ALL() statements', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'string[]',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const values = [faker.random.uuid(), faker.random.uuid()];
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model,
           where: {
-            foo: {
+            stringArrayColumn: {
               '!': values,
             },
           },
         });
 
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1<>ALL("foo") AND $2<>ALL("foo")');
+        whereStatement!.should.equal('WHERE $1<>ALL("string_array_column") AND $2<>ALL("string_array_column")');
         params.should.deep.equal([values[0], values[1]]);
       });
     });
@@ -2987,155 +2508,79 @@ describe('sqlHelper', () => {
     });
   });
   describe('#buildOrderStatement()', () => {
-    const model = new ModelMetadata({
-      name: 'foo',
-      type: TestEntity,
-    });
-    model.columns = [
-      new ColumnTypeMetadata({
-        target: 'foo',
-        name: 'id',
-        propertyName: 'id',
-        primary: true,
-        type: 'integer',
-      }),
-      new ColumnTypeMetadata({
-        target: 'foo',
-        name: 'foo',
-        propertyName: 'foo',
-        type: 'string',
-      }),
-      new ColumnTypeMetadata({
-        target: 'foo',
-        name: 'foobar',
-        propertyName: 'bar',
-        type: 'string',
-      }),
-    ];
-
     it('should return empty if there are no orders defined', () => {
       const result = sqlHelper.buildOrderStatement({
-        model,
+        model: repositoriesByModelNameLowered.kitchensink.model,
         sorts: [],
-      });
-
-      result.should.equal('');
-    });
-    it('should return empty if there are orders is null', () => {
-      const result = sqlHelper.buildOrderStatement({
-        model,
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore - testing a value that isn't allowed by typescript
-        sorts: null,
       });
 
       result.should.equal('');
     });
     it('should handle single string order with implicit direction', () => {
       const result = sqlHelper.buildOrderStatement({
-        model,
-        sorts: ['foo'],
+        model: repositoriesByModelNameLowered.kitchensink.model,
+        sorts: [
+          {
+            propertyName: 'name',
+          },
+        ],
       });
 
-      result.should.equal('ORDER BY "foo"');
+      result.should.equal('ORDER BY "name"');
     });
     it('should handle single string order with implicit direction and explicit columnName', () => {
       const result = sqlHelper.buildOrderStatement({
-        model,
-        sorts: ['bar'],
+        model: repositoriesByModelNameLowered.kitchensink.model,
+        sorts: [
+          {
+            propertyName: 'intColumn',
+          },
+        ],
       });
 
-      result.should.equal('ORDER BY "foobar"');
-    });
-    it('should handle single string order with explicit asc direction', () => {
-      const result = sqlHelper.buildOrderStatement({
-        model,
-        sorts: ['foo asc'],
-      });
-
-      result.should.equal('ORDER BY "foo"');
-    });
-    it('should handle single string order with explicit asc direction and explicit columnName', () => {
-      const result = sqlHelper.buildOrderStatement({
-        model,
-        sorts: ['bar asc'],
-      });
-
-      result.should.equal('ORDER BY "foobar"');
+      result.should.equal('ORDER BY "int_column"');
     });
     it('should handle single string order with explicit desc direction', () => {
       const result = sqlHelper.buildOrderStatement({
-        model,
-        sorts: ['foo desc'],
+        model: repositoriesByModelNameLowered.kitchensink.model,
+        sorts: [
+          {
+            propertyName: 'name',
+            descending: true,
+          },
+        ],
       });
 
-      result.should.equal('ORDER BY "foo" DESC');
+      result.should.equal('ORDER BY "name" DESC');
     });
     it('should handle single string order with explicit desc direction and explicit columnName', () => {
       const result = sqlHelper.buildOrderStatement({
-        model,
-        sorts: ['bar desc'],
-      });
-
-      result.should.equal('ORDER BY "foobar" DESC');
-    });
-    it('should handle multiple string order (string array)', () => {
-      const result = sqlHelper.buildOrderStatement({
-        model,
-        sorts: ['bar desc', 'foo'],
-      });
-
-      result.should.equal('ORDER BY "foobar" DESC,"foo"');
-    });
-    it('should handle single object order with explicit desc direction', () => {
-      const result = sqlHelper.buildOrderStatement({
-        model,
+        model: repositoriesByModelNameLowered.kitchensink.model,
         sorts: [
           {
-            foo: -1,
+            propertyName: 'intColumn',
+            descending: true,
           },
         ],
       });
 
-      result.should.equal('ORDER BY "foo" DESC');
+      result.should.equal('ORDER BY "int_column" DESC');
     });
-    it('should handle single object order with explicit desc direction and explicit columnName', () => {
+    it('should handle multiple string order', () => {
       const result = sqlHelper.buildOrderStatement({
-        model,
+        model: repositoriesByModelNameLowered.kitchensink.model,
         sorts: [
           {
-            bar: -1,
+            propertyName: 'intColumn',
+            descending: true,
+          },
+          {
+            propertyName: 'name',
           },
         ],
       });
 
-      result.should.equal('ORDER BY "foobar" DESC');
-    });
-    it('should handle multiple string order (object)', () => {
-      const result = sqlHelper.buildOrderStatement({
-        model,
-        sorts: [
-          {
-            foo: 1,
-            bar: -1,
-          },
-        ],
-      });
-
-      result.should.equal('ORDER BY "foo","foobar" DESC');
-    });
-    it('should handle mixed string and object orders', () => {
-      const result = sqlHelper.buildOrderStatement({
-        model,
-        sorts: [
-          'foo asc',
-          {
-            bar: -1,
-          },
-        ],
-      });
-
-      result.should.equal('ORDER BY "foo","foobar" DESC');
+      result.should.equal('ORDER BY "int_column" DESC,"name"');
     });
   });
 });

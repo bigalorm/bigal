@@ -11,4 +11,5 @@ export * from './FindResult';
 export * from './PaginateOptions';
 export * from './PopulateArgs';
 export * from './ReturnSelect';
+export * from './Sort';
 export * from './WhereQuery';

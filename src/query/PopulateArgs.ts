@@ -1,14 +1,16 @@
-import type { WhereQuery, WhereQueryTyped } from './WhereQuery';
+import type { GetPropertyType } from '../types/GetPropertyType';
 
-export interface PopulateArgs {
-  where?: WhereQuery;
-  select?: string[];
-  sort?: string[] | string;
+import type { Sort } from './Sort';
+import type { WhereQuery } from './WhereQuery';
+
+export interface PopulateArgs<T> {
+  where?: WhereQuery<T>;
+  select?: (string & keyof T)[];
+  sort?: Sort<T>;
   skip?: number;
   limit?: number;
 }
 
-export interface PopulateArgsTyped<T> extends PopulateArgs {
-  where?: WhereQueryTyped<T>;
-  select?: (string & keyof T)[];
+export interface PopulatedProperty<T, TProperty extends string & keyof T> extends PopulateArgs<GetPropertyType<T, TProperty>> {
+  propertyName: TProperty;
 }

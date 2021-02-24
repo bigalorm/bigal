@@ -1,11 +1,6 @@
-import type { FindOneArgs, FindOneArgsTyped } from './FindOneArgs';
+import type { FindOneArgs } from './FindOneArgs';
 
-export interface FindArgs extends FindOneArgs {
-  skip?: number;
-  limit?: number;
-}
-
-export interface FindArgsTyped<T> extends FindOneArgsTyped<T> {
+export interface FindArgs<T> extends FindOneArgs<T> {
   skip?: number;
   limit?: number;
 }

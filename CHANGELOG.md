@@ -1,3 +1,9 @@
+### 7.0.0
+  * Add generic types to select and where. #72 Thanks @krislefeber!
+  * Add debug environment variable to print sql to console. #73 Thanks @krislefeber!
+  * Add generic types to returnSelect and sort arguments
+  * Update npms
+
 ### 6.0.2
   * Update npms
   * Sort union/intersection members

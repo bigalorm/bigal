@@ -1,7 +1,7 @@
 import type { ChainablePromiseLike } from '../ChainablePromiseLike';
 
-import type { WhereQueryTyped } from './WhereQuery';
+import type { WhereQuery } from './WhereQuery';
 
 export interface DestroyResult<TEntity, TReturn> extends ChainablePromiseLike<TReturn> {
-  where(args: WhereQueryTyped<TEntity>): DestroyResult<TEntity, TReturn>;
+  where(args: WhereQuery<TEntity>): DestroyResult<TEntity, TReturn>;
 }

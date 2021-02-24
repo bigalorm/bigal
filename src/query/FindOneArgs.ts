@@ -1,12 +1,8 @@
-import type { WhereQuery, WhereQueryTyped } from './WhereQuery';
+import type { Sort } from './Sort';
+import type { WhereQuery } from './WhereQuery';
 
-export interface FindOneArgs {
-  select?: string[];
-  where?: WhereQuery;
-  sort?: string[] | string;
-}
-
-export interface FindOneArgsTyped<T> extends FindOneArgs {
+export interface FindOneArgs<T> {
   select?: (string & keyof T)[];
-  where?: WhereQueryTyped<T>;
+  where?: WhereQuery<T>;
+  sort?: Sort<T>;
 }

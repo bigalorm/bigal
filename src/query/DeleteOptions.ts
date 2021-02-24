@@ -1,11 +1,11 @@
-interface ReturnSelect {
-  returnSelect: string[];
+interface ReturnSelect<T> {
+  returnSelect: (string & keyof T)[];
   returnRecords?: true;
 }
 
-interface ReturnRecords {
+interface ReturnRecords<T> {
   returnRecords: true;
-  returnSelect?: string[];
+  returnSelect?: (string & keyof T)[];
 }
 
-export type DeleteOptions = ReturnRecords | ReturnSelect;
+export type DeleteOptions<T> = ReturnRecords<T> | ReturnSelect<T>;

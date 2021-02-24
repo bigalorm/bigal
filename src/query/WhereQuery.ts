@@ -1,18 +1,9 @@
 import type { EntityFieldValue } from '../Entity';
 
-export type WhereClauseValue = EntityFieldValue | WhereQuery;
+export type WhereClauseValue<T> = EntityFieldValue | WhereQuery<T>;
 
-export interface WhereQuery {
-  [index: string]: WhereClauseValue;
-}
-
-export type WhereQueryTyped<T> = {
-  [P in keyof T]?: WhereClauseValue;
+export type WhereQuery<T> = {
+  [P in keyof T]?: WhereClauseValue<T>;
 } & {
-  where?: WhereQueryTyped<T>;
-  or?: OrQuery<T>[];
-};
-
-type OrQuery<T> = {
-  [P in keyof T]?: WhereClauseValue;
+  or?: WhereQuery<T>[];
 };

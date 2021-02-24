@@ -9,12 +9,11 @@ import type {
   ColumnTypeMetadata,
   ModelMetadata,
 } from './metadata';
-import type { Comparer, WhereClauseValue, WhereQuery } from './query';
+import type { Comparer, OrderBy, WhereClauseValue, WhereQuery } from './query';
 
 interface QueryAndParams {
   query: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: any[];
+  params: unknown[];
 }
 
 /* eslint-disable @typescript-eslint/no-use-before-define */
@@ -43,8 +42,8 @@ export function getSelectQueryAndParams<T extends Entity>({
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
   select?: string[];
-  where?: WhereQuery;
-  sorts: (Record<string, number | string> | string)[];
+  where?: WhereQuery<T>;
+  sorts: OrderBy<T>[];
   skip: number;
   limit: number;
 }): QueryAndParams {
@@ -128,7 +127,7 @@ export function getCountQueryAndParams<T extends Entity>({
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
-  where?: WhereQuery;
+  where?: WhereQuery<T>;
 }): QueryAndParams {
   let query = `SELECT count(*) AS "count" FROM "${model.tableName}"`;
 
@@ -312,7 +311,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
-  where: WhereQuery;
+  where: WhereQuery<T>;
   values: Partial<Entity>;
   returnRecords?: boolean;
   returnSelect?: Extract<keyof Entity, string>[];
@@ -432,7 +431,7 @@ export function getDeleteQueryAndParams<T extends Entity>({
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
-  where?: WhereQuery;
+  where?: WhereQuery<T>;
   returnRecords?: boolean;
   returnSelect?: Extract<keyof Entity, string>[];
 }): QueryAndParams {
@@ -527,13 +526,11 @@ export function buildWhereStatement<T extends Entity>({
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
   model: ModelMetadata<T>;
-  where?: WhereQuery;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params?: any[];
+  where?: WhereQuery<T>;
+  params?: unknown[];
 }): {
   whereStatement?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: any[];
+  params: unknown[];
 } {
   let whereStatement;
   if (_.isObject(where)) {
@@ -564,44 +561,19 @@ export function buildWhereStatement<T extends Entity>({
  * @returns {string} SQL order by statement
  * @private
  */
-export function buildOrderStatement<T extends Entity>({ model, sorts }: { model: ModelMetadata<T>; sorts: (Record<string, number | string> | string)[] }): string {
+export function buildOrderStatement<T extends Entity>({ model, sorts }: { model: ModelMetadata<T>; sorts: OrderBy<T>[] }): string {
   if (_.isNil(sorts) || !_.some(sorts)) {
     return '';
   }
 
   let orderStatement = 'ORDER BY ';
-  const orderProperties: {
-    propertyName: string;
-    order: number | string;
-  }[] = [];
-  for (const sortStatement of sorts) {
-    if (_.isString(sortStatement)) {
-      for (const sort of sortStatement.split(',')) {
-        const parts = sort.split(' ');
-        const propertyName = parts.shift();
-        if (propertyName) {
-          orderProperties.push({
-            propertyName,
-            order: parts.join(''),
-          });
-        }
-      }
-    } else if (_.isObject(sortStatement)) {
-      for (const [propertyName, order] of Object.entries(sortStatement)) {
-        orderProperties.push({
-          propertyName,
-          order,
-        });
-      }
-    }
-  }
 
-  for (const [index, orderProperty] of orderProperties.entries()) {
+  for (const [index, orderProperty] of sorts.entries()) {
     if (index > 0) {
       orderStatement += ',';
     }
 
-    const { propertyName, order } = orderProperty;
+    const { propertyName, descending } = orderProperty;
     const column = model.columnsByPropertyName[propertyName];
     if (!column) {
       throw new Error(`Property (${propertyName}) not found in model (${model.name}).`);
@@ -609,7 +581,7 @@ export function buildOrderStatement<T extends Entity>({ model, sorts }: { model:
 
     orderStatement += `"${column.name}"`;
 
-    if (order && (order === -1 || order === '-1' || /desc/i.test(`${order}`))) {
+    if (descending) {
       orderStatement += ' DESC';
     }
   }
@@ -644,9 +616,8 @@ function buildWhere<T extends Entity>({
   propertyName?: string;
   comparer?: Comparer | string;
   isNegated?: boolean;
-  value?: WhereClauseValue;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: any[];
+  value?: WhereClauseValue<T>;
+  params: unknown[];
 }): string {
   switch (comparer || propertyName) {
     case '!':
@@ -937,7 +908,7 @@ function buildWhere<T extends Entity>({
 
       if (_.isObject(value) && !_.isDate(value)) {
         const andValues = [];
-        for (const [key, where] of Object.entries(value as WhereQuery)) {
+        for (const [key, where] of Object.entries(value as WhereQuery<T>)) {
           let subQueryComparer: Comparer | string | undefined;
           if (isComparer(key)) {
             subQueryComparer = key;
@@ -986,8 +957,7 @@ function buildOrOperatorStatement<T extends Entity>({
   model: ModelMetadata<T>;
   isNegated: boolean;
   value: number[] | string[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: any[];
+  params: unknown[];
 }): string {
   const orClauses = [];
   for (const constraint of value) {
@@ -1018,9 +988,8 @@ interface ComparisonOperatorStatementParams<T extends Entity> {
   propertyName: string;
   comparer?: Comparer | string;
   isNegated: boolean;
-  value?: WhereClauseValue;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: any[];
+  value?: WhereClauseValue<T>;
+  params: unknown[];
 }
 
 function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isNegated, value, params }: ComparisonOperatorStatementParams<T>): string {

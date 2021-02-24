@@ -5,8 +5,9 @@ import type { EntityFieldValue, EntityStatic } from './Entity';
 import type { IReadonlyRepository } from './IReadonlyRepository';
 import type { IRepository } from './IRepository';
 import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
-import type { CountResult, FindArgsTyped, FindOneArgsTyped, FindOneResult, FindResult, PaginateOptions, PopulateArgsTyped, WhereQuery, WhereQueryTyped } from './query';
+import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, WhereQuery, SortObject } from './query';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
+import type { GetPropertyType } from './types/GetPropertyType';
 
 export interface IRepositoryOptions<T> {
   modelMetadata: ModelMetadata<T>;
@@ -56,31 +57,31 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
    * @param {object} [args] - Arguments
    * @param {string[]} [args.select] - Array of model property names to return from the query.
    * @param {object} [args.where] - Object representing the where query
-   * @param {string|object|string[]|object[]} [args.sort] - Property name(s) to sort by
+   * @param {string|object} [args.sort] - Property name(s) to sort by
    */
-  public findOne(args: FindOneArgsTyped<T> | WhereQueryTyped<T> = {}): FindOneResult<T> {
+  public findOne(args: FindOneArgs<T> | WhereQuery<T> = {}): FindOneResult<T> {
     const { stack } = new Error(`${this.model.name}.findOne()`);
 
-    let select: string[] | undefined;
-    let where: WhereQuery = {};
-    let sort: string[] | string | null = null;
+    let select: (string & keyof T)[] | undefined;
+    let where: WhereQuery<T> = {};
+    let sort: SortObject<T> | string | null = null;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
     for (const [name, value] of Object.entries(args)) {
       let isWhereCriteria = false;
 
       switch (name) {
         case 'select':
-          select = value as string[] | undefined;
+          select = value as (string & keyof T)[];
           break;
         case 'where':
-          where = value as WhereQuery;
+          where = value as WhereQuery<T>;
           break;
         case 'sort':
-          sort = value as string[] | string | null;
+          sort = value as SortObject<T> | string;
           break;
         default:
           select = undefined;
-          where = args as WhereQuery;
+          where = args as WhereQuery<T>;
           sort = null;
           isWhereCriteria = true;
           break;
@@ -91,17 +92,17 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
       }
     }
 
-    interface Populate extends PopulateArgsTyped<T> {
-      propertyName: string & keyof T;
+    interface Populates {
+      propertyName: string;
+      where?: WhereQuery<unknown>;
+      select?: string[];
+      sort?: SortObject<unknown> | string;
+      skip?: number;
+      limit?: number;
     }
 
-    const populates: Populate[] = [];
-    const sorts: (Record<string, number | string> | string)[] = [];
-    if (_.isArray(sort)) {
-      sorts.push(...sort);
-    } else if (sort) {
-      sorts.push(sort);
-    }
+    const populates: Populates[] = [];
+    const sorts: OrderBy<T>[] = sort ? this._convertSortsToOrderBy(sort) : [];
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
@@ -111,7 +112,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
        * Filters the query
        * @param {object} value - Object representing the where query
        */
-      where(value: WhereQueryTyped<T>): FindOneResult<T> {
+      where(value: WhereQuery<T>): FindOneResult<T> {
         where = value;
 
         return this;
@@ -126,15 +127,15 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
        * @param {string|number} [options.skip] - Number of records to skip
        * @param {string|number} [options.limit] - Number of results to return
        */
-      populate(
-        propertyName: Extract<keyof T, string>,
+      populate<TProperty extends string & keyof T>(
+        propertyName: TProperty,
         {
           where: populateWhere, //
           select: populateSelect,
           sort: populateSort,
           skip: populateSkip,
           limit: populateLimit,
-        }: PopulateArgsTyped<T> = {},
+        }: PopulateArgs<GetPropertyType<T, TProperty>> = {},
       ): FindOneResult<T> {
         populates.push({
           propertyName,
@@ -151,8 +152,8 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
        * Sorts the query
        * @param {string|object} value
        */
-      sort(value: Record<string, number | string> | string): FindOneResult<T> {
-        sorts.push(value);
+      sort(value: Sort<T>): FindOneResult<T> {
+        sorts.push(...modelInstance._convertSortsToOrderBy(value));
 
         return this;
       },
@@ -176,7 +177,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
           if (results.rows && results.rows.length) {
             const result = modelInstance._buildInstance(results.rows[0] as Partial<T>);
 
-            const populateQueries = [];
+            const populateQueries: Promise<void>[] = [];
             for (const populate of populates) {
               const column = modelInstance.model.columnsByPropertyName[populate.propertyName];
               if (!column) {
@@ -196,7 +197,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
                 }
 
                 const populateWhere = {
-                  [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName] as EntityFieldValue,
+                  [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName as string & keyof T] as EntityFieldValue,
                   ...populate.where,
                 };
 
@@ -206,11 +207,11 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
                       select: populate.select,
                       where: populateWhere,
                       sort: populate.sort,
-                    });
+                    } as FindOneArgs<T>);
 
                     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                     // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
-                    result[populate.propertyName] = populateResult;
+                    result[populate.propertyName as string & keyof T] = populateResult;
                   })(),
                 );
               } else if (collectionColumn.collection) {
@@ -262,7 +263,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
                           select: [relatedModelColumn.via] as (string & keyof T)[],
                           where: {
                             [collectionColumn.via]: id,
-                          } as WhereQueryTyped<T>,
+                          } as WhereQuery<T>,
                         });
                         const ids = _.map(mapRecords, relatedModelColumn.via);
 
@@ -279,11 +280,11 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
                           sort: populate.sort,
                           skip: populate.skip,
                           limit: populate.limit,
-                        });
+                        } as FindArgs<T>);
 
                         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                         // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
-                        result[populate.propertyName] = populateResults;
+                        result[populate.propertyName as string & keyof T] = populateResults;
                       }
                     })(),
                   );
@@ -301,11 +302,11 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
                         sort: populate.sort,
                         skip: populate.skip,
                         limit: populate.limit,
-                      });
+                      } as FindArgs<T>);
 
                       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                       // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
-                      result[populate.propertyName] = populateResults;
+                      result[populate.propertyName as string & keyof T] = populateResults;
                     })(),
                   );
                 }
@@ -341,16 +342,16 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
    * @param {object} [args] - Arguments
    * @param {string[]} [args.select] - Array of model property names to return from the query.
    * @param {object} [args.where] - Object representing the where query
-   * @param {string|object|string[]|object[]} [args.sort] - Property name(s) to sort by
+   * @param {string|object} [args.sort] - Property name(s) to sort by
    * @param {string|number} [args.skip] - Number of records to skip
    * @param {string|number} [args.limit] - Number of results to return
    */
-  public find(args: FindArgsTyped<T> | WhereQueryTyped<T> = {}): FindResult<T> {
+  public find(args: FindArgs<T> | WhereQuery<T> = {}): FindResult<T> {
     const { stack } = new Error(`${this.model.name}.find()`);
 
-    let select: string[] | undefined;
-    let where: WhereQuery = {};
-    let sort: string[] | string | null = null;
+    let select: (string & keyof T)[] | undefined;
+    let where: WhereQuery<T> = {};
+    let sort: SortObject<T> | string | null = null;
     let skip: number | null = null;
     let limit: number | null = null;
     // Args can be a FindArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
@@ -359,23 +360,23 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
 
       switch (name) {
         case 'select':
-          select = value as string[];
+          select = value as (string & keyof T)[];
           break;
         case 'where':
-          where = value as WhereQuery;
+          where = value as WhereQuery<T>;
           break;
         case 'sort':
-          sort = value as string[] | string | null;
+          sort = value as SortObject<T> | string;
           break;
         case 'skip':
-          skip = value as number | null;
+          skip = value as number;
           break;
         case 'limit':
-          limit = value as number | null;
+          limit = value as number;
           break;
         default:
           select = undefined;
-          where = args as WhereQuery;
+          where = args as WhereQuery<T>;
           sort = null;
           skip = null;
           limit = null;
@@ -388,12 +389,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
       }
     }
 
-    const sorts: (Record<string, number | string> | string)[] = [];
-    if (_.isArray(sort)) {
-      sorts.push(...sort);
-    } else if (sort) {
-      sorts.push(sort);
-    }
+    const sorts = sort ? this._convertSortsToOrderBy(sort) : [];
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
@@ -403,17 +399,17 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
        * Filters the query
        * @param {object} value - Object representing the where query
        */
-      where(value: WhereQueryTyped<T>): FindResult<T> {
+      where(value: WhereQuery<T>): FindResult<T> {
         where = value;
 
         return this;
       },
       /**
        * Sorts the query
-       * @param {string|object} value
+       * @param {string|string[]|object} value
        */
-      sort(value: Record<string, number | string> | string): FindResult<T> {
-        sorts.push(value);
+      sort(value: Sort<T>): FindResult<T> {
+        sorts.push(...modelInstance._convertSortsToOrderBy(value));
 
         return this;
       },
@@ -483,7 +479,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
    * @param {object} [where] - Object representing the where query
    * @returns {number} Number of records matching the where criteria
    */
-  public count(where?: WhereQueryTyped<T>): CountResult<T> {
+  public count(where?: WhereQuery<T>): CountResult<T> {
     const { stack } = new Error(`${this.model.name}.count()`);
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -494,7 +490,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
        * Filters the query
        * @param {object} value - Object representing the where query
        */
-      where(value: WhereQueryTyped<T>): CountResult<T> | number {
+      where(value: WhereQuery<T>): CountResult<T> | number {
         // eslint-disable-next-line no-param-reassign
         where = value;
 
@@ -580,5 +576,44 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
     }
 
     return rows.map((row: Partial<T>) => this._buildInstance(row));
+  }
+
+  protected _convertSortsToOrderBy(sorts: SortObject<T> | string): OrderBy<T>[] {
+    const result: OrderBy<T>[] = [];
+    if (sorts) {
+      if (Array.isArray(sorts)) {
+        for (const sort of sorts as string[]) {
+          const parts = sort.trim().split(' ');
+          const propertyName = parts.shift() as string & keyof T;
+          result.push({
+            propertyName,
+            descending: /desc/i.test(parts.join('')),
+          });
+        }
+      } else if (_.isString(sorts)) {
+        for (const sort of sorts.split(',')) {
+          const parts = sort.trim().split(' ');
+          const propertyName = parts.shift() as string & keyof T;
+          result.push({
+            propertyName,
+            descending: /desc/i.test(parts.join('')),
+          });
+        }
+      } else if (_.isObject(sorts)) {
+        for (const [propertyName, order] of Object.entries(sorts)) {
+          let descending = false;
+          if (order === -1 || order === '-1' || /desc/i.test(`${order as string}`)) {
+            descending = true;
+          }
+
+          result.push({
+            propertyName: propertyName as string & keyof T,
+            descending,
+          });
+        }
+      }
+    }
+
+    return result;
   }
 }

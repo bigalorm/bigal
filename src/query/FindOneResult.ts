@@ -1,10 +1,12 @@
 import type { ChainablePromiseLike } from '../ChainablePromiseLike';
+import type { GetPropertyType } from '../types/GetPropertyType';
 
 import type { PopulateArgs } from './PopulateArgs';
-import type { WhereQueryTyped } from './WhereQuery';
+import type { Sort } from './Sort';
+import type { WhereQuery } from './WhereQuery';
 
 export interface FindOneResult<TEntity> extends ChainablePromiseLike<TEntity | null> {
-  where(args: WhereQueryTyped<TEntity>): FindOneResult<TEntity>;
-  populate(propertyName: Extract<keyof TEntity, string>, options?: PopulateArgs): FindOneResult<TEntity>;
-  sort(value: Record<string, number | string> | string): FindOneResult<TEntity>;
+  where(args: WhereQuery<TEntity>): FindOneResult<TEntity>;
+  populate<TProperty extends string & keyof TEntity>(propertyName: TProperty, options?: PopulateArgs<GetPropertyType<TEntity, TProperty>>): FindOneResult<TEntity>;
+  sort(value: Sort<TEntity>): FindOneResult<TEntity>;
 }
