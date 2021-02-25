@@ -1,3 +1,8 @@
+### 7.1.1
+  * Allow sort() argument to be undefined
+  * Fix object notation for sort() to have properties be optional
+  * Make `__bigAlEntity` be optional on Entity to avoid undefined errors when using objects as model data
+
 ### 7.1.0
   * Fix `select` typings for populate() calls
   * Changed `Entity` to be an abstract class rather than an interface

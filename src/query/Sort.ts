@@ -20,7 +20,7 @@ export type MultipleSortString<T extends Entity, TSortString extends string = st
   : SortString<T>;
 
 export type SortObject<T extends Entity> = {
-  [K in keyof T]: -1 | 'asc' | 'desc' | 1;
+  [K in keyof T]?: -1 | 'asc' | 'desc' | 1;
 };
 
 export type Sort<T extends Entity> = MultipleSortString<T> | SortObject<T>;

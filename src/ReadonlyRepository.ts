@@ -150,10 +150,12 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       },
       /**
        * Sorts the query
-       * @param {string|object} value
+       * @param {string|object} [value]
        */
-      sort(value: Sort<T>): FindOneResult<T> {
-        sorts.push(...modelInstance._convertSortsToOrderBy(value));
+      sort(value?: Sort<T>): FindOneResult<T> {
+        if (value) {
+          sorts.push(...modelInstance._convertSortsToOrderBy(value));
+        }
 
         return this;
       },
@@ -407,10 +409,12 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       },
       /**
        * Sorts the query
-       * @param {string|string[]|object} value
+       * @param {string|string[]|object} [value]
        */
-      sort(value: Sort<T>): FindResult<T> {
-        sorts.push(...modelInstance._convertSortsToOrderBy(value));
+      sort(value?: Sort<T>): FindResult<T> {
+        if (value) {
+          sorts.push(...modelInstance._convertSortsToOrderBy(value));
+        }
 
         return this;
       },
@@ -603,7 +607,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       } else if (_.isObject(sorts)) {
         for (const [propertyName, order] of Object.entries(sorts)) {
           let descending = false;
-          if (order === -1 || /desc/i.test(`${order}`)) {
+          if (order && (order === -1 || /desc/i.test(`${order}`))) {
             descending = true;
           }
 

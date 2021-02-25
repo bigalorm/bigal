@@ -5,7 +5,7 @@ export type EntityFieldValue = boolean[] | Date | number[] | Record<string, unkn
 // eslint-disable-next-line @typescript-eslint/no-extraneous-class
 export abstract class Entity {}
 export interface Entity {
-  __bigAlEntity: true;
+  __bigAlEntity?: true;
 }
 
 export interface EntityStatic<T extends Entity> {
