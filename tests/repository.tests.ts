@@ -5,8 +5,8 @@ import type { QueryResult } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { Entity, IReadonlyRepository, IRepository } from '../src';
-import { Repository, initialize } from '../src';
+import type { IReadonlyRepository, IRepository } from '../src';
+import { Repository, initialize, Entity } from '../src';
 import { ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
 
 import { Product, ProductWithCreateUpdateDateTracking, Store } from './models';
@@ -32,7 +32,7 @@ describe('Repository', () => {
   let ProductWithCreateUpdateDateTrackingRepository: Repository<ProductWithCreateUpdateDateTracking>;
 
   // eslint-disable-next-line @typescript-eslint/no-extraneous-class
-  class TestEntity implements Entity {}
+  class TestEntity extends Entity {}
 
   before(() => {
     should = chai.should();

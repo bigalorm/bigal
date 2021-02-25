@@ -1,7 +1,8 @@
+import type { Entity } from './Entity';
 import type { ModelMetadata } from './metadata';
 import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, WhereQuery } from './query';
 
-export interface IReadonlyRepository<T> {
+export interface IReadonlyRepository<T extends Entity> {
   readonly model: ModelMetadata<T>;
 
   /**

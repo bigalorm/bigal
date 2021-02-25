@@ -1,4 +1,3 @@
-import type { Entity } from '../../src';
 import { column, table } from '../../src/decorators';
 
 // eslint-disable-next-line import/no-cycle
@@ -12,7 +11,7 @@ import type { Store } from './Store';
 @table({
   name: 'products',
 })
-export class Product extends ModelBase implements Entity {
+export class Product extends ModelBase {
   @column({
     type: 'string',
     required: true,

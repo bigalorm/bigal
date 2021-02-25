@@ -1,4 +1,4 @@
-import type { Entity } from '../../src';
+import { Entity } from '../../src';
 import { column, primaryColumn, table } from '../../src/decorators';
 
 // eslint-disable-next-line import/no-cycle
@@ -9,7 +9,7 @@ import { Product } from './Product';
 @table({
   name: 'product__category',
 })
-export class ProductCategory implements Entity {
+export class ProductCategory extends Entity {
   @primaryColumn({ type: 'integer' })
   public id!: number;
 

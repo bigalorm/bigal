@@ -1,3 +1,10 @@
+### 7.1.0
+  * Fix `select` typings for populate() calls
+  * Changed `Entity` to be an abstract class rather than an interface
+
+NOTE: This is a pretty big breaking change, but v7.0.0 was less than 24h old and was broken, so leaving this as a
+minor version change.
+
 ### 7.0.0
   * Add generic types to select and where. #72 Thanks @krislefeber!
   * Add debug environment variable to print sql to console. #73 Thanks @krislefeber!

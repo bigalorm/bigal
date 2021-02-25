@@ -1,12 +1,13 @@
 import type { ChainablePromiseLike } from '../ChainablePromiseLike';
-import type { GetPropertyType } from '../types/GetPropertyType';
+import type { Entity } from '../Entity';
+import type { GetValueType, PickByValueType } from '../types';
 
 import type { PopulateArgs } from './PopulateArgs';
 import type { Sort } from './Sort';
 import type { WhereQuery } from './WhereQuery';
 
-export interface FindOneResult<TEntity> extends ChainablePromiseLike<TEntity | null> {
-  where(args: WhereQuery<TEntity>): FindOneResult<TEntity>;
-  populate<TProperty extends string & keyof TEntity>(propertyName: TProperty, options?: PopulateArgs<GetPropertyType<TEntity, TProperty>>): FindOneResult<TEntity>;
-  sort(value: Sort<TEntity>): FindOneResult<TEntity>;
+export interface FindOneResult<T extends Entity> extends ChainablePromiseLike<T | null> {
+  where(args: WhereQuery<T>): FindOneResult<T>;
+  populate<TProperty extends string & keyof PickByValueType<T, Entity>>(propertyName: TProperty, options?: PopulateArgs<GetValueType<PickByValueType<T, Entity>[TProperty], Entity>>): FindOneResult<T>;
+  sort(value: Sort<T>): FindOneResult<T>;
 }

@@ -27,6 +27,8 @@ $ npm install pg postgres-pool bigal
 
 #### Defining database models
 
+Model definitions need to extend `Entity`.
+
 ```typescript
 import { Entity } from 'bigal';
 import { column, primaryColumn, table } from 'bigal/decorators';
@@ -37,7 +39,7 @@ import { ProductCategory } from './ProductCategory';
 @table({
   name: 'products',
 })
-export class Product implements Entity {
+export class Product extends Entity {
   @primaryColumn({ type: 'integer' })
   public id!: number;
 

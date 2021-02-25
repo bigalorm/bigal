@@ -39,9 +39,9 @@ export function getSelectQueryAndParams<T extends Entity>({
   skip,
   limit,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
-  select?: string[];
+  select?: (string & keyof T)[];
   where?: WhereQuery<T>;
   sorts: OrderBy<T>[];
   skip: number;
@@ -125,7 +125,7 @@ export function getCountQueryAndParams<T extends Entity>({
   model,
   where,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   where?: WhereQuery<T>;
 }): QueryAndParams {
@@ -164,11 +164,11 @@ export function getInsertQueryAndParams<T extends Entity>({
   returnRecords = true,
   returnSelect,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
-  values: Partial<Entity> | Partial<Entity>[];
+  values: Partial<T> | Partial<T>[];
   returnRecords?: boolean;
-  returnSelect?: Extract<keyof Entity, string>[];
+  returnSelect?: (string & keyof T)[];
 }): QueryAndParams {
   const entitiesToInsert = _.isArray(values) ? values : [values];
   const columnsToInsert = [];
@@ -194,11 +194,13 @@ export function getInsertQueryAndParams<T extends Entity>({
       let includePropertyName = false;
       for (const entity of entitiesToInsert) {
         // If there is a default value for the property and it is not defined, use the default
-        if (hasDefaultValue && _.isUndefined(entity[column.propertyName])) {
-          entity[column.propertyName] = defaultValue;
+        if (hasDefaultValue && _.isUndefined(entity[column.propertyName as string & keyof T])) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - string is not assignable to T[string & keyof T] | undefined
+          entity[column.propertyName as string & keyof T] = defaultValue;
         }
 
-        if (_.isUndefined(entity[column.propertyName])) {
+        if (_.isUndefined(entity[column.propertyName as string & keyof T])) {
           if (column.required) {
             throw new Error(`Create statement for "${model.name}" is missing value for required field: ${column.propertyName}`);
           }
@@ -225,7 +227,7 @@ export function getInsertQueryAndParams<T extends Entity>({
 
     for (const [entityIndex, entity] of entitiesToInsert.entries()) {
       let value;
-      const entityValue = entity[column.propertyName] as EntityFieldValue;
+      const entityValue = entity[column.propertyName as string & keyof T] as EntityFieldValue;
       if (_.isNil(entityValue)) {
         value = 'NULL';
       } else {
@@ -243,7 +245,7 @@ export function getInsertQueryAndParams<T extends Entity>({
             throw new Error(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`);
           }
 
-          const primaryKeyValue = (entityValue as Partial<Entity>)[relatedModelPrimaryKey.propertyName] as EntityFieldValue;
+          const primaryKeyValue = (entityValue as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T] as EntityFieldValue;
           if (_.isNil(primaryKeyValue)) {
             throw new Error(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`);
           }
@@ -309,17 +311,18 @@ export function getUpdateQueryAndParams<T extends Entity>({
   returnRecords = true,
   returnSelect,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   where: WhereQuery<T>;
-  values: Partial<Entity>;
+  values: Partial<T>;
   returnRecords?: boolean;
-  returnSelect?: Extract<keyof Entity, string>[];
+  returnSelect?: (string & keyof T)[];
 }): QueryAndParams {
   for (const column of model.updateDateColumns) {
-    if (_.isUndefined(values[column.propertyName])) {
-      // eslint-disable-next-line no-param-reassign
-      values[column.propertyName] = new Date();
+    if (_.isUndefined(values[column.propertyName as string & keyof T])) {
+      // eslint-disable-next-line no-param-reassign, @typescript-eslint/ban-ts-comment
+      // @ts-ignore - Date is not assignable to T[string & keyof T]
+      values[column.propertyName as string & keyof T] = new Date();
     }
   }
 
@@ -351,7 +354,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
             throw new Error(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`);
           }
 
-          const primaryKeyValue = (value as Partial<Entity>)[relatedModelPrimaryKey.propertyName] as EntityFieldValue;
+          const primaryKeyValue = (value as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T] as EntityFieldValue;
           if (_.isNil(primaryKeyValue)) {
             throw new Error(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`);
           }
@@ -376,7 +379,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
   }
 
   for (const column of model.versionColumns) {
-    if (!_.isUndefined(values[column.propertyName])) {
+    if (!_.isUndefined(values[column.propertyName as string & keyof T])) {
       if (!isFirstProperty) {
         query += ',';
       }
@@ -429,11 +432,11 @@ export function getDeleteQueryAndParams<T extends Entity>({
   returnRecords = true,
   returnSelect,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   where?: WhereQuery<T>;
   returnRecords?: boolean;
-  returnSelect?: Extract<keyof Entity, string>[];
+  returnSelect?: (string & keyof T)[];
 }): QueryAndParams {
   let query = `DELETE FROM "${model.tableName}"`;
 
@@ -469,20 +472,20 @@ export function getDeleteQueryAndParams<T extends Entity>({
  * @returns {string} SQL columns
  * @private
  */
-export function getColumnsToSelect<T extends Entity>({ model, select }: { model: ModelMetadata<T>; select?: Extract<keyof Entity, string>[] }): string {
+export function getColumnsToSelect<T extends Entity>({ model, select }: { model: ModelMetadata<T>; select?: (string & keyof T)[] }): string {
   if (select) {
     const { primaryKeyColumn } = model;
 
     // Include primary key column if it's not defined
-    if (primaryKeyColumn && !select.includes(primaryKeyColumn.propertyName)) {
-      select.push(primaryKeyColumn.propertyName);
+    if (primaryKeyColumn && !select.includes(primaryKeyColumn.propertyName as string & keyof T)) {
+      select.push(primaryKeyColumn.propertyName as string & keyof T);
     }
   } else {
     // eslint-disable-next-line no-param-reassign
     select = [];
     for (const column of model.columns) {
       if (!(column as ColumnCollectionMetadata).collection) {
-        select.push(column.propertyName);
+        select.push(column.propertyName as string & keyof T);
       }
     }
   }
@@ -524,7 +527,7 @@ export function buildWhereStatement<T extends Entity>({
   where,
   params = [],
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   where?: WhereQuery<T>;
   params?: unknown[];
@@ -611,7 +614,7 @@ function buildWhere<T extends Entity>({
   value,
   params = [],
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   propertyName?: string;
   comparer?: Comparer | string;
@@ -768,7 +771,7 @@ function buildWhere<T extends Entity>({
             throw new Error(`Unable to find primary key column for ${column.model} specified in where clause for ${model.name}.${column.propertyName}`);
           }
 
-          const primaryKeyValue = (value as Partial<Entity>)[relatedModelPrimaryKey.propertyName] as EntityFieldValue;
+          const primaryKeyValue = (value as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T] as EntityFieldValue;
           if (!_.isNil(primaryKeyValue)) {
             // Treat `value` as a hydrated object
             return buildWhere({
@@ -953,7 +956,7 @@ function buildOrOperatorStatement<T extends Entity>({
   value,
   params = [],
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   isNegated: boolean;
   value: number[] | string[];

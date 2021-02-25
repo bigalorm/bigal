@@ -146,7 +146,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
     }
 
     let returnRecords = true;
-    let returnSelect: string[] | undefined;
+    let returnSelect: (string & keyof T)[] | undefined;
     if (options) {
       if ((options as DoNotReturnRecords).returnRecords === false) {
         returnRecords = false;

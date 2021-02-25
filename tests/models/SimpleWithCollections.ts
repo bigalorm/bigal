@@ -1,15 +1,14 @@
 import { column, table } from '../../src/decorators';
 
+import { Category } from './Category';
 import { ModelBase } from './ModelBase';
-// eslint-disable-next-line import/no-cycle
 import { Product } from './Product';
-// eslint-disable-next-line import/no-cycle
 import { ProductCategory } from './ProductCategory';
 
 @table({
-  name: 'categories',
+  name: 'simple',
 })
-export class Category extends ModelBase {
+export class SimpleWithCollections extends ModelBase {
   @column({
     type: 'string',
     required: true,
@@ -18,8 +17,14 @@ export class Category extends ModelBase {
 
   @column({
     collection: () => Product.name,
-    through: () => ProductCategory.name,
-    via: 'category',
+    via: 'store',
   })
-  public products!: Product[];
+  public products?: Product[];
+
+  @column({
+    collection: () => Category.name,
+    through: () => ProductCategory.name,
+    via: 'product',
+  })
+  public categories!: Category[];
 }

@@ -1,23 +1,23 @@
 import _ from 'lodash';
 import type { Pool } from 'postgres-pool';
 
-import type { EntityFieldValue, EntityStatic } from './Entity';
+import type { Entity, EntityFieldValue, EntityStatic } from './Entity';
 import type { IReadonlyRepository } from './IReadonlyRepository';
 import type { IRepository } from './IRepository';
 import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
 import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, WhereQuery, SortObject } from './query';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
-import type { GetPropertyType } from './types/GetPropertyType';
+import type { GetValueType, PickByValueType } from './types';
 
-export interface IRepositoryOptions<T> {
+export interface IRepositoryOptions<T extends Entity> {
   modelMetadata: ModelMetadata<T>;
   type: EntityStatic<T>;
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   pool: Pool;
   readonlyPool?: Pool;
 }
 
-export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
+export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository<T> {
   private readonly _modelMetadata: ModelMetadata<T>;
 
   protected _type: EntityStatic<T>;
@@ -26,7 +26,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
 
   protected _readonlyPool: Pool;
 
-  protected _repositoriesByModelNameLowered: Record<string, IReadonlyRepository<T> | IRepository<T>>;
+  protected _repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
 
   protected _floatProperties: string[] = [];
 
@@ -94,9 +94,9 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
 
     interface Populates {
       propertyName: string;
-      where?: WhereQuery<unknown>;
+      where?: WhereQuery<Entity>;
       select?: string[];
-      sort?: SortObject<unknown> | string;
+      sort?: SortObject<Entity> | string;
       skip?: number;
       limit?: number;
     }
@@ -127,7 +127,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
        * @param {string|number} [options.skip] - Number of records to skip
        * @param {string|number} [options.limit] - Number of results to return
        */
-      populate<TProperty extends string & keyof T>(
+      populate<TProperty extends string & keyof PickByValueType<T, Entity>>(
         propertyName: TProperty,
         {
           where: populateWhere, //
@@ -135,7 +135,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
           sort: populateSort,
           skip: populateSkip,
           limit: populateLimit,
-        }: PopulateArgs<GetPropertyType<T, TProperty>> = {},
+        }: PopulateArgs<GetValueType<PickByValueType<T, Entity>[TProperty], Entity>> = {},
       ): FindOneResult<T> {
         populates.push({
           propertyName,
@@ -207,7 +207,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
                       select: populate.select,
                       where: populateWhere,
                       sort: populate.sort,
-                    } as FindOneArgs<T>);
+                    } as FindOneArgs<Entity>);
 
                     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                     // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
@@ -238,7 +238,8 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
                 }
 
                 if (collectionColumn.through) {
-                  const throughRepository = modelInstance._repositoriesByModelNameLowered[collectionColumn.through.toLowerCase()];
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  const throughRepository = modelInstance._repositoriesByModelNameLowered[collectionColumn.through.toLowerCase()] as IReadonlyRepository<any>;
                   if (!throughRepository) {
                     throw new Error(`Unable to find repository for multi-map collection: ${collectionColumn.through}. From ${column.target}#${populate.propertyName}`);
                   }
@@ -260,7 +261,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
                     (async function populateMultiMulti(): Promise<void> {
                       if (relatedModelColumn) {
                         const mapRecords = await throughRepository.find({
-                          select: [relatedModelColumn.via] as (string & keyof T)[],
+                          select: [relatedModelColumn.via],
                           where: {
                             [collectionColumn.via]: id,
                           } as WhereQuery<T>,
@@ -280,7 +281,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
                           sort: populate.sort,
                           skip: populate.skip,
                           limit: populate.limit,
-                        } as FindArgs<T>);
+                        } as FindArgs<Entity>);
 
                         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                         // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
@@ -302,7 +303,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
                         sort: populate.sort,
                         skip: populate.skip,
                         limit: populate.limit,
-                      } as FindArgs<T>);
+                      } as FindArgs<Entity>);
 
                       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
                       // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
@@ -602,7 +603,7 @@ export class ReadonlyRepository<T> implements IReadonlyRepository<T> {
       } else if (_.isObject(sorts)) {
         for (const [propertyName, order] of Object.entries(sorts)) {
           let descending = false;
-          if (order === -1 || order === '-1' || /desc/i.test(`${order as string}`)) {
+          if (order === -1 || /desc/i.test(`${order}`)) {
             descending = true;
           }
 

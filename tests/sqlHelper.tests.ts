@@ -3,31 +3,64 @@ import * as faker from 'faker';
 import { Pool } from 'postgres-pool';
 import { mock } from 'ts-mockito';
 
-import type { Entity, IReadonlyRepository, IRepository } from '../src';
-import { Repository, initialize } from '../src';
-import { ColumnCollectionMetadata, ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
+import type { IReadonlyRepository, IRepository, Entity } from '../src';
+import { initialize } from '../src';
+import type { ModelMetadata } from '../src/metadata';
 import * as sqlHelper from '../src/SqlHelper';
 
-import { Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, ProductWithCreatedAt, ReadonlyProduct, Store, KitchenSink } from './models';
+import {
+  Category,
+  Product,
+  ProductCategory,
+  ProductWithCreateUpdateDateTracking,
+  ProductWithCreatedAt,
+  ReadonlyProduct,
+  Store,
+  KitchenSink,
+  NonStandardPrimaryId,
+  RequiredPropertyWithDefaultValue,
+  RequiredPropertyWithDefaultValueFunction,
+  SimpleWithCollections,
+  SimpleWithCreatedAt,
+  SimpleWithCreatedAtAndUpdatedAt,
+  SimpleWithJson,
+  SimpleWithUpdatedAt,
+} from './models';
 
 type RepositoriesByModelNameLowered = Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
 
 describe('sqlHelper', () => {
   let should: Chai.Should;
   const mockedPool: Pool = mock(Pool);
+  let repositoriesByModelName: RepositoriesByModelNameLowered;
   const repositoriesByModelNameLowered: RepositoriesByModelNameLowered = {};
-
-  // eslint-disable-next-line @typescript-eslint/no-extraneous-class
-  class TestEntity implements Entity {}
 
   before(() => {
     should = chai.should();
-    const repositoriesByModelName = initialize({
-      models: [Category, KitchenSink, Product, ProductCategory, ProductWithCreatedAt, ProductWithCreateUpdateDateTracking, ReadonlyProduct, Store],
+    repositoriesByModelName = initialize({
+      models: [
+        Category,
+        KitchenSink,
+        NonStandardPrimaryId,
+        Product,
+        ProductCategory,
+        ProductWithCreatedAt,
+        ProductWithCreateUpdateDateTracking,
+        ReadonlyProduct,
+        RequiredPropertyWithDefaultValue,
+        RequiredPropertyWithDefaultValueFunction,
+        SimpleWithCollections,
+        SimpleWithCreatedAt,
+        SimpleWithCreatedAtAndUpdatedAt,
+        SimpleWithJson,
+        SimpleWithUpdatedAt,
+        Store,
+      ],
       pool: mockedPool,
     });
 
     for (const [modelName, repository] of Object.entries(repositoriesByModelName)) {
+      repositoriesByModelName[modelName] = repository;
       repositoriesByModelNameLowered[modelName.toLowerCase()] = repository;
     }
   });
@@ -37,7 +70,7 @@ describe('sqlHelper', () => {
       it('should include all columns if select is undefined', () => {
         const { query, params } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.productwithcreatedat.model,
+          model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
           where: {},
           sorts: [],
           limit: 1,
@@ -52,7 +85,7 @@ describe('sqlHelper', () => {
       it('should include primaryKey column if select is empty', () => {
         const { query, params } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.product.model,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           select: [],
           where: {},
           sorts: [],
@@ -64,38 +97,9 @@ describe('sqlHelper', () => {
         params.should.deep.equal([]);
       });
       it('should include non "id" primaryKey column if select is empty', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foobario',
-            propertyName: 'foobario',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'name',
-            propertyName: 'name',
-            required: true,
-            defaultsTo: 'foobar',
-            type: 'string',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
         const { query, params } = sqlHelper.getSelectQueryAndParams({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.nonstandardprimaryid.model,
           select: [],
           where: {},
           sorts: [],
@@ -103,56 +107,13 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "foobario" FROM "${model.tableName}" LIMIT 1`);
-        params.should.deep.equal([]);
-      });
-      it('should include non "id" primaryKey column name with id propertyName if select is empty', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foobario',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'name',
-            propertyName: 'name',
-            required: true,
-            defaultsTo: 'foobar',
-            type: 'string',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
-        const { query, params } = sqlHelper.getSelectQueryAndParams({
-          repositoriesByModelNameLowered: repositories,
-          model,
-          select: [],
-          where: {},
-          sorts: [],
-          limit: 1,
-          skip: 0,
-        });
-
-        query.should.equal(`SELECT "foobario" AS "id" FROM "${model.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "unique_id" AS "uniqueId" FROM "${repositoriesByModelName.NonStandardPrimaryId.model.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
       it('should include primaryKey column if select does not include it', () => {
-        const { query, params } = sqlHelper.getSelectQueryAndParams({
+        const { query, params } = sqlHelper.getSelectQueryAndParams<Product>({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.product.model,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           select: ['name'],
           where: {},
           sorts: [],
@@ -164,98 +125,26 @@ describe('sqlHelper', () => {
         params.should.deep.equal([]);
       });
       it('should include non "id" primaryKey column if select does not include it', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foobario',
-            propertyName: 'foobario',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'name',
-            propertyName: 'name',
-            required: true,
-            defaultsTo: 'foobar',
-            type: 'string',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
-        const { query, params } = sqlHelper.getSelectQueryAndParams({
-          repositoriesByModelNameLowered: repositories,
-          model,
-          select: ['name'],
+        const { query, params } = sqlHelper.getSelectQueryAndParams<NonStandardPrimaryId>({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.nonstandardprimaryid.model as ModelMetadata<NonStandardPrimaryId>,
+          select: ['foo'],
           where: {},
           sorts: [],
           limit: 1,
           skip: 0,
         });
 
-        query.should.equal(`SELECT "name","foobario" FROM "${model.tableName}" LIMIT 1`);
-        params.should.deep.equal([]);
-      });
-      it('should include non "id" primaryKey column with id propertyName if select does not include it', () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foobario',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'name',
-            propertyName: 'name',
-            required: true,
-            defaultsTo: 'foobar',
-            type: 'string',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        repositories[model.name.toLowerCase()] = new Repository({
-          modelMetadata: model,
-          type: model.type,
-          pool: mockedPool,
-          repositoriesByModelNameLowered: repositories,
-        });
-
-        const { query, params } = sqlHelper.getSelectQueryAndParams({
-          repositoriesByModelNameLowered: repositories,
-          model,
-          select: ['name'],
-          where: {},
-          sorts: [],
-          limit: 1,
-          skip: 0,
-        });
-
-        query.should.equal(`SELECT "name","foobario" AS "id" FROM "${model.tableName}" LIMIT 1`);
+        query.should.equal(`SELECT "foo","unique_id" AS "uniqueId" FROM "${repositoriesByModelName.NonStandardPrimaryId.model.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
     });
     describe('where', () => {
       it('should include where statement if defined', () => {
         const name = faker.random.uuid();
-        const { query, params } = sqlHelper.getSelectQueryAndParams({
+        const { query, params } = sqlHelper.getSelectQueryAndParams<ProductWithCreatedAt>({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.productwithcreatedat.model,
+          model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
           where: {
             name,
           },
@@ -272,9 +161,9 @@ describe('sqlHelper', () => {
     });
     describe('sorts', () => {
       it('should include order by statement if defined', () => {
-        const { query, params } = sqlHelper.getSelectQueryAndParams({
+        const { query, params } = sqlHelper.getSelectQueryAndParams<ProductWithCreatedAt>({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.productwithcreatedat.model,
+          model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
           sorts: [
             {
               propertyName: 'name',
@@ -295,7 +184,7 @@ describe('sqlHelper', () => {
       it('should include OFFSET statement if skip is a number', () => {
         const { query, params } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.productwithcreatedat.model,
+          model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
           where: {},
           sorts: [],
           limit: 1,
@@ -312,7 +201,7 @@ describe('sqlHelper', () => {
       it('should include LIMIT statement if limit is a number', () => {
         const { query, params } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.productwithcreatedat.model,
+          model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
           where: {},
           sorts: [],
           skip: 0,
@@ -330,7 +219,7 @@ describe('sqlHelper', () => {
     it('should count all records if no where statement is defined', () => {
       const { query, params } = sqlHelper.getCountQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
       });
 
       query.should.equal(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered.product.model.tableName}"`);
@@ -342,9 +231,9 @@ describe('sqlHelper', () => {
         name: `store - ${faker.random.uuid()}`,
       };
 
-      const { query, params } = sqlHelper.getCountQueryAndParams({
+      const { query, params } = sqlHelper.getCountQueryAndParams<Product>({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           store,
         },
@@ -359,54 +248,19 @@ describe('sqlHelper', () => {
       ((): void => {
         sqlHelper.getInsertQueryAndParams({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.product.model,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           values: {
-            store: faker.random.uuid(),
+            store: faker.random.number(),
           },
           returnRecords: true,
         });
       }).should.throw(Error, `Create statement for "${repositoriesByModelNameLowered.product.model.name}" is missing value for required field: name`);
     });
     it('should not throw if a required property has a defaultValue and an undefined initial value', () => {
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          required: true,
-          defaultsTo: 'foobar',
-          type: 'string',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'bar',
-          propertyName: 'bar',
-          type: 'string',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       ((): void => {
         sqlHelper.getInsertQueryAndParams({
-          repositoriesByModelNameLowered: repositories,
-          model,
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelName.RequiredPropertyWithDefaultValue.model as ModelMetadata<RequiredPropertyWithDefaultValue>,
           values: {
             bar: faker.random.uuid(),
           },
@@ -415,85 +269,23 @@ describe('sqlHelper', () => {
       }).should.not.throw();
     });
     it('should not override properties with defaultValue if value is defined', () => {
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          defaultsTo: 'foobar',
-          type: 'string',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
-      const name = faker.random.uuid();
+      const value = faker.random.uuid();
       const { params } = sqlHelper.getInsertQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelName.RequiredPropertyWithDefaultValue.model as ModelMetadata<RequiredPropertyWithDefaultValue>,
         values: {
-          name,
+          foo: value,
         },
         returnRecords: true,
       });
 
-      params.should.deep.equal([name]);
+      params.should.deep.equal([value]);
     });
     it('should set undefined properties to defaultValue if defined on schema', () => {
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          defaultsTo: 'foobar',
-          type: 'string',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'bar',
-          propertyName: 'bar',
-          type: 'string',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const bar = faker.random.uuid();
       const { params } = sqlHelper.getInsertQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelName.RequiredPropertyWithDefaultValue.model as ModelMetadata<RequiredPropertyWithDefaultValue>,
         values: {
           bar,
         },
@@ -502,44 +294,10 @@ describe('sqlHelper', () => {
       params.should.deep.equal(['foobar', bar]);
     });
     it('should set undefined properties to result of defaultValue function if defined on schema', () => {
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          defaultsTo: (): string => 'foobar',
-          type: 'string',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'bar',
-          propertyName: 'bar',
-          type: 'string',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const bar = faker.random.uuid();
       const { params } = sqlHelper.getInsertQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelName.RequiredPropertyWithDefaultValueFunction.model as ModelMetadata<RequiredPropertyWithDefaultValueFunction>,
         values: {
           bar,
         },
@@ -548,51 +306,17 @@ describe('sqlHelper', () => {
       params.should.deep.equal(['foobar', bar]);
     });
     it('should set createdAt if schema.autoCreatedAt and value is undefined', () => {
-      const beforeTime = new Date();
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          type: 'string',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'created_at',
-          propertyName: 'createdAt',
-          type: 'datetime',
-          createDate: true,
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const name = faker.random.uuid();
+      const beforeTime = new Date();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelName.SimpleWithCreatedAt.model as ModelMetadata<SimpleWithCreatedAt>,
         values: {
           name,
         },
       });
 
-      query.should.equal(`INSERT INTO "${model.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithCreatedAt.model.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
       params.should.have.length(2);
       const afterTime = new Date();
       for (const [index, value] of params.entries()) {
@@ -606,99 +330,31 @@ describe('sqlHelper', () => {
     });
     it('should not override createdAt if schema.autoCreatedAt and value is defined', () => {
       const createdAt = faker.date.past();
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          type: 'string',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'created_at',
-          propertyName: 'createdAt',
-          type: 'datetime',
-          createDate: true,
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const name = faker.random.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelName.SimpleWithCreatedAt.model as ModelMetadata<SimpleWithCreatedAt>,
         values: {
           name,
           createdAt,
         },
       });
 
-      query.should.equal(`INSERT INTO "${model.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithCreatedAt.model.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
       params.should.deep.equal([name, createdAt]);
     });
     it('should set updatedAt if schema.autoUpdatedAt and value is undefined', () => {
       const beforeTime = new Date();
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          type: 'string',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'updated_at',
-          propertyName: 'updatedAt',
-          type: 'datetime',
-          updateDate: true,
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const name = faker.random.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelName.SimpleWithUpdatedAt.model as ModelMetadata<SimpleWithUpdatedAt>,
         values: {
           name,
         },
       });
 
-      query.should.equal(`INSERT INTO "${model.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithUpdatedAt.model.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
       params.should.have.length(2);
       const afterTime = new Date();
       for (const [index, value] of params.entries()) {
@@ -712,120 +368,48 @@ describe('sqlHelper', () => {
     });
     it('should not override updatedAt if schema.autoUpdatedAt and value is defined', () => {
       const updatedAt = faker.date.past();
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          type: 'string',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'updated_at',
-          propertyName: 'updatedAt',
-          type: 'datetime',
-          updateDate: true,
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const name = faker.random.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelName.SimpleWithUpdatedAt.model as ModelMetadata<SimpleWithUpdatedAt>,
         values: {
           name,
           updatedAt,
         },
       });
 
-      query.should.equal(`INSERT INTO "${model.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithUpdatedAt.model.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
       params.should.deep.equal([name, updatedAt]);
     });
     it('should ignore collection properties', () => {
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          type: 'string',
-        }),
-        new ColumnCollectionMetadata({
-          target: 'foo',
-          name: 'bars',
-          propertyName: 'bars',
-          collection: 'bar',
-          via: 'foo',
-        }),
-        new ColumnCollectionMetadata({
-          target: 'foo',
-          name: 'bats',
-          propertyName: 'bats',
-          collection: 'bats',
-          through: 'foo__bats',
-          via: 'foo',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
-      const name = faker.random.uuid();
-      const { query, params } = sqlHelper.getInsertQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
-        values: {
-          name,
-          bars: [faker.random.uuid()],
-          bats: [faker.random.uuid()],
-        },
-      });
-
-      query.should.equal(`INSERT INTO "${model.tableName}" ("name") VALUES ($1) RETURNING "id","name"`);
-      params.should.deep.equal([name]);
-    });
-    it('should use primaryKey value if hydrated object is passed as a value', () => {
-      const store = {
-        id: faker.random.uuid(),
-        name: `store - ${faker.random.uuid()}`,
-      };
+      const product = new Product();
+      product.id = faker.random.number();
+      const category = new Category();
+      category.id = faker.random.number();
 
       const name = faker.random.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelName.SimpleWithCollections.model as ModelMetadata<SimpleWithCollections>,
+        values: {
+          name,
+          products: [product],
+          categories: [category],
+        },
+      });
+
+      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithCollections.model.tableName}" ("name") VALUES ($1) RETURNING "id","name"`);
+      params.should.deep.equal([name]);
+    });
+    it('should use primaryKey value if hydrated object is passed as a value', () => {
+      const store = new Store();
+      store.id = faker.random.number();
+      store.name = `store - ${faker.random.uuid()}`;
+
+      const name = faker.random.uuid();
+      const { query, params } = sqlHelper.getInsertQueryAndParams({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         values: {
           name,
           store,
@@ -839,39 +423,6 @@ describe('sqlHelper', () => {
     });
     it('should cast value to jsonb if type=json and value is an array', () => {
       // Please see https://github.com/brianc/node-postgres/issues/442 for details of why this is needed
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          type: 'string',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'bar',
-          propertyName: 'bar',
-          type: 'json',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const name = faker.random.uuid();
       const bar = [
         {
@@ -880,23 +431,23 @@ describe('sqlHelper', () => {
       ];
 
       const { query, params } = sqlHelper.getInsertQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelName.SimpleWithJson.model as ModelMetadata<SimpleWithJson>,
         values: {
           name,
           bar,
         },
       });
 
-      query.should.equal(`INSERT INTO "${model.tableName}" ("name","bar") VALUES ($1,$2::jsonb) RETURNING "id","name","bar"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithJson.model.tableName}" ("name","bar") VALUES ($1,$2::jsonb) RETURNING "id","name","bar"`);
       params.should.deep.equal([name, JSON.stringify(bar)]);
     });
     it('should support inserting a single record and return records if returnRecords=true', () => {
-      const storeId = faker.random.uuid();
+      const storeId = faker.random.number();
       const name = faker.random.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         values: {
           name,
           store: storeId,
@@ -910,11 +461,11 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name, [], storeId]);
     });
     it('should support inserting a single record and return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
-      const storeId = faker.random.uuid();
+      const storeId = faker.random.number();
       const name = faker.random.uuid();
-      const { query, params } = sqlHelper.getInsertQueryAndParams({
+      const { query, params } = sqlHelper.getInsertQueryAndParams<Product>({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         values: {
           name,
           store: storeId,
@@ -927,11 +478,11 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name, [], storeId]);
     });
     it('should support inserting a single record and not return records if returnRecords=false', () => {
-      const storeId = faker.random.uuid();
+      const storeId = faker.random.number();
       const name = faker.random.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         values: {
           name,
           store: storeId,
@@ -943,13 +494,13 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name, [], storeId]);
     });
     it('should support inserting multiple records and return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
-      const storeId1 = faker.random.uuid();
+      const storeId1 = faker.random.number();
       const name1 = faker.random.uuid();
-      const storeId2 = faker.random.uuid();
+      const storeId2 = faker.random.number();
       const name2 = faker.random.uuid();
-      const { query, params } = sqlHelper.getInsertQueryAndParams({
+      const { query, params } = sqlHelper.getInsertQueryAndParams<Product>({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         values: [
           {
             name: name1,
@@ -968,13 +519,13 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name1, name2, [], [], storeId1, storeId2]);
     });
     it('should support inserting multiple records and return records if returnRecords=true', () => {
-      const storeId1 = faker.random.uuid();
+      const storeId1 = faker.random.number();
       const name1 = faker.random.uuid();
-      const storeId2 = faker.random.uuid();
+      const storeId2 = faker.random.number();
       const name2 = faker.random.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         values: [
           {
             name: name1,
@@ -993,13 +544,13 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name1, name2, [], [], storeId1, storeId2]);
     });
     it('should support inserting multiple records and not return records if returnRecords=false', () => {
-      const storeId1 = faker.random.uuid();
+      const storeId1 = faker.random.number();
       const name1 = faker.random.uuid();
-      const storeId2 = faker.random.uuid();
+      const storeId2 = faker.random.number();
       const name2 = faker.random.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         values: [
           {
             name: name1,
@@ -1019,100 +570,32 @@ describe('sqlHelper', () => {
   });
   describe('#getUpdateQueryAndParams()', () => {
     it('should not set createdAt if schema.autoCreatedAt and value is undefined', () => {
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          type: 'string',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'created_at',
-          propertyName: 'createdAt',
-          type: 'datetime',
-          createDate: true,
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const name = faker.random.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelName.SimpleWithCreatedAt.model as ModelMetadata<SimpleWithCreatedAt>,
         where: {},
         values: {
           name,
         },
       });
 
-      query.should.equal(`UPDATE "${model.tableName}" SET "name"=$1 RETURNING "id","name","created_at" AS "createdAt"`);
+      query.should.equal(`UPDATE "${repositoriesByModelName.SimpleWithCreatedAt.model.tableName}" SET "name"=$1 RETURNING "id","name","created_at" AS "createdAt"`);
       params.should.deep.equal([name]);
     });
     it('should set updatedAt if schema.autoUpdatedAt and value is undefined', () => {
       const beforeTime = new Date();
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          type: 'string',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'updated_at',
-          propertyName: 'updatedAt',
-          type: 'datetime',
-          updateDate: true,
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const name = faker.random.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelName.SimpleWithUpdatedAt.model as ModelMetadata<SimpleWithUpdatedAt>,
         where: {},
         values: {
           name,
         },
       });
 
-      query.should.equal(`UPDATE "${model.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
+      query.should.equal(`UPDATE "${repositoriesByModelName.SimpleWithUpdatedAt.model.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
       params.should.have.length(2);
       const afterTime = new Date();
       for (const [index, value] of params.entries()) {
@@ -1126,44 +609,10 @@ describe('sqlHelper', () => {
     });
     it('should not override updatedAt if schema.autoUpdatedAt and value is defined', () => {
       const updatedAt = faker.date.past();
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          type: 'string',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'updated_at',
-          propertyName: 'updatedAt',
-          type: 'datetime',
-          updateDate: true,
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const name = faker.random.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelName.SimpleWithUpdatedAt.model as ModelMetadata<SimpleWithUpdatedAt>,
         where: {},
         values: {
           name,
@@ -1171,77 +620,39 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${model.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
+      query.should.equal(`UPDATE "${repositoriesByModelName.SimpleWithUpdatedAt.model.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
       params.should.deep.equal([name, updatedAt]);
     });
     it('should ignore collection properties', () => {
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          type: 'string',
-        }),
-        new ColumnCollectionMetadata({
-          target: 'foo',
-          name: 'bars',
-          propertyName: 'bars',
-          collection: 'bar',
-          via: 'foo',
-        }),
-        new ColumnCollectionMetadata({
-          target: 'foo',
-          name: 'bats',
-          propertyName: 'bats',
-          collection: 'bats',
-          through: 'foo__bats',
-          via: 'foo',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
-      const name = faker.random.uuid();
-      const { query, params } = sqlHelper.getUpdateQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
-        where: {},
-        values: {
-          name,
-          bars: [faker.random.uuid()],
-          bats: [faker.random.uuid()],
-        },
-      });
-
-      query.should.equal(`UPDATE "${model.tableName}" SET "name"=$1 RETURNING "id","name"`);
-      params.should.deep.equal([name]);
-    });
-    it('should use primaryKey value if hydrated object is passed as a value', () => {
-      const store = {
-        id: faker.random.uuid(),
-        name: `store - ${faker.random.uuid()}`,
-      };
+      const product = new Product();
+      product.id = faker.random.number();
+      const category = new Category();
+      category.id = faker.random.number();
 
       const name = faker.random.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.productwithcreatedat.model,
+        model: repositoriesByModelName.SimpleWithCollections.model as ModelMetadata<SimpleWithCollections>,
+        where: {},
+        values: {
+          name,
+          products: [product],
+          categories: [category],
+        },
+      });
+
+      query.should.equal(`UPDATE "${repositoriesByModelName.SimpleWithCollections.model.tableName}" SET "name"=$1 RETURNING "id","name"`);
+      params.should.deep.equal([name]);
+    });
+    it('should use primaryKey value if hydrated object is passed as a value', () => {
+      const store = new Store();
+      store.id = faker.random.number();
+      store.name = `store - ${faker.random.uuid()}`;
+
+      const name = faker.random.uuid();
+      const { query, params } = sqlHelper.getUpdateQueryAndParams({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
         where: {},
         values: {
           name,
@@ -1256,39 +667,6 @@ describe('sqlHelper', () => {
     });
     it('should cast value to jsonb if type=json and value is an array', () => {
       // Please see https://github.com/brianc/node-postgres/issues/442 for details of why this is needed
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          type: 'string',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'bar',
-          propertyName: 'bar',
-          type: 'json',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const name = faker.random.uuid();
       const bar = [
         {
@@ -1297,8 +675,8 @@ describe('sqlHelper', () => {
       ];
 
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelName.SimpleWithJson.model as ModelMetadata<SimpleWithJson>,
         where: {},
         values: {
           name,
@@ -1306,7 +684,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${model.tableName}" SET "name"=$1,"bar"=$2::jsonb RETURNING "id","name","bar"`);
+      query.should.equal(`UPDATE "${repositoriesByModelName.SimpleWithJson.model.tableName}" SET "name"=$1,"bar"=$2::jsonb RETURNING "id","name","bar"`);
       params.should.deep.equal([name, JSON.stringify(bar)]);
     });
     it('should include where statement if defined', () => {
@@ -1316,9 +694,9 @@ describe('sqlHelper', () => {
       };
 
       const name = faker.random.uuid();
-      const { query, params } = sqlHelper.getUpdateQueryAndParams({
+      const { query, params } = sqlHelper.getUpdateQueryAndParams<ProductWithCreatedAt>({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.productwithcreatedat.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
         where: {
           store,
         },
@@ -1334,11 +712,11 @@ describe('sqlHelper', () => {
     });
     it('should return records if returnRecords=true', () => {
       const productId = faker.random.uuid();
-      const storeId = faker.random.uuid();
+      const storeId = faker.random.number();
       const name = faker.random.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.productwithcreatedat.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
         where: {
           id: productId,
         },
@@ -1356,11 +734,11 @@ describe('sqlHelper', () => {
     });
     it('should return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
       const productId = faker.random.uuid();
-      const storeId = faker.random.uuid();
+      const storeId = faker.random.number();
       const name = faker.random.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           id: productId,
         },
@@ -1377,11 +755,11 @@ describe('sqlHelper', () => {
     });
     it('should not return records if returnRecords=false', () => {
       const productId = faker.random.uuid();
-      const storeId = faker.random.uuid();
+      const storeId = faker.random.number();
       const name = faker.random.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           id: productId,
         },
@@ -1400,7 +778,7 @@ describe('sqlHelper', () => {
     it('should delete all records if no where statement is defined', () => {
       const { query, params } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.productwithcreatedat.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
       });
 
       query.should.equal(
@@ -1409,90 +787,23 @@ describe('sqlHelper', () => {
       params.should.deep.equal([]);
     });
     it('should delete all records (non "id" primaryKey) if no where statement is defined', () => {
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'foobario',
-          propertyName: 'foobario',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          required: true,
-          defaultsTo: 'foobar',
-          type: 'string',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
       const { query, params } = sqlHelper.getDeleteQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelName.NonStandardPrimaryId.model,
       });
 
-      query.should.equal(`DELETE FROM "${model.tableName}" RETURNING "foobario","name"`);
-      params.should.deep.equal([]);
-    });
-    it('should delete all records (non "id" primaryKey with id propertyName) if no where statement is defined', () => {
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'foobario',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          required: true,
-          defaultsTo: 'foobar',
-          type: 'string',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      repositories[model.name.toLowerCase()] = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: mockedPool,
-        repositoriesByModelNameLowered: repositories,
-      });
-
-      const { query, params } = sqlHelper.getDeleteQueryAndParams({
-        repositoriesByModelNameLowered: repositories,
-        model,
-      });
-
-      query.should.equal(`DELETE FROM "${model.tableName}" RETURNING "foobario" AS "id","name"`);
+      query.should.equal(`DELETE FROM "${repositoriesByModelName.NonStandardPrimaryId.model.tableName}" RETURNING "unique_id" AS "uniqueId","foo"`);
       params.should.deep.equal([]);
     });
     it('should include where statement if defined', () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
 
       const { query, params } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.productwithcreatedat.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
         where: {
           store,
         },
@@ -1507,7 +818,7 @@ describe('sqlHelper', () => {
       const productId = faker.random.uuid();
       const { query, params } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.productwithcreatedat.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
         where: {
           id: productId,
         },
@@ -1523,7 +834,7 @@ describe('sqlHelper', () => {
       const productId = faker.random.uuid();
       const { query, params } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           id: productId,
         },
@@ -1538,7 +849,7 @@ describe('sqlHelper', () => {
       const productId = faker.random.uuid();
       const { query, params } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           id: productId,
         },
@@ -1552,7 +863,7 @@ describe('sqlHelper', () => {
   describe('#getColumnsToSelect()', () => {
     it('should include all columns if select is undefined (explicit)', () => {
       const query = sqlHelper.getColumnsToSelect({
-        model: repositoriesByModelNameLowered.productwithcreatedat.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
         select: undefined,
       });
 
@@ -1560,14 +871,14 @@ describe('sqlHelper', () => {
     });
     it('should include all columns if select is undefined (implicit)', () => {
       const query = sqlHelper.getColumnsToSelect({
-        model: repositoriesByModelNameLowered.productwithcreatedat.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
       });
 
       query.should.equal('"id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
     });
     it('should include primaryKey column if select is empty', () => {
       const query = sqlHelper.getColumnsToSelect({
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         select: [],
       });
 
@@ -1575,7 +886,7 @@ describe('sqlHelper', () => {
     });
     it('should include primaryKey column if select does not include it', () => {
       const query = sqlHelper.getColumnsToSelect({
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         select: ['name'],
       });
 
@@ -1586,7 +897,7 @@ describe('sqlHelper', () => {
     it('should return empty if where is undefined', () => {
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
       });
 
       should.not.exist(whereStatement);
@@ -1596,7 +907,7 @@ describe('sqlHelper', () => {
       ((): void => {
         sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.product.model,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           where: {
             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore - testing a value not allowed by type definition
@@ -1606,10 +917,10 @@ describe('sqlHelper', () => {
       }).should.throw(Error, `Attempting to query with an undefined value. store on ${repositoriesByModelNameLowered.product.model.name}`);
     });
     it('should use column name if defined', () => {
-      const storeId = faker.random.uuid();
+      const storeId = faker.random.number();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           store: storeId,
         },
@@ -1623,7 +934,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name,
         },
@@ -1637,7 +948,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             startsWith: name,
@@ -1654,7 +965,7 @@ describe('sqlHelper', () => {
       const name2 = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             startsWith: [name1, name2],
@@ -1670,7 +981,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             endsWith: name,
@@ -1687,7 +998,7 @@ describe('sqlHelper', () => {
       const name2 = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             endsWith: [name1, name2],
@@ -1703,7 +1014,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             contains: name,
@@ -1720,7 +1031,7 @@ describe('sqlHelper', () => {
       const name2 = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             contains: [name1, name2],
@@ -1736,7 +1047,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             like: name,
@@ -1752,7 +1063,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             '!': {
@@ -1769,7 +1080,7 @@ describe('sqlHelper', () => {
     it('should handle like with an empty value', () => {
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             like: '',
@@ -1784,7 +1095,7 @@ describe('sqlHelper', () => {
     it('should handle not like with an empty value', () => {
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             '!': {
@@ -1802,7 +1113,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             like: [name],
@@ -1818,7 +1129,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             '!': {
@@ -1837,7 +1148,7 @@ describe('sqlHelper', () => {
       const name2 = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             like: [name1, name2],
@@ -1853,7 +1164,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             like: [null, '', name],
@@ -1870,7 +1181,7 @@ describe('sqlHelper', () => {
       const name2 = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             '!': {
@@ -1888,7 +1199,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             '!': {
@@ -1905,7 +1216,7 @@ describe('sqlHelper', () => {
     it('should handle like with an empty array', () => {
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             like: [],
@@ -1920,7 +1231,7 @@ describe('sqlHelper', () => {
     it('should handle not like with an empty array', () => {
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             '!': {
@@ -1938,7 +1249,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           aliases: {
             like: [name],
@@ -1954,7 +1265,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           aliases: {
             '!': {
@@ -1972,7 +1283,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           aliases: {
             like: name,
@@ -1988,7 +1299,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           aliases: {
             '!': {
@@ -2007,7 +1318,7 @@ describe('sqlHelper', () => {
       const name2 = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           aliases: {
             like: [name1, name2],
@@ -2024,7 +1335,7 @@ describe('sqlHelper', () => {
       const name2 = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           aliases: {
             '!': {
@@ -2042,7 +1353,7 @@ describe('sqlHelper', () => {
       const now = new Date();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.productwithcreatedat.model,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
         where: {
           createdAt: {
             '>': now,
@@ -2059,7 +1370,7 @@ describe('sqlHelper', () => {
       const store = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           or: [
             {
@@ -2086,7 +1397,7 @@ describe('sqlHelper', () => {
       const sku = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           id,
           or: [
@@ -2112,7 +1423,7 @@ describe('sqlHelper', () => {
       const name = [faker.random.uuid(), faker.random.uuid()];
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name,
         },
@@ -2127,7 +1438,7 @@ describe('sqlHelper', () => {
 
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.kitchensink.model,
+        model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         where: {
           intColumn: values,
         },
@@ -2142,7 +1453,7 @@ describe('sqlHelper', () => {
 
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.kitchensink.model,
+        model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         where: {
           floatColumn: values,
         },
@@ -2156,7 +1467,7 @@ describe('sqlHelper', () => {
       it('should handle empty array value with array type column', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             arrayColumn: [],
           },
@@ -2169,7 +1480,7 @@ describe('sqlHelper', () => {
       it('should handle comparing array type as an array of null or empty', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             arrayColumn: [null, []],
           },
@@ -2183,7 +1494,7 @@ describe('sqlHelper', () => {
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             arrayColumn: value,
           },
@@ -2197,7 +1508,7 @@ describe('sqlHelper', () => {
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             arrayColumn: [value],
           },
@@ -2211,7 +1522,7 @@ describe('sqlHelper', () => {
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             arrayColumn: {
               '!': value,
@@ -2227,7 +1538,7 @@ describe('sqlHelper', () => {
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             arrayColumn: {
               '!': [value],
@@ -2243,7 +1554,7 @@ describe('sqlHelper', () => {
         const values = [faker.random.uuid(), faker.random.uuid()];
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             arrayColumn: values,
           },
@@ -2257,7 +1568,7 @@ describe('sqlHelper', () => {
         const values = [faker.random.uuid(), faker.random.uuid()];
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             arrayColumn: {
               '!': values,
@@ -2274,7 +1585,7 @@ describe('sqlHelper', () => {
       it('should handle empty array value with array type column', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             stringArrayColumn: [],
           },
@@ -2287,7 +1598,7 @@ describe('sqlHelper', () => {
       it('should handle comparing array type as an array of null or empty', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             stringArrayColumn: [null, []],
           },
@@ -2301,7 +1612,7 @@ describe('sqlHelper', () => {
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             stringArrayColumn: value,
           },
@@ -2315,7 +1626,7 @@ describe('sqlHelper', () => {
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             stringArrayColumn: [value],
           },
@@ -2329,7 +1640,7 @@ describe('sqlHelper', () => {
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             stringArrayColumn: {
               '!': value,
@@ -2345,7 +1656,7 @@ describe('sqlHelper', () => {
         const value = faker.random.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             stringArrayColumn: {
               '!': [value],
@@ -2361,7 +1672,7 @@ describe('sqlHelper', () => {
         const values = [faker.random.uuid(), faker.random.uuid()];
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             stringArrayColumn: values,
           },
@@ -2375,7 +1686,7 @@ describe('sqlHelper', () => {
         const values = [faker.random.uuid(), faker.random.uuid()];
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.kitchensink.model,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
           where: {
             stringArrayColumn: {
               '!': values,
@@ -2391,7 +1702,7 @@ describe('sqlHelper', () => {
     it('should treat empty array value as "false"', () => {
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: [],
         },
@@ -2404,7 +1715,7 @@ describe('sqlHelper', () => {
     it('should treat negated empty array value as "true"', () => {
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             '!': [],
@@ -2420,7 +1731,7 @@ describe('sqlHelper', () => {
       const name = faker.random.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: [name],
         },
@@ -2433,7 +1744,7 @@ describe('sqlHelper', () => {
     it('should handle an array value with NULL explicitly', () => {
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: [null, ''],
         },
@@ -2447,7 +1758,7 @@ describe('sqlHelper', () => {
       const name = [faker.random.uuid(), faker.random.uuid()];
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             '!': name,
@@ -2462,7 +1773,7 @@ describe('sqlHelper', () => {
     it('should treat negation of empty array value as "true"', () => {
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             '!': [],
@@ -2477,7 +1788,7 @@ describe('sqlHelper', () => {
     it('should treat negation of array value with NULL explicitly as AND statements', () => {
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           name: {
             '!': [null, ''],
@@ -2496,7 +1807,7 @@ describe('sqlHelper', () => {
 
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
-        model: repositoriesByModelNameLowered.product.model,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           store,
         },
@@ -2510,7 +1821,7 @@ describe('sqlHelper', () => {
   describe('#buildOrderStatement()', () => {
     it('should return empty if there are no orders defined', () => {
       const result = sqlHelper.buildOrderStatement({
-        model: repositoriesByModelNameLowered.kitchensink.model,
+        model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [],
       });
 
@@ -2518,7 +1829,7 @@ describe('sqlHelper', () => {
     });
     it('should handle single string order with implicit direction', () => {
       const result = sqlHelper.buildOrderStatement({
-        model: repositoriesByModelNameLowered.kitchensink.model,
+        model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
             propertyName: 'name',
@@ -2530,7 +1841,7 @@ describe('sqlHelper', () => {
     });
     it('should handle single string order with implicit direction and explicit columnName', () => {
       const result = sqlHelper.buildOrderStatement({
-        model: repositoriesByModelNameLowered.kitchensink.model,
+        model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
             propertyName: 'intColumn',
@@ -2542,7 +1853,7 @@ describe('sqlHelper', () => {
     });
     it('should handle single string order with explicit desc direction', () => {
       const result = sqlHelper.buildOrderStatement({
-        model: repositoriesByModelNameLowered.kitchensink.model,
+        model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
             propertyName: 'name',
@@ -2555,7 +1866,7 @@ describe('sqlHelper', () => {
     });
     it('should handle single string order with explicit desc direction and explicit columnName', () => {
       const result = sqlHelper.buildOrderStatement({
-        model: repositoriesByModelNameLowered.kitchensink.model,
+        model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
             propertyName: 'intColumn',
@@ -2568,7 +1879,7 @@ describe('sqlHelper', () => {
     });
     it('should handle multiple string order', () => {
       const result = sqlHelper.buildOrderStatement({
-        model: repositoriesByModelNameLowered.kitchensink.model,
+        model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
             propertyName: 'intColumn',

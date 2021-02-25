@@ -1,4 +1,3 @@
-import type { Entity } from '../../src';
 import { column, table } from '../../src/decorators';
 
 import { ModelBase } from './ModelBase';
@@ -6,7 +5,7 @@ import { ModelBase } from './ModelBase';
 @table({
   name: 'kitchen_sink',
 })
-export class KitchenSink extends ModelBase implements Entity {
+export class KitchenSink extends ModelBase {
   @column({
     type: 'string',
     required: true,
@@ -36,4 +35,8 @@ export class KitchenSink extends ModelBase implements Entity {
     name: 'string_array_column',
   })
   public stringArrayColumn?: string[];
+
+  public instanceFunction(): string {
+    return `${this.name || ''} bar!`;
+  }
 }

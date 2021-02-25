@@ -5,13 +5,10 @@ import type { QueryResult } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { Entity, IReadonlyRepository, IRepository, Repository } from '../src';
-import { ReadonlyRepository, initialize } from '../src';
-import { ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
+import type { Repository, ReadonlyRepository } from '../src';
+import { initialize } from '../src';
 
-import { Category, Product, ProductCategory, ReadonlyProduct, Store } from './models';
-
-type RepositoriesByModelNameLowered = Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+import { Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, Store } from './models';
 
 function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
   return {
@@ -31,21 +28,21 @@ describe('ReadonlyRepository', () => {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   let ReadonlyProductRepository: ReadonlyRepository<ReadonlyProduct>;
   // eslint-disable-next-line @typescript-eslint/naming-convention
+  let ReadonlyKitchenSinkRepository: ReadonlyRepository<KitchenSink>;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   let StoreRepository: Repository<Store>;
-
-  // eslint-disable-next-line @typescript-eslint/no-extraneous-class
-  class TestEntity implements Entity {}
 
   before(() => {
     should = chai.should();
 
     const repositoriesByModelName = initialize({
-      models: [Category, Product, ProductCategory, ReadonlyProduct, Store],
+      models: [Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, Store],
       pool: instance(mockedPool),
     });
 
     ProductRepository = repositoriesByModelName.Product as Repository<Product>;
     ReadonlyProductRepository = repositoriesByModelName.ReadonlyProduct as ReadonlyRepository<ReadonlyProduct>;
+    ReadonlyKitchenSinkRepository = repositoriesByModelName.KitchenSink as ReadonlyRepository<KitchenSink>;
     StoreRepository = repositoriesByModelName.Store as Repository<Store>;
   });
 
@@ -165,361 +162,200 @@ describe('ReadonlyRepository', () => {
     });
     describe('Parse number columns', () => {
       it('should parse integer columns from integer query value', async () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'integer',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        const repository = new ReadonlyRepository({
-          modelMetadata: model,
-          type: model.type,
-          pool: instance(mockedPool),
-          repositoriesByModelNameLowered: repositories,
-        });
-        repositories[model.name.toLowerCase()] = repository;
-
         const id = faker.random.number();
+        const name = faker.random.uuid();
         const numberValue = 42;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
             {
               id,
-              foo: `${numberValue}`,
+              name,
+              intColumn: `${numberValue}`,
             },
           ]),
         );
 
-        const result = await repository.findOne();
+        const result = await ReadonlyKitchenSinkRepository.findOne();
         should.exist(result);
 
         result!.should.deep.equal({
           id,
-          foo: numberValue,
+          name,
+          intColumn: numberValue,
         });
 
         const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        query.should.equal(
+          `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
+        );
         params!.should.deep.equal([]);
       });
       it('should parse integer columns from float strings query value', async () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'integer',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        const repository = new ReadonlyRepository({
-          modelMetadata: model,
-          type: model.type,
-          pool: instance(mockedPool),
-          repositoriesByModelNameLowered: repositories,
-        });
-        repositories[model.name.toLowerCase()] = repository;
-
         const id = faker.random.number();
+        const name = faker.random.uuid();
         const numberValue = 42.24;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
             {
               id,
-              foo: `${numberValue}`,
+              name,
+              intColumn: `${numberValue}`,
             },
           ]),
         );
 
-        const result = await repository.findOne();
+        const result = await ReadonlyKitchenSinkRepository.findOne();
         should.exist(result);
         result!.should.deep.equal({
           id,
-          foo: 42,
+          name,
+          intColumn: 42,
         });
 
         const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        query.should.equal(
+          `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
+        );
         params!.should.deep.equal([]);
       });
       it('should parse integer columns that return as number', async () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'integer',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        const repository = new ReadonlyRepository({
-          modelMetadata: model,
-          type: model.type,
-          pool: instance(mockedPool),
-          repositoriesByModelNameLowered: repositories,
-        });
-        repositories[model.name.toLowerCase()] = repository;
-
         const id = faker.random.number();
+        const name = faker.random.uuid();
         const numberValue = 42;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
             {
               id,
-              foo: numberValue,
+              name,
+              intColumn: numberValue,
             },
           ]),
         );
 
-        const result = await repository.findOne();
+        const result = await ReadonlyKitchenSinkRepository.findOne();
         should.exist(result);
         result!.should.deep.equal({
           id,
-          foo: numberValue,
+          name,
+          intColumn: numberValue,
         });
 
         const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        query.should.equal(
+          `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
+        );
         params!.should.deep.equal([]);
       });
       it('should ignore large integer columns values', async () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'integer',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        const repository = new ReadonlyRepository({
-          modelMetadata: model,
-          type: model.type,
-          pool: instance(mockedPool),
-          repositoriesByModelNameLowered: repositories,
-        });
-        repositories[model.name.toLowerCase()] = repository;
-
         const id = faker.random.number();
+        const name = faker.random.uuid();
         const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0`;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
             {
               id,
-              foo: largeNumberValue,
+              name,
+              intColumn: largeNumberValue,
             },
           ]),
         );
 
-        const result = await repository.findOne();
+        const result = await ReadonlyKitchenSinkRepository.findOne();
         should.exist(result);
         result!.should.deep.equal({
           id,
-          foo: largeNumberValue,
+          name,
+          intColumn: largeNumberValue,
         });
 
         const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        query.should.equal(
+          `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
+        );
         params!.should.deep.equal([]);
       });
       it('should parse float columns return as float strings', async () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'float',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        const repository = new ReadonlyRepository({
-          modelMetadata: model,
-          type: model.type,
-          pool: instance(mockedPool),
-          repositoriesByModelNameLowered: repositories,
-        });
-        repositories[model.name.toLowerCase()] = repository;
-
         const id = faker.random.number();
+        const name = faker.random.uuid();
         const numberValue = 42.24;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
             {
               id,
-              foo: `${numberValue}`,
+              name,
+              floatColumn: `${numberValue}`,
             },
           ]),
         );
 
-        const result = await repository.findOne();
+        const result = await ReadonlyKitchenSinkRepository.findOne();
         should.exist(result);
         result!.should.deep.equal({
           id,
-          foo: numberValue,
+          name,
+          floatColumn: numberValue,
         });
 
         const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        query.should.equal(
+          `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
+        );
         params!.should.deep.equal([]);
       });
       it('should parse float columns return as number', async () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'float',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        const repository = new ReadonlyRepository({
-          modelMetadata: model,
-          type: model.type,
-          pool: instance(mockedPool),
-          repositoriesByModelNameLowered: repositories,
-        });
-        repositories[model.name.toLowerCase()] = repository;
-
         const id = faker.random.number();
+        const name = faker.random.uuid();
         const numberValue = 42.24;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
             {
               id,
-              foo: numberValue,
+              name,
+              floatColumn: numberValue,
             },
           ]),
         );
 
-        const result = await repository.findOne();
+        const result = await ReadonlyKitchenSinkRepository.findOne();
         should.exist(result);
         result!.should.deep.equal({
           id,
-          foo: numberValue,
+          name,
+          floatColumn: numberValue,
         });
 
         const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        query.should.equal(
+          `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
+        );
         params!.should.deep.equal([]);
       });
       it('should ignore large float columns', async () => {
-        const model = new ModelMetadata({
-          name: 'foo',
-          type: TestEntity,
-        });
-        model.columns = [
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'id',
-            propertyName: 'id',
-            primary: true,
-            type: 'integer',
-          }),
-          new ColumnTypeMetadata({
-            target: 'foo',
-            name: 'foo',
-            propertyName: 'foo',
-            type: 'float',
-          }),
-        ];
-        const repositories: RepositoriesByModelNameLowered = {};
-        const repository = new ReadonlyRepository({
-          modelMetadata: model,
-          type: model.type,
-          pool: instance(mockedPool),
-          repositoriesByModelNameLowered: repositories,
-        });
-        repositories[model.name.toLowerCase()] = repository;
-
         const id = faker.random.number();
+        const name = faker.random.uuid();
         const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0.42`;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
             {
               id,
-              foo: largeNumberValue,
+              name,
+              floatColumn: largeNumberValue,
             },
           ]),
         );
 
-        const result = await repository.findOne();
+        const result = await ReadonlyKitchenSinkRepository.findOne();
         should.exist(result);
         result!.should.deep.equal({
           id,
-          foo: largeNumberValue,
+          name,
+          floatColumn: largeNumberValue,
         });
 
         const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(`SELECT "id","foo" FROM "${model.tableName}" LIMIT 1`);
+        query.should.equal(
+          `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
+        );
         params!.should.deep.equal([]);
       });
     });
@@ -557,6 +393,43 @@ describe('ReadonlyRepository', () => {
       storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1 LIMIT 1');
       storeQueryParams!.should.deep.equal([store.id]);
     });
+    it('should support populating a single relation with partial select and order', async () => {
+      const store = {
+        id: faker.random.number(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const product = {
+        id: faker.random.number(),
+        name: `product - ${faker.random.uuid()}`,
+        store,
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([
+          {
+            id: product.id,
+            name: product.name,
+            store: store.id,
+          },
+        ]),
+        getQueryResult([store]),
+      );
+
+      const result = await ProductRepository.findOne().populate('store', {
+        select: ['name'],
+        sort: 'name',
+      });
+      verify(mockedPool.query(anyString(), anything())).twice();
+      should.exist(result);
+      result!.should.deep.equal(product);
+
+      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
+      productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      productQueryParams!.should.deep.equal([]);
+      const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
+      storeQuery.should.equal('SELECT "name","id" FROM "stores" WHERE "id"=$1 ORDER BY "name" LIMIT 1');
+      storeQueryParams!.should.deep.equal([store.id]);
+    });
     it('should support populating collection', async () => {
       const store = {
         id: faker.random.number(),
@@ -592,6 +465,46 @@ describe('ReadonlyRepository', () => {
       storeQueryParams!.should.deep.equal([]);
       const [productQuery, productQueryParams] = capture(mockedPool.query).second();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
+      productQueryParams!.should.deep.equal([store.id]);
+    });
+    it('should support populating collection with partial select and order', async () => {
+      const store = {
+        id: faker.random.number(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const product1 = {
+        id: faker.random.number(),
+        name: `product - ${faker.random.uuid()}`,
+        store: store.id,
+      };
+      const product2 = {
+        id: faker.random.number(),
+        name: `product - ${faker.random.uuid()}`,
+        store: store.id,
+      };
+
+      const storeWithProducts = _.extend(
+        {
+          products: [product1, product2],
+        },
+        store,
+      );
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1, product2]));
+
+      const result = await StoreRepository.findOne().populate('products', {
+        select: ['name'],
+        sort: 'aliases',
+      });
+      verify(mockedPool.query(anyString(), anything())).twice();
+      should.exist(result);
+      result!.should.deep.equal(storeWithProducts);
+
+      const [storeQuery, storeQueryParams] = capture(mockedPool.query).first();
+      storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
+      storeQueryParams!.should.deep.equal([]);
+      const [productQuery, productQueryParams] = capture(mockedPool.query).second();
+      productQuery.should.equal('SELECT "name","id" FROM "products" WHERE "store_id"=$1 ORDER BY "alias_names"');
       productQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating multi-multi collection', async () => {
@@ -640,6 +553,57 @@ describe('ReadonlyRepository', () => {
       productCategoryMapQueryParams!.should.deep.equal([product.id]);
       const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
       categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
+      categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
+    });
+    it('should support populating multi-multi collection with partial select and order', async () => {
+      const product = {
+        id: faker.random.number(),
+        name: `product - ${faker.random.uuid()}`,
+      };
+      const category1 = {
+        id: faker.random.number(),
+        name: `category - ${faker.random.uuid()}`,
+      };
+      const category2 = {
+        id: faker.random.number(),
+        name: `category - ${faker.random.uuid()}`,
+      };
+      const productCategory1Map = {
+        id: faker.random.number(),
+        product: product.id,
+        category: category1.id,
+      };
+      const productCategory2Map = {
+        id: faker.random.number(),
+        product: product.id,
+        category: category2.id,
+      };
+
+      const productWithCategories = _.extend(
+        {
+          categories: [category1, category2],
+        },
+        product,
+      );
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory1Map, productCategory2Map]), getQueryResult([category1, category2]));
+
+      const result = await ProductRepository.findOne().populate('categories', {
+        select: ['name'],
+        sort: 'name desc',
+      });
+      verify(mockedPool.query(anyString(), anything())).thrice();
+      should.exist(result);
+      result!.should.deep.equal(productWithCategories);
+
+      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
+      productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      productQueryParams!.should.deep.equal([]);
+      const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).second();
+      productCategoryMapQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
+      productCategoryMapQueryParams!.should.deep.equal([product.id]);
+      const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
+      categoryQuery.should.equal('SELECT "name","id" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) ORDER BY "name" DESC');
       categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
     });
     it('should support complex query with multiple chained modifiers', async () => {
@@ -725,110 +689,27 @@ describe('ReadonlyRepository', () => {
       categoryQueryParams!.should.deep.equal([[category1.id, category2.id], 'category%']);
     });
     it('should have instance functions be equal across multiple queries', async () => {
-      // eslint-disable-next-line max-classes-per-file
-      class TestEntityWithInstanceFunction implements Entity {
-        public id!: number;
+      const result = {
+        id: faker.random.number(),
+        name: `sink - ${faker.random.uuid()}`,
+      };
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([result]));
 
-        public foo: string | undefined;
-
-        public toBar(): string {
-          return `${this.foo || ''} bar!`;
-        }
-      }
-
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntityWithInstanceFunction,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'foo',
-          propertyName: 'foo',
-          type: 'string',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      const repository = new ReadonlyRepository({
-        modelMetadata: model,
-        type: model.type,
-        pool: instance(mockedPool),
-        repositoriesByModelNameLowered: repositories,
-      });
-      repositories[model.name.toLowerCase()] = repository;
-
-      const id = faker.random.number();
-      const foo = faker.random.uuid();
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([
-          {
-            id,
-            foo,
-          },
-        ]),
-      );
-
-      const result1 = await repository.findOne();
-      const result2 = await repository.findOne();
+      const result1 = await ReadonlyKitchenSinkRepository.findOne();
+      const result2 = await ReadonlyKitchenSinkRepository.findOne();
 
       verify(mockedPool.query(anyString(), anything())).twice();
 
       should.exist(result1);
       result1!.should.deep.equal(result2);
-      result1!.toBar().should.equal(`${foo} bar!`);
+      result1!.instanceFunction().should.equal(`${result.name} bar!`);
       should.exist(result2);
-      result2!.toBar().should.equal(`${foo} bar!`);
+      result2!.instanceFunction().should.equal(`${result.name} bar!`);
     });
     it('should not create an object/assign instance functions to null results', async () => {
-      // eslint-disable-next-line max-classes-per-file
-      class TestEntityWithInstanceFunction implements Entity {
-        public id!: number;
-
-        public foo: string | undefined;
-
-        public toBar(): string {
-          return `${this.foo} bar!`;
-        }
-      }
-
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntityWithInstanceFunction,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'foo',
-          propertyName: 'foo',
-          type: 'string',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      const repository = new ReadonlyRepository({
-        modelMetadata: model,
-        type: model.type,
-        pool: instance(mockedPool),
-        repositoriesByModelNameLowered: repositories,
-      });
-      repositories[model.name.toLowerCase()] = repository;
-
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([null]));
 
-      const result = await repository.findOne();
+      const result = await ReadonlyKitchenSinkRepository.findOne();
 
       verify(mockedPool.query(anyString(), anything())).once();
 
@@ -1167,64 +1048,20 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([store.id]);
     });
     it('should have instance functions be equal across multiple queries', async () => {
-      // eslint-disable-next-line max-classes-per-file
-      class TestEntityWithInstanceFunction implements Entity {
-        public id!: number;
+      const result = {
+        id: faker.random.number(),
+        name: `sink - ${faker.random.uuid()}`,
+      };
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([result]));
 
-        public foo: string | undefined;
-
-        public toBar(): string {
-          return `${this.foo} bar!`;
-        }
-      }
-
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntityWithInstanceFunction,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'id',
-          propertyName: 'id',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'foo',
-          propertyName: 'foo',
-          type: 'string',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      const repository = new ReadonlyRepository({
-        modelMetadata: model,
-        type: model.type,
-        pool: instance(mockedPool),
-        repositoriesByModelNameLowered: repositories,
-      });
-      repositories[model.name.toLowerCase()] = repository;
-
-      const id = faker.random.number();
-      const foo = faker.random.uuid();
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([
-          {
-            id,
-            foo,
-          },
-        ]),
-      );
-
-      const result1 = await repository.find();
-      const result2 = await repository.find();
+      const result1 = await ReadonlyKitchenSinkRepository.find();
+      const result2 = await ReadonlyKitchenSinkRepository.find();
       verify(mockedPool.query(anyString(), anything())).twice();
       should.exist(result1);
       should.exist(result2);
       result1.should.deep.equal(result2);
-      result1[0].toBar().should.equal(`${foo} bar!`);
-      result2[0].toBar().should.equal(`${foo} bar!`);
+      result1[0].instanceFunction().should.equal(`${result.name} bar!`);
+      result2[0].instanceFunction().should.equal(`${result.name} bar!`);
     });
   });
   describe('#count()', () => {

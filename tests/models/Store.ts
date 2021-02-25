@@ -1,4 +1,3 @@
-import type { Entity } from '../../src';
 import { column, table } from '../../src/decorators';
 
 import { ModelBase } from './ModelBase';
@@ -8,7 +7,7 @@ import { Product } from './Product';
 @table({
   name: 'stores',
 })
-export class Store extends ModelBase implements Entity {
+export class Store extends ModelBase {
   @column({
     type: 'string',
   })
