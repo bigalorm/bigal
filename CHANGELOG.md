@@ -1,3 +1,6 @@
+### 7.1.2
+  * Make sort argument optional for chained calls
+
 ### 7.1.1
   * Allow sort() argument to be undefined
   * Fix object notation for sort() to have properties be optional

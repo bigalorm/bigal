@@ -7,7 +7,7 @@ import type { WhereQuery } from './WhereQuery';
 
 export interface FindResult<TEntity extends Entity> extends ChainablePromiseLike<TEntity[]> {
   where(args: WhereQuery<TEntity>): FindResult<TEntity>;
-  sort(value: Sort<TEntity>): FindResult<TEntity>;
+  sort(value?: Sort<TEntity>): FindResult<TEntity>;
   limit(value: number): FindResult<TEntity>;
   skip(value: number): FindResult<TEntity>;
   paginate(options: PaginateOptions): FindResult<TEntity>;
