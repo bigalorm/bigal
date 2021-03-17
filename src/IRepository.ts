@@ -8,7 +8,7 @@ import type {
   ReturnSelect,
   WhereQuery,
 } from './query';
-import type { CreateOrUpdateParams } from './types';
+import type { CreateOrUpdateParams, QueryResponse } from './types';
 
 export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
   /**
@@ -18,7 +18,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object}
    */
-  create(values: Partial<CreateOrUpdateParams<T>>, options?: ReturnSelect<T>): Promise<T>;
+  create(values: Partial<CreateOrUpdateParams<T>>, options?: ReturnSelect<T>): Promise<QueryResponse<T>>;
 
   /**
    * Creates a objects using the specified values
@@ -37,7 +37,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  create(values: Partial<CreateOrUpdateParams<T>>[], options?: ReturnSelect<T>): Promise<T[]>;
+  create(values: Partial<CreateOrUpdateParams<T>>[], options?: ReturnSelect<T>): Promise<QueryResponse<T>[]>;
 
   /**
    * Creates an object using the specified values
@@ -47,7 +47,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object|object[]|void} Return value from the db
    */
-  create(values: Partial<CreateOrUpdateParams<T>> | Partial<CreateOrUpdateParams<T>>[], options?: CreateUpdateOptions<T>): Promise<T | T[] | void>;
+  create(values: Partial<CreateOrUpdateParams<T>> | Partial<CreateOrUpdateParams<T>>[], options?: CreateUpdateOptions<T>): Promise<QueryResponse<T> | QueryResponse<T>[] | void>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -68,7 +68,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  update(where: WhereQuery<T>, values: Partial<CreateOrUpdateParams<T>>, options?: ReturnSelect<T>): Promise<T[]>;
+  update(where: WhereQuery<T>, values: Partial<CreateOrUpdateParams<T>>, options?: ReturnSelect<T>): Promise<QueryResponse<T>[]>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -79,7 +79,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} Return values from the db or `true` if returnRecords=false
    */
-  update(where: WhereQuery<T>, values: Partial<CreateOrUpdateParams<T>>, options?: CreateUpdateOptions<T>): Promise<T[] | void>;
+  update(where: WhereQuery<T>, values: Partial<CreateOrUpdateParams<T>>, options?: CreateUpdateOptions<T>): Promise<QueryResponse<T>[] | void>;
 
   /**
    * Destroys object(s) matching the where query
@@ -96,7 +96,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResult<T, T[]>;
+  destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResult<T, QueryResponse<T>[]>;
 
   /**
    * Destroys object(s) matching the where query
@@ -106,5 +106,5 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} `void` or records affected if returnRecords=true
    */
-  destroy<TOptions extends DeleteOptions<T> = DeleteOptions<T>>(where: WhereQuery<T>, options?: TOptions): DestroyResult<T, TOptions extends DeleteOptions<T> ? void : T[]>;
+  destroy<TOptions extends DeleteOptions<T> = DeleteOptions<T>>(where: WhereQuery<T>, options?: TOptions): DestroyResult<T, TOptions extends DeleteOptions<T> ? void : QueryResponse<T>[]>;
 }

@@ -7,7 +7,7 @@ import type { IRepository } from './IRepository';
 import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
 import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, WhereQuery, SortObject, SortObjectValue } from './query';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
-import type { GetValueType, PickByValueType, OmitFunctionsAndEntityCollections } from './types';
+import type { GetValueType, PickByValueType, OmitFunctionsAndEntityCollections, QueryResponse, PickAsPopulatedProperty } from './types';
 
 export interface IRepositoryOptions<T extends Entity> {
   modelMetadata: ModelMetadata<T>;
@@ -59,7 +59,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
    * @param {object} [args.where] - Object representing the where query
    * @param {string|object} [args.sort] - Property name(s) to sort by
    */
-  public findOne(args: FindOneArgs<T> | WhereQuery<T> = {}): FindOneResult<T> {
+  public findOne(args: FindOneArgs<T> | WhereQuery<T> = {}): FindOneResult<T, QueryResponse<T>> {
     const { stack } = new Error(`${this.model.name}.findOne()`);
 
     let select: (string & keyof OmitFunctionsAndEntityCollections<T>)[] | undefined;
@@ -112,7 +112,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * Filters the query
        * @param {object} value - Object representing the where query
        */
-      where(value: WhereQuery<T>): FindOneResult<T> {
+      where(value: WhereQuery<T>): FindOneResult<T, QueryResponse<T>> {
         where = value;
 
         return this;
@@ -136,7 +136,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           skip: populateSkip,
           limit: populateLimit,
         }: PopulateArgs<GetValueType<PickByValueType<T, Entity>[TProperty], Entity>> = {},
-      ): FindOneResult<T> {
+      ): FindOneResult<T, Omit<QueryResponse<T>, TProperty> & PickAsPopulatedProperty<T, TProperty>> {
         populates.push({
           propertyName,
           where: populateWhere,
@@ -146,20 +146,20 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           limit: populateLimit,
         });
 
-        return this;
+        return this as FindOneResult<T, Omit<QueryResponse<T>, TProperty> & PickAsPopulatedProperty<T, TProperty>>;
       },
       /**
        * Sorts the query
        * @param {string|object} [value]
        */
-      sort(value?: Sort<T>): FindOneResult<T> {
+      sort(value?: Sort<T>): FindOneResult<T, QueryResponse<T>> {
         if (value) {
           sorts.push(...modelInstance._convertSortsToOrderBy(value));
         }
 
         return this;
       },
-      async then(resolve: (result: T | null) => Promise<T> | T | null, reject: (err: Error) => void): Promise<T | null> {
+      async then(resolve: (result: QueryResponse<T> | null) => Promise<QueryResponse<T>> | QueryResponse<T> | null, reject: (err: Error) => void): Promise<QueryResponse<T> | null> {
         try {
           if (_.isString(where)) {
             throw new Error('The query cannot be a string, it must be an object');
@@ -175,9 +175,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             skip: 0,
           });
 
-          const results = await modelInstance._readonlyPool.query(query, params);
+          const results = await modelInstance._readonlyPool.query<Partial<QueryResponse<T>>>(query, params);
           if (results.rows && results.rows.length) {
-            const result = modelInstance._buildInstance(results.rows[0] as Partial<T>);
+            const result = modelInstance._buildInstance(results.rows[0]);
 
             const populateQueries: Promise<void>[] = [];
             for (const populate of populates) {
@@ -199,7 +199,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
                 }
 
                 const populateWhere = {
-                  [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName as string & keyof T] as EntityFieldValue,
+                  [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName as string & keyof QueryResponse<T>] as EntityFieldValue,
                   ...populate.where,
                 };
 
@@ -234,7 +234,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
                   throw new Error(`Unable to populate ${column.target}#${column.propertyName}. There is no primary key defined in ${modelInstance.model.name}`);
                 }
 
-                const id = result[primaryKeyColumn.propertyName as keyof T] as EntityFieldValue;
+                const id = result[primaryKeyColumn.propertyName as keyof QueryResponse<T>] as EntityFieldValue;
                 if (_.isNil(id)) {
                   throw new Error(`Primary key (${primaryKeyColumn.propertyName}) has no value for entity ${column.target}.`);
                 }
@@ -349,7 +349,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
    * @param {string|number} [args.skip] - Number of records to skip
    * @param {string|number} [args.limit] - Number of results to return
    */
-  public find(args: FindArgs<T> | WhereQuery<T> = {}): FindResult<T> {
+  public find(args: FindArgs<T> | WhereQuery<T> = {}): FindResult<T, QueryResponse<T>> {
     const { stack } = new Error(`${this.model.name}.find()`);
 
     let select: (string & keyof OmitFunctionsAndEntityCollections<T>)[] | undefined;
@@ -402,7 +402,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * Filters the query
        * @param {object} value - Object representing the where query
        */
-      where(value: WhereQuery<T>): FindResult<T> {
+      where(value: WhereQuery<T>): FindResult<T, QueryResponse<T>> {
         where = value;
 
         return this;
@@ -411,7 +411,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * Sorts the query
        * @param {string|string[]|object} [value]
        */
-      sort(value?: Sort<T>): FindResult<T> {
+      sort(value?: Sort<T>): FindResult<T, QueryResponse<T>> {
         if (value) {
           sorts.push(...modelInstance._convertSortsToOrderBy(value));
         }
@@ -422,7 +422,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * Limits results returned by the query
        * @param {number} value
        */
-      limit(value: number): FindResult<T> {
+      limit(value: number): FindResult<T, QueryResponse<T>> {
         limit = value;
 
         return this;
@@ -431,7 +431,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * Skips records returned by the query
        * @param {number} value
        */
-      skip(value: number): FindResult<T> {
+      skip(value: number): FindResult<T, QueryResponse<T>> {
         skip = value;
 
         return this;
@@ -441,11 +441,11 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * @param {number} [page=1] - Page to return - Starts at 1
        * @param {number} [limit=10] - Number of records to return
        */
-      paginate({ page = 1, limit: paginateLimit = 10 }: PaginateOptions): FindResult<T> {
+      paginate({ page = 1, limit: paginateLimit = 10 }: PaginateOptions): FindResult<T, QueryResponse<T>> {
         const safePage = Math.max(page, 1);
         return this.skip(safePage * paginateLimit - paginateLimit).limit(paginateLimit);
       },
-      async then(resolve: (result: T[]) => T[], reject: (err: Error) => void): Promise<T[]> {
+      async then(resolve: (result: QueryResponse<T>[]) => QueryResponse<T>[], reject: (err: Error) => void): Promise<QueryResponse<T>[]> {
         try {
           if (_.isString(where)) {
             reject(new Error('The query cannot be a string, it must be an object'));
@@ -528,7 +528,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     };
   }
 
-  protected _buildInstance(row: Partial<T>): T {
+  protected _buildInstance(row: Partial<QueryResponse<T>>): QueryResponse<T> {
     if (_.isNil(row)) {
       return row;
     }
@@ -538,7 +538,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
     // NOTE: Number fields may be strings coming from the db. In those cases, try to convert the value to Number
     for (const name of this._floatProperties) {
-      const originalValue = row[name as keyof T] as number | string | null | undefined;
+      const originalValue = row[name as keyof QueryResponse<T>] as number | string | null | undefined;
       if (!_.isNil(originalValue) && typeof originalValue === 'string') {
         try {
           const value = Number(originalValue);
@@ -554,7 +554,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     }
 
     for (const name of this._intProperties) {
-      const originalValue = row[name as keyof T] as number | string | null | undefined;
+      const originalValue = row[name as keyof QueryResponse<T>] as number | string | null | undefined;
       if (!_.isNil(originalValue) && typeof originalValue === 'string') {
         try {
           const value = Number(originalValue);
@@ -572,15 +572,15 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       }
     }
 
-    return instance;
+    return (instance as unknown) as QueryResponse<T>;
   }
 
-  protected _buildInstances(rows: Partial<T>[]): T[] {
+  protected _buildInstances(rows: Partial<QueryResponse<T>>[]): QueryResponse<T>[] {
     if (_.isNil(rows)) {
       return rows;
     }
 
-    return rows.map((row: Partial<T>) => this._buildInstance(row));
+    return rows.map((row: Partial<QueryResponse<T>>) => this._buildInstance(row));
   }
 
   protected _convertSortsToOrderBy(sorts: SortObject<T> | string): OrderBy<T>[] {
