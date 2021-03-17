@@ -29,6 +29,8 @@ describe('Repository', () => {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   let ProductRepository: Repository<Product>;
   // eslint-disable-next-line @typescript-eslint/naming-convention
+  let StoreRepository: Repository<Store>;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   let ProductWithCreateUpdateDateTrackingRepository: Repository<ProductWithCreateUpdateDateTracking>;
 
   // eslint-disable-next-line @typescript-eslint/no-extraneous-class
@@ -43,6 +45,7 @@ describe('Repository', () => {
     });
 
     ProductRepository = repositoriesByModelName.Product as Repository<Product>;
+    StoreRepository = repositoriesByModelName.Store as Repository<Store>;
     ProductWithCreateUpdateDateTrackingRepository = repositoriesByModelName.ProductWithCreateUpdateDateTracking as Repository<ProductWithCreateUpdateDateTracking>;
   });
 
@@ -218,6 +221,64 @@ describe('Repository', () => {
       query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([products[0].name, products[1].name, [], [], products[0].store, products[1].store]);
+    });
+    it('should ignore one-to-many collection values', async () => {
+      const store = {
+        id: faker.random.number(),
+        name: `store - ${faker.random.uuid()}`,
+      };
+      const product = {
+        id: faker.random.number(),
+        name: `product - ${faker.random.uuid()}`,
+        store,
+        categories: [],
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]));
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - Collections are excluded from values type
+      const result = await StoreRepository.create({
+        name: store.name,
+        products: [product],
+      });
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      should.exist(result);
+      result.should.deep.equal(store);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('INSERT INTO "stores" ("name") VALUES ($1) RETURNING "id","name"');
+      params!.should.deep.equal([store.name]);
+    });
+    it('should ignore many-to-many collection values', async () => {
+      const category = {
+        id: faker.random.number(),
+        name: `category - ${faker.random.uuid()}`,
+      };
+      const product = {
+        id: faker.random.number(),
+        name: `product - ${faker.random.uuid()}`,
+        store: faker.random.number(),
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore - Collections are excluded from values type
+      const result = await ProductRepository.create({
+        name: product.name,
+        store: product.store,
+        categories: [category],
+      });
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      should.exist(result);
+      result.should.deep.equal(product);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      params!.should.deep.equal([product.name, [], product.store]);
     });
   });
   describe('#update()', () => {

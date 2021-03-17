@@ -1,3 +1,5 @@
+import type { CreateOrUpdateParams } from './types';
+
 export type EntityFieldValue = boolean[] | Date | number[] | Record<string, unknown> | string[] | boolean | number | string | unknown | null;
 
 // NOTE: Using declaration merging so that IsValueOfType can identify classes that extend Entity, while
@@ -6,11 +8,12 @@ export type EntityFieldValue = boolean[] | Date | number[] | Record<string, unkn
 export abstract class Entity {}
 export interface Entity {
   __bigAlEntity?: true;
+  id?: unknown;
 }
 
 export interface EntityStatic<T extends Entity> {
   // NOTE: Static methods
-  beforeCreate?: (values: Partial<T>) => Partial<T> | Promise<Partial<T>>;
-  beforeUpdate?: (values: Partial<T>) => Partial<T> | Promise<Partial<T>>;
+  beforeCreate?: (values: Partial<CreateOrUpdateParams<T>>) => Partial<CreateOrUpdateParams<T>> | Promise<Partial<CreateOrUpdateParams<T>>>;
+  beforeUpdate?: (values: Partial<CreateOrUpdateParams<T>>) => Partial<CreateOrUpdateParams<T>> | Promise<Partial<CreateOrUpdateParams<T>>>;
   new (): T;
 }

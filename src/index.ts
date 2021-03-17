@@ -9,11 +9,14 @@ import { ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata, getMetadataStor
 import { ReadonlyRepository } from './ReadonlyRepository';
 import { Repository } from './Repository';
 
+export * from './decorators';
 export * from './Entity';
 export * from './IReadonlyRepository';
 export * from './IRepository';
+export * from './metadata';
 export * from './ReadonlyRepository';
 export * from './Repository';
+export * from './types';
 
 export interface IConnection {
   pool: Pool;

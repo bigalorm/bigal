@@ -5,9 +5,9 @@ import type { Entity, EntityFieldValue, EntityStatic } from './Entity';
 import type { IReadonlyRepository } from './IReadonlyRepository';
 import type { IRepository } from './IRepository';
 import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
-import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, WhereQuery, SortObject } from './query';
+import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, WhereQuery, SortObject, SortObjectValue } from './query';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
-import type { GetValueType, PickByValueType } from './types';
+import type { GetValueType, PickByValueType, OmitFunctionsAndEntityCollections } from './types';
 
 export interface IRepositoryOptions<T extends Entity> {
   modelMetadata: ModelMetadata<T>;
@@ -62,7 +62,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
   public findOne(args: FindOneArgs<T> | WhereQuery<T> = {}): FindOneResult<T> {
     const { stack } = new Error(`${this.model.name}.findOne()`);
 
-    let select: (string & keyof T)[] | undefined;
+    let select: (string & keyof OmitFunctionsAndEntityCollections<T>)[] | undefined;
     let where: WhereQuery<T> = {};
     let sort: SortObject<T> | string | null = null;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
@@ -71,7 +71,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
       switch (name) {
         case 'select':
-          select = value as (string & keyof T)[];
+          select = value as (string & keyof OmitFunctionsAndEntityCollections<T>)[];
           break;
         case 'where':
           where = value as WhereQuery<T>;
@@ -352,7 +352,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
   public find(args: FindArgs<T> | WhereQuery<T> = {}): FindResult<T> {
     const { stack } = new Error(`${this.model.name}.find()`);
 
-    let select: (string & keyof T)[] | undefined;
+    let select: (string & keyof OmitFunctionsAndEntityCollections<T>)[] | undefined;
     let where: WhereQuery<T> = {};
     let sort: SortObject<T> | string | null = null;
     let skip: number | null = null;
@@ -363,7 +363,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
       switch (name) {
         case 'select':
-          select = value as (string & keyof T)[];
+          select = value as (string & keyof OmitFunctionsAndEntityCollections<T>)[];
           break;
         case 'where':
           where = value as WhereQuery<T>;
@@ -589,7 +589,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       if (Array.isArray(sorts)) {
         for (const sort of sorts as string[]) {
           const parts = sort.trim().split(' ');
-          const propertyName = parts.shift() as string & keyof T;
+          const propertyName = parts.shift() as string & keyof OmitFunctionsAndEntityCollections<T>;
           result.push({
             propertyName,
             descending: /desc/i.test(parts.join('')),
@@ -598,21 +598,22 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       } else if (_.isString(sorts)) {
         for (const sort of sorts.split(',')) {
           const parts = sort.trim().split(' ');
-          const propertyName = parts.shift() as string & keyof T;
+          const propertyName = parts.shift() as string & keyof OmitFunctionsAndEntityCollections<T>;
           result.push({
             propertyName,
             descending: /desc/i.test(parts.join('')),
           });
         }
       } else if (_.isObject(sorts)) {
-        for (const [propertyName, order] of Object.entries(sorts)) {
+        for (const [propertyName, orderValue] of Object.entries(sorts)) {
           let descending = false;
+          const order = orderValue as SortObjectValue;
           if (order && (order === -1 || /desc/i.test(`${order}`))) {
             descending = true;
           }
 
           result.push({
-            propertyName: propertyName as string & keyof T,
+            propertyName: propertyName as string & keyof OmitFunctionsAndEntityCollections<T>,
             descending,
           });
         }

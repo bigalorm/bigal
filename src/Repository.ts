@@ -12,6 +12,7 @@ import type {
 } from './query';
 import { ReadonlyRepository } from './ReadonlyRepository';
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper';
+import type { CreateOrUpdateParams, OmitFunctionsAndEntityCollections } from './types';
 
 export class Repository<T extends Entity> extends ReadonlyRepository<T> implements IRepository<T> {
   /**
@@ -21,7 +22,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object}
    */
-  public create(values: Partial<T>, options?: ReturnSelect<T>): Promise<T>;
+  public create(values: Partial<CreateOrUpdateParams<T>>, options?: ReturnSelect<T>): Promise<T>;
 
   /**
    * Creates a objects using the specified values
@@ -30,7 +31,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {boolean} options.returnRecords - Determines if inserted records should be returned
    * @returns {void}
    */
-  public create(values: Partial<T> | Partial<T>[], options: DoNotReturnRecords): Promise<void>;
+  public create(values: Partial<CreateOrUpdateParams<T>> | Partial<CreateOrUpdateParams<T>>[], options: DoNotReturnRecords): Promise<void>;
 
   /**
    * Creates a objects using the specified values
@@ -39,7 +40,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public create(values: Partial<T>[], options?: ReturnSelect<T>): Promise<T[]>;
+  public create(values: Partial<CreateOrUpdateParams<T>>[], options?: ReturnSelect<T>): Promise<T[]>;
 
   /**
    * Creates an object using the specified values
@@ -49,7 +50,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object|object[]|void} Return value from the db
    */
-  public async create(values: Partial<T> | Partial<T>[], options?: CreateUpdateOptions<T>): Promise<T | T[] | void> {
+  public async create(values: Partial<CreateOrUpdateParams<T>> | Partial<CreateOrUpdateParams<T>>[], options?: CreateUpdateOptions<T>): Promise<T | T[] | void> {
     if (this.model.readonly) {
       throw new Error(`${this.model.name} is readonly.`);
     }
@@ -69,7 +70,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
     }
 
     let returnRecords = true;
-    let returnSelect: (string & keyof T)[] | undefined;
+    let returnSelect: (string & keyof OmitFunctionsAndEntityCollections<T>)[] | undefined;
     if (options) {
       if ((options as DoNotReturnRecords).returnRecords === false) {
         returnRecords = false;
@@ -110,7 +111,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {boolean} options.returnRecords - Determines if inserted records should be returned
    * @returns {void}
    */
-  public update(where: WhereQuery<T>, values: Partial<T>, options: DoNotReturnRecords): Promise<void>;
+  public update(where: WhereQuery<T>, values: Partial<CreateOrUpdateParams<T>>, options: DoNotReturnRecords): Promise<void>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -120,7 +121,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public update(where: WhereQuery<T>, values: Partial<T>, options?: ReturnSelect<T>): Promise<T[]>;
+  public update(where: WhereQuery<T>, values: Partial<CreateOrUpdateParams<T>>, options?: ReturnSelect<T>): Promise<T[]>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -131,7 +132,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} Return values from the db or `true` if returnRecords=false
    */
-  public async update(where: WhereQuery<T>, values: Partial<T>, options?: CreateUpdateOptions<T>): Promise<T[] | void> {
+  public async update(where: WhereQuery<T>, values: Partial<CreateOrUpdateParams<T>>, options?: CreateUpdateOptions<T>): Promise<T[] | void> {
     if (this.model.readonly) {
       throw new Error(`${this.model.name} is readonly.`);
     }
@@ -146,7 +147,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
     }
 
     let returnRecords = true;
-    let returnSelect: (string & keyof T)[] | undefined;
+    let returnSelect: (string & keyof OmitFunctionsAndEntityCollections<T>)[] | undefined;
     if (options) {
       if ((options as DoNotReturnRecords).returnRecords === false) {
         returnRecords = false;

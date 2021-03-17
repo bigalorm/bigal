@@ -1,12 +1,12 @@
 import type { Entity } from '../Entity';
-import type { GetValueType, PickByValueType } from '../types';
+import type { GetValueType, PickByValueType, OmitFunctionsAndEntityCollections } from '../types';
 
 import type { Sort } from './Sort';
 import type { WhereQuery } from './WhereQuery';
 
 export interface PopulateArgs<T extends Entity> {
   where?: WhereQuery<T>;
-  select?: (string & keyof T)[];
+  select?: (string & keyof OmitFunctionsAndEntityCollections<T>)[];
   sort?: Sort<T>;
   skip?: number;
   limit?: number;

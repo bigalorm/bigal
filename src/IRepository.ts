@@ -8,6 +8,7 @@ import type {
   ReturnSelect,
   WhereQuery,
 } from './query';
+import type { CreateOrUpdateParams } from './types';
 
 export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
   /**
@@ -17,7 +18,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object}
    */
-  create(values: Partial<T>, options?: ReturnSelect<T>): Promise<T>;
+  create(values: Partial<CreateOrUpdateParams<T>>, options?: ReturnSelect<T>): Promise<T>;
 
   /**
    * Creates a objects using the specified values
@@ -26,7 +27,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {boolean} options.returnRecords - Determines if inserted records should be returned
    * @returns {void}
    */
-  create(values: Partial<T> | Partial<T>[], options: DoNotReturnRecords): Promise<void>;
+  create(values: Partial<CreateOrUpdateParams<T>> | Partial<CreateOrUpdateParams<T>>[], options: DoNotReturnRecords): Promise<void>;
 
   /**
    * Creates a objects using the specified values
@@ -36,7 +37,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  create(values: Partial<T>[], options?: ReturnSelect<T>): Promise<T[]>;
+  create(values: Partial<CreateOrUpdateParams<T>>[], options?: ReturnSelect<T>): Promise<T[]>;
 
   /**
    * Creates an object using the specified values
@@ -46,7 +47,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object|object[]|void} Return value from the db
    */
-  create(values: Partial<T> | Partial<T>[], options?: CreateUpdateOptions<T>): Promise<T | T[] | void>;
+  create(values: Partial<CreateOrUpdateParams<T>> | Partial<CreateOrUpdateParams<T>>[], options?: CreateUpdateOptions<T>): Promise<T | T[] | void>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -57,7 +58,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {{returnRecords: false}} options
    * @returns {void}
    */
-  update(where: WhereQuery<T>, values: Partial<T>, options: DoNotReturnRecords): Promise<void>;
+  update(where: WhereQuery<T>, values: Partial<CreateOrUpdateParams<T>>, options: DoNotReturnRecords): Promise<void>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -67,7 +68,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  update(where: WhereQuery<T>, values: Partial<T>, options?: ReturnSelect<T>): Promise<T[]>;
+  update(where: WhereQuery<T>, values: Partial<CreateOrUpdateParams<T>>, options?: ReturnSelect<T>): Promise<T[]>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -78,7 +79,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} Return values from the db or `true` if returnRecords=false
    */
-  update(where: WhereQuery<T>, values: Partial<T>, options?: CreateUpdateOptions<T>): Promise<T[] | void>;
+  update(where: WhereQuery<T>, values: Partial<CreateOrUpdateParams<T>>, options?: CreateUpdateOptions<T>): Promise<T[] | void>;
 
   /**
    * Destroys object(s) matching the where query

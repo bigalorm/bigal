@@ -393,7 +393,11 @@ describe('sqlHelper', () => {
         model: repositoriesByModelName.SimpleWithCollections.model as ModelMetadata<SimpleWithCollections>,
         values: {
           name,
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - Collections are excluded from values type
           products: [product],
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - Collections are excluded from values type
           categories: [category],
         },
       });
@@ -636,7 +640,11 @@ describe('sqlHelper', () => {
         where: {},
         values: {
           name,
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - Collections are excluded from values type
           products: [product],
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - Collections are excluded from values type
           categories: [category],
         },
       });

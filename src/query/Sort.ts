@@ -1,6 +1,12 @@
 import type { Entity } from '../Entity';
+import type { ExcludeFunctionsAndEntityCollections, OmitFunctionsAndEntityCollections } from '../types';
 
-export type SortString<T extends Entity> = `${string & keyof T} ASC` | `${string & keyof T} asc` | `${string & keyof T} DESC` | `${string & keyof T} desc` | `${string & keyof T}`;
+export type SortString<T extends Entity> =
+  | `${string & keyof OmitFunctionsAndEntityCollections<T>} ASC`
+  | `${string & keyof OmitFunctionsAndEntityCollections<T>} asc`
+  | `${string & keyof OmitFunctionsAndEntityCollections<T>} DESC`
+  | `${string & keyof OmitFunctionsAndEntityCollections<T>} desc`
+  | `${string & keyof OmitFunctionsAndEntityCollections<T>}`;
 
 type ValidateMultipleSorts<
   T extends Entity,
@@ -19,13 +25,15 @@ export type MultipleSortString<T extends Entity, TSortString extends string = st
     : ValidateMultipleSorts<T, TRestSortPart, TSortString extends `${infer TPreviouslyValidatedSortString}${TRestSortPart}` ? TPreviouslyValidatedSortString : never, TSortString>
   : SortString<T>;
 
+export type SortObjectValue = -1 | 'asc' | 'desc' | 1;
+
 export type SortObject<T extends Entity> = {
-  [K in keyof T]?: -1 | 'asc' | 'desc' | 1;
+  [K in keyof T as ExcludeFunctionsAndEntityCollections<T, K>]?: SortObjectValue;
 };
 
 export type Sort<T extends Entity> = MultipleSortString<T> | SortObject<T>;
 
 export interface OrderBy<T extends Entity> {
-  propertyName: string & keyof T;
+  propertyName: string & keyof OmitFunctionsAndEntityCollections<T>;
   descending?: boolean;
 }
