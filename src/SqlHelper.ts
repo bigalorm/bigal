@@ -167,7 +167,7 @@ export function getInsertQueryAndParams<T extends Entity>({
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
-  values: Partial<CreateOrUpdateParams<T>> | Partial<CreateOrUpdateParams<T>>[];
+  values: CreateOrUpdateParams<T> | CreateOrUpdateParams<T>[];
   returnRecords?: boolean;
   returnSelect?: (string & keyof OmitFunctionsAndEntityCollections<T>)[];
 }): QueryAndParams {
@@ -315,7 +315,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   where: WhereQuery<T>;
-  values: Partial<CreateOrUpdateParams<T>>;
+  values: CreateOrUpdateParams<T>;
   returnRecords?: boolean;
   returnSelect?: (string & keyof OmitFunctionsAndEntityCollections<T>)[];
 }): QueryAndParams {

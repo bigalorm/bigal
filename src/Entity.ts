@@ -13,7 +13,7 @@ export interface Entity {
 
 export interface EntityStatic<T extends Entity> {
   // NOTE: Static methods
-  beforeCreate?: (values: Partial<CreateOrUpdateParams<T>>) => Partial<CreateOrUpdateParams<T>> | Promise<Partial<CreateOrUpdateParams<T>>>;
-  beforeUpdate?: (values: Partial<CreateOrUpdateParams<T>>) => Partial<CreateOrUpdateParams<T>> | Promise<Partial<CreateOrUpdateParams<T>>>;
+  beforeCreate?: (values: CreateOrUpdateParams<T>) => CreateOrUpdateParams<T> | Promise<CreateOrUpdateParams<T>>;
+  beforeUpdate?: (values: CreateOrUpdateParams<T>) => CreateOrUpdateParams<T> | Promise<CreateOrUpdateParams<T>>;
   new (): T;
 }
