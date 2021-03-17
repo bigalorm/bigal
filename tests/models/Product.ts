@@ -1,7 +1,6 @@
 import { column, table } from '../../src/decorators';
 
 // eslint-disable-next-line import/no-cycle
-// eslint-disable-next-line import/no-cycle
 import { Category } from './Category';
 import { ModelBase } from './ModelBase';
 // eslint-disable-next-line import/no-cycle
