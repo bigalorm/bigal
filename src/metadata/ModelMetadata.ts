@@ -11,7 +11,7 @@ interface ColumnByStringId {
   [index: string]: Column;
 }
 
-export interface ModelMetadataOptions<T extends Entity = Entity> {
+export interface ModelMetadataOptions<T extends Entity> {
   name: string;
   type: EntityStatic<T>;
   connection?: string;

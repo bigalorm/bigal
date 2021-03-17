@@ -5,12 +5,13 @@ import { ModelMetadata, getMetadataStorage } from '../metadata';
 
 import type { TableOptions } from './TableOptions';
 
-type ReturnFunctionType<T extends Entity = Entity> = (object: EntityStatic<T>) => void;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ReturnFunctionType = (object: any) => void;
 
 export function table(options?: TableOptions): ReturnFunctionType;
 export function table(dbName: string, options: TableOptions): ReturnFunctionType;
-export function table(dbNameOrTableOptions?: TableOptions | string, options?: TableOptions): ReturnFunctionType {
-  return function tableDecorator<T extends Entity>(classObject: EntityStatic<T>): void {
+export function table<T extends Entity>(dbNameOrTableOptions?: TableOptions | string, options?: TableOptions): ReturnFunctionType {
+  return function tableDecorator(classObject: EntityStatic<T>): void {
     const className = classObject.name;
 
     let dbTableName: string | undefined;
