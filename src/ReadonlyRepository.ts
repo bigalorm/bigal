@@ -7,7 +7,7 @@ import type { IRepository } from './IRepository';
 import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
 import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, WhereQuery, SortObject, SortObjectValue } from './query';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
-import type { GetValueType, PickByValueType, OmitFunctionsAndEntityCollections, QueryResponse, PickAsPopulatedProperty } from './types';
+import type { GetValueType, PickByValueType, OmitFunctionsAndEntityCollections, QueryResponse, PickAsPopulated } from './types';
 
 export interface IRepositoryOptions<T extends Entity> {
   modelMetadata: ModelMetadata<T>;
@@ -129,24 +129,18 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        */
       populate<TProperty extends string & keyof PickByValueType<T, Entity>>(
         propertyName: TProperty,
-        {
-          where: populateWhere, //
-          select: populateSelect,
-          sort: populateSort,
-          skip: populateSkip,
-          limit: populateLimit,
-        }: PopulateArgs<GetValueType<PickByValueType<T, Entity>[TProperty], Entity>> = {},
-      ): FindOneResult<T, Omit<QueryResponse<T>, TProperty> & PickAsPopulatedProperty<T, TProperty>> {
+        options?: PopulateArgs<GetValueType<PickByValueType<T, Entity>[TProperty], Entity>>,
+      ): FindOneResult<T, Omit<QueryResponse<T>, TProperty> & PickAsPopulated<T, TProperty>> {
         populates.push({
           propertyName,
-          where: populateWhere,
-          select: populateSelect,
-          sort: populateSort,
-          skip: populateSkip,
-          limit: populateLimit,
+          where: options?.where,
+          select: options?.select,
+          sort: options?.sort,
+          skip: options?.skip,
+          limit: options?.limit,
         });
 
-        return this as FindOneResult<T, Omit<QueryResponse<T>, TProperty> & PickAsPopulatedProperty<T, TProperty>>;
+        return this as FindOneResult<T, Omit<QueryResponse<T>, TProperty> & PickAsPopulated<T, TProperty>>;
       },
       /**
        * Sorts the query
