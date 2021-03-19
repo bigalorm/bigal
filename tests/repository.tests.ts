@@ -5,10 +5,10 @@ import type { QueryResult } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type {CreateUpdateParams, QueryResponse, Repository} from '../src';
+import type { CreateUpdateParams, QueryResponse, Repository } from '../src';
 import { initialize } from '../src';
 
-import {Product, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store} from './models';
+import { Product, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store } from './models';
 
 function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
   return {
@@ -317,7 +317,7 @@ describe('Repository', () => {
         name: item.name,
       };
       createParams.otherIds = item.otherIds;
-      
+
       const result = await SimpleWithStringCollectionRepository.create(createParams);
 
       verify(mockedPool.query(anyString(), anything())).once();
