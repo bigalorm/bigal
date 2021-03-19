@@ -1,6 +1,5 @@
 export * from './Category';
 export * from './KitchenSink';
-export * from './NonStandardPrimaryId';
 export * from './Product';
 export * from './ProductCategory';
 export * from './ProductWithCreatedAt';

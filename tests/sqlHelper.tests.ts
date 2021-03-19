@@ -17,7 +17,6 @@ import {
   ReadonlyProduct,
   Store,
   KitchenSink,
-  NonStandardPrimaryId,
   RequiredPropertyWithDefaultValue,
   RequiredPropertyWithDefaultValueFunction,
   SimpleWithCollections,
@@ -41,7 +40,6 @@ describe('sqlHelper', () => {
       models: [
         Category,
         KitchenSink,
-        NonStandardPrimaryId,
         Product,
         ProductCategory,
         ProductWithCreatedAt,
@@ -96,20 +94,6 @@ describe('sqlHelper', () => {
         query.should.equal(`SELECT "id" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
-      it('should include non "id" primaryKey column if select is empty', () => {
-        const { query, params } = sqlHelper.getSelectQueryAndParams({
-          repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.nonstandardprimaryid.model,
-          select: [],
-          where: {},
-          sorts: [],
-          limit: 1,
-          skip: 0,
-        });
-
-        query.should.equal(`SELECT "unique_id" AS "uniqueId" FROM "${repositoriesByModelName.NonStandardPrimaryId.model.tableName}" LIMIT 1`);
-        params.should.deep.equal([]);
-      });
       it('should include primaryKey column if select does not include it', () => {
         const { query, params } = sqlHelper.getSelectQueryAndParams<Product>({
           repositoriesByModelNameLowered,
@@ -122,20 +106,6 @@ describe('sqlHelper', () => {
         });
 
         query.should.equal(`SELECT "name","id" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`);
-        params.should.deep.equal([]);
-      });
-      it('should include non "id" primaryKey column if select does not include it', () => {
-        const { query, params } = sqlHelper.getSelectQueryAndParams<NonStandardPrimaryId>({
-          repositoriesByModelNameLowered,
-          model: repositoriesByModelNameLowered.nonstandardprimaryid.model as ModelMetadata<NonStandardPrimaryId>,
-          select: ['foo'],
-          where: {},
-          sorts: [],
-          limit: 1,
-          skip: 0,
-        });
-
-        query.should.equal(`SELECT "foo","unique_id" AS "uniqueId" FROM "${repositoriesByModelName.NonStandardPrimaryId.model.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
     });
@@ -792,15 +762,6 @@ describe('sqlHelper', () => {
       query.should.equal(
         `DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
-      params.should.deep.equal([]);
-    });
-    it('should delete all records (non "id" primaryKey) if no where statement is defined', () => {
-      const { query, params } = sqlHelper.getDeleteQueryAndParams({
-        repositoriesByModelNameLowered,
-        model: repositoriesByModelName.NonStandardPrimaryId.model,
-      });
-
-      query.should.equal(`DELETE FROM "${repositoriesByModelName.NonStandardPrimaryId.model.tableName}" RETURNING "unique_id" AS "uniqueId","foo"`);
       params.should.deep.equal([]);
     });
     it('should include where statement if defined', () => {

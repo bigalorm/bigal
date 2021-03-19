@@ -5,13 +5,10 @@ import type { QueryResult } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { IReadonlyRepository, IRepository } from '../src';
-import { Repository, initialize, Entity } from '../src';
-import { ColumnTypeMetadata, ModelMetadata } from '../src/metadata';
+import type { QueryResponse, Repository } from '../src';
+import { initialize } from '../src';
 
 import { Product, ProductWithCreateUpdateDateTracking, Store } from './models';
-
-type RepositoriesByModelNameLowered = Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
 
 function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
   return {
@@ -32,9 +29,6 @@ describe('Repository', () => {
   let StoreRepository: Repository<Store>;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   let ProductWithCreateUpdateDateTrackingRepository: Repository<ProductWithCreateUpdateDateTracking>;
-
-  // eslint-disable-next-line @typescript-eslint/no-extraneous-class
-  class TestEntity extends Entity {}
 
   before(() => {
     should = chai.should();
@@ -484,111 +478,6 @@ describe('Repository', () => {
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('DELETE FROM "products" RETURNING "id"');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      params!.should.deep.equal([]);
-    });
-    it('should support call without constraints (non "id" primaryKey)', async () => {
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'foobario',
-          propertyName: 'foobario',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          required: true,
-          defaultsTo: 'foobar',
-          type: 'string',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      const repository = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: instance(mockedPool),
-        repositoriesByModelNameLowered: repositories,
-      });
-      repositories[model.name.toLowerCase()] = repository;
-
-      const products = [
-        {
-          foobario: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
-        },
-        {
-          foobario: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
-        },
-      ];
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
-
-      const result = await repository.destroy();
-      should.not.exist(result);
-
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "foo"');
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      params!.should.deep.equal([]);
-    });
-    it('should support call without constraints (non "id" primaryKey) if returnRecords=true', async () => {
-      const model = new ModelMetadata({
-        name: 'foo',
-        type: TestEntity,
-      });
-      model.columns = [
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'foobario',
-          propertyName: 'foobario',
-          primary: true,
-          type: 'integer',
-        }),
-        new ColumnTypeMetadata({
-          target: 'foo',
-          name: 'name',
-          propertyName: 'name',
-          required: true,
-          defaultsTo: 'foobar',
-          type: 'string',
-        }),
-      ];
-      const repositories: RepositoriesByModelNameLowered = {};
-      const repository = new Repository({
-        modelMetadata: model,
-        type: model.type,
-        pool: instance(mockedPool),
-        repositoriesByModelNameLowered: repositories,
-      });
-      repositories[model.name.toLowerCase()] = repository;
-
-      const products = [
-        {
-          foobario: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
-        },
-        {
-          foobario: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
-        },
-      ];
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
-
-      const result = await repository.destroy({}, { returnRecords: true });
-      should.exist(result);
-      result.should.deep.equal(products);
-
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "foo" RETURNING "foobario","name"');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([]);
     });
