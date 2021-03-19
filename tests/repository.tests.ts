@@ -5,10 +5,10 @@ import type { QueryResult } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { QueryResponse, Repository } from '../src';
+import type {CreateUpdateParams, QueryResponse, Repository} from '../src';
 import { initialize } from '../src';
 
-import { Product, ProductWithCreateUpdateDateTracking, Store } from './models';
+import {Product, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store} from './models';
 
 function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
   return {
@@ -26,6 +26,8 @@ describe('Repository', () => {
   // eslint-disable-next-line @typescript-eslint/naming-convention
   let ProductRepository: Repository<Product>;
   // eslint-disable-next-line @typescript-eslint/naming-convention
+  let SimpleWithStringCollectionRepository: Repository<SimpleWithStringCollection>;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   let StoreRepository: Repository<Store>;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   let ProductWithCreateUpdateDateTrackingRepository: Repository<ProductWithCreateUpdateDateTracking>;
@@ -34,11 +36,12 @@ describe('Repository', () => {
     should = chai.should();
 
     const repositoriesByModelName = initialize({
-      models: [Product, ProductWithCreateUpdateDateTracking, Store],
+      models: [Product, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store],
       pool: instance(mockedPool),
     });
 
     ProductRepository = repositoriesByModelName.Product as Repository<Product>;
+    SimpleWithStringCollectionRepository = repositoriesByModelName.SimpleWithStringCollection as Repository<SimpleWithStringCollection>;
     StoreRepository = repositoriesByModelName.Store as Repository<Store>;
     ProductWithCreateUpdateDateTrackingRepository = repositoriesByModelName.ProductWithCreateUpdateDateTracking as Repository<ProductWithCreateUpdateDateTracking>;
   });
@@ -300,6 +303,31 @@ describe('Repository', () => {
       query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([product.name, [], store.id]);
+    });
+    it('should insert with string array value parameter', async () => {
+      const item = {
+        id: faker.random.number(),
+        name: `simpleWithStringArray - ${faker.random.uuid()}`,
+        otherIds: [faker.random.uuid(), faker.random.uuid()],
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([item]));
+
+      const createParams: CreateUpdateParams<SimpleWithStringCollection> = {
+        name: item.name,
+      };
+      createParams.otherIds = item.otherIds;
+      
+      const result = await SimpleWithStringCollectionRepository.create(createParams);
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      should.exist(result);
+      result.should.deep.equal(item);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('INSERT INTO "simple" ("name","other_ids") VALUES ($1,$2) RETURNING "id","name","other_ids" AS "otherIds"');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      params!.should.deep.equal([item.name, item.otherIds]);
     });
     it('should ignore one-to-many collection values', async () => {
       const store = {

@@ -11,5 +11,6 @@ export * from './SimpleWithCollections';
 export * from './SimpleWithCreatedAt';
 export * from './SimpleWithCreatedAtAndUpdatedAt';
 export * from './SimpleWithJson';
+export * from './SimpleWithStringCollection';
 export * from './SimpleWithUpdatedAt';
 export * from './Store';
