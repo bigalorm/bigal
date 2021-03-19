@@ -10,7 +10,7 @@ import type {
   ModelMetadata,
 } from './metadata';
 import type { Comparer, OrderBy, WhereClauseValue, WhereQuery } from './query';
-import type { CreateOrUpdateParams, OmitFunctionsAndEntityCollections } from './types';
+import type { CreateUpdateParams, OmitFunctionsAndEntityCollections } from './types';
 
 interface QueryAndParams {
   query: string;
@@ -167,7 +167,7 @@ export function getInsertQueryAndParams<T extends Entity>({
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
-  values: CreateOrUpdateParams<T> | CreateOrUpdateParams<T>[];
+  values: CreateUpdateParams<T> | CreateUpdateParams<T>[];
   returnRecords?: boolean;
   returnSelect?: (string & keyof OmitFunctionsAndEntityCollections<T>)[];
 }): QueryAndParams {
@@ -195,13 +195,13 @@ export function getInsertQueryAndParams<T extends Entity>({
       let includePropertyName = false;
       for (const entity of entitiesToInsert) {
         // If there is a default value for the property and it is not defined, use the default
-        if (hasDefaultValue && _.isUndefined(entity[column.propertyName as string & keyof CreateOrUpdateParams<T>])) {
+        if (hasDefaultValue && _.isUndefined(entity[column.propertyName as string & keyof CreateUpdateParams<T>])) {
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
           // @ts-ignore - string is not assignable to T[string & keyof T] | undefined
-          entity[column.propertyName as string & keyof CreateOrUpdateParams<T>] = defaultValue;
+          entity[column.propertyName as string & keyof CreateUpdateParams<T>] = defaultValue;
         }
 
-        if (_.isUndefined(entity[column.propertyName as string & keyof CreateOrUpdateParams<T>])) {
+        if (_.isUndefined(entity[column.propertyName as string & keyof CreateUpdateParams<T>])) {
           if (column.required) {
             throw new Error(`Create statement for "${model.name}" is missing value for required field: ${column.propertyName}`);
           }
@@ -228,7 +228,7 @@ export function getInsertQueryAndParams<T extends Entity>({
 
     for (const [entityIndex, entity] of entitiesToInsert.entries()) {
       let value;
-      const entityValue = entity[column.propertyName as string & keyof CreateOrUpdateParams<T>] as EntityFieldValue;
+      const entityValue = entity[column.propertyName as string & keyof CreateUpdateParams<T>] as EntityFieldValue;
       if (_.isNil(entityValue)) {
         value = 'NULL';
       } else {
@@ -246,7 +246,7 @@ export function getInsertQueryAndParams<T extends Entity>({
             throw new Error(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`);
           }
 
-          const primaryKeyValue = (entityValue as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateOrUpdateParams<T>] as EntityFieldValue;
+          const primaryKeyValue = (entityValue as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T>] as EntityFieldValue;
           if (_.isNil(primaryKeyValue)) {
             throw new Error(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`);
           }
@@ -315,15 +315,15 @@ export function getUpdateQueryAndParams<T extends Entity>({
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   where: WhereQuery<T>;
-  values: CreateOrUpdateParams<T>;
+  values: CreateUpdateParams<T>;
   returnRecords?: boolean;
   returnSelect?: (string & keyof OmitFunctionsAndEntityCollections<T>)[];
 }): QueryAndParams {
   for (const column of model.updateDateColumns) {
-    if (_.isUndefined(values[column.propertyName as string & keyof CreateOrUpdateParams<T>])) {
+    if (_.isUndefined(values[column.propertyName as string & keyof CreateUpdateParams<T>])) {
       // eslint-disable-next-line no-param-reassign, @typescript-eslint/ban-ts-comment
       // @ts-ignore - Date is not assignable to T[string & keyof T]
-      values[column.propertyName as string & keyof CreateOrUpdateParams<T>] = new Date();
+      values[column.propertyName as string & keyof CreateUpdateParams<T>] = new Date();
     }
   }
 
@@ -355,7 +355,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
             throw new Error(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`);
           }
 
-          const primaryKeyValue = (value as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateOrUpdateParams<T>] as EntityFieldValue;
+          const primaryKeyValue = (value as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T>] as EntityFieldValue;
           if (_.isNil(primaryKeyValue)) {
             throw new Error(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`);
           }
@@ -380,7 +380,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
   }
 
   for (const column of model.versionColumns) {
-    if (!_.isUndefined(values[column.propertyName as string & keyof CreateOrUpdateParams<T>])) {
+    if (!_.isUndefined(values[column.propertyName as string & keyof CreateUpdateParams<T>])) {
       if (!isFirstProperty) {
         query += ',';
       }

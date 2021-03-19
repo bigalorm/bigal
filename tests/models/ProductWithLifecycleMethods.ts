@@ -1,4 +1,4 @@
-import type { CreateOrUpdateParams } from '../../src';
+import type { CreateUpdateParams } from '../../src';
 import { table } from '../../src';
 
 import { Product } from './Product';
@@ -7,7 +7,7 @@ import { Product } from './Product';
   name: 'products',
 })
 export class ProductWithLifecycleMethods extends Product {
-  public static beforeCreate(values: CreateOrUpdateParams<ProductWithLifecycleMethods>): CreateOrUpdateParams<ProductWithLifecycleMethods> {
+  public static beforeCreate(values: CreateUpdateParams<ProductWithLifecycleMethods>): CreateUpdateParams<ProductWithLifecycleMethods> {
     return values;
   }
 }

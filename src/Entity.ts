@@ -1,4 +1,4 @@
-import type { CreateOrUpdateParams } from './types';
+import type { CreateUpdateParams } from './types';
 
 export type EntityFieldValue = boolean[] | Date | number[] | Record<string, unknown> | string[] | boolean | number | string | unknown | null;
 
@@ -8,7 +8,7 @@ export abstract class Entity {
 
 export interface EntityStatic<T extends Entity> {
   // NOTE: Static methods
-  beforeCreate?: (values: CreateOrUpdateParams<T>) => CreateOrUpdateParams<T> | Promise<CreateOrUpdateParams<T>>;
-  beforeUpdate?: (values: CreateOrUpdateParams<T>) => CreateOrUpdateParams<T> | Promise<CreateOrUpdateParams<T>>;
+  beforeCreate?: (values: CreateUpdateParams<T>) => CreateUpdateParams<T> | Promise<CreateUpdateParams<T>>;
+  beforeUpdate?: (values: CreateUpdateParams<T>) => CreateUpdateParams<T> | Promise<CreateUpdateParams<T>>;
   new (): T;
 }

@@ -1,4 +1,4 @@
-export * from './CreateOrUpdateParams';
+export * from './CreateUpdateParams';
 export * from './EntityPrimitiveOrId';
 export * from './ExcludeEntityCollections';
 export * from './ExcludeFunctionsAndEntityCollections';

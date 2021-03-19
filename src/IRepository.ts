@@ -8,7 +8,7 @@ import type {
   ReturnSelect,
   WhereQuery,
 } from './query';
-import type { CreateOrUpdateParams, QueryResponse } from './types';
+import type { CreateUpdateParams, QueryResponse } from './types';
 
 export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
   /**
@@ -18,7 +18,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object}
    */
-  create(values: CreateOrUpdateParams<T>, options?: ReturnSelect<T>): Promise<QueryResponse<T>>;
+  create(values: CreateUpdateParams<T>, options?: ReturnSelect<T>): Promise<QueryResponse<T>>;
 
   /**
    * Creates a objects using the specified values
@@ -27,7 +27,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {boolean} options.returnRecords - Determines if inserted records should be returned
    * @returns {void}
    */
-  create(values: CreateOrUpdateParams<T> | CreateOrUpdateParams<T>[], options: DoNotReturnRecords): Promise<void>;
+  create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options: DoNotReturnRecords): Promise<void>;
 
   /**
    * Creates a objects using the specified values
@@ -37,7 +37,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  create(values: CreateOrUpdateParams<T>[], options?: ReturnSelect<T>): Promise<QueryResponse<T>[]>;
+  create(values: CreateUpdateParams<T>[], options?: ReturnSelect<T>): Promise<QueryResponse<T>[]>;
 
   /**
    * Creates an object using the specified values
@@ -47,7 +47,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object|object[]|void} Return value from the db
    */
-  create(values: CreateOrUpdateParams<T> | CreateOrUpdateParams<T>[], options?: CreateUpdateOptions<T>): Promise<QueryResponse<T> | QueryResponse<T>[] | void>;
+  create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options?: CreateUpdateOptions<T>): Promise<QueryResponse<T> | QueryResponse<T>[] | void>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -58,7 +58,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {{returnRecords: false}} options
    * @returns {void}
    */
-  update(where: WhereQuery<T>, values: CreateOrUpdateParams<T>, options: DoNotReturnRecords): Promise<void>;
+  update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options: DoNotReturnRecords): Promise<void>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -68,7 +68,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  update(where: WhereQuery<T>, values: CreateOrUpdateParams<T>, options?: ReturnSelect<T>): Promise<QueryResponse<T>[]>;
+  update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: ReturnSelect<T>): Promise<QueryResponse<T>[]>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -79,7 +79,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} Return values from the db or `true` if returnRecords=false
    */
-  update(where: WhereQuery<T>, values: CreateOrUpdateParams<T>, options?: CreateUpdateOptions<T>): Promise<QueryResponse<T>[] | void>;
+  update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: CreateUpdateOptions<T>): Promise<QueryResponse<T>[] | void>;
 
   /**
    * Destroys object(s) matching the where query
