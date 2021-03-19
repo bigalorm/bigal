@@ -1,3 +1,5 @@
+import assert from 'assert';
+
 import chai from 'chai';
 import * as faker from 'faker';
 import _ from 'lodash';
@@ -8,7 +10,7 @@ import { anyString, anything, capture, instance, mock, reset, verify, when } fro
 import type { Repository, ReadonlyRepository } from '../src';
 import { initialize } from '../src';
 
-import { Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, Store } from './models';
+import { Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, Store } from './models';
 
 function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
   return {
@@ -31,12 +33,14 @@ describe('ReadonlyRepository', () => {
   let ReadonlyKitchenSinkRepository: ReadonlyRepository<KitchenSink>;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   let StoreRepository: Repository<Store>;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  let SimpleWithJsonRepository: Repository<SimpleWithJson>;
 
   before(() => {
     should = chai.should();
 
     const repositoriesByModelName = initialize({
-      models: [Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, Store],
+      models: [Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, Store],
       pool: instance(mockedPool),
     });
 
@@ -44,6 +48,7 @@ describe('ReadonlyRepository', () => {
     ReadonlyProductRepository = repositoriesByModelName.ReadonlyProduct as ReadonlyRepository<ReadonlyProduct>;
     ReadonlyKitchenSinkRepository = repositoriesByModelName.KitchenSink as ReadonlyRepository<KitchenSink>;
     StoreRepository = repositoriesByModelName.Store as Repository<Store>;
+    SimpleWithJsonRepository = repositoriesByModelName.SimpleWithJson as Repository<SimpleWithJson>;
   });
 
   beforeEach(() => {
@@ -714,6 +719,25 @@ describe('ReadonlyRepository', () => {
       verify(mockedPool.query(anyString(), anything())).once();
 
       should.not.exist(result);
+    });
+    it('should support an object with a json field', async () => {
+      const simple = {
+        id: faker.random.number(),
+        name: `simple - ${faker.random.uuid()}`,
+        keyValue: {
+          foo: 42,
+        },
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      const result = await SimpleWithJsonRepository.findOne();
+      assert(result);
+      result.should.deep.equal(simple);
+      result.keyValue?.should.deep.equal(simple.keyValue);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","bar","key_value" AS "keyValue" FROM "simple" LIMIT 1');
+      params!.should.deep.equal([]);
     });
   });
   describe('#find()', () => {

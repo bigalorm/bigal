@@ -413,7 +413,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithJson.model.tableName}" ("name","bar") VALUES ($1,$2::jsonb) RETURNING "id","name","bar"`);
+      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithJson.model.tableName}" ("name","bar") VALUES ($1,$2::jsonb) RETURNING "id","name","bar","key_value" AS "keyValue"`);
       params.should.deep.equal([name, JSON.stringify(bar)]);
     });
     it('should support inserting a single record and return records if returnRecords=true', () => {
@@ -662,7 +662,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${repositoriesByModelName.SimpleWithJson.model.tableName}" SET "name"=$1,"bar"=$2::jsonb RETURNING "id","name","bar"`);
+      query.should.equal(`UPDATE "${repositoriesByModelName.SimpleWithJson.model.tableName}" SET "name"=$1,"bar"=$2::jsonb RETURNING "id","name","bar","key_value" AS "keyValue"`);
       params.should.deep.equal([name, JSON.stringify(bar)]);
     });
     it('should include where statement if defined', () => {

@@ -16,4 +16,9 @@ export class SimpleWithJson extends ModelBase {
     type: 'json',
   })
   public bar?: unknown;
+
+  @column({
+    type: 'json',
+  })
+  public keyValue?: Record<string, number>;
 }
