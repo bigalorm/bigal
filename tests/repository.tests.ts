@@ -216,6 +216,91 @@ describe('Repository', () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([products[0].name, products[1].name, [], [], products[0].store, products[1].store]);
     });
+    it('should allow populated value parameters', async () => {
+      const store = new Store();
+      store.id = faker.random.number();
+      store.name = faker.random.uuid();
+
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: store.id,
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      const result = await ProductRepository.create({
+        name: product.name,
+        store,
+      });
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      should.exist(result);
+      result.should.deep.equal(product);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      params!.should.deep.equal([product.name, [], store.id]);
+    });
+    it('should allow populated (QueryResponse) value parameters', async () => {
+      const store = new Store();
+      store.id = faker.random.number();
+      store.name = faker.random.uuid();
+
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: store.id,
+      };
+
+      const storeAsQueryResponse: QueryResponse<Store> = store;
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      const result = await ProductRepository.create({
+        name: product.name,
+        store: storeAsQueryResponse,
+      });
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      should.exist(result);
+      result.should.deep.equal(product);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      params!.should.deep.equal([product.name, [], store.id]);
+    });
+    it(`should allow populated (Pick<T, 'id'>) value parameters`, async () => {
+      const store = new Store();
+      store.id = faker.random.number();
+      store.name = faker.random.uuid();
+
+      const product = {
+        id: faker.random.uuid(),
+        name: `product - ${faker.random.uuid()}`,
+        store: store.id,
+      };
+
+      const storeAsPickId = _.pick(store, 'id');
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      const result = await ProductRepository.create({
+        name: product.name,
+        store: storeAsPickId,
+      });
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      should.exist(result);
+      result.should.deep.equal(product);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      params!.should.deep.equal([product.name, [], store.id]);
+    });
     it('should ignore one-to-many collection values', async () => {
       const store = {
         id: faker.random.number(),
