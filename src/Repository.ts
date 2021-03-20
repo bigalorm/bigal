@@ -62,7 +62,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
     if (this._type.beforeCreate) {
       if (Array.isArray(values)) {
         // eslint-disable-next-line no-param-reassign
-        values = await Promise.all(values.map(this._type.beforeCreate));
+        values = await Promise.all(values.map((value) => (this._type.beforeCreate ? this._type.beforeCreate(value) : Promise.resolve())));
       } else {
         // eslint-disable-next-line no-param-reassign
         values = await this._type.beforeCreate(values);
