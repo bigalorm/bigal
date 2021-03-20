@@ -9,5 +9,5 @@ export type Populated<T, K extends keyof T> = Omit<T, K> &
     // If T[P] is not an array:
     //   If the property is originally optional, include null as a possible value type
     //   Otherwise, do not include null as a possible value type
-    [P in K]-?: Extract<T[P], Entity | Entity[]> extends Entity ? (undefined extends T[P] ? Extract<T[P], Entity> | null : Extract<T[P], Entity>) : Extract<T[P], Entity[]>;
+    [P in K]-?: Extract<T[P], Entity | Entity[]> extends Entity ? (undefined extends T[P] ? Extract<T[P], Entity> | null : Extract<T[P], Entity>) : Exclude<Extract<T[P], Entity[]>, undefined>;
   };

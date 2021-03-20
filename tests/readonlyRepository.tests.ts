@@ -7,7 +7,7 @@ import type { QueryResult } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { Repository, ReadonlyRepository } from '../src';
+import type { Repository, ReadonlyRepository, QueryResponsePopulated } from '../src';
 import { initialize } from '../src';
 
 import { Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, Store } from './models';
@@ -436,27 +436,24 @@ describe('ReadonlyRepository', () => {
       storeQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating collection', async () => {
-      const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
-      };
-      const product1 = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-        store: store.id,
-      };
-      const product2 = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-        store: store.id,
-      };
+      const store = new Store();
+      store.id = faker.random.number();
+      store.name = `store - ${faker.random.uuid()}`;
 
-      const storeWithProducts = _.extend(
-        {
-          products: [product1, product2],
-        },
-        store,
-      );
+      const product1 = new Product();
+      product1.id = faker.random.number();
+      product1.name = `product - ${faker.random.uuid()}`;
+      product1.store = store.id;
+
+      const product2 = new Product();
+      product2.id = faker.random.number();
+      product2.name = `product - ${faker.random.uuid()}`;
+      product2.store = store.id;
+
+      const storeWithProducts: QueryResponsePopulated<Store, 'products'> = {
+        ...store,
+        products: [product1, product2],
+      };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1, product2]));
 
@@ -464,6 +461,7 @@ describe('ReadonlyRepository', () => {
       verify(mockedPool.query(anyString(), anything())).twice();
       should.exist(result);
       result!.should.deep.equal(storeWithProducts);
+      storeWithProducts.products.length.should.equal(2);
 
       const [storeQuery, storeQueryParams] = capture(mockedPool.query).first();
       storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
