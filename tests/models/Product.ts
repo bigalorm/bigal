@@ -1,3 +1,4 @@
+import type { CreateUpdateParams } from '../../src';
 import { column, table } from '../../src/decorators';
 
 // eslint-disable-next-line import/no-cycle
@@ -40,5 +41,15 @@ export class Product extends ModelBase {
     through: () => ProductCategory.name,
     via: 'product',
   })
-  public categories!: Category[];
+  public categories?: Category[];
+
+  // Example instance method
+  public nameAndSku(): string {
+    return `${this.name} - ${this.sku || 'no sku'}`;
+  }
+
+  // Example lifecycle method that gets overwritten by subclasses
+  public static beforeCreate(values: CreateUpdateParams<Product>): CreateUpdateParams<Product> | Promise<CreateUpdateParams<Product>> {
+    return values;
+  }
 }
