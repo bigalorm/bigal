@@ -78,7 +78,7 @@ export class Product extends Entity {
 
 #### Initialize repositories
 
-```typescript
+```ts
 import {
   initialize,
   Repository,
@@ -513,6 +513,34 @@ const items = await PersonRepository.destroy(
 ```
 
 > Note: The primary key will always be included. To only return the primary key value, pass an empty array
+
+### Known issues
+
+If you have a json property, with an `id` field, on an entity model, TypeScript will probably think it is a BigAl
+entity due to how the type system works. In that case, you'll want to wrap the type with `NotEntity<>`. For example:
+
+```ts
+export interface IMyJsonType {
+  id: string;
+  foo: string;
+}
+
+export class Product extends Entity {
+  @primaryColumn({type: 'integer'})
+  public id!: number;
+
+  @column({
+    type: 'string',
+    required: true,
+  })
+  public name!: string;
+
+  @column({
+    type: 'json',
+  })
+  public myJson?: NotEntity<IMyJsonType>;
+}
+```
 
 ### Debugging
 
