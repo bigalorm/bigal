@@ -620,7 +620,7 @@ function buildWhere<T extends Entity>({
   propertyName?: string;
   comparer?: Comparer | string;
   isNegated?: boolean;
-  value?: WhereClauseValue<T>;
+  value?: WhereClauseValue<string> | WhereClauseValue<T> | WhereQuery<T> | WhereQuery<T>[] | string;
   params: unknown[];
 }): string {
   switch (comparer || propertyName) {
@@ -639,7 +639,7 @@ function buildWhere<T extends Entity>({
         repositoriesByModelNameLowered,
         model,
         isNegated,
-        value: value as number[] | string[],
+        value: value as WhereQuery<T>[],
         params,
       });
     case 'contains':
@@ -750,7 +750,7 @@ function buildWhere<T extends Entity>({
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         propertyName: propertyName!,
         isNegated,
-        value,
+        value: value as WhereClauseValue<T>,
         params,
       });
     default: {
@@ -772,7 +772,7 @@ function buildWhere<T extends Entity>({
             throw new Error(`Unable to find primary key column for ${column.model} specified in where clause for ${model.name}.${column.propertyName}`);
           }
 
-          const primaryKeyValue = (value as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T] as EntityFieldValue;
+          const primaryKeyValue = ((value as unknown) as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T] as EntityFieldValue;
           if (!_.isNil(primaryKeyValue)) {
             // Treat `value` as a hydrated object
             return buildWhere({
@@ -781,7 +781,7 @@ function buildWhere<T extends Entity>({
               propertyName,
               comparer,
               isNegated,
-              value: primaryKeyValue,
+              value: primaryKeyValue as WhereClauseValue<T>,
               params,
             });
           }
@@ -845,7 +845,7 @@ function buildWhere<T extends Entity>({
               model,
               propertyName,
               isNegated,
-              value: valueWithoutNull[0] as EntityFieldValue,
+              value: valueWithoutNull[0] as WhereClauseValue<T>,
               params,
             }),
           );
@@ -864,7 +864,7 @@ function buildWhere<T extends Entity>({
                     model,
                     propertyName,
                     isNegated,
-                    value: val as EntityFieldValue,
+                    value: val as WhereClauseValue<T>,
                     params,
                   }),
                 );
@@ -912,7 +912,7 @@ function buildWhere<T extends Entity>({
 
       if (_.isObject(value) && !_.isDate(value)) {
         const andValues = [];
-        for (const [key, where] of Object.entries(value as WhereQuery<T>)) {
+        for (const [key, where] of Object.entries(value)) {
           let subQueryComparer: Comparer | string | undefined;
           if (isComparer(key)) {
             subQueryComparer = key;
@@ -943,7 +943,7 @@ function buildWhere<T extends Entity>({
         propertyName: propertyName!,
         comparer,
         isNegated,
-        value,
+        value: value as WhereClauseValue<T>,
         params,
       });
     }
@@ -960,7 +960,7 @@ function buildOrOperatorStatement<T extends Entity>({
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   isNegated: boolean;
-  value: number[] | string[];
+  value: WhereQuery<T>[];
   params: unknown[];
 }): string {
   const orClauses = [];
@@ -992,7 +992,7 @@ interface ComparisonOperatorStatementParams<T extends Entity> {
   propertyName: string;
   comparer?: Comparer | string;
   isNegated: boolean;
-  value?: WhereClauseValue<T>;
+  value?: string[] | WhereClauseValue<T> | string;
   params: unknown[];
 }
 
@@ -1059,7 +1059,14 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
         return `(${orConstraints.join(' OR ')})`;
       }
 
-      const lowerValues = (value as string[]).map((val) => val.toLowerCase());
+      // Should be a string array at this point
+      const lowerValues = value.map((val: unknown) => {
+        if (typeof val === 'string') {
+          return val.toLowerCase();
+        }
+
+        return val;
+      });
 
       // NOTE: This is doing a case-insensitive pattern match
       params.push(lowerValues);
@@ -1080,7 +1087,7 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
     }
 
     // eslint-disable-next-line no-param-reassign
-    value = _.first(value as string[]);
+    value = _.first(value);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

@@ -1,10 +1,39 @@
-import type { EntityFieldValue, Entity } from '../Entity';
-import type { OmitFunctionsAndEntityCollections } from '../types';
+import type { Entity, NotEntityBrand } from '../Entity';
+import type { EntityPrimitiveOrId, ExcludeFunctionsAndEntityCollections, QueryResponse } from '../types';
 
-export type WhereClauseValue<T extends Entity> = EntityFieldValue | WhereQuery<T>;
+export type WhereClauseValue<TValue> = TValue extends NotEntityBrand | undefined
+  ? Exclude<TValue, undefined>
+  : TValue extends Entity
+  ?
+      | Exclude<EntityPrimitiveOrId<TValue>, undefined>
+      | Exclude<EntityPrimitiveOrId<TValue>, undefined>[]
+      | Exclude<Pick<QueryResponse<TValue>, 'id'>, undefined>
+      | Exclude<Pick<QueryResponse<TValue>, 'id'>, undefined>[]
+      | null
+  : Exclude<(TValue | null)[] | TValue, undefined> | null;
+
+export type StringConstraint<TValue extends string> = {
+  [P in 'contains' | 'endsWith' | 'like' | 'startsWith']?: WhereClauseValue<TValue>;
+};
+
+export type NumberOrDateConstraint<TValue extends Date | number> = {
+  [P in '<' | '<=' | '>' | '>=']?: WhereClauseValue<TValue>;
+};
+
+export type NegatableConstraint<TValue> =
+  | TValue
+  | {
+      '!': TValue;
+    };
+
+export type WhereQueryStatement<TValue> = TValue extends string
+  ? NegatableConstraint<StringConstraint<TValue> | WhereClauseValue<TValue>>
+  : TValue extends Date | number
+  ? NegatableConstraint<NumberOrDateConstraint<TValue> | WhereClauseValue<TValue>>
+  : NegatableConstraint<WhereClauseValue<TValue>>;
 
 export type WhereQuery<T extends Entity> = {
-  [P in keyof OmitFunctionsAndEntityCollections<T>]?: WhereClauseValue<T>;
+  [K in keyof T as ExcludeFunctionsAndEntityCollections<T[K], K>]?: T[K] extends (infer U)[] | undefined ? WhereQueryStatement<U> : WhereQueryStatement<T[K]>;
 } & {
   or?: WhereQuery<T>[];
 };

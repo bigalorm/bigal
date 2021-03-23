@@ -417,7 +417,7 @@ describe('Repository', () => {
     });
     it('should return array of updated objects if second parameter is not defined', async () => {
       const product = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
         store: faker.random.number(),
       };
@@ -444,7 +444,7 @@ describe('Repository', () => {
     });
     it('should return array of updated objects if second parameter is not defined - Promise.all', async () => {
       const product = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
         store: faker.random.number(),
       };
@@ -473,7 +473,7 @@ describe('Repository', () => {
     });
     it('should return void if returnRecords=false', async () => {
       const product = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `product - ${faker.random.uuid()}`,
         store: faker.random.number(),
       };
@@ -596,16 +596,16 @@ describe('Repository', () => {
     });
     it('should support call constraints as a parameter', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.uuid(),
+          id: faker.random.number(),
           name: `product - ${faker.random.uuid()}`,
         },
         {
-          id: faker.random.uuid(),
+          id: faker.random.number(),
           name: `product - ${faker.random.uuid()}`,
         },
       ];
@@ -625,16 +625,16 @@ describe('Repository', () => {
     });
     it('should support call constraints as a parameter if returnRecords=true', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.uuid(),
+          id: faker.random.number(),
           name: `product - ${faker.random.uuid()}`,
         },
         {
-          id: faker.random.uuid(),
+          id: faker.random.number(),
           name: `product - ${faker.random.uuid()}`,
         },
       ];
@@ -658,16 +658,16 @@ describe('Repository', () => {
     });
     it('should support call with chained where constraints', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.uuid(),
+          id: faker.random.number(),
           name: `product - ${faker.random.uuid()}`,
         },
         {
-          id: faker.random.uuid(),
+          id: faker.random.number(),
           name: `product - ${faker.random.uuid()}`,
         },
       ];
@@ -685,16 +685,16 @@ describe('Repository', () => {
     });
     it('should support call with chained where constraints if returnRecords=true', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.uuid(),
+          id: faker.random.number(),
           name: `product - ${faker.random.uuid()}`,
         },
         {
-          id: faker.random.uuid(),
+          id: faker.random.number(),
           name: `product - ${faker.random.uuid()}`,
         },
       ];
@@ -713,16 +713,16 @@ describe('Repository', () => {
     });
     it('should support call with chained where constraints - Promise.all', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.uuid(),
+          id: faker.random.number(),
           name: `product - ${faker.random.uuid()}`,
         },
         {
-          id: faker.random.uuid(),
+          id: faker.random.number(),
           name: `product - ${faker.random.uuid()}`,
         },
       ];
@@ -742,16 +742,16 @@ describe('Repository', () => {
     });
     it('should support call with chained where constraints if returnRecords=true - Promise.all', async () => {
       const store = {
-        id: faker.random.uuid(),
+        id: faker.random.number(),
         name: `store - ${faker.random.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.uuid(),
+          id: faker.random.number(),
           name: `product - ${faker.random.uuid()}`,
         },
         {
-          id: faker.random.uuid(),
+          id: faker.random.number(),
           name: `product - ${faker.random.uuid()}`,
         },
       ];

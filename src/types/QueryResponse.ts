@@ -1,7 +1,6 @@
-import type { Entity } from '../Entity';
+import type { Entity, NotEntityBrand } from '../Entity';
 
 import type { ExcludeEntityCollections } from './ExcludeEntityCollections';
-import type { OmitSubclassOfType } from './OmitSubclassOfType';
 
 /**
  * Changes all properties with Entity values to Primitive (string|number). Removes any properties that with values
@@ -9,7 +8,7 @@ import type { OmitSubclassOfType } from './OmitSubclassOfType';
  */
 export type QueryResponse<T extends Entity> = Extract<
   {
-    [K in keyof T as ExcludeEntityCollections<T[K], K>]: OmitSubclassOfType<T[K], Entity>;
+    [K in keyof T as ExcludeEntityCollections<T[K], K>]: T[K] extends NotEntityBrand | undefined ? T[K] : Exclude<T[K], Entity>;
   },
   T
 >;

@@ -6,6 +6,11 @@ export abstract class Entity {
   public abstract id: unknown;
 }
 
+export interface NotEntityBrand {
+  _notEntityBrand: void;
+}
+export type NotEntity<T> = NotEntityBrand & T;
+
 export interface EntityStatic<T extends Entity> {
   // NOTE: Static methods are generalized with `any` instead of `T` to get around Typescript's challenges of overriding
   // static methods in subclasses. See Typescript #4628

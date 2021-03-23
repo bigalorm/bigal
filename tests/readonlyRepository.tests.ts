@@ -7,10 +7,11 @@ import type { QueryResult } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { Repository, ReadonlyRepository, QueryResponsePopulated } from '../src';
+import type { Repository, ReadonlyRepository, QueryResponsePopulated, NotEntity } from '../src';
 import { initialize } from '../src';
 
-import { Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, Store } from './models';
+import type { IJsonLikeEntity } from './models';
+import { Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, SimpleWithRelationAndJson, Store } from './models';
 
 function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
   return {
@@ -35,12 +36,14 @@ describe('ReadonlyRepository', () => {
   let StoreRepository: Repository<Store>;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   let SimpleWithJsonRepository: Repository<SimpleWithJson>;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  let SimpleWithRelationAndJsonRepository: Repository<SimpleWithRelationAndJson>;
 
   before(() => {
     should = chai.should();
 
     const repositoriesByModelName = initialize({
-      models: [Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, Store],
+      models: [Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, SimpleWithRelationAndJson, Store],
       pool: instance(mockedPool),
     });
 
@@ -49,6 +52,7 @@ describe('ReadonlyRepository', () => {
     ReadonlyKitchenSinkRepository = repositoriesByModelName.KitchenSink as ReadonlyRepository<KitchenSink>;
     StoreRepository = repositoriesByModelName.Store as Repository<Store>;
     SimpleWithJsonRepository = repositoriesByModelName.SimpleWithJson as Repository<SimpleWithJson>;
+    SimpleWithRelationAndJsonRepository = repositoriesByModelName.SimpleWithRelationAndJson as Repository<SimpleWithRelationAndJson>;
   });
 
   beforeEach(() => {
@@ -735,6 +739,88 @@ describe('ReadonlyRepository', () => {
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","bar","key_value" AS "keyValue" FROM "simple" LIMIT 1');
+      params!.should.deep.equal([]);
+    });
+    it('should support an object with a json field (with id property)', async () => {
+      const store = new Store();
+      store.id = faker.random.number();
+      store.name = `store - ${faker.random.uuid()}`;
+
+      const simple = new SimpleWithRelationAndJson();
+      simple.id = faker.random.number();
+      simple.name = `simple - ${faker.random.uuid()}`;
+      simple.store = store;
+      simple.message = {
+        id: 'foo',
+        message: 'bar',
+      } as NotEntity<IJsonLikeEntity>;
+
+      const simpleQueryResult = {
+        id: simple.id,
+        name: simple.name,
+        store: store.id,
+        message: simple.message,
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simpleQueryResult]));
+      const result = await SimpleWithRelationAndJsonRepository.findOne().where({
+        or: [
+          {
+            name: simple.name,
+            id: simple.id,
+          },
+        ],
+        id: 42,
+      });
+      assert(result);
+      result.should.deep.equal(simpleQueryResult);
+      result.message?.id.should.equal(simple.message.id);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","store_id" AS "store","message" FROM "simple" WHERE ("name"=$1 AND "id"=$2) AND "id"=$3 LIMIT 1');
+      params!.should.deep.equal([simple.name, simple.id, 42]);
+    });
+    it('should support an object with a json field (with id property) and populate statement', async () => {
+      const store = new Store();
+      store.id = faker.random.number();
+      store.name = `store - ${faker.random.uuid()}`;
+
+      const simple = new SimpleWithRelationAndJson();
+      simple.id = faker.random.number();
+      simple.name = `simple - ${faker.random.uuid()}`;
+      simple.store = store;
+      simple.message = {
+        id: 'foo',
+        message: 'bar',
+      } as NotEntity<IJsonLikeEntity>;
+
+      const simpleQueryResult = {
+        id: simple.id,
+        name: simple.name,
+        store: store.id,
+        message: simple.message,
+      };
+
+      const storeQueryResult = {
+        id: store.id,
+        name: store.name,
+      };
+
+      when(mockedPool.query(anyString(), anything()))
+        .thenResolve(getQueryResult([simpleQueryResult]))
+        .thenResolve(getQueryResult([storeQueryResult]));
+      const result = await SimpleWithRelationAndJsonRepository.findOne().populate('store', {
+        select: ['name'],
+      });
+      assert(result);
+      result.should.deep.equal({
+        ...simpleQueryResult,
+        store: storeQueryResult,
+      });
+      result.message?.id.should.equal(simple.message.id);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","store_id" AS "store","message" FROM "simple" LIMIT 1');
       params!.should.deep.equal([]);
     });
   });
