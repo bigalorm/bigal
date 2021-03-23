@@ -115,6 +115,45 @@ describe('ReadonlyRepository', () => {
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
       params!.should.deep.equal([product.id]);
     });
+    it('should support call with where constraint as a parameter and querying id by entity value', async () => {
+      const product = new Product();
+      product.id = faker.random.number();
+      product.name = `product - ${faker.random.uuid()}`;
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      const result = await ProductRepository.findOne({
+        id: product,
+      });
+      should.exist(result);
+      result!.should.deep.equal(product);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
+      params!.should.deep.equal([product.id]);
+    });
+    it('should support call with where constraint as a parameter and querying property by entity value', async () => {
+      const productStore = new Store();
+      productStore.id = faker.random.number();
+      productStore.name = `store - ${faker.random.uuid()}`;
+
+      const product = new Product();
+      product.id = faker.random.number();
+      product.name = `product - ${faker.random.uuid()}`;
+      product.store = productStore.id;
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      const result = await ProductRepository.findOne({
+        store: productStore,
+      });
+      should.exist(result);
+      result!.should.deep.equal(product);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 LIMIT 1');
+      params!.should.deep.equal([productStore.id]);
+    });
     it('should support call with chained where constraints', async () => {
       const product = {
         id: faker.random.number(),

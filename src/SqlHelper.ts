@@ -760,30 +760,46 @@ function buildWhere<T extends Entity>({
 
       if (propertyName) {
         const column = model.columnsByPropertyName[propertyName] as ColumnModelMetadata;
-        if (column && column.model && _.isObject(value)) {
-          const relatedModelRepository = repositoriesByModelNameLowered[column.model.toLowerCase()];
+        if (column && _.isObject(value)) {
+          if (column.primary) {
+            const primaryKeyValue = ((value as unknown) as Partial<T>)[column.propertyName as string & keyof T];
+            if (!_.isNil(primaryKeyValue)) {
+              // Treat `value` as a hydrated object
+              return buildWhere({
+                repositoriesByModelNameLowered,
+                model,
+                propertyName,
+                comparer,
+                isNegated,
+                value: primaryKeyValue as WhereClauseValue<T>,
+                params,
+              });
+            }
+          } else if (column.model) {
+            const relatedModelRepository = repositoriesByModelNameLowered[column.model.toLowerCase()];
 
-          if (!relatedModelRepository) {
-            throw new Error(`Unable to find model schema (${column.model}) specified in where clause for "${column.propertyName}"`);
-          }
+            if (!relatedModelRepository) {
+              throw new Error(`Unable to find model schema (${column.model}) specified in where clause for "${column.propertyName}"`);
+            }
 
-          const relatedModelPrimaryKey = relatedModelRepository.model.primaryKeyColumn;
-          if (!relatedModelPrimaryKey) {
-            throw new Error(`Unable to find primary key column for ${column.model} specified in where clause for ${model.name}.${column.propertyName}`);
-          }
+            const relatedModelPrimaryKey = relatedModelRepository.model.primaryKeyColumn;
+            if (!relatedModelPrimaryKey) {
+              throw new Error(`Unable to find primary key column for ${column.model} specified in where clause for ${model.name}.${column.propertyName}`);
+            }
 
-          const primaryKeyValue = ((value as unknown) as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T] as EntityFieldValue;
-          if (!_.isNil(primaryKeyValue)) {
-            // Treat `value` as a hydrated object
-            return buildWhere({
-              repositoriesByModelNameLowered,
-              model,
-              propertyName,
-              comparer,
-              isNegated,
-              value: primaryKeyValue as WhereClauseValue<T>,
-              params,
-            });
+            const primaryKeyValue = ((value as unknown) as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T];
+            if (!_.isNil(primaryKeyValue)) {
+              // Treat `value` as a hydrated object
+              return buildWhere({
+                repositoriesByModelNameLowered,
+                model,
+                propertyName,
+                comparer,
+                isNegated,
+                value: primaryKeyValue as WhereClauseValue<T>,
+                params,
+              });
+            }
           }
         }
       }

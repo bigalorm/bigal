@@ -33,7 +33,11 @@ export type WhereQueryStatement<TValue> = TValue extends string
   : NegatableConstraint<WhereClauseValue<TValue>>;
 
 export type WhereQuery<T extends Entity> = {
-  [K in keyof T as ExcludeFunctionsAndEntityCollections<T[K], K>]?: T[K] extends (infer U)[] | undefined ? WhereQueryStatement<U> : WhereQueryStatement<T[K]>;
+  [K in keyof T as ExcludeFunctionsAndEntityCollections<T[K], K>]?: K extends 'id'
+    ? WhereQueryStatement<T | T[K]>
+    : T[K] extends (infer U)[] | undefined
+    ? WhereQueryStatement<U>
+    : WhereQueryStatement<T[K]>;
 } & {
   or?: WhereQuery<T>[];
 };
