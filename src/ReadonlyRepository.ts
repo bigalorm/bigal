@@ -321,7 +321,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
-            typedException.stack += stack;
+            typedException.stack += `\n${stack || ''}`;
           } else {
             typedException.stack = stack;
           }
@@ -461,7 +461,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
-            typedException.stack += stack;
+            typedException.stack += `\n${stack || ''}`;
           } else {
             typedException.stack = stack;
           }
@@ -510,7 +510,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
-            typedException.stack += stack;
+            typedException.stack += `\n${stack || ''}`;
           } else {
             typedException.stack = stack;
           }
