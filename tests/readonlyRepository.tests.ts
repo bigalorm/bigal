@@ -11,7 +11,7 @@ import type { Repository, ReadonlyRepository, QueryResponsePopulated, NotEntity 
 import { initialize } from '../src';
 
 import type { IJsonLikeEntity } from './models';
-import { Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, SimpleWithRelationAndJson, Store } from './models';
+import { Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, SimpleWithRelationAndJson, SimpleWithStringCollection, SimpleWithStringId, Store } from './models';
 
 function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
   return {
@@ -38,12 +38,14 @@ describe('ReadonlyRepository', () => {
   let SimpleWithJsonRepository: Repository<SimpleWithJson>;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   let SimpleWithRelationAndJsonRepository: Repository<SimpleWithRelationAndJson>;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  let SimpleWithStringCollectionRepository: Repository<SimpleWithStringCollection>;
 
   before(() => {
     should = chai.should();
 
     const repositoriesByModelName = initialize({
-      models: [Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, SimpleWithRelationAndJson, Store],
+      models: [Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, SimpleWithRelationAndJson, SimpleWithStringCollection, Store],
       pool: instance(mockedPool),
     });
 
@@ -53,6 +55,7 @@ describe('ReadonlyRepository', () => {
     StoreRepository = repositoriesByModelName.Store as Repository<Store>;
     SimpleWithJsonRepository = repositoriesByModelName.SimpleWithJson as Repository<SimpleWithJson>;
     SimpleWithRelationAndJsonRepository = repositoriesByModelName.SimpleWithRelationAndJson as Repository<SimpleWithRelationAndJson>;
+    SimpleWithStringCollectionRepository = repositoriesByModelName.SimpleWithStringCollection as Repository<SimpleWithStringCollection>;
   });
 
   beforeEach(() => {
@@ -760,6 +763,40 @@ describe('ReadonlyRepository', () => {
       verify(mockedPool.query(anyString(), anything())).once();
 
       should.not.exist(result);
+    });
+    it('should allow querying required string array', async () => {
+      const anotherSimple = new SimpleWithStringId();
+      anotherSimple.id = faker.random.uuid();
+      anotherSimple.name = 'anotherSimple';
+
+      const otherSimple = new SimpleWithStringId();
+      otherSimple.id = faker.random.uuid();
+      otherSimple.name = 'otherSimple';
+      otherSimple.otherId = anotherSimple;
+
+      const simple = new SimpleWithStringCollection();
+      simple.id = faker.random.number();
+      simple.name = `product - ${faker.random.uuid()}`;
+      simple.otherIds = [faker.random.uuid(), faker.random.uuid()];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+
+      const result = await SimpleWithStringCollectionRepository.findOne({
+        or: [
+          {
+            id: simple.id,
+          },
+          {
+            otherIds: [otherSimple.id, otherSimple.otherId.id],
+          },
+        ],
+      });
+      should.exist(result);
+      result!.should.deep.equal(simple);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","other_ids" AS "otherIds" FROM "simple" WHERE (("id"=$1) OR (($2=ANY("other_ids") OR $3=ANY("other_ids")))) LIMIT 1');
+      params!.should.deep.equal([simple.id, otherSimple.id, anotherSimple.id]);
     });
     it('should support an object with a json field', async () => {
       const simple = {

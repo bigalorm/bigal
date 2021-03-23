@@ -13,5 +13,6 @@ export * from './SimpleWithCreatedAtAndUpdatedAt';
 export * from './SimpleWithJson';
 export * from './SimpleWithRelationAndJson';
 export * from './SimpleWithStringCollection';
+export * from './SimpleWithStringId';
 export * from './SimpleWithUpdatedAt';
 export * from './Store';
