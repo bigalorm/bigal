@@ -1,5 +1,5 @@
 import type { Entity, NotEntityBrand } from '../Entity';
-import type { EntityPrimitiveOrId, ExcludeFunctionsAndEntityCollections, QueryResponse } from '../types';
+import type { EntityPrimitiveOrId, ExcludeFunctionsAndEntityCollections, QueryResult } from '../types';
 
 export type WhereClauseValue<TValue> = TValue extends NotEntityBrand | undefined
   ? Exclude<TValue, undefined>
@@ -7,8 +7,8 @@ export type WhereClauseValue<TValue> = TValue extends NotEntityBrand | undefined
   ?
       | Exclude<EntityPrimitiveOrId<TValue>, undefined>
       | Exclude<EntityPrimitiveOrId<TValue>, undefined>[]
-      | Exclude<Pick<QueryResponse<TValue>, 'id'>, undefined>
-      | Exclude<Pick<QueryResponse<TValue>, 'id'>, undefined>[]
+      | Exclude<Pick<QueryResult<TValue>, 'id'>, undefined>
+      | Exclude<Pick<QueryResult<TValue>, 'id'>, undefined>[]
       | null
   : Exclude<(TValue | null)[] | TValue, undefined> | null;
 

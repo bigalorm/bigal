@@ -12,7 +12,7 @@ import type {
 } from './query';
 import { ReadonlyRepository } from './ReadonlyRepository';
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper';
-import type { CreateUpdateParams, OmitFunctionsAndEntityCollections, QueryResponse } from './types';
+import type { CreateUpdateParams, OmitFunctionsAndEntityCollections, QueryResult } from './types';
 
 export class Repository<T extends Entity> extends ReadonlyRepository<T> implements IRepository<T> {
   /**
@@ -22,7 +22,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object}
    */
-  public create(values: CreateUpdateParams<T>, options?: ReturnSelect<T>): Promise<QueryResponse<T>>;
+  public create(values: CreateUpdateParams<T>, options?: ReturnSelect<T>): Promise<QueryResult<T>>;
 
   /**
    * Creates a objects using the specified values
@@ -40,7 +40,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public create(values: CreateUpdateParams<T>[], options?: ReturnSelect<T>): Promise<QueryResponse<T>[]>;
+  public create(values: CreateUpdateParams<T>[], options?: ReturnSelect<T>): Promise<QueryResult<T>[]>;
 
   /**
    * Creates an object using the specified values
@@ -50,7 +50,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object|object[]|void} Return value from the db
    */
-  public async create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options?: CreateUpdateOptions<T>): Promise<QueryResponse<T> | QueryResponse<T>[] | void> {
+  public async create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options?: CreateUpdateOptions<T>): Promise<QueryResult<T> | QueryResult<T>[] | void> {
     if (this.model.readonly) {
       throw new Error(`${this.model.name} is readonly.`);
     }
@@ -121,7 +121,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: ReturnSelect<T>): Promise<QueryResponse<T>[]>;
+  public update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: ReturnSelect<T>): Promise<QueryResult<T>[]>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -132,7 +132,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} Return values from the db or `true` if returnRecords=false
    */
-  public async update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: CreateUpdateOptions<T>): Promise<QueryResponse<T>[] | void> {
+  public async update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: CreateUpdateOptions<T>): Promise<QueryResult<T>[] | void> {
     if (this.model.readonly) {
       throw new Error(`${this.model.name} is readonly.`);
     }
@@ -189,7 +189,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResult<T, QueryResponse<T>[]>;
+  public destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResult<T, QueryResult<T>[]>;
 
   /**
    * Destroys object(s) matching the where query
@@ -199,7 +199,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} `void` or records affected if returnRecords=true
    */
-  public destroy(where: WhereQuery<T> = {}, options?: DeleteOptions<T>): DestroyResult<T, QueryResponse<T>[] | void> {
+  public destroy(where: WhereQuery<T> = {}, options?: DeleteOptions<T>): DestroyResult<T, QueryResult<T>[] | void> {
     if (this.model.readonly) {
       throw new Error(`${this.model.name} is readonly.`);
     }
@@ -216,13 +216,13 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
        * Filters the query
        * @param {object} value - Object representing the where query
        */
-      where(value: WhereQuery<T>): DestroyResult<T, QueryResponse<T>[] | void> {
+      where(value: WhereQuery<T>): DestroyResult<T, QueryResult<T>[] | void> {
         // eslint-disable-next-line no-param-reassign
         where = value;
 
         return this;
       },
-      async then(resolve: (result: QueryResponse<T>[] | void) => QueryResponse<T>[] | void, reject: (err: Error) => void): Promise<QueryResponse<T>[] | void> {
+      async then(resolve: (result: QueryResult<T>[] | void) => QueryResult<T>[] | void, reject: (err: Error) => void): Promise<QueryResult<T>[] | void> {
         if (_.isString(where)) {
           return reject(new Error('The query cannot be a string, it must be an object'));
         }

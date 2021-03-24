@@ -7,7 +7,7 @@ import type { QueryResult } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { Repository, ReadonlyRepository, QueryResponsePopulated, NotEntity } from '../src';
+import type { Repository, ReadonlyRepository, QueryResultPopulated, NotEntity } from '../src';
 import { initialize } from '../src';
 
 import type { IJsonLikeEntity } from './models';
@@ -496,7 +496,7 @@ describe('ReadonlyRepository', () => {
       product2.name = `product - ${faker.random.uuid()}`;
       product2.store = store.id;
 
-      const storeWithProducts: QueryResponsePopulated<Store, 'products'> = {
+      const storeWithProducts: QueryResultPopulated<Store, 'products'> = {
         ...store,
         products: [product1, product2],
       };

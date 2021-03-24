@@ -1,16 +1,16 @@
 import chai from 'chai';
 import * as faker from 'faker';
 import * as _ from 'lodash';
-import type { QueryResult } from 'pg';
+import type { QueryResult as PostgresQueryResult } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { CreateUpdateParams, QueryResponse, Repository } from '../src';
+import type { CreateUpdateParams, QueryResult, Repository } from '../src';
 import { initialize } from '../src';
 
 import { Product, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store } from './models';
 
-function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
+function getQueryResult<T>(rows: T[] = []): PostgresQueryResult<T> {
   return {
     command: 'select',
     rowCount: 1,
@@ -246,7 +246,7 @@ describe('Repository', () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       params!.should.deep.equal([product.name, [], store.id]);
     });
-    it('should allow populated (QueryResponse) value parameters', async () => {
+    it('should allow populated (QueryResult) value parameters', async () => {
       const store = new Store();
       store.id = faker.random.number();
       store.name = faker.random.uuid();
@@ -257,13 +257,13 @@ describe('Repository', () => {
         store: store.id,
       };
 
-      const storeAsQueryResponse: QueryResponse<Store> = store;
+      const storeAsQueryResult: QueryResult<Store> = store;
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
       const result = await ProductRepository.create({
         name: product.name,
-        store: storeAsQueryResponse,
+        store: storeAsQueryResult,
       });
 
       verify(mockedPool.query(anyString(), anything())).once();

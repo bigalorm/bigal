@@ -9,5 +9,5 @@ export * from './OmitFunctionsAndEntityCollections';
 export * from './PickAsPopulated';
 export * from './PickByValueType';
 export * from './Populated';
-export * from './QueryResponse';
-export * from './QueryResponsePopulated';
+export * from './QueryResult';
+export * from './QueryResultPopulated';
