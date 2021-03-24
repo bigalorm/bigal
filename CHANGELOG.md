@@ -1,3 +1,14 @@
+### 8.0.0
+  * Constrain types for create(), update(), and selects
+    * Exclude instance functions and entity collections
+    * Only expect `primitive | Pick<T, ‘id’>` when creating, updating, or in where queries, rather than `primitive | T`
+  * Shape query result types
+    * Remove Entity and Entity[] types from property values for find(), findOne(), update(), and destroy() responses
+    * Add Entity and Entity[] types when populate is called
+  * Update npms
+
+  **Breaking Change:** The change to create and update values expects a property called `id` on subclasses of `Entity`.
+
 ### 7.1.2
   * Make sort argument optional for chained calls
 
