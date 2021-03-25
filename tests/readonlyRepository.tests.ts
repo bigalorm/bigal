@@ -899,6 +899,33 @@ describe('ReadonlyRepository', () => {
       query.should.equal('SELECT "id","name","store_id" AS "store","message" FROM "simple" LIMIT 1');
       params!.should.deep.equal([]);
     });
+    it('should support retaining original field - withOriginalFieldType()', async () => {
+      const store = new Store();
+      store.id = faker.random.number();
+      store.name = 'Store';
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([
+          {
+            id: faker.random.number(),
+            name: 'Product',
+            store: store.id,
+          },
+        ]),
+        getQueryResult([store]),
+      );
+
+      const productResult = await ProductRepository.findOne().withOriginalFieldType('store');
+      assert(productResult);
+      const storeResult = await StoreRepository.findOne().where({
+        id: productResult.store,
+      });
+      assert(storeResult);
+
+      productResult.store = storeResult;
+      productResult.store.id.should.equal(store.id);
+      productResult.store.name?.should.equal(store.name);
+    });
   });
   describe('#find()', () => {
     it('should support call without constraints', async () => {
@@ -1246,6 +1273,35 @@ describe('ReadonlyRepository', () => {
       result1.should.deep.equal(result2);
       result1[0].instanceFunction().should.equal(`${result.name} bar!`);
       result2[0].instanceFunction().should.equal(`${result.name} bar!`);
+    });
+    it('should support retaining original field - withOriginalFieldType()', async () => {
+      const store = new Store();
+      store.id = faker.random.number();
+      store.name = 'Store';
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([
+          {
+            id: faker.random.number(),
+            name: 'Product',
+            store: store.id,
+          },
+        ]),
+        getQueryResult([store]),
+      );
+
+      const products = await ProductRepository.find().withOriginalFieldType('store');
+      products.length.should.equal(1);
+      const [productResult] = products;
+      const stores = await StoreRepository.find().where({
+        id: productResult.store,
+      });
+      stores.length.should.equal(1);
+      const [storeResult] = stores;
+
+      productResult.store = storeResult;
+      productResult.store.id.should.equal(store.id);
+      productResult.store.name?.should.equal(store.name);
     });
   });
   describe('#count()', () => {

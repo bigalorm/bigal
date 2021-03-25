@@ -153,6 +153,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
+      withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(_propertyName: TProperty): FindOneResult<T, Omit<QueryResult<T>, TProperty> & Pick<T, TProperty>> {
+        return this;
+      },
       async then(resolve: (result: QueryResult<T> | null) => Promise<QueryResult<T>> | QueryResult<T> | null, reject: (err: Error) => void): Promise<QueryResult<T> | null> {
         try {
           if (_.isString(where)) {
@@ -428,6 +431,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       skip(value: number): FindResult<T, QueryResult<T>> {
         skip = value;
 
+        return this;
+      },
+      withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(_propertyName: TProperty): FindResult<T, Omit<QueryResult<T>, TProperty> & Pick<T, TProperty>> {
         return this;
       },
       /**
