@@ -6,6 +6,7 @@ export * from './GetValueType';
 export * from './IsValueOfType';
 export * from './OmitEntityCollections';
 export * from './OmitFunctionsAndEntityCollections';
+export * from './PickAsType';
 export * from './PickAsPopulated';
 export * from './PickByValueType';
 export * from './Populated';

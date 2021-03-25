@@ -926,6 +926,28 @@ describe('ReadonlyRepository', () => {
       productResult.store.id.should.equal(store.id);
       productResult.store.name?.should.equal(store.name);
     });
+    it('should support manually setting a field - withFieldValue()', async () => {
+      const store = new Store();
+      store.id = faker.random.number();
+      store.name = 'Store';
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([
+          {
+            id: faker.random.number(),
+            name: 'Product',
+            store: store.id,
+          },
+        ]),
+        getQueryResult([store]),
+      );
+
+      const productResult = await ProductRepository.findOne().withFieldValue('store', store);
+      assert(productResult);
+
+      productResult.store.id.should.equal(store.id);
+      productResult.store.name?.should.equal(store.name);
+    });
   });
   describe('#find()', () => {
     it('should support call without constraints', async () => {

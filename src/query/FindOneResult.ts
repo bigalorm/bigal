@@ -1,6 +1,6 @@
 import type { ChainablePromiseLike } from '../ChainablePromiseLike';
 import type { Entity } from '../Entity';
-import type { GetValueType, PickAsPopulated, PickByValueType } from '../types';
+import type { GetValueType, PickAsPopulated, PickByValueType, PickAsType, QueryResult } from '../types';
 
 import type { PopulateArgs } from './PopulateArgs';
 import type { Sort } from './Sort';
@@ -14,4 +14,8 @@ export interface FindOneResult<T extends Entity, TReturn> extends ChainablePromi
   ): FindOneResult<T, Omit<TReturn, TProperty> & PickAsPopulated<T, TProperty>>;
   sort(value?: Sort<T>): FindOneResult<T, TReturn>;
   withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
+  withFieldValue<TProperty extends string & keyof T, TValue extends T[TProperty]>(
+    propertyName: TProperty,
+    value: TValue,
+  ): FindOneResult<T, Omit<QueryResult<T>, TProperty> & PickAsType<T, TProperty, TValue>>;
 }

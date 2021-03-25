@@ -7,7 +7,7 @@ import type { IRepository } from './IRepository';
 import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
 import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, WhereQuery, SortObject, SortObjectValue } from './query';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
-import type { GetValueType, PickByValueType, OmitFunctionsAndEntityCollections, QueryResult, PickAsPopulated } from './types';
+import type { GetValueType, PickByValueType, OmitFunctionsAndEntityCollections, QueryResult, PickAsPopulated, PickAsType } from './types';
 
 export interface IRepositoryOptions<T extends Entity> {
   modelMetadata: ModelMetadata<T>;
@@ -102,6 +102,13 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     }
 
     const populates: Populates[] = [];
+
+    interface ManuallySetField {
+      propertyName: string;
+      value: unknown;
+    }
+
+    const manuallySetFields: ManuallySetField[] = [];
     const sorts: OrderBy<T>[] = sort ? this._convertSortsToOrderBy(sort) : [];
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -155,6 +162,17 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       },
       withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(_propertyName: TProperty): FindOneResult<T, Omit<QueryResult<T>, TProperty> & Pick<T, TProperty>> {
         return this;
+      },
+      withFieldValue<TProperty extends string & keyof T, TValue extends T[TProperty]>(
+        propertyName: TProperty,
+        value: TValue,
+      ): FindOneResult<T, Omit<QueryResult<T>, TProperty> & PickAsType<T, TProperty, TValue>> {
+        manuallySetFields.push({
+          propertyName,
+          value,
+        });
+
+        return this as FindOneResult<T, Omit<QueryResult<T>, TProperty> & PickAsType<T, TProperty, TValue>>;
       },
       async then(resolve: (result: QueryResult<T> | null) => Promise<QueryResult<T>> | QueryResult<T> | null, reject: (err: Error) => void): Promise<QueryResult<T> | null> {
         try {
@@ -315,6 +333,12 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
             if (populateQueries.length) {
               await Promise.all(populateQueries);
+            }
+
+            for (const manuallySetField of manuallySetFields) {
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+              // @ts-ignore - Ignoring unknown is not a key
+              result[manuallySetField.propertyName as string & keyof T] = manuallySetField.value;
             }
 
             return await resolve(result);
