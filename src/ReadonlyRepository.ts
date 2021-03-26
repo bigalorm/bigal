@@ -17,6 +17,17 @@ export interface IRepositoryOptions<T extends Entity> {
   readonlyPool?: Pool;
 }
 
+interface Populate {
+  propertyName: string;
+  where?: WhereQuery<Entity>;
+  select?: string[];
+  sort?: SortObject<Entity> | string;
+  skip?: number;
+  limit?: number;
+}
+
+type PrimaryId = number | string;
+
 export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository<T> {
   private readonly _modelMetadata: ModelMetadata<T>;
 
@@ -92,16 +103,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       }
     }
 
-    interface Populates {
-      propertyName: string;
-      where?: WhereQuery<Entity>;
-      select?: string[];
-      sort?: SortObject<Entity> | string;
-      skip?: number;
-      limit?: number;
-    }
-
-    const populates: Populates[] = [];
+    const populates: Populate[] = [];
 
     interface ManuallySetField {
       propertyName: string;
@@ -194,145 +196,8 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           if (results.rows && results.rows.length) {
             const result = modelInstance._buildInstance(results.rows[0]);
 
-            const populateQueries: Promise<void>[] = [];
-            for (const populate of populates) {
-              const column = modelInstance.model.columnsByPropertyName[populate.propertyName];
-              if (!column) {
-                throw new Error(`Unable to find ${populate.propertyName} on ${modelInstance.model.name} model for populating.`);
-              }
-
-              const modelColumn = column as ColumnModelMetadata;
-              const collectionColumn = column as ColumnCollectionMetadata;
-              if (modelColumn.model) {
-                const populateRepository = modelInstance._repositoriesByModelNameLowered[modelColumn.model.toLowerCase()];
-                if (!populateRepository) {
-                  throw new Error(`Unable to find populate repository by entity name: ${modelColumn.model}. From ${column.target}#${column.propertyName}`);
-                }
-
-                if (!populateRepository.model.primaryKeyColumn) {
-                  throw new Error(`Unable to populate ${modelColumn.model} from ${column.target}#${column.propertyName}. There is no primary key defined in ${modelColumn.model}`);
-                }
-
-                const populateWhere = {
-                  [populateRepository.model.primaryKeyColumn.propertyName]: result[populate.propertyName as string & keyof QueryResult<T>] as EntityFieldValue,
-                  ...populate.where,
-                };
-
-                populateQueries.push(
-                  (async function populateModel(): Promise<void> {
-                    const populateResult = await populateRepository.findOne({
-                      select: populate.select,
-                      where: populateWhere,
-                      sort: populate.sort,
-                    } as FindOneArgs<Entity>);
-
-                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                    // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
-                    result[populate.propertyName as string & keyof T] = populateResult;
-                  })(),
-                );
-              } else if (collectionColumn.collection) {
-                const populateRepository = modelInstance._repositoriesByModelNameLowered[collectionColumn.collection.toLowerCase()];
-                if (!populateRepository) {
-                  throw new Error(`Unable to find populate repository for collection by name ${collectionColumn.collection}. From ${column.target}#${populate.propertyName}`);
-                }
-
-                const populateModelPrimaryKeyColumn = populateRepository.model.primaryKeyColumn;
-                if (!populateModelPrimaryKeyColumn) {
-                  throw new Error(
-                    `Unable to populate ${collectionColumn.collection} objects from ${column.target}#${column.propertyName}. There is no primary key defined in ${collectionColumn.collection}`,
-                  );
-                }
-
-                const { primaryKeyColumn } = modelInstance.model;
-                if (!primaryKeyColumn) {
-                  throw new Error(`Unable to populate ${column.target}#${column.propertyName}. There is no primary key defined in ${modelInstance.model.name}`);
-                }
-
-                const id = result[primaryKeyColumn.propertyName as keyof QueryResult<T>] as EntityFieldValue;
-                if (_.isNil(id)) {
-                  throw new Error(`Primary key (${primaryKeyColumn.propertyName}) has no value for entity ${column.target}.`);
-                }
-
-                if (collectionColumn.through) {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  const throughRepository = modelInstance._repositoriesByModelNameLowered[collectionColumn.through.toLowerCase()] as IReadonlyRepository<any>;
-                  if (!throughRepository) {
-                    throw new Error(`Unable to find repository for multi-map collection: ${collectionColumn.through}. From ${column.target}#${populate.propertyName}`);
-                  }
-
-                  let relatedModelColumn: ColumnCollectionMetadata | undefined;
-                  for (const populateModelColumn of populateRepository.model.columns) {
-                    const { through } = populateModelColumn as ColumnCollectionMetadata;
-                    if (through && through.toLowerCase() === collectionColumn.through.toLowerCase()) {
-                      relatedModelColumn = populateModelColumn as ColumnCollectionMetadata;
-                      break;
-                    }
-                  }
-
-                  if (!relatedModelColumn) {
-                    throw new Error(`Unable to find property on related model for multi-map collection: ${collectionColumn.through}. From ${column.target}#${populate.propertyName}`);
-                  }
-
-                  populateQueries.push(
-                    (async function populateMultiMulti(): Promise<void> {
-                      if (relatedModelColumn) {
-                        const mapRecords = await throughRepository.find({
-                          select: [relatedModelColumn.via],
-                          where: {
-                            [collectionColumn.via]: id,
-                          } as WhereQuery<T>,
-                        });
-                        const ids = _.map(mapRecords, relatedModelColumn.via);
-
-                        const populateWhere = _.merge(
-                          {
-                            [populateModelPrimaryKeyColumn.propertyName]: ids,
-                          },
-                          populate.where,
-                        );
-
-                        const populateResults = await populateRepository.find({
-                          select: populate.select,
-                          where: populateWhere,
-                          sort: populate.sort,
-                          skip: populate.skip,
-                          limit: populate.limit,
-                        } as FindArgs<Entity>);
-
-                        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                        // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
-                        result[populate.propertyName as string & keyof T] = populateResults;
-                      }
-                    })(),
-                  );
-                } else {
-                  const populateWhere = {
-                    [collectionColumn.via]: id,
-                    ...populate.where,
-                  };
-
-                  populateQueries.push(
-                    (async function populateCollection(): Promise<void> {
-                      const populateResults = await populateRepository.find({
-                        select: populate.select,
-                        where: populateWhere,
-                        sort: populate.sort,
-                        skip: populate.skip,
-                        limit: populate.limit,
-                      } as FindArgs<Entity>);
-
-                      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-                      // @ts-ignore - Ignoring result does not have index signature for known field (populate.propertyName)
-                      result[populate.propertyName as string & keyof T] = populateResults;
-                    })(),
-                  );
-                }
-              }
-            }
-
-            if (populateQueries.length) {
-              await Promise.all(populateQueries);
+            if (populates.length) {
+              await modelInstance.populateFields([result], populates);
             }
 
             for (const manuallySetField of manuallySetFields) {
@@ -413,6 +278,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       }
     }
 
+    const populates: Populate[] = [];
     const sorts = sort ? this._convertSortsToOrderBy(sort) : [];
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -427,6 +293,32 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         where = value;
 
         return this;
+      },
+      /**
+       * Populates/hydrates relations
+       * @param {string} propertyName - Name of property to join
+       * @param {object} [options] - Populate options
+       * @param {object} [options.where] - Object representing the where query
+       * @param {string[]} [options.select] - Array of model property names to return from the query.
+       * @param {string|object} [options.sort] - Property name(s) to sort by
+       * @param {string|number} [options.skip] - Number of records to skip
+       * @param {string|number} [options.limit] - Number of results to return
+       */
+      populate<TProperty extends string & keyof PickByValueType<T, Entity>>(
+        propertyName: TProperty,
+        options?: PopulateArgs<GetValueType<PickByValueType<T, Entity>[TProperty], Entity>>,
+      ): FindResult<T, Omit<QueryResult<T>, TProperty> & PickAsPopulated<T, TProperty>> {
+        populates.push({
+          propertyName,
+          where: options?.where,
+          select: options?.select,
+          sort: options?.sort,
+          skip: options?.skip,
+          limit: options?.limit,
+        });
+
+        // TODO: Figure out the type to make this happy without having to cast to unknown
+        return (this as unknown) as FindResult<T, Omit<QueryResult<T>, TProperty> & PickAsPopulated<T, TProperty>>;
       },
       /**
        * Sorts the query
@@ -487,7 +379,13 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           });
 
           const results = await modelInstance._readonlyPool.query(query, params);
-          return resolve(modelInstance._buildInstances(results.rows));
+          const entities = modelInstance._buildInstances(results.rows);
+
+          if (populates.length) {
+            await modelInstance.populateFields(entities, populates);
+          }
+
+          return resolve(entities);
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
@@ -645,5 +543,232 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     }
 
     return result;
+  }
+
+  // NOTE: This will mutate `entities`
+  protected async populateFields(entities: QueryResult<T>[], populates: Populate[]): Promise<void> {
+    if (!entities.length) {
+      return;
+    }
+
+    const populateQueries: Promise<void>[] = [];
+    for (const populate of populates) {
+      const column = this.model.columnsByPropertyName[populate.propertyName];
+      if (!column) {
+        throw new Error(`Unable to find ${populate.propertyName} on ${this.model.name} model for populating.`);
+      }
+
+      const modelColumn = column as ColumnModelMetadata;
+      const collectionColumn = column as ColumnCollectionMetadata;
+      if (modelColumn.model) {
+        populateQueries.push(this.populateSingleAssociation(entities, populate, modelColumn));
+      } else if (collectionColumn.collection) {
+        const populateRepository = this._repositoriesByModelNameLowered[collectionColumn.collection.toLowerCase()];
+        if (!populateRepository) {
+          throw new Error(`Unable to find populate repository for collection by name ${collectionColumn.collection}. From ${column.target}#${populate.propertyName}`);
+        }
+
+        const { primaryKeyColumn } = this.model;
+        if (!primaryKeyColumn) {
+          throw new Error(`Unable to populate ${column.target}#${column.propertyName}. There is no primary key defined in ${this.model.name}`);
+        }
+
+        const entityIds = new Set<EntityFieldValue>();
+        for (const entity of entities) {
+          const id = entity[primaryKeyColumn.propertyName as keyof QueryResult<T>] as EntityFieldValue;
+          if (_.isNil(id)) {
+            throw new Error(`Primary key (${primaryKeyColumn.propertyName}) has no value for entity ${column.target}.`);
+          }
+
+          entityIds.add(id);
+        }
+
+        if (collectionColumn.through) {
+          const populateModelPrimaryKeyColumn = populateRepository.model.primaryKeyColumn;
+          if (!populateModelPrimaryKeyColumn) {
+            throw new Error(
+              `Unable to populate ${collectionColumn.collection} objects from ${column.target}#${column.propertyName}. There is no primary key defined in ${collectionColumn.collection}`,
+            );
+          }
+
+          populateQueries.push(
+            this.populateManyManyCollection(
+              entities,
+              primaryKeyColumn.propertyName as keyof T,
+              Array.from(entityIds),
+              populateModelPrimaryKeyColumn.propertyName as keyof T,
+              populate,
+              collectionColumn,
+              populateRepository,
+            ),
+          );
+        } else {
+          populateQueries.push(this.populateOneManyCollection(entities, primaryKeyColumn.propertyName as keyof T, Array.from(entityIds), populate, collectionColumn, populateRepository));
+        }
+      }
+    }
+
+    if (populateQueries.length) {
+      await Promise.all(populateQueries);
+    }
+  }
+
+  private async populateSingleAssociation(entities: QueryResult<T>[], populate: Populate, column: ColumnModelMetadata): Promise<void> {
+    const populateRepository = this._repositoriesByModelNameLowered[column.model.toLowerCase()];
+    if (!populateRepository) {
+      throw new Error(`Unable to find populate repository by entity name: ${column.model}. From ${column.target}#${column.propertyName}`);
+    }
+
+    if (!populateRepository.model.primaryKeyColumn) {
+      throw new Error(`Unable to populate ${column.model} from ${column.target}#${column.propertyName}. There is no primary key defined in ${column.model}`);
+    }
+
+    const propertyName = populate.propertyName as string & keyof QueryResult<T>;
+    const populateIds = new Set<EntityFieldValue>();
+    for (const entity of entities) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-member-access
+      const populateId = entity[propertyName] as EntityFieldValue;
+      if (populateId) {
+        populateIds.add(populateId);
+      }
+    }
+
+    const populateWhere: WhereQuery<Entity> = {
+      [populateRepository.model.primaryKeyColumn.propertyName]: Array.from(populateIds),
+      ...populate.where,
+    };
+
+    const populateResults = await populateRepository.find({
+      select: populate.select,
+      where: populateWhere,
+      sort: populate.sort,
+    } as FindArgs<Entity>);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const populateResultsById = _.keyBy(populateResults, populateRepository.model.primaryKeyColumn.propertyName) as Record<number | string, any>;
+
+    for (const entity of entities) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access
+      entity[propertyName] = populateResultsById[entity[propertyName] as any];
+    }
+  }
+
+  private async populateOneManyCollection(
+    entities: QueryResult<T>[],
+    primaryKeyPropertyName: keyof QueryResult<T>,
+    entityIds: EntityFieldValue[],
+    populate: Populate,
+    column: ColumnCollectionMetadata,
+    populateRepository: IReadonlyRepository<Entity>,
+  ): Promise<void> {
+    const populateWhere = {
+      [column.via]: entityIds,
+      ...populate.where,
+    };
+
+    const populateResults = await populateRepository.find({
+      select: populate.select,
+      where: populateWhere,
+      sort: populate.sort,
+      skip: populate.skip,
+      limit: populate.limit,
+    } as FindArgs<Entity>);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const populateResultsByEntityId = _.groupBy(populateResults, column.via) as Record<PrimaryId, any>;
+    for (const entity of entities) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-assignment
+      const id = entity[primaryKeyPropertyName] as any;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment
+      entity[populate.propertyName as string & keyof QueryResult<T>] = populateResultsByEntityId[id] || [];
+    }
+  }
+
+  private async populateManyManyCollection(
+    entities: QueryResult<T>[],
+    primaryKeyPropertyName: keyof QueryResult<T>,
+    entityIds: EntityFieldValue[],
+    populateModelPrimaryKeyPropertyName: keyof QueryResult<T>,
+    populate: Populate,
+    column: ColumnCollectionMetadata,
+    populateRepository: IReadonlyRepository<Entity>,
+  ): Promise<void> {
+    if (!column.through) {
+      throw new Error(`Unable to populate multi-map collection: Missing "through" value. From ${column.target}#${populate.propertyName}`);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const throughRepository = this._repositoriesByModelNameLowered[column.through.toLowerCase()] as IReadonlyRepository<any>;
+    if (!throughRepository) {
+      throw new Error(`Unable to find repository for multi-map collection: ${column.through}. From ${column.target}#${populate.propertyName}`);
+    }
+
+    // Other side of the relation
+    let relatedModelColumn: ColumnCollectionMetadata | undefined;
+    for (const populateModelColumn of populateRepository.model.columns) {
+      const { through } = populateModelColumn as ColumnCollectionMetadata;
+      if (through && through.toLowerCase() === column.through.toLowerCase()) {
+        relatedModelColumn = populateModelColumn as ColumnCollectionMetadata;
+        break;
+      }
+    }
+
+    if (!relatedModelColumn) {
+      throw new Error(`Unable to find property on related model for multi-map collection: ${column.through}. From ${column.target}#${populate.propertyName}`);
+    }
+
+    const mapRecords = await throughRepository.find({
+      select: [relatedModelColumn.via],
+      where: {
+        [column.via]: entityIds,
+      } as WhereQuery<T>,
+    });
+    const populateIds = new Set<PrimaryId>();
+    const populateIdsByEntityId: Record<PrimaryId, PrimaryId[]> = {};
+    for (const mapRecord of mapRecords) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const entityId = mapRecord[column.via];
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const populatedId = mapRecord[relatedModelColumn.via];
+      populateIds.add(populatedId);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      if (!populateIdsByEntityId[entityId]) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        populateIdsByEntityId[entityId] = [];
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      populateIdsByEntityId[entityId].push(populatedId);
+    }
+
+    const populateWhere = _.merge(
+      {
+        [populateModelPrimaryKeyPropertyName]: Array.from(populateIds),
+      },
+      populate.where,
+    );
+
+    const populateResults = await populateRepository.find({
+      select: populate.select,
+      where: populateWhere,
+      sort: populate.sort,
+      skip: populate.skip,
+      limit: populate.limit,
+    } as FindArgs<Entity>);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const populateResultsById = _.keyBy(populateResults, populateModelPrimaryKeyPropertyName) as Record<PrimaryId, Entity>;
+
+    for (const entity of entities) {
+      const populatedItems = [];
+      const entityId = (entity[primaryKeyPropertyName] as unknown) as PrimaryId;
+      const populateIdsForEntity = populateIdsByEntityId[entityId] || [];
+      for (const id of populateIdsForEntity) {
+        const populatedItem = populateResultsById[id];
+        if (populatedItem) {
+          populatedItems.push(populatedItem);
+        }
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (entity[populate.propertyName as string & keyof QueryResult<T>] as any) = populatedItems;
+    }
   }
 }

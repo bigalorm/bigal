@@ -760,20 +760,35 @@ function buildWhere<T extends Entity>({
 
       if (propertyName) {
         const column = model.columnsByPropertyName[propertyName] as ColumnModelMetadata;
-        if (column && _.isObject(value)) {
+        if (column && (_.isObject(value) || Array.isArray(value))) {
           if (column.primary) {
-            const primaryKeyValue = ((value as unknown) as Partial<T>)[column.propertyName as string & keyof T];
-            if (!_.isNil(primaryKeyValue)) {
-              // Treat `value` as a hydrated object
+            if (Array.isArray(value) && value.every((item: Partial<T>) => _.isObject(item) && !_.isNil(item[column.propertyName as string & keyof T]))) {
+              const ids = _.map(value, column.propertyName);
+              // Treat `value` as an array of hydrated objects
               return buildWhere({
                 repositoriesByModelNameLowered,
                 model,
                 propertyName,
                 comparer,
                 isNegated,
-                value: primaryKeyValue as WhereClauseValue<T>,
+                value: ids,
                 params,
               });
+            }
+            if (_.isObject(value)) {
+              const primaryKeyValue = ((value as unknown) as Partial<T>)[column.propertyName as string & keyof T];
+              if (!_.isNil(primaryKeyValue)) {
+                // Treat `value` as a hydrated object
+                return buildWhere({
+                  repositoriesByModelNameLowered,
+                  model,
+                  propertyName,
+                  comparer,
+                  isNegated,
+                  value: primaryKeyValue as WhereClauseValue<T>,
+                  params,
+                });
+              }
             }
           } else if (column.model) {
             const relatedModelRepository = repositoriesByModelNameLowered[column.model.toLowerCase()];
@@ -787,8 +802,8 @@ function buildWhere<T extends Entity>({
               throw new Error(`Unable to find primary key column for ${column.model} specified in where clause for ${model.name}.${column.propertyName}`);
             }
 
-            const primaryKeyValue = ((value as unknown) as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T];
-            if (!_.isNil(primaryKeyValue)) {
+            if (Array.isArray(value) && value.every((item: Partial<T>) => _.isObject(item) && !_.isNil(item[column.propertyName as string & keyof T]))) {
+              const ids = _.map(value, relatedModelPrimaryKey.propertyName);
               // Treat `value` as a hydrated object
               return buildWhere({
                 repositoriesByModelNameLowered,
@@ -796,9 +811,24 @@ function buildWhere<T extends Entity>({
                 propertyName,
                 comparer,
                 isNegated,
-                value: primaryKeyValue as WhereClauseValue<T>,
+                value: ids,
                 params,
               });
+            }
+            if (_.isObject(value)) {
+              const primaryKeyValue = ((value as unknown) as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T];
+              if (!_.isNil(primaryKeyValue)) {
+                // Treat `value` as a hydrated object
+                return buildWhere({
+                  repositoriesByModelNameLowered,
+                  model,
+                  propertyName,
+                  comparer,
+                  isNegated,
+                  value: primaryKeyValue as WhereClauseValue<T>,
+                  params,
+                });
+              }
             }
           }
         }
@@ -871,7 +901,7 @@ function buildWhere<T extends Entity>({
           const columnType = columnTypeFromPropertyName || columnTypeFromComparer;
 
           if (columnType) {
-            const columnTypeLowered = columnType.type ? columnType.type.toLowerCase() : '';
+            let columnTypeLowered = columnType.type ? columnType.type.toLowerCase() : '';
             if (columnTypeLowered === 'array' || columnTypeLowered === 'string[]' || columnTypeLowered === 'integer[]' || columnTypeLowered === 'float[]' || columnTypeLowered === 'boolean[]') {
               for (const val of valueWithoutNull) {
                 orConstraints.push(
@@ -886,6 +916,25 @@ function buildWhere<T extends Entity>({
                 );
               }
             } else {
+              // If it's an array of values for a model relationship, try to find the type of the primary key for the related model
+              if (!columnTypeLowered) {
+                const columnAsModelType = (columnType as unknown) as ColumnModelMetadata;
+                if (columnAsModelType.model) {
+                  const relatedModelRepository = repositoriesByModelNameLowered[columnAsModelType.model.toLowerCase()];
+
+                  if (!relatedModelRepository) {
+                    throw new Error(`Unable to find model schema (${columnAsModelType.model}) specified in where clause for "${columnAsModelType.propertyName}"`);
+                  }
+
+                  const relatedModelPrimaryKey = relatedModelRepository.model.primaryKeyColumn as ColumnTypeMetadata;
+                  if (!relatedModelPrimaryKey) {
+                    throw new Error(`Unable to find primary key column for ${columnAsModelType.model} specified in where clause for ${model.name}.${columnAsModelType.propertyName}`);
+                  }
+
+                  columnTypeLowered = relatedModelPrimaryKey.type ? relatedModelPrimaryKey.type.toLowerCase() : '';
+                }
+              }
+
               let castType;
 
               switch (columnTypeLowered) {
