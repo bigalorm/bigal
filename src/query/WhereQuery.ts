@@ -37,7 +37,8 @@ export type WhereQuery<T extends Entity> = {
     ? WhereQueryStatement<T | T[K]>
     : T[K] extends (infer U)[] | undefined
     ? WhereQueryStatement<U>
-    : WhereQueryStatement<T[K]>;
+    : // NOTE: The extra parts (| Exclude<...>) at the end of the next line are needed for arrays of union types
+      Exclude<(T[K] | null)[] | T[K], undefined> | WhereQueryStatement<T[K]> | { '!': Exclude<(T[K] | null)[] | T[K], undefined> };
 } & {
   or?: WhereQuery<T>[];
 };

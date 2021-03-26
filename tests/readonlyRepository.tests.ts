@@ -11,7 +11,19 @@ import type { Repository, ReadonlyRepository, QueryResultPopulated, NotEntity } 
 import { initialize } from '../src';
 
 import type { IJsonLikeEntity } from './models';
-import { Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, SimpleWithRelationAndJson, SimpleWithStringCollection, SimpleWithStringId, Store } from './models';
+import {
+  Category,
+  KitchenSink,
+  Product,
+  ProductCategory,
+  ReadonlyProduct,
+  SimpleWithJson,
+  SimpleWithRelationAndJson,
+  SimpleWithStringCollection,
+  SimpleWithStringId,
+  SimpleWithUnion,
+  Store,
+} from './models';
 
 function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
   return {
@@ -40,12 +52,14 @@ describe('ReadonlyRepository', () => {
   let SimpleWithRelationAndJsonRepository: Repository<SimpleWithRelationAndJson>;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   let SimpleWithStringCollectionRepository: Repository<SimpleWithStringCollection>;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  let SimpleWithUnionRepository: Repository<SimpleWithUnion>;
 
   before(() => {
     should = chai.should();
 
     const repositoriesByModelName = initialize({
-      models: [Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, SimpleWithRelationAndJson, SimpleWithStringCollection, Store],
+      models: [Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, SimpleWithRelationAndJson, SimpleWithStringCollection, SimpleWithUnion, Store],
       pool: instance(mockedPool),
     });
 
@@ -56,6 +70,7 @@ describe('ReadonlyRepository', () => {
     SimpleWithJsonRepository = repositoriesByModelName.SimpleWithJson as Repository<SimpleWithJson>;
     SimpleWithRelationAndJsonRepository = repositoriesByModelName.SimpleWithRelationAndJson as Repository<SimpleWithRelationAndJson>;
     SimpleWithStringCollectionRepository = repositoriesByModelName.SimpleWithStringCollection as Repository<SimpleWithStringCollection>;
+    SimpleWithUnionRepository = repositoriesByModelName.SimpleWithUnion as Repository<SimpleWithUnion>;
   });
 
   beforeEach(() => {
@@ -797,6 +812,44 @@ describe('ReadonlyRepository', () => {
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","other_ids" AS "otherIds" FROM "simple" WHERE (("id"=$1) OR (($2=ANY("other_ids") OR $3=ANY("other_ids")))) LIMIT 1');
       params!.should.deep.equal([simple.id, otherSimple.id, anotherSimple.id]);
+    });
+    it('should support an object with an enum/union field', async () => {
+      const simple = {
+        id: faker.random.number(),
+        name: `simple - ${faker.random.uuid()}`,
+        status: 'Foobar',
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      const result = await SimpleWithUnionRepository.findOne().where({
+        status: ['Bar', 'Foo'],
+      });
+      assert(result);
+      result.should.deep.equal(simple);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","status" FROM "simple" WHERE "status"=ANY($1::TEXT[]) LIMIT 1');
+      params!.should.deep.equal([['Bar', 'Foo']]);
+    });
+    it('should support an object with negated enum/union field', async () => {
+      const simple = {
+        id: faker.random.number(),
+        name: `simple - ${faker.random.uuid()}`,
+        status: 'Foobar',
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      const result = await SimpleWithUnionRepository.findOne().where({
+        status: {
+          '!': ['Bar', 'Foo'],
+        },
+      });
+      assert(result);
+      result.should.deep.equal(simple);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","status" FROM "simple" WHERE "status"<>ALL($1::TEXT[]) LIMIT 1');
+      params!.should.deep.equal([['Bar', 'Foo']]);
     });
     it('should support an object with a json field', async () => {
       const simple = {
