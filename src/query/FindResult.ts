@@ -12,5 +12,5 @@ export interface FindResult<T extends Entity, TReturn> extends ChainablePromiseL
   limit(value: number): FindResult<T, TReturn>;
   skip(value: number): FindResult<T, TReturn>;
   paginate(options: PaginateOptions): FindResult<T, TReturn>;
-  withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(propertyName: TProperty): FindResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
+  UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(propertyName: TProperty): FindResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
 }

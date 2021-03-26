@@ -899,7 +899,7 @@ describe('ReadonlyRepository', () => {
       query.should.equal('SELECT "id","name","store_id" AS "store","message" FROM "simple" LIMIT 1');
       params!.should.deep.equal([]);
     });
-    it('should support retaining original field - withOriginalFieldType()', async () => {
+    it('should support retaining original field - UNSAFE_withOriginalFieldType()', async () => {
       const store = new Store();
       store.id = faker.random.number();
       store.name = 'Store';
@@ -915,7 +915,7 @@ describe('ReadonlyRepository', () => {
         getQueryResult([store]),
       );
 
-      const productResult = await ProductRepository.findOne().withOriginalFieldType('store');
+      const productResult = await ProductRepository.findOne().UNSAFE_withOriginalFieldType('store');
       assert(productResult);
       const storeResult = await StoreRepository.findOne().where({
         id: productResult.store,
@@ -926,7 +926,7 @@ describe('ReadonlyRepository', () => {
       productResult.store.id.should.equal(store.id);
       productResult.store.name?.should.equal(store.name);
     });
-    it('should support manually setting a field - withFieldValue()', async () => {
+    it('should support manually setting a field - UNSAFE_withFieldValue()', async () => {
       const store = new Store();
       store.id = faker.random.number();
       store.name = 'Store';
@@ -942,7 +942,7 @@ describe('ReadonlyRepository', () => {
         getQueryResult([store]),
       );
 
-      const productResult = await ProductRepository.findOne().withFieldValue('store', store);
+      const productResult = await ProductRepository.findOne().UNSAFE_withFieldValue('store', store);
       assert(productResult);
 
       productResult.store.id.should.equal(store.id);
@@ -1296,7 +1296,7 @@ describe('ReadonlyRepository', () => {
       result1[0].instanceFunction().should.equal(`${result.name} bar!`);
       result2[0].instanceFunction().should.equal(`${result.name} bar!`);
     });
-    it('should support retaining original field - withOriginalFieldType()', async () => {
+    it('should support retaining original field - UNSAFE_withOriginalFieldType()', async () => {
       const store = new Store();
       store.id = faker.random.number();
       store.name = 'Store';
@@ -1312,7 +1312,7 @@ describe('ReadonlyRepository', () => {
         getQueryResult([store]),
       );
 
-      const products = await ProductRepository.find().withOriginalFieldType('store');
+      const products = await ProductRepository.find().UNSAFE_withOriginalFieldType('store');
       products.length.should.equal(1);
       const [productResult] = products;
       const stores = await StoreRepository.find().where({

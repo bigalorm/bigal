@@ -13,8 +13,8 @@ export interface FindOneResult<T extends Entity, TReturn> extends ChainablePromi
     options?: PopulateArgs<GetValueType<PickByValueType<T, Entity>[TProperty], Entity>>,
   ): FindOneResult<T, Omit<TReturn, TProperty> & PickAsPopulated<T, TProperty>>;
   sort(value?: Sort<T>): FindOneResult<T, TReturn>;
-  withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
-  withFieldValue<TProperty extends string & keyof T, TValue extends T[TProperty]>(
+  UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
+  UNSAFE_withFieldValue<TProperty extends string & keyof T, TValue extends T[TProperty]>(
     propertyName: TProperty,
     value: TValue,
   ): FindOneResult<T, Omit<QueryResult<T>, TProperty> & PickAsType<T, TProperty, TValue>>;

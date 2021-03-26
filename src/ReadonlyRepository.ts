@@ -160,10 +160,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
-      withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(_propertyName: TProperty): FindOneResult<T, Omit<QueryResult<T>, TProperty> & Pick<T, TProperty>> {
+      UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(_propertyName: TProperty): FindOneResult<T, Omit<QueryResult<T>, TProperty> & Pick<T, TProperty>> {
         return this;
       },
-      withFieldValue<TProperty extends string & keyof T, TValue extends T[TProperty]>(
+      UNSAFE_withFieldValue<TProperty extends string & keyof T, TValue extends T[TProperty]>(
         propertyName: TProperty,
         value: TValue,
       ): FindOneResult<T, Omit<QueryResult<T>, TProperty> & PickAsType<T, TProperty, TValue>> {
@@ -457,7 +457,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
-      withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(_propertyName: TProperty): FindResult<T, Omit<QueryResult<T>, TProperty> & Pick<T, TProperty>> {
+      UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(_propertyName: TProperty): FindResult<T, Omit<QueryResult<T>, TProperty> & Pick<T, TProperty>> {
         return this;
       },
       /**
