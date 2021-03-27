@@ -13,7 +13,9 @@ import { initialize } from '../src';
 import type { IJsonLikeEntity } from './models';
 import {
   Category,
+  Classroom,
   KitchenSink,
+  ParkingSpace,
   Product,
   ProductCategory,
   ReadonlyProduct,
@@ -23,6 +25,8 @@ import {
   SimpleWithStringId,
   SimpleWithUnion,
   Store,
+  Teacher,
+  TeacherClassroom,
 } from './models';
 
 function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
@@ -54,12 +58,29 @@ describe('ReadonlyRepository', () => {
   let SimpleWithStringCollectionRepository: Repository<SimpleWithStringCollection>;
   // eslint-disable-next-line @typescript-eslint/naming-convention
   let SimpleWithUnionRepository: Repository<SimpleWithUnion>;
+  // eslint-disable-next-line @typescript-eslint/naming-convention
+  let TeacherRepository: Repository<Teacher>;
 
   before(() => {
     should = chai.should();
 
     const repositoriesByModelName = initialize({
-      models: [Category, KitchenSink, Product, ProductCategory, ReadonlyProduct, SimpleWithJson, SimpleWithRelationAndJson, SimpleWithStringCollection, SimpleWithUnion, Store],
+      models: [
+        Classroom, //
+        Category,
+        KitchenSink,
+        ParkingSpace,
+        Product,
+        ProductCategory,
+        ReadonlyProduct,
+        SimpleWithJson,
+        SimpleWithRelationAndJson,
+        SimpleWithStringCollection,
+        SimpleWithUnion,
+        Store,
+        Teacher,
+        TeacherClassroom,
+      ],
       pool: instance(mockedPool),
     });
 
@@ -71,6 +92,7 @@ describe('ReadonlyRepository', () => {
     SimpleWithRelationAndJsonRepository = repositoriesByModelName.SimpleWithRelationAndJson as Repository<SimpleWithRelationAndJson>;
     SimpleWithStringCollectionRepository = repositoriesByModelName.SimpleWithStringCollection as Repository<SimpleWithStringCollection>;
     SimpleWithUnionRepository = repositoriesByModelName.SimpleWithUnion as Repository<SimpleWithUnion>;
+    TeacherRepository = repositoriesByModelName.Teacher as Repository<Teacher>;
   });
 
   beforeEach(() => {
@@ -1391,6 +1413,12 @@ describe('ReadonlyRepository', () => {
       let product2Category1: ProductCategory;
       let product3Category1: ProductCategory;
 
+      let teacher1: Teacher;
+      let teacher2: Teacher;
+      let parkingSpace: ParkingSpace;
+      let classroom: Classroom;
+      let teacher1Classroom: TeacherClassroom;
+
       before(() => {
         store1 = new Store();
         store1.id = faker.random.number();
@@ -1442,6 +1470,33 @@ describe('ReadonlyRepository', () => {
         product3Category1.id = faker.random.number();
         product3Category1.product = product3.id;
         product3Category1.category = category1.id;
+
+        teacher1 = new Teacher();
+        teacher1.id = faker.random.uuid();
+        teacher1.firstName = faker.name.firstName();
+        teacher1.lastName = faker.name.lastName();
+        teacher1.isActive = true;
+
+        teacher2 = new Teacher();
+        teacher2.id = faker.random.uuid();
+        teacher2.firstName = faker.name.firstName();
+        teacher2.lastName = faker.name.lastName();
+        teacher2.isActive = true;
+
+        parkingSpace = new ParkingSpace();
+        parkingSpace.id = faker.random.uuid();
+        parkingSpace.name = faker.random.number().toString();
+
+        teacher1.parkingSpace = parkingSpace.id;
+
+        classroom = new Classroom();
+        classroom.id = faker.random.uuid();
+        classroom.name = faker.random.number().toString();
+
+        teacher1Classroom = new TeacherClassroom();
+        teacher1Classroom.id = faker.random.uuid();
+        teacher1Classroom.teacher = teacher1.id;
+        teacher1Classroom.classroom = classroom.id;
       });
 
       it('should support populating a single relation - same/shared', async () => {
@@ -1709,6 +1764,68 @@ describe('ReadonlyRepository', () => {
         const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).last();
         categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
         categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
+
+        const boxedResults = results as QueryResultPopulated<Product, 'categories' | 'store'>[];
+        boxedResults[0].store.id.should.equal(store1.id);
+      });
+      it('should support populating multiple properties with partial select and sort', async () => {
+        when(mockedPool.query(anyString(), anything()))
+          .thenResolve(getQueryResult([_.pick(teacher1, 'id', 'firstName', 'lastName', 'isActive', 'parkingSpace'), _.pick(teacher2, 'id', 'firstName', 'lastName', 'isActive', 'parkingSpace')]))
+          .thenResolve(getQueryResult([_.pick(parkingSpace, 'id', 'name')]))
+          .thenResolve(getQueryResult([teacher1Classroom]))
+          .thenResolve(getQueryResult([_.pick(classroom, 'id', 'name')]));
+
+        async function getTeachers(): Promise<QueryResultPopulated<Teacher, 'classrooms' | 'parkingSpace'>[]> {
+          return TeacherRepository.find()
+            .where({
+              isActive: true,
+            })
+            .sort('lastName')
+            .populate('parkingSpace', {
+              select: ['name'],
+            })
+            .populate('classrooms', {
+              select: ['name'],
+              where: {
+                name: {
+                  like: 'classroom%',
+                },
+              },
+            });
+        }
+
+        const results = await getTeachers();
+        results.should.deep.equal([
+          {
+            ..._.pick(teacher1, 'id', 'firstName', 'lastName', 'isActive'),
+            parkingSpace: _.pick(parkingSpace, 'id', 'name'),
+            classrooms: [_.pick(classroom, 'id', 'name')],
+          },
+          {
+            ..._.pick(teacher2, 'id', 'firstName', 'lastName', 'isActive'),
+            parkingSpace: undefined,
+            classrooms: [],
+          },
+        ]);
+        verify(mockedPool.query(anyString(), anything())).times(4);
+        results[0].parkingSpace?.id.should.equal(parkingSpace.id);
+        results[0].classrooms.length.should.equal(1);
+        results[0].classrooms[0].id.should.equal(classroom.id);
+
+        const [teacherQuery, teacherQueryParams] = capture(mockedPool.query).first();
+        teacherQuery.should.equal(
+          'SELECT "id","first_name" AS "firstName","last_name" AS "lastName","parking_space_id" AS "parkingSpace","is_active" AS "isActive" FROM "teacher" WHERE "is_active"=$1 ORDER BY "last_name"',
+        );
+        teacherQueryParams!.should.deep.equal([true]);
+        const [parkingSpaceQuery, parkingSpaceQueryParams] = capture(mockedPool.query).second();
+        parkingSpaceQuery.should.equal('SELECT "name","id" FROM "parking_space" WHERE "id"=$1');
+        parkingSpaceQueryParams!.should.deep.equal([parkingSpace.id]);
+        const [teacherClassroomQuery, teacherClassroomQueryParams] = capture(mockedPool.query).third();
+        teacherClassroomQuery.should.equal('SELECT "classroom_id" AS "classroom","id" FROM "teacher__classroom" WHERE "teacher_id"=ANY($1::TEXT[])');
+        teacherClassroomQueryParams!.should.deep.equal([[teacher1.id, teacher2.id]]);
+        const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).last();
+        categoryQuery.should.equal('SELECT "name","id" FROM "classroom" WHERE "id"=$1 AND "name" ILIKE $2');
+        categoryQueryParams!.should.deep.equal([classroom.id, 'classroom%']);
       });
     });
   });

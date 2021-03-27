@@ -1,5 +1,7 @@
 export * from './Category';
+export * from './Classroom';
 export * from './KitchenSink';
+export * from './ParkingSpace';
 export * from './Product';
 export * from './ProductCategory';
 export * from './ProductWithCreatedAt';
@@ -17,3 +19,7 @@ export * from './SimpleWithStringId';
 export * from './SimpleWithUnion';
 export * from './SimpleWithUpdatedAt';
 export * from './Store';
+export * from './Student';
+export * from './StudentClassroom';
+export * from './Teacher';
+export * from './TeacherClassroom';
