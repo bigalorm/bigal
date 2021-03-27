@@ -1,3 +1,10 @@
+### 8.1.0
+  * Allow chaining `populate()` with `find()` calls :tada:
+  * Add `UNSAFE_withOriginalFieldType()` helper method to `find()` and `findOne()` to retain the original type for a field.
+    This is useful if you have a model field with type `string | Foo` and want to retain the `| Foo` part, instead of
+    being forced to strictly `string`.
+  * Add `UNSAFE_withFieldValue()` helper method to `findOne()` to manually set a field value.
+
 ### 8.0.0
   * Constrain types for create(), update(), and selects
     * Exclude instance functions and entity collections
