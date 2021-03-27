@@ -104,7 +104,7 @@ export function getSelectQueryAndParams<T extends Entity>({
 
   if (process.env.DEBUG_BIGAL?.toLowerCase() === 'true') {
     // eslint-disable-next-line no-console
-    console.log({ generatedBigalQuery: query });
+    console.log(`BigAl: ${query}`);
   }
 
   return {
