@@ -635,7 +635,7 @@ describe('ReadonlyRepository', () => {
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
       productQueryParams!.should.deep.equal([]);
       const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).second();
-      productCategoryMapQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
+      productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
       productCategoryMapQueryParams!.should.deep.equal([product.id]);
       const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
       categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
@@ -686,7 +686,7 @@ describe('ReadonlyRepository', () => {
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
       productQueryParams!.should.deep.equal([]);
       const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).second();
-      productCategoryMapQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
+      productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
       productCategoryMapQueryParams!.should.deep.equal([product.id]);
       const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
       categoryQuery.should.equal('SELECT "name","id" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) ORDER BY "name" DESC');
@@ -768,7 +768,7 @@ describe('ReadonlyRepository', () => {
       storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1 AND "name" ILIKE $2');
       storeQueryParams!.should.deep.equal([store.id, 'store%']);
       const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).third();
-      productCategoryMapQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
+      productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
       productCategoryMapQueryParams!.should.deep.equal([product.id]);
       const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).byCallIndex(3);
       categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) AND "name" ILIKE $2 ORDER BY "name" LIMIT 2');
@@ -1672,7 +1672,7 @@ describe('ReadonlyRepository', () => {
         productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
         productQueryParams!.should.deep.equal([]);
         const [productCategoryQuery, productCategoryQueryParams] = capture(mockedPool.query).second();
-        productCategoryQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
+        productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
         productCategoryQueryParams!.should.deep.equal([[product1.id, product3.id, product2.id]]);
         const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
         categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
@@ -1710,7 +1710,7 @@ describe('ReadonlyRepository', () => {
         productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
         productQueryParams!.should.deep.equal([]);
         const [productCategoryQuery, productCategoryQueryParams] = capture(mockedPool.query).second();
-        productCategoryQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
+        productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
         productCategoryQueryParams!.should.deep.equal([[product1.id, product3.id, product2.id]]);
         const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
         categoryQuery.should.equal('SELECT "id" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) ORDER BY "name"');
@@ -1759,7 +1759,7 @@ describe('ReadonlyRepository', () => {
         storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=ANY($1::INTEGER[])');
         storeQueryParams!.should.deep.equal([[store1.id, store2.id]]);
         const [productCategoryQuery, productCategoryQueryParams] = capture(mockedPool.query).third();
-        productCategoryQuery.should.equal('SELECT "category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
+        productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
         productCategoryQueryParams!.should.deep.equal([[product1.id, product3.id, product2.id]]);
         const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).last();
         categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
@@ -1821,7 +1821,7 @@ describe('ReadonlyRepository', () => {
         parkingSpaceQuery.should.equal('SELECT "name","id" FROM "parking_space" WHERE "id"=$1');
         parkingSpaceQueryParams!.should.deep.equal([parkingSpace.id]);
         const [teacherClassroomQuery, teacherClassroomQueryParams] = capture(mockedPool.query).third();
-        teacherClassroomQuery.should.equal('SELECT "classroom_id" AS "classroom","id" FROM "teacher__classroom" WHERE "teacher_id"=ANY($1::TEXT[])');
+        teacherClassroomQuery.should.equal('SELECT "teacher_id" AS "teacher","classroom_id" AS "classroom","id" FROM "teacher__classroom" WHERE "teacher_id"=ANY($1::TEXT[])');
         teacherClassroomQueryParams!.should.deep.equal([[teacher1.id, teacher2.id]]);
         const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).last();
         categoryQuery.should.equal('SELECT "name","id" FROM "classroom" WHERE "id"=$1 AND "name" ILIKE $2');

@@ -716,7 +716,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     }
 
     const mapRecords = await throughRepository.find({
-      select: [relatedModelColumn.via],
+      select: [column.via, relatedModelColumn.via],
       where: {
         [column.via]: entityIds,
       } as WhereQuery<T>,
