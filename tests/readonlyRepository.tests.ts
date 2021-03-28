@@ -21,6 +21,7 @@ import {
   ReadonlyProduct,
   SimpleWithJson,
   SimpleWithRelationAndJson,
+  SimpleWithSelfReference,
   SimpleWithStringCollection,
   SimpleWithStringId,
   SimpleWithUnion,
@@ -42,24 +43,18 @@ function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
 describe('ReadonlyRepository', () => {
   let should: Chai.Should;
   const mockedPool: Pool = mock(Pool);
-  // eslint-disable-next-line @typescript-eslint/naming-convention
+  /* eslint-disable @typescript-eslint/naming-convention */
   let ProductRepository: Repository<Product>;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   let ReadonlyProductRepository: ReadonlyRepository<ReadonlyProduct>;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   let ReadonlyKitchenSinkRepository: ReadonlyRepository<KitchenSink>;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   let StoreRepository: Repository<Store>;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   let SimpleWithJsonRepository: Repository<SimpleWithJson>;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   let SimpleWithRelationAndJsonRepository: Repository<SimpleWithRelationAndJson>;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
+  let SimpleWithSelfReferenceRepository: Repository<SimpleWithSelfReference>;
   let SimpleWithStringCollectionRepository: Repository<SimpleWithStringCollection>;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   let SimpleWithUnionRepository: Repository<SimpleWithUnion>;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   let TeacherRepository: Repository<Teacher>;
+  /* eslint-enable @typescript-eslint/naming-convention */
 
   before(() => {
     should = chai.should();
@@ -75,6 +70,7 @@ describe('ReadonlyRepository', () => {
         ReadonlyProduct,
         SimpleWithJson,
         SimpleWithRelationAndJson,
+        SimpleWithSelfReference,
         SimpleWithStringCollection,
         SimpleWithUnion,
         Store,
@@ -90,6 +86,7 @@ describe('ReadonlyRepository', () => {
     StoreRepository = repositoriesByModelName.Store as Repository<Store>;
     SimpleWithJsonRepository = repositoriesByModelName.SimpleWithJson as Repository<SimpleWithJson>;
     SimpleWithRelationAndJsonRepository = repositoriesByModelName.SimpleWithRelationAndJson as Repository<SimpleWithRelationAndJson>;
+    SimpleWithSelfReferenceRepository = repositoriesByModelName.SimpleWithSelfReference as Repository<SimpleWithSelfReference>;
     SimpleWithStringCollectionRepository = repositoriesByModelName.SimpleWithStringCollection as Repository<SimpleWithStringCollection>;
     SimpleWithUnionRepository = repositoriesByModelName.SimpleWithUnion as Repository<SimpleWithUnion>;
     TeacherRepository = repositoriesByModelName.Teacher as Repository<Teacher>;
@@ -691,6 +688,94 @@ describe('ReadonlyRepository', () => {
       const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
       categoryQuery.should.equal('SELECT "name","id" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) ORDER BY "name" DESC');
       categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
+    });
+    it('should support populating self reference collection', async () => {
+      const source1 = new SimpleWithSelfReference();
+      source1.id = faker.random.uuid();
+      source1.name = 'Source';
+
+      const translation1 = new SimpleWithSelfReference();
+      translation1.id = faker.random.uuid();
+      translation1.name = 'translation1';
+      translation1.source = source1.id;
+
+      const translation2 = new SimpleWithSelfReference();
+      translation2.id = faker.random.uuid();
+      translation2.name = 'translation2';
+      translation2.source = source1.id;
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([_.pick(source1, 'id', 'name')]),
+        getQueryResult([_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')]),
+      );
+
+      const result = await SimpleWithSelfReferenceRepository.findOne({
+        select: ['name'],
+      })
+        .where({
+          id: source1.id,
+        })
+        .populate('translations');
+      verify(mockedPool.query(anyString(), anything())).twice();
+      assert(result);
+      result.should.deep.equal({
+        ..._.pick(source1, 'id', 'name'),
+        translations: [_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')],
+      });
+      result.translations.length.should.equal(2);
+      result.translations[0].id.should.equal(translation1.id);
+
+      const [sourceQuery, sourceQueryParams] = capture(mockedPool.query).first();
+      sourceQuery.should.equal('SELECT "name","id" FROM "simple" WHERE "id"=$1 LIMIT 1');
+      sourceQueryParams!.should.deep.equal([source1.id]);
+      const [translationsQuery, translationsQueryParams] = capture(mockedPool.query).second();
+      translationsQuery.should.equal('SELECT "id","name","source_id" AS "source" FROM "simple" WHERE "source_id"=$1');
+      translationsQueryParams!.should.deep.equal([source1.id]);
+    });
+    it('should support populating collection and not explicitly selecting relation column', async () => {
+      const source1 = new SimpleWithSelfReference();
+      source1.id = faker.random.uuid();
+      source1.name = 'Source';
+
+      const translation1 = new SimpleWithSelfReference();
+      translation1.id = faker.random.uuid();
+      translation1.name = 'translation1';
+      translation1.source = source1.id;
+
+      const translation2 = new SimpleWithSelfReference();
+      translation2.id = faker.random.uuid();
+      translation2.name = 'translation2';
+      translation2.source = source1.id;
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([_.pick(source1, 'id', 'name')]),
+        getQueryResult([_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')]),
+      );
+
+      const result = await SimpleWithSelfReferenceRepository.findOne({
+        select: ['name'],
+      })
+        .where({
+          id: source1.id,
+        })
+        .populate('translations', {
+          select: ['id', 'name'],
+        });
+      verify(mockedPool.query(anyString(), anything())).twice();
+      assert(result);
+      result.should.deep.equal({
+        ..._.pick(source1, 'id', 'name'),
+        translations: [_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')],
+      });
+      result.translations.length.should.equal(2);
+      result.translations[0].id.should.equal(translation1.id);
+
+      const [sourceQuery, sourceQueryParams] = capture(mockedPool.query).first();
+      sourceQuery.should.equal('SELECT "name","id" FROM "simple" WHERE "id"=$1 LIMIT 1');
+      sourceQueryParams!.should.deep.equal([source1.id]);
+      const [translationsQuery, translationsQueryParams] = capture(mockedPool.query).second();
+      translationsQuery.should.equal('SELECT "id","name" FROM "simple" WHERE "source_id"=$1');
+      translationsQueryParams!.should.deep.equal([source1.id]);
     });
     it('should support complex query with multiple chained modifiers', async () => {
       const store = {
@@ -1419,6 +1504,11 @@ describe('ReadonlyRepository', () => {
       let classroom: Classroom;
       let teacher1Classroom: TeacherClassroom;
 
+      let source1: SimpleWithSelfReference;
+      let source2: SimpleWithSelfReference;
+      let translation1: SimpleWithSelfReference;
+      let translation2: SimpleWithSelfReference;
+
       before(() => {
         store1 = new Store();
         store1.id = faker.random.number();
@@ -1497,6 +1587,24 @@ describe('ReadonlyRepository', () => {
         teacher1Classroom.id = faker.random.uuid();
         teacher1Classroom.teacher = teacher1.id;
         teacher1Classroom.classroom = classroom.id;
+
+        source1 = new SimpleWithSelfReference();
+        source1.id = faker.random.uuid();
+        source1.name = 'Source';
+
+        source2 = new SimpleWithSelfReference();
+        source2.id = faker.random.uuid();
+        source2.name = 'Source2';
+
+        translation1 = new SimpleWithSelfReference();
+        translation1.id = faker.random.uuid();
+        translation1.name = 'translation1';
+        translation1.source = source1.id;
+
+        translation2 = new SimpleWithSelfReference();
+        translation2.id = faker.random.uuid();
+        translation2.name = 'translation2';
+        translation2.source = source1.id;
       });
 
       it('should support populating a single relation - same/shared', async () => {
@@ -1619,7 +1727,7 @@ describe('ReadonlyRepository', () => {
         );
 
         const results = await StoreRepository.find().populate('products', {
-          select: ['name', 'sku'],
+          select: ['name', 'sku', 'store'],
           sort: 'name',
         });
         verify(mockedPool.query(anyString(), anything())).twice();
@@ -1640,7 +1748,7 @@ describe('ReadonlyRepository', () => {
         productQuery.should.equal('SELECT "id","name" FROM "stores"');
         productQueryParams!.should.deep.equal([]);
         const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
-        storeQuery.should.equal('SELECT "name","sku","id" FROM "products" WHERE "store_id"=ANY($1::INTEGER[]) ORDER BY "name"');
+        storeQuery.should.equal('SELECT "name","sku","store_id" AS "store","id" FROM "products" WHERE "store_id"=ANY($1::INTEGER[]) ORDER BY "name"');
         storeQueryParams!.should.deep.equal([[store1.id, store2.id]]);
       });
       it('should support populating multi-multi collection', async () => {
@@ -1826,6 +1934,61 @@ describe('ReadonlyRepository', () => {
         const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).last();
         categoryQuery.should.equal('SELECT "name","id" FROM "classroom" WHERE "id"=$1 AND "name" ILIKE $2');
         categoryQueryParams!.should.deep.equal([classroom.id, 'classroom%']);
+      });
+      it('should support populating self reference', async () => {
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([_.pick(source1, 'id', 'name'), _.pick(source2, 'id', 'name')]),
+          getQueryResult([_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')]),
+        );
+
+        const results = await SimpleWithSelfReferenceRepository.find({
+          select: ['name'],
+        })
+          .where({
+            source: null,
+          })
+          .populate('translations');
+        verify(mockedPool.query(anyString(), anything())).twice();
+        results.should.deep.equal([
+          {
+            ..._.pick(source1, 'id', 'name'),
+            translations: [_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')],
+          },
+          {
+            ..._.pick(source2, 'id', 'name'),
+            translations: [],
+          },
+        ]);
+        results[0].translations.length.should.equal(2);
+        results[0].translations[0].id.should.equal(translation1.id);
+
+        const [sourceQuery, sourceQueryParams] = capture(mockedPool.query).first();
+        sourceQuery.should.equal('SELECT "name","id" FROM "simple" WHERE "source_id" IS NULL');
+        sourceQueryParams!.should.deep.equal([]);
+        const [translationsQuery, translationsQueryParams] = capture(mockedPool.query).second();
+        translationsQuery.should.equal('SELECT "id","name","source_id" AS "source" FROM "simple" WHERE "source_id"=ANY($1::TEXT[])');
+        translationsQueryParams!.should.deep.equal([[source1.id, source2.id]]);
+      });
+      it('should support populating self reference and not explicitly selecting relation column', async () => {
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([_.pick(source1, 'id', 'name'), _.pick(source2, 'id', 'name')]),
+          getQueryResult([_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')]),
+        );
+
+        try {
+          await SimpleWithSelfReferenceRepository.find({
+            select: ['name'],
+          })
+            .where({
+              source: null,
+            })
+            .populate('translations', {
+              select: ['id', 'name'],
+            });
+          assert.fail('Should not get here');
+        } catch (ex) {
+          ex.message.should.equal('Unable to populate "translations" on SimpleWithSelfReference. "source" is not included in select array.');
+        }
       });
     });
   });

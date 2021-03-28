@@ -1,3 +1,7 @@
+### 8.1.1
+  * Throw error when trying to populate a one-to-many relationship from `find()` with specific select columns and not including the
+    relation column.
+
 ### 8.1.0
   * Allow chaining `populate()` with `find()` calls :tada:
   * Add `UNSAFE_withOriginalFieldType()` helper method to `find()` and `findOne()` to retain the original type for a field.

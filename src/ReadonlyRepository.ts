@@ -660,6 +660,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     column: ColumnCollectionMetadata,
     populateRepository: IReadonlyRepository<Entity>,
   ): Promise<void> {
+    if (entities.length > 1 && populate.select && !populate.select.includes(column.via)) {
+      throw new Error(`Unable to populate "${populate.propertyName}" on ${this.model.name}. "${column.via}" is not included in select array.`);
+    }
+
     const populateWhere = {
       [column.via]: entityIds,
       ...populate.where,
@@ -673,13 +677,18 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       limit: populate.limit,
     } as FindArgs<Entity>);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const populateResultsByEntityId = _.groupBy(populateResults, column.via) as Record<PrimaryId, any>;
-    for (const entity of entities) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-assignment
-      const id = entity[primaryKeyPropertyName] as any;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment
-      entity[populate.propertyName as string & keyof QueryResult<T>] = populateResultsByEntityId[id] || [];
+    if (entities.length === 1) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (entities[0][populate.propertyName as string & keyof QueryResult<T>] as any) = populateResults;
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const populateResultsByEntityId = _.groupBy(populateResults, column.via) as Record<PrimaryId, any>;
+      for (const entity of entities) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-assignment
+        const id = entity[primaryKeyPropertyName] as any;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment
+        entity[populate.propertyName as string & keyof QueryResult<T>] = populateResultsByEntityId[id] || [];
+      }
     }
   }
 

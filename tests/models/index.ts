@@ -14,6 +14,7 @@ export * from './SimpleWithCreatedAt';
 export * from './SimpleWithCreatedAtAndUpdatedAt';
 export * from './SimpleWithJson';
 export * from './SimpleWithRelationAndJson';
+export * from './SimpleWithSelfReference';
 export * from './SimpleWithStringCollection';
 export * from './SimpleWithStringId';
 export * from './SimpleWithUnion';
