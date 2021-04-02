@@ -25,7 +25,7 @@ export interface IConnection {
 
 export interface InitializeOptions extends IConnection {
   models: EntityStatic<Entity>[];
-  connections?: { [index: string]: IConnection };
+  connections?: Record<string, IConnection>;
   expose?: (repository: ReadonlyRepository<Entity> | Repository<Entity>, tableMetadata: ModelMetadata<Entity>) => void;
 }
 
@@ -65,7 +65,7 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
     throw new Error('Models need to be specified to read all model information from decorators');
   }
 
-  const inheritanceTreesByModelName: { [index: string]: ModelClass[] } = {};
+  const inheritanceTreesByModelName: Record<string, ModelClass[]> = {};
   const modelNames: string[] = [];
   for (const model of models) {
     // Load inheritance hierarchy for each model. This will make sure that any decorators on inherited class files are
@@ -77,25 +77,21 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
   // Assemble all metadata for complete model and column definitions
   const metadataStorage = getMetadataStorage();
 
-  const modelMetadataByModelName: { [index: string]: ModelMetadata<Entity> } = {};
+  const modelMetadataByModelName: Record<string, ModelMetadata<Entity>> = {};
   for (const model of metadataStorage.models) {
     modelMetadataByModelName[model.name] = model;
   }
 
-  interface ColumnsByPropertyName {
-    [index: string]: ColumnMetadata;
-  }
+  type ColumnsByPropertyName = Record<string, ColumnMetadata>;
   // Add dictionary to quickly find a column by propertyName, for applying ColumnModifierMetadata records
-  const columnsByPropertyNameForModel: { [index: string]: ColumnsByPropertyName } = {};
+  const columnsByPropertyNameForModel: Record<string, ColumnsByPropertyName> = {};
   for (const column of metadataStorage.columns) {
     columnsByPropertyNameForModel[column.target] = columnsByPropertyNameForModel[column.target] || {};
     columnsByPropertyNameForModel[column.target][column.propertyName] = column;
   }
 
-  interface ColumnModifiersByPropertyName {
-    [index: string]: ColumnModifierMetadata[];
-  }
-  const columnModifiersByPropertyNameForModel: { [index: string]: ColumnModifiersByPropertyName } = {};
+  type ColumnModifiersByPropertyName = Record<string, ColumnModifierMetadata[]>;
+  const columnModifiersByPropertyNameForModel: Record<string, ColumnModifiersByPropertyName> = {};
   for (const columnModifier of metadataStorage.columnModifiers) {
     columnModifiersByPropertyNameForModel[columnModifier.target] = columnModifiersByPropertyNameForModel[columnModifier.target] || {};
     columnModifiersByPropertyNameForModel[columnModifier.target][columnModifier.propertyName] = columnModifiersByPropertyNameForModel[columnModifier.target][columnModifier.propertyName] || [];

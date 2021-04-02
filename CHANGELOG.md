@@ -1,3 +1,7 @@
+### 9.0.0
+  * Drop Node.js 10 support
+  * Enable consistent indexed object style lint rule
+
 ### 8.1.1
   * Throw error when trying to populate a one-to-many relationship from `find()` with specific select columns and not including the
     relation column.

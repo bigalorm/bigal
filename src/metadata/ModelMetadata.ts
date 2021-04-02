@@ -7,9 +7,7 @@ import type { ColumnModelMetadata } from './ColumnModelMetadata';
 import type { ColumnTypeMetadata } from './ColumnTypeMetadata';
 
 type Column = ColumnCollectionMetadata | ColumnModelMetadata | ColumnTypeMetadata;
-interface ColumnByStringId {
-  [index: string]: Column;
-}
+type ColumnByStringId = Record<string, Column>;
 
 export interface ModelMetadataOptions<T extends Entity> {
   name: string;
