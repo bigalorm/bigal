@@ -762,7 +762,7 @@ function buildWhere<T extends Entity>({
         const column = model.columnsByPropertyName[propertyName] as ColumnModelMetadata;
         if (column && _.isObject(value)) {
           if (column.primary) {
-            const primaryKeyValue = ((value as unknown) as Partial<T>)[column.propertyName as string & keyof T];
+            const primaryKeyValue = (value as unknown as Partial<T>)[column.propertyName as string & keyof T];
             if (!_.isNil(primaryKeyValue)) {
               // Treat `value` as a hydrated object
               return buildWhere({
@@ -787,7 +787,7 @@ function buildWhere<T extends Entity>({
               throw new Error(`Unable to find primary key column for ${column.model} specified in where clause for ${model.name}.${column.propertyName}`);
             }
 
-            const primaryKeyValue = ((value as unknown) as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T];
+            const primaryKeyValue = (value as unknown as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T];
             if (!_.isNil(primaryKeyValue)) {
               // Treat `value` as a hydrated object
               return buildWhere({
@@ -888,7 +888,7 @@ function buildWhere<T extends Entity>({
             } else {
               // If it's an array of values for a model relationship, try to find the type of the primary key for the related model
               if (!columnTypeLowered) {
-                const columnAsModelType = (columnType as unknown) as ColumnModelMetadata;
+                const columnAsModelType = columnType as unknown as ColumnModelMetadata;
                 if (columnAsModelType.model) {
                   const relatedModelRepository = repositoriesByModelNameLowered[columnAsModelType.model.toLowerCase()];
 

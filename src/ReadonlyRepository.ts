@@ -318,7 +318,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         });
 
         // TODO: Figure out the type to make this happy without having to cast to unknown
-        return (this as unknown) as FindResult<T, Omit<QueryResult<T>, TProperty> & PickAsPopulated<T, TProperty>>;
+        return this as unknown as FindResult<T, Omit<QueryResult<T>, TProperty> & PickAsPopulated<T, TProperty>>;
       },
       /**
        * Sorts the query
@@ -494,7 +494,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       }
     }
 
-    return (instance as unknown) as QueryResult<T>;
+    return instance as unknown as QueryResult<T>;
   }
 
   protected _buildInstances(rows: Partial<QueryResult<T>>[]): QueryResult<T>[] {
@@ -767,7 +767,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
     for (const entity of entities) {
       const populatedItems = [];
-      const entityId = (entity[primaryKeyPropertyName] as unknown) as PrimaryId;
+      const entityId = entity[primaryKeyPropertyName] as unknown as PrimaryId;
       const populateIdsForEntity = populateIdsByEntityId[entityId] || [];
       for (const id of populateIdsForEntity) {
         const populatedItem = populateResultsById[id];

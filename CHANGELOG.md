@@ -1,3 +1,7 @@
+### 9.0.1
+  * Update npms
+  * Add Node.js v16 to CI tests
+
 ### 9.0.0
   * Drop Node.js 10 support
   * Enable consistent indexed object style lint rule
