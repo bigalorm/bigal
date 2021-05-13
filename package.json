@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "9.0.1",
+  "version": "9.0.2",
   "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
   "main": "index.js",
   "types": "index.d.ts",
@@ -59,7 +59,7 @@
     "test": "mocha -r ts-node/register tests/**/*.tests.ts",
     "lint": "eslint --fix --ext .ts src tests",
     "lint-staged": "lint-staged",
-    "dist": "if [ -d \"src\" ]; then rm -rf dist && npm run build && npm run lint && npm run test && cp package.json dist && cp *.md dist && cp LICENSE dist && cp .npmignore dist && cd dist && npm publish; fi",
+    "dist": "if [ -d \"src\" ]; then rm -rf dist && npm run build && npm run lint && npm run test && cp package.json dist && cp package-lock.json dist && cp *.md dist && cp LICENSE dist && cp .npmignore dist && cd dist && npm publish; fi",
     "prepublishOnly": "if [ -d \"src\" ]; then echo \"Please use: npm run dist\" && exit 125; fi && pinst --disable",
     "postinstall": "husky install",
     "postpublish": "pinst --enable"
