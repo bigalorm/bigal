@@ -946,7 +946,7 @@ function buildWhere<T extends Entity>({
       }
 
       if (_.isObject(value) && !_.isDate(value)) {
-        const andValues = [];
+        const andValues: string[] = [];
         for (const [key, where] of Object.entries(value)) {
           let subQueryComparer: Comparer | string | undefined;
           if (isComparer(key)) {
@@ -963,7 +963,7 @@ function buildWhere<T extends Entity>({
               propertyName,
               comparer: subQueryComparer,
               isNegated,
-              value: where,
+              value: where as WhereClauseValue<T>,
               params,
             }),
           );
@@ -1122,7 +1122,7 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
     }
 
     // eslint-disable-next-line no-param-reassign
-    value = _.first(value);
+    value = value[0] as WhereClauseValue<T> | string;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

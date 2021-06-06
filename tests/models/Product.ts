@@ -49,7 +49,7 @@ export class Product extends ModelBase {
   }
 
   // Example lifecycle method that gets overwritten by subclasses
-  public static beforeCreate(values: CreateUpdateParams<Product>): CreateUpdateParams<Product> | Promise<CreateUpdateParams<Product>> {
+  public static override beforeCreate(values: CreateUpdateParams<Product>): CreateUpdateParams<Product> | Promise<CreateUpdateParams<Product>> {
     return values;
   }
 }

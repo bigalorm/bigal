@@ -7,11 +7,11 @@ import { Product } from './Product';
   name: 'products',
 })
 export class ProductWithLifecycleMethods extends Product {
-  public static beforeCreate(values: CreateUpdateParams<ProductWithLifecycleMethods>): CreateUpdateParams<ProductWithLifecycleMethods> {
+  public static override beforeCreate(values: CreateUpdateParams<ProductWithLifecycleMethods>): CreateUpdateParams<ProductWithLifecycleMethods> {
     return values;
   }
 
-  public static beforeUpdate(values: CreateUpdateParams<ProductWithLifecycleMethods>): Promise<CreateUpdateParams<ProductWithLifecycleMethods>> {
+  public static override beforeUpdate(values: CreateUpdateParams<ProductWithLifecycleMethods>): Promise<CreateUpdateParams<ProductWithLifecycleMethods>> {
     return Promise.resolve(values);
   }
 }

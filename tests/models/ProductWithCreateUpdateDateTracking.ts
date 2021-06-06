@@ -3,7 +3,7 @@ import type { CreateUpdateParams } from '../../src';
 import { Product } from './Product';
 
 export class ProductWithCreateUpdateDateTracking extends Product {
-  public static async beforeCreate(values: CreateUpdateParams<ProductWithCreateUpdateDateTracking>): Promise<CreateUpdateParams<ProductWithCreateUpdateDateTracking>> {
+  public static override async beforeCreate(values: CreateUpdateParams<ProductWithCreateUpdateDateTracking>): Promise<CreateUpdateParams<ProductWithCreateUpdateDateTracking>> {
     await Promise.resolve();
 
     return {
@@ -13,7 +13,7 @@ export class ProductWithCreateUpdateDateTracking extends Product {
     };
   }
 
-  public static beforeUpdate(values: CreateUpdateParams<ProductWithCreateUpdateDateTracking>): CreateUpdateParams<ProductWithCreateUpdateDateTracking> {
+  public static override beforeUpdate(values: CreateUpdateParams<ProductWithCreateUpdateDateTracking>): CreateUpdateParams<ProductWithCreateUpdateDateTracking> {
     return {
       ...values,
       // eslint-disable-next-line @typescript-eslint/restrict-template-expressions

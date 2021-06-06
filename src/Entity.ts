@@ -4,6 +4,14 @@ export type EntityFieldValue = boolean[] | Date | number[] | Record<string, unkn
 
 export abstract class Entity {
   public abstract id: unknown;
+
+  public static beforeCreate(values: CreateUpdateParams<Entity>): CreateUpdateParams<Entity> | Promise<CreateUpdateParams<Entity>> {
+    return values;
+  }
+
+  public static beforeUpdate(values: CreateUpdateParams<Entity>): CreateUpdateParams<Entity> | Promise<CreateUpdateParams<Entity>> {
+    return values;
+  }
 }
 
 export interface NotEntityBrand {
