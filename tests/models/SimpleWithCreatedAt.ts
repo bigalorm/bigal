@@ -1,4 +1,4 @@
-import { column, createDateColumn, table } from '../../src/decorators';
+import { column, createDateColumn, table } from '../../src';
 
 import { ModelBase } from './ModelBase';
 

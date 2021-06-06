@@ -1,4 +1,4 @@
-import { createDateColumn } from '../../src/decorators';
+import { createDateColumn } from '../../src';
 
 import { Product } from './Product';
 

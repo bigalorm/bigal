@@ -8,12 +8,16 @@ export type SortString<T extends Entity> =
   | `${string & keyof OmitFunctionsAndEntityCollections<T>} desc`
   | `${string & keyof OmitFunctionsAndEntityCollections<T>}`;
 
-type ValidateMultipleSorts<T extends Entity, TNextSortPart extends string, TPreviouslyValidatedSortString extends string, TSortString extends string> =
-  TNextSortPart extends `, ${SortString<T>}${infer TRestSortPart}`
-    ? TRestSortPart extends ''
-      ? TSortString
-      : ValidateMultipleSorts<T, TRestSortPart, TNextSortPart extends `${infer TValidatedSortPart}${TRestSortPart}` ? `${TPreviouslyValidatedSortString}${TValidatedSortPart}` : never, TSortString>
-    : `${TPreviouslyValidatedSortString}, ${SortString<T>}`;
+type ValidateMultipleSorts<
+  T extends Entity,
+  TNextSortPart extends string,
+  TPreviouslyValidatedSortString extends string,
+  TSortString extends string,
+> = TNextSortPart extends `, ${SortString<T>}${infer TRestSortPart}`
+  ? TRestSortPart extends ''
+    ? TSortString
+    : ValidateMultipleSorts<T, TRestSortPart, TNextSortPart extends `${infer TValidatedSortPart}${TRestSortPart}` ? `${TPreviouslyValidatedSortString}${TValidatedSortPart}` : never, TSortString>
+  : `${TPreviouslyValidatedSortString}, ${SortString<T>}`;
 
 export type MultipleSortString<T extends Entity, TSortString extends string = string> = TSortString extends `${SortString<T>}${infer TRestSortPart}`
   ? TRestSortPart extends ''

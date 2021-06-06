@@ -1,4 +1,4 @@
-import { column, table, updateDateColumn } from '../../src/decorators';
+import { column, table, updateDateColumn } from '../../src';
 
 import { ModelBase } from './ModelBase';
 

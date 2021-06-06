@@ -1,4 +1,4 @@
-import { column, table } from '../../src/decorators';
+import { column, table } from '../../src';
 
 import { Category } from './Category';
 import { ModelBase } from './ModelBase';

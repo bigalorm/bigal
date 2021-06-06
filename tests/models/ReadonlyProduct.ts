@@ -1,4 +1,4 @@
-import { table } from '../../src/decorators';
+import { table } from '../../src';
 
 import { Product } from './Product';
 

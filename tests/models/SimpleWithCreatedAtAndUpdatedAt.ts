@@ -1,4 +1,4 @@
-import { updateDateColumn } from '../../src/decorators';
+import { updateDateColumn } from '../../src';
 
 import { SimpleWithCreatedAt } from './SimpleWithCreatedAt';
 
