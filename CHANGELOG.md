@@ -1,3 +1,6 @@
+### 9.1.1
+  * Update npms
+
 ### 9.1.0
   * Add beforeCreate and beforeUpdate static method definitions to Entity.
   * Enable typescript lint check: [`noImplicitOverride`](https://www.typescriptlang.org/tsconfig#noImplicitOverride)
