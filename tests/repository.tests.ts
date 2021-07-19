@@ -72,9 +72,9 @@ describe('Repository', () => {
     });
     it('should return single object result if single value is specified', async () => {
       const product = {
-        id: faker.random.uuid(),
-        name: `product - ${faker.random.uuid()}`,
-        store: faker.random.number(),
+        id: faker.datatype.uuid(),
+        name: `product - ${faker.datatype.uuid()}`,
+        store: faker.datatype.number(),
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -95,9 +95,9 @@ describe('Repository', () => {
     });
     it('should return single object result if single value is specified - Promise.all', async () => {
       const product = {
-        id: faker.random.uuid(),
-        name: `product - ${faker.random.uuid()}`,
-        store: faker.random.number(),
+        id: faker.datatype.uuid(),
+        name: `product - ${faker.datatype.uuid()}`,
+        store: faker.datatype.number(),
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -120,9 +120,9 @@ describe('Repository', () => {
     });
     it('should return void if single value is specified and returnRecords=false', async () => {
       const product = {
-        id: faker.random.uuid(),
-        name: `product - ${faker.random.uuid()}`,
-        store: faker.random.number(),
+        id: faker.datatype.uuid(),
+        name: `product - ${faker.datatype.uuid()}`,
+        store: faker.datatype.number(),
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -157,14 +157,14 @@ describe('Repository', () => {
     it('should return object array results if multiple values are specified', async () => {
       const products = [
         {
-          id: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
-          store: faker.random.number(),
+          id: faker.datatype.uuid(),
+          name: `product - ${faker.datatype.uuid()}`,
+          store: faker.datatype.number(),
         },
         {
-          id: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
-          store: faker.random.number(),
+          id: faker.datatype.uuid(),
+          name: `product - ${faker.datatype.uuid()}`,
+          store: faker.datatype.number(),
         },
       ];
 
@@ -188,14 +188,14 @@ describe('Repository', () => {
     it('should return void if multiple values are specified and returnRecords=false', async () => {
       const products = [
         {
-          id: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
-          store: faker.random.number(),
+          id: faker.datatype.uuid(),
+          name: `product - ${faker.datatype.uuid()}`,
+          store: faker.datatype.number(),
         },
         {
-          id: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
-          store: faker.random.number(),
+          id: faker.datatype.uuid(),
+          name: `product - ${faker.datatype.uuid()}`,
+          store: faker.datatype.number(),
         },
       ];
 
@@ -221,12 +221,12 @@ describe('Repository', () => {
     });
     it('should allow populated value parameters', async () => {
       const store = new Store();
-      store.id = faker.random.number();
-      store.name = faker.random.uuid();
+      store.id = faker.datatype.number();
+      store.name = faker.datatype.uuid();
 
       const product = {
-        id: faker.random.uuid(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.uuid(),
+        name: `product - ${faker.datatype.uuid()}`,
         store: store.id,
       };
 
@@ -248,12 +248,12 @@ describe('Repository', () => {
     });
     it('should allow populated (QueryResult) value parameters', async () => {
       const store = new Store();
-      store.id = faker.random.number();
-      store.name = faker.random.uuid();
+      store.id = faker.datatype.number();
+      store.name = faker.datatype.uuid();
 
       const product = {
-        id: faker.random.uuid(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.uuid(),
+        name: `product - ${faker.datatype.uuid()}`,
         store: store.id,
       };
 
@@ -277,12 +277,12 @@ describe('Repository', () => {
     });
     it(`should allow populated (Pick<T, 'id'>) value parameters`, async () => {
       const store = new Store();
-      store.id = faker.random.number();
-      store.name = faker.random.uuid();
+      store.id = faker.datatype.number();
+      store.name = faker.datatype.uuid();
 
       const product = {
-        id: faker.random.uuid(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.uuid(),
+        name: `product - ${faker.datatype.uuid()}`,
         store: store.id,
       };
 
@@ -306,9 +306,9 @@ describe('Repository', () => {
     });
     it('should insert with string array value parameter', async () => {
       const item = {
-        id: faker.random.number(),
-        name: `simpleWithStringArray - ${faker.random.uuid()}`,
-        otherIds: [faker.random.uuid(), faker.random.uuid()],
+        id: faker.datatype.number(),
+        name: `simpleWithStringArray - ${faker.datatype.uuid()}`,
+        otherIds: [faker.datatype.uuid(), faker.datatype.uuid()],
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([item]));
@@ -331,12 +331,12 @@ describe('Repository', () => {
     });
     it('should ignore one-to-many collection values', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
         store,
         categories: [],
       };
@@ -359,13 +359,13 @@ describe('Repository', () => {
     });
     it('should ignore many-to-many collection values', async () => {
       const category = {
-        id: faker.random.number(),
-        name: `category - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `category - ${faker.datatype.uuid()}`,
       };
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-        store: faker.random.number(),
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
+        store: faker.datatype.number(),
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -398,7 +398,7 @@ describe('Repository', () => {
         ]),
       );
 
-      const id = faker.random.number();
+      const id = faker.datatype.number();
 
       await ProductWithCreateUpdateDateTrackingRepository.update(
         {
@@ -417,9 +417,9 @@ describe('Repository', () => {
     });
     it('should return array of updated objects if second parameter is not defined', async () => {
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-        store: faker.random.number(),
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
+        store: faker.datatype.number(),
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -444,9 +444,9 @@ describe('Repository', () => {
     });
     it('should return array of updated objects if second parameter is not defined - Promise.all', async () => {
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-        store: faker.random.number(),
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
+        store: faker.datatype.number(),
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -473,9 +473,9 @@ describe('Repository', () => {
     });
     it('should return void if returnRecords=false', async () => {
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
-        store: faker.random.number(),
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
+        store: faker.datatype.number(),
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -506,12 +506,12 @@ describe('Repository', () => {
     it('should delete all records and return void if there are no constraints', async () => {
       const products = [
         {
-          id: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.uuid(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.uuid(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -528,12 +528,12 @@ describe('Repository', () => {
     it('should delete all records if empty constraint and return all data if returnRecords=true', async () => {
       const products = [
         {
-          id: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.uuid(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.uuid(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -551,12 +551,12 @@ describe('Repository', () => {
     it('should delete all records if empty constraint and return specific columns if returnSelect is specified', async () => {
       const products = [
         {
-          id: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.uuid(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.uuid(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -574,12 +574,12 @@ describe('Repository', () => {
     it('should delete all records if empty constraint and return id column if returnSelect is empty', async () => {
       const products = [
         {
-          id: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.uuid(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.uuid(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.uuid(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -596,17 +596,17 @@ describe('Repository', () => {
     });
     it('should support call constraints as a parameter', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -625,17 +625,17 @@ describe('Repository', () => {
     });
     it('should support call constraints as a parameter if returnRecords=true', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -658,17 +658,17 @@ describe('Repository', () => {
     });
     it('should support call with chained where constraints', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -685,17 +685,17 @@ describe('Repository', () => {
     });
     it('should support call with chained where constraints if returnRecords=true', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -713,17 +713,17 @@ describe('Repository', () => {
     });
     it('should support call with chained where constraints - Promise.all', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -742,17 +742,17 @@ describe('Repository', () => {
     });
     it('should support call with chained where constraints if returnRecords=true - Promise.all', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 

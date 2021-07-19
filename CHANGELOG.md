@@ -1,3 +1,6 @@
+### 9.1.3
+  * Fix deprecated faker.js usage
+
 ### 9.1.2
   * Update npms
 

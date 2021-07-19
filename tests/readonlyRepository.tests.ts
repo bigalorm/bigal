@@ -99,8 +99,8 @@ describe('ReadonlyRepository', () => {
   describe('#findOne()', () => {
     it('should support call without constraints', async () => {
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -114,8 +114,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with constraints as a parameter', async () => {
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -136,8 +136,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with where constraint as a parameter', async () => {
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -154,8 +154,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with where constraint as a parameter and querying id by entity value', async () => {
       const product = new Product();
-      product.id = faker.random.number();
-      product.name = `product - ${faker.random.uuid()}`;
+      product.id = faker.datatype.number();
+      product.name = `product - ${faker.datatype.uuid()}`;
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
@@ -171,12 +171,12 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with where constraint as a parameter and querying property by entity value', async () => {
       const productStore = new Store();
-      productStore.id = faker.random.number();
-      productStore.name = `store - ${faker.random.uuid()}`;
+      productStore.id = faker.datatype.number();
+      productStore.name = `store - ${faker.datatype.uuid()}`;
 
       const product = new Product();
-      product.id = faker.random.number();
-      product.name = `product - ${faker.random.uuid()}`;
+      product.id = faker.datatype.number();
+      product.name = `product - ${faker.datatype.uuid()}`;
       product.store = productStore.id;
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -193,8 +193,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with chained where constraints', async () => {
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -211,8 +211,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with chained where constraints - Promise.all', async () => {
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -231,8 +231,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with chained sort', async () => {
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -247,8 +247,8 @@ describe('ReadonlyRepository', () => {
     });
     describe('Parse number columns', () => {
       it('should parse integer columns from integer query value', async () => {
-        const id = faker.random.number();
-        const name = faker.random.uuid();
+        const id = faker.datatype.number();
+        const name = faker.datatype.uuid();
         const numberValue = 42;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -276,8 +276,8 @@ describe('ReadonlyRepository', () => {
         params!.should.deep.equal([]);
       });
       it('should parse integer columns from float strings query value', async () => {
-        const id = faker.random.number();
-        const name = faker.random.uuid();
+        const id = faker.datatype.number();
+        const name = faker.datatype.uuid();
         const numberValue = 42.24;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -304,8 +304,8 @@ describe('ReadonlyRepository', () => {
         params!.should.deep.equal([]);
       });
       it('should parse integer columns that return as number', async () => {
-        const id = faker.random.number();
-        const name = faker.random.uuid();
+        const id = faker.datatype.number();
+        const name = faker.datatype.uuid();
         const numberValue = 42;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -332,8 +332,8 @@ describe('ReadonlyRepository', () => {
         params!.should.deep.equal([]);
       });
       it('should ignore large integer columns values', async () => {
-        const id = faker.random.number();
-        const name = faker.random.uuid();
+        const id = faker.datatype.number();
+        const name = faker.datatype.uuid();
         const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0`;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -360,8 +360,8 @@ describe('ReadonlyRepository', () => {
         params!.should.deep.equal([]);
       });
       it('should parse float columns return as float strings', async () => {
-        const id = faker.random.number();
-        const name = faker.random.uuid();
+        const id = faker.datatype.number();
+        const name = faker.datatype.uuid();
         const numberValue = 42.24;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -388,8 +388,8 @@ describe('ReadonlyRepository', () => {
         params!.should.deep.equal([]);
       });
       it('should parse float columns return as number', async () => {
-        const id = faker.random.number();
-        const name = faker.random.uuid();
+        const id = faker.datatype.number();
+        const name = faker.datatype.uuid();
         const numberValue = 42.24;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -416,8 +416,8 @@ describe('ReadonlyRepository', () => {
         params!.should.deep.equal([]);
       });
       it('should ignore large float columns', async () => {
-        const id = faker.random.number();
-        const name = faker.random.uuid();
+        const id = faker.datatype.number();
+        const name = faker.datatype.uuid();
         const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0.42`;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -446,12 +446,12 @@ describe('ReadonlyRepository', () => {
     });
     it('should support populating a single relation', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
         store,
       };
 
@@ -480,12 +480,12 @@ describe('ReadonlyRepository', () => {
     });
     it('should support populating a single relation with partial select and order', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
         store,
       };
 
@@ -517,17 +517,17 @@ describe('ReadonlyRepository', () => {
     });
     it('should support populating collection', async () => {
       const store = new Store();
-      store.id = faker.random.number();
-      store.name = `store - ${faker.random.uuid()}`;
+      store.id = faker.datatype.number();
+      store.name = `store - ${faker.datatype.uuid()}`;
 
       const product1 = new Product();
-      product1.id = faker.random.number();
-      product1.name = `product - ${faker.random.uuid()}`;
+      product1.id = faker.datatype.number();
+      product1.name = `product - ${faker.datatype.uuid()}`;
       product1.store = store.id;
 
       const product2 = new Product();
-      product2.id = faker.random.number();
-      product2.name = `product - ${faker.random.uuid()}`;
+      product2.id = faker.datatype.number();
+      product2.name = `product - ${faker.datatype.uuid()}`;
       product2.store = store.id;
 
       const storeWithProducts: QueryResultPopulated<Store, 'products'> = {
@@ -552,17 +552,17 @@ describe('ReadonlyRepository', () => {
     });
     it('should support populating collection with partial select and order', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const product1 = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
         store: store.id,
       };
       const product2 = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
         store: store.id,
       };
 
@@ -592,24 +592,24 @@ describe('ReadonlyRepository', () => {
     });
     it('should support populating multi-multi collection', async () => {
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
       };
       const category1 = {
-        id: faker.random.number(),
-        name: `category - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `category - ${faker.datatype.uuid()}`,
       };
       const category2 = {
-        id: faker.random.number(),
-        name: `category - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `category - ${faker.datatype.uuid()}`,
       };
       const productCategory1Map = {
-        id: faker.random.number(),
+        id: faker.datatype.number(),
         product: product.id,
         category: category1.id,
       };
       const productCategory2Map = {
-        id: faker.random.number(),
+        id: faker.datatype.number(),
         product: product.id,
         category: category2.id,
       };
@@ -640,24 +640,24 @@ describe('ReadonlyRepository', () => {
     });
     it('should support populating multi-multi collection with partial select and order', async () => {
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
       };
       const category1 = {
-        id: faker.random.number(),
-        name: `category - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `category - ${faker.datatype.uuid()}`,
       };
       const category2 = {
-        id: faker.random.number(),
-        name: `category - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `category - ${faker.datatype.uuid()}`,
       };
       const productCategory1Map = {
-        id: faker.random.number(),
+        id: faker.datatype.number(),
         product: product.id,
         category: category1.id,
       };
       const productCategory2Map = {
-        id: faker.random.number(),
+        id: faker.datatype.number(),
         product: product.id,
         category: category2.id,
       };
@@ -691,16 +691,16 @@ describe('ReadonlyRepository', () => {
     });
     it('should support populating self reference collection', async () => {
       const source1 = new SimpleWithSelfReference();
-      source1.id = faker.random.uuid();
+      source1.id = faker.datatype.uuid();
       source1.name = 'Source';
 
       const translation1 = new SimpleWithSelfReference();
-      translation1.id = faker.random.uuid();
+      translation1.id = faker.datatype.uuid();
       translation1.name = 'translation1';
       translation1.source = source1.id;
 
       const translation2 = new SimpleWithSelfReference();
-      translation2.id = faker.random.uuid();
+      translation2.id = faker.datatype.uuid();
       translation2.name = 'translation2';
       translation2.source = source1.id;
 
@@ -734,16 +734,16 @@ describe('ReadonlyRepository', () => {
     });
     it('should support populating collection and not explicitly selecting relation column', async () => {
       const source1 = new SimpleWithSelfReference();
-      source1.id = faker.random.uuid();
+      source1.id = faker.datatype.uuid();
       source1.name = 'Source';
 
       const translation1 = new SimpleWithSelfReference();
-      translation1.id = faker.random.uuid();
+      translation1.id = faker.datatype.uuid();
       translation1.name = 'translation1';
       translation1.source = source1.id;
 
       const translation2 = new SimpleWithSelfReference();
-      translation2.id = faker.random.uuid();
+      translation2.id = faker.datatype.uuid();
       translation2.name = 'translation2';
       translation2.source = source1.id;
 
@@ -779,29 +779,29 @@ describe('ReadonlyRepository', () => {
     });
     it('should support complex query with multiple chained modifiers', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const product = {
-        id: faker.random.number(),
-        name: `product - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
         store: store.id,
       };
       const category1 = {
-        id: faker.random.number(),
-        name: `category - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `category - ${faker.datatype.uuid()}`,
       };
       const category2 = {
-        id: faker.random.number(),
-        name: `category - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `category - ${faker.datatype.uuid()}`,
       };
       const productCategory1Map = {
-        id: faker.random.number(),
+        id: faker.datatype.number(),
         product: product.id,
         category: category1.id,
       };
       const productCategory2Map = {
-        id: faker.random.number(),
+        id: faker.datatype.number(),
         product: product.id,
         category: category2.id,
       };
@@ -861,8 +861,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should have instance functions be equal across multiple queries', async () => {
       const result = {
-        id: faker.random.number(),
-        name: `sink - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `sink - ${faker.datatype.uuid()}`,
       };
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([result]));
 
@@ -888,18 +888,18 @@ describe('ReadonlyRepository', () => {
     });
     it('should allow querying required string array', async () => {
       const anotherSimple = new SimpleWithStringId();
-      anotherSimple.id = faker.random.uuid();
+      anotherSimple.id = faker.datatype.uuid();
       anotherSimple.name = 'anotherSimple';
 
       const otherSimple = new SimpleWithStringId();
-      otherSimple.id = faker.random.uuid();
+      otherSimple.id = faker.datatype.uuid();
       otherSimple.name = 'otherSimple';
       otherSimple.otherId = anotherSimple;
 
       const simple = new SimpleWithStringCollection();
-      simple.id = faker.random.number();
-      simple.name = `product - ${faker.random.uuid()}`;
-      simple.otherIds = [faker.random.uuid(), faker.random.uuid()];
+      simple.id = faker.datatype.number();
+      simple.name = `product - ${faker.datatype.uuid()}`;
+      simple.otherIds = [faker.datatype.uuid(), faker.datatype.uuid()];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
 
@@ -922,8 +922,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should support an object with an enum/union field', async () => {
       const simple = {
-        id: faker.random.number(),
-        name: `simple - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `simple - ${faker.datatype.uuid()}`,
         status: 'Foobar',
       };
 
@@ -940,8 +940,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should support an object with negated enum/union field', async () => {
       const simple = {
-        id: faker.random.number(),
-        name: `simple - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `simple - ${faker.datatype.uuid()}`,
         status: 'Foobar',
       };
 
@@ -960,8 +960,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should support an object with a json field', async () => {
       const simple = {
-        id: faker.random.number(),
-        name: `simple - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `simple - ${faker.datatype.uuid()}`,
         keyValue: {
           foo: 42,
         },
@@ -979,12 +979,12 @@ describe('ReadonlyRepository', () => {
     });
     it('should support an object with a json field (with id property)', async () => {
       const store = new Store();
-      store.id = faker.random.number();
-      store.name = `store - ${faker.random.uuid()}`;
+      store.id = faker.datatype.number();
+      store.name = `store - ${faker.datatype.uuid()}`;
 
       const simple = new SimpleWithRelationAndJson();
-      simple.id = faker.random.number();
-      simple.name = `simple - ${faker.random.uuid()}`;
+      simple.id = faker.datatype.number();
+      simple.name = `simple - ${faker.datatype.uuid()}`;
       simple.store = store;
       simple.message = {
         id: 'foo',
@@ -1018,12 +1018,12 @@ describe('ReadonlyRepository', () => {
     });
     it('should support an object with a json field (with id property) and populate statement', async () => {
       const store = new Store();
-      store.id = faker.random.number();
-      store.name = `store - ${faker.random.uuid()}`;
+      store.id = faker.datatype.number();
+      store.name = `store - ${faker.datatype.uuid()}`;
 
       const simple = new SimpleWithRelationAndJson();
-      simple.id = faker.random.number();
-      simple.name = `simple - ${faker.random.uuid()}`;
+      simple.id = faker.datatype.number();
+      simple.name = `simple - ${faker.datatype.uuid()}`;
       simple.store = store;
       simple.message = {
         id: 'foo',
@@ -1061,13 +1061,13 @@ describe('ReadonlyRepository', () => {
     });
     it('should support retaining original field - UNSAFE_withOriginalFieldType()', async () => {
       const store = new Store();
-      store.id = faker.random.number();
+      store.id = faker.datatype.number();
       store.name = 'Store';
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([
           {
-            id: faker.random.number(),
+            id: faker.datatype.number(),
             name: 'Product',
             store: store.id,
           },
@@ -1088,13 +1088,13 @@ describe('ReadonlyRepository', () => {
     });
     it('should support manually setting a field - UNSAFE_withFieldValue()', async () => {
       const store = new Store();
-      store.id = faker.random.number();
+      store.id = faker.datatype.number();
       store.name = 'Store';
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([
           {
-            id: faker.random.number(),
+            id: faker.datatype.number(),
             name: 'Product',
             store: store.id,
           },
@@ -1113,12 +1113,12 @@ describe('ReadonlyRepository', () => {
     it('should support call without constraints', async () => {
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -1133,17 +1133,17 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with constraints as a parameter', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -1167,17 +1167,17 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with where constraint as a parameter', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -1195,17 +1195,17 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with chained where constraints', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -1223,14 +1223,14 @@ describe('ReadonlyRepository', () => {
     it('should support call with chained where constraints - array ILIKE array of values', async () => {
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
-          serialNumber: faker.random.uuid(),
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
+          serialNumber: faker.datatype.uuid(),
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
-          serialNumber: faker.random.uuid(),
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
+          serialNumber: faker.datatype.uuid(),
         },
       ];
 
@@ -1264,14 +1264,14 @@ describe('ReadonlyRepository', () => {
     it('should support call with chained where constraints - NOT ILIKE array of values', async () => {
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
-          sku: faker.random.uuid(),
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
+          sku: faker.datatype.uuid(),
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
-          sku: faker.random.uuid(),
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
+          sku: faker.datatype.uuid(),
         },
       ];
 
@@ -1292,17 +1292,17 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with chained where constraints - Promise.all', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -1322,12 +1322,12 @@ describe('ReadonlyRepository', () => {
     it('should support call with chained sort', async () => {
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -1343,12 +1343,12 @@ describe('ReadonlyRepository', () => {
     it('should support call with chained limit', async () => {
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -1364,12 +1364,12 @@ describe('ReadonlyRepository', () => {
     it('should support call with chained skip', async () => {
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -1385,12 +1385,12 @@ describe('ReadonlyRepository', () => {
     it('should support call with chained paginate', async () => {
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -1408,17 +1408,17 @@ describe('ReadonlyRepository', () => {
     });
     it('should support complex query with multiple chained modifiers', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -1442,8 +1442,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should have instance functions be equal across multiple queries', async () => {
       const result = {
-        id: faker.random.number(),
-        name: `sink - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `sink - ${faker.datatype.uuid()}`,
       };
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([result]));
 
@@ -1458,13 +1458,13 @@ describe('ReadonlyRepository', () => {
     });
     it('should support retaining original field - UNSAFE_withOriginalFieldType()', async () => {
       const store = new Store();
-      store.id = faker.random.number();
+      store.id = faker.datatype.number();
       store.name = 'Store';
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([
           {
-            id: faker.random.number(),
+            id: faker.datatype.number(),
             name: 'Product',
             store: store.id,
           },
@@ -1511,98 +1511,98 @@ describe('ReadonlyRepository', () => {
 
       before(() => {
         store1 = new Store();
-        store1.id = faker.random.number();
+        store1.id = faker.datatype.number();
         store1.name = `store1 - ${store1.id}`;
 
         store2 = new Store();
-        store2.id = faker.random.number();
+        store2.id = faker.datatype.number();
         store2.name = `store2 - ${store2.id}`;
 
         product1 = new Product();
-        product1.id = faker.random.number();
+        product1.id = faker.datatype.number();
         product1.name = `product1 - ${product1.id}`;
         product1.store = store1.id;
 
         product2 = new Product();
-        product2.id = faker.random.number();
+        product2.id = faker.datatype.number();
         product2.name = `product2 - ${product2.id}`;
         product2.store = store2.id;
 
         product3 = new Product();
-        product3.id = faker.random.number();
+        product3.id = faker.datatype.number();
         product3.name = `product3 - ${product2.id}`;
         product3.store = store1.id;
 
         category1 = new Category();
-        category1.id = faker.random.number();
+        category1.id = faker.datatype.number();
         category1.name = `category1 - ${category1.id}`;
 
         category2 = new Category();
-        category2.id = faker.random.number();
+        category2.id = faker.datatype.number();
         category2.name = `category2 - ${category2.id}`;
 
         product1Category1 = new ProductCategory();
-        product1Category1.id = faker.random.number();
+        product1Category1.id = faker.datatype.number();
         product1Category1.product = product1.id;
         product1Category1.category = category1.id;
 
         product1Category2 = new ProductCategory();
-        product1Category2.id = faker.random.number();
+        product1Category2.id = faker.datatype.number();
         product1Category2.product = product1.id;
         product1Category2.category = category2.id;
 
         product2Category1 = new ProductCategory();
-        product2Category1.id = faker.random.number();
+        product2Category1.id = faker.datatype.number();
         product2Category1.product = product2.id;
         product2Category1.category = category1.id;
 
         product3Category1 = new ProductCategory();
-        product3Category1.id = faker.random.number();
+        product3Category1.id = faker.datatype.number();
         product3Category1.product = product3.id;
         product3Category1.category = category1.id;
 
         teacher1 = new Teacher();
-        teacher1.id = faker.random.uuid();
+        teacher1.id = faker.datatype.uuid();
         teacher1.firstName = faker.name.firstName();
         teacher1.lastName = faker.name.lastName();
         teacher1.isActive = true;
 
         teacher2 = new Teacher();
-        teacher2.id = faker.random.uuid();
+        teacher2.id = faker.datatype.uuid();
         teacher2.firstName = faker.name.firstName();
         teacher2.lastName = faker.name.lastName();
         teacher2.isActive = true;
 
         parkingSpace = new ParkingSpace();
-        parkingSpace.id = faker.random.uuid();
-        parkingSpace.name = faker.random.number().toString();
+        parkingSpace.id = faker.datatype.uuid();
+        parkingSpace.name = faker.datatype.number().toString();
 
         teacher1.parkingSpace = parkingSpace.id;
 
         classroom = new Classroom();
-        classroom.id = faker.random.uuid();
-        classroom.name = faker.random.number().toString();
+        classroom.id = faker.datatype.uuid();
+        classroom.name = faker.datatype.number().toString();
 
         teacher1Classroom = new TeacherClassroom();
-        teacher1Classroom.id = faker.random.uuid();
+        teacher1Classroom.id = faker.datatype.uuid();
         teacher1Classroom.teacher = teacher1.id;
         teacher1Classroom.classroom = classroom.id;
 
         source1 = new SimpleWithSelfReference();
-        source1.id = faker.random.uuid();
+        source1.id = faker.datatype.uuid();
         source1.name = 'Source';
 
         source2 = new SimpleWithSelfReference();
-        source2.id = faker.random.uuid();
+        source2.id = faker.datatype.uuid();
         source2.name = 'Source2';
 
         translation1 = new SimpleWithSelfReference();
-        translation1.id = faker.random.uuid();
+        translation1.id = faker.datatype.uuid();
         translation1.name = 'translation1';
         translation1.source = source1.id;
 
         translation2 = new SimpleWithSelfReference();
-        translation2.id = faker.random.uuid();
+        translation2.id = faker.datatype.uuid();
         translation2.name = 'translation2';
         translation2.source = source1.id;
       });
@@ -1996,12 +1996,12 @@ describe('ReadonlyRepository', () => {
     it('should support call without constraints', async () => {
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -2023,17 +2023,17 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call constraints as a parameter', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -2058,17 +2058,17 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with chained where constraints', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 
@@ -2092,17 +2092,17 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with chained where constraints - Promise.all', async () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
       const products = [
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
         {
-          id: faker.random.number(),
-          name: `product - ${faker.random.uuid()}`,
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
         },
       ];
 

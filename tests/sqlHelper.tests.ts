@@ -111,7 +111,7 @@ describe('sqlHelper', () => {
     });
     describe('where', () => {
       it('should include where statement if defined', () => {
-        const name = faker.random.uuid();
+        const name = faker.datatype.uuid();
         const { query, params } = sqlHelper.getSelectQueryAndParams<ProductWithCreatedAt>({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
@@ -197,8 +197,8 @@ describe('sqlHelper', () => {
     });
     it('should include where statement if defined', () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
 
       const { query, params } = sqlHelper.getCountQueryAndParams<Product>({
@@ -220,7 +220,7 @@ describe('sqlHelper', () => {
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           values: {
-            store: faker.random.number(),
+            store: faker.datatype.number(),
           },
           returnRecords: true,
         });
@@ -232,14 +232,14 @@ describe('sqlHelper', () => {
           repositoriesByModelNameLowered,
           model: repositoriesByModelName.RequiredPropertyWithDefaultValue.model as ModelMetadata<RequiredPropertyWithDefaultValue>,
           values: {
-            bar: faker.random.uuid(),
+            bar: faker.datatype.uuid(),
           },
           returnRecords: true,
         });
       }).should.not.throw();
     });
     it('should not override properties with defaultValue if value is defined', () => {
-      const value = faker.random.uuid();
+      const value = faker.datatype.uuid();
       const { params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelName.RequiredPropertyWithDefaultValue.model as ModelMetadata<RequiredPropertyWithDefaultValue>,
@@ -252,7 +252,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([value]);
     });
     it('should set undefined properties to defaultValue if defined on schema', () => {
-      const bar = faker.random.uuid();
+      const bar = faker.datatype.uuid();
       const { params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelName.RequiredPropertyWithDefaultValue.model as ModelMetadata<RequiredPropertyWithDefaultValue>,
@@ -264,7 +264,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal(['foobar', bar]);
     });
     it('should set undefined properties to result of defaultValue function if defined on schema', () => {
-      const bar = faker.random.uuid();
+      const bar = faker.datatype.uuid();
       const { params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelName.RequiredPropertyWithDefaultValueFunction.model as ModelMetadata<RequiredPropertyWithDefaultValueFunction>,
@@ -276,7 +276,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal(['foobar', bar]);
     });
     it('should set createdAt if schema.autoCreatedAt and value is undefined', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const beforeTime = new Date();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
@@ -300,7 +300,7 @@ describe('sqlHelper', () => {
     });
     it('should not override createdAt if schema.autoCreatedAt and value is defined', () => {
       const createdAt = faker.date.past();
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelName.SimpleWithCreatedAt.model as ModelMetadata<SimpleWithCreatedAt>,
@@ -315,7 +315,7 @@ describe('sqlHelper', () => {
     });
     it('should set updatedAt if schema.autoUpdatedAt and value is undefined', () => {
       const beforeTime = new Date();
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelName.SimpleWithUpdatedAt.model as ModelMetadata<SimpleWithUpdatedAt>,
@@ -338,7 +338,7 @@ describe('sqlHelper', () => {
     });
     it('should not override updatedAt if schema.autoUpdatedAt and value is defined', () => {
       const updatedAt = faker.date.past();
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelName.SimpleWithUpdatedAt.model as ModelMetadata<SimpleWithUpdatedAt>,
@@ -353,11 +353,11 @@ describe('sqlHelper', () => {
     });
     it('should ignore collection properties', () => {
       const product = new Product();
-      product.id = faker.random.number();
+      product.id = faker.datatype.number();
       const category = new Category();
-      category.id = faker.random.number();
+      category.id = faker.datatype.number();
 
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelName.SimpleWithCollections.model as ModelMetadata<SimpleWithCollections>,
@@ -377,10 +377,10 @@ describe('sqlHelper', () => {
     });
     it('should use primaryKey value if hydrated object is passed as a value', () => {
       const store = new Store();
-      store.id = faker.random.number();
-      store.name = `store - ${faker.random.uuid()}`;
+      store.id = faker.datatype.number();
+      store.name = `store - ${faker.datatype.uuid()}`;
 
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -397,10 +397,10 @@ describe('sqlHelper', () => {
     });
     it('should cast value to jsonb if type=json and value is an array', () => {
       // Please see https://github.com/brianc/node-postgres/issues/442 for details of why this is needed
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const bar = [
         {
-          foo: faker.random.uuid(),
+          foo: faker.datatype.uuid(),
         },
       ];
 
@@ -417,8 +417,8 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name, JSON.stringify(bar)]);
     });
     it('should support inserting a single record and return records if returnRecords=true', () => {
-      const storeId = faker.random.number();
-      const name = faker.random.uuid();
+      const storeId = faker.datatype.number();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -435,8 +435,8 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name, [], storeId]);
     });
     it('should support inserting a single record and return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
-      const storeId = faker.random.number();
-      const name = faker.random.uuid();
+      const storeId = faker.datatype.number();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams<Product>({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -452,8 +452,8 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name, [], storeId]);
     });
     it('should support inserting a single record and not return records if returnRecords=false', () => {
-      const storeId = faker.random.number();
-      const name = faker.random.uuid();
+      const storeId = faker.datatype.number();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -468,10 +468,10 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name, [], storeId]);
     });
     it('should support inserting multiple records and return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
-      const storeId1 = faker.random.number();
-      const name1 = faker.random.uuid();
-      const storeId2 = faker.random.number();
-      const name2 = faker.random.uuid();
+      const storeId1 = faker.datatype.number();
+      const name1 = faker.datatype.uuid();
+      const storeId2 = faker.datatype.number();
+      const name2 = faker.datatype.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams<Product>({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -493,10 +493,10 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name1, name2, [], [], storeId1, storeId2]);
     });
     it('should support inserting multiple records and return records if returnRecords=true', () => {
-      const storeId1 = faker.random.number();
-      const name1 = faker.random.uuid();
-      const storeId2 = faker.random.number();
-      const name2 = faker.random.uuid();
+      const storeId1 = faker.datatype.number();
+      const name1 = faker.datatype.uuid();
+      const storeId2 = faker.datatype.number();
+      const name2 = faker.datatype.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -518,10 +518,10 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name1, name2, [], [], storeId1, storeId2]);
     });
     it('should support inserting multiple records and not return records if returnRecords=false', () => {
-      const storeId1 = faker.random.number();
-      const name1 = faker.random.uuid();
-      const storeId2 = faker.random.number();
-      const name2 = faker.random.uuid();
+      const storeId1 = faker.datatype.number();
+      const name1 = faker.datatype.uuid();
+      const storeId2 = faker.datatype.number();
+      const name2 = faker.datatype.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -544,7 +544,7 @@ describe('sqlHelper', () => {
   });
   describe('#getUpdateQueryAndParams()', () => {
     it('should not set createdAt if schema.autoCreatedAt and value is undefined', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelName.SimpleWithCreatedAt.model as ModelMetadata<SimpleWithCreatedAt>,
@@ -559,7 +559,7 @@ describe('sqlHelper', () => {
     });
     it('should set updatedAt if schema.autoUpdatedAt and value is undefined', () => {
       const beforeTime = new Date();
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelName.SimpleWithUpdatedAt.model as ModelMetadata<SimpleWithUpdatedAt>,
@@ -583,7 +583,7 @@ describe('sqlHelper', () => {
     });
     it('should not override updatedAt if schema.autoUpdatedAt and value is defined', () => {
       const updatedAt = faker.date.past();
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelName.SimpleWithUpdatedAt.model as ModelMetadata<SimpleWithUpdatedAt>,
@@ -599,11 +599,11 @@ describe('sqlHelper', () => {
     });
     it('should ignore collection properties', () => {
       const product = new Product();
-      product.id = faker.random.number();
+      product.id = faker.datatype.number();
       const category = new Category();
-      category.id = faker.random.number();
+      category.id = faker.datatype.number();
 
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelName.SimpleWithCollections.model as ModelMetadata<SimpleWithCollections>,
@@ -624,10 +624,10 @@ describe('sqlHelper', () => {
     });
     it('should use primaryKey value if hydrated object is passed as a value', () => {
       const store = new Store();
-      store.id = faker.random.number();
-      store.name = `store - ${faker.random.uuid()}`;
+      store.id = faker.datatype.number();
+      store.name = `store - ${faker.datatype.uuid()}`;
 
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
@@ -645,10 +645,10 @@ describe('sqlHelper', () => {
     });
     it('should cast value to jsonb if type=json and value is an array', () => {
       // Please see https://github.com/brianc/node-postgres/issues/442 for details of why this is needed
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const bar = [
         {
-          foo: faker.random.uuid(),
+          foo: faker.datatype.uuid(),
         },
       ];
 
@@ -667,11 +667,11 @@ describe('sqlHelper', () => {
     });
     it('should include where statement if defined', () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
 
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams<ProductWithCreatedAt>({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
@@ -689,9 +689,9 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name, store.id]);
     });
     it('should return records if returnRecords=true', () => {
-      const productId = faker.random.number();
-      const storeId = faker.random.number();
-      const name = faker.random.uuid();
+      const productId = faker.datatype.number();
+      const storeId = faker.datatype.number();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
@@ -711,9 +711,9 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name, storeId, productId]);
     });
     it('should return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
-      const productId = faker.random.number();
-      const storeId = faker.random.number();
-      const name = faker.random.uuid();
+      const productId = faker.datatype.number();
+      const storeId = faker.datatype.number();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -732,9 +732,9 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name, storeId, productId]);
     });
     it('should not return records if returnRecords=false', () => {
-      const productId = faker.random.number();
-      const storeId = faker.random.number();
-      const name = faker.random.uuid();
+      const productId = faker.datatype.number();
+      const storeId = faker.datatype.number();
+      const name = faker.datatype.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -766,8 +766,8 @@ describe('sqlHelper', () => {
     });
     it('should include where statement if defined', () => {
       const store = {
-        id: faker.random.number(),
-        name: `store - ${faker.random.uuid()}`,
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
       };
 
       const { query, params } = sqlHelper.getDeleteQueryAndParams({
@@ -784,7 +784,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([store.id]);
     });
     it('should return records if returnRecords=true', () => {
-      const productId = faker.random.number();
+      const productId = faker.datatype.number();
       const { query, params } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
@@ -800,7 +800,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([productId]);
     });
     it('should return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
-      const productId = faker.random.number();
+      const productId = faker.datatype.number();
       const { query, params } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -815,7 +815,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([productId]);
     });
     it('should not return records if returnRecords=false', () => {
-      const productId = faker.random.number();
+      const productId = faker.datatype.number();
       const { query, params } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -886,7 +886,7 @@ describe('sqlHelper', () => {
       }).should.throw(Error, `Attempting to query with an undefined value. store on ${repositoriesByModelNameLowered.product.model.name}`);
     });
     it('should use column name if defined', () => {
-      const storeId = faker.random.number();
+      const storeId = faker.datatype.number();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -900,7 +900,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([storeId]);
     });
     it('should use property name if columnName is not defined', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -914,7 +914,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name]);
     });
     it('should handle startsWith', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -931,7 +931,7 @@ describe('sqlHelper', () => {
     });
     it('should handle startsWith with an array of values', () => {
       const name1 = 'TestUpper';
-      const name2 = faker.random.uuid();
+      const name2 = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -947,7 +947,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([[`${name1.toLowerCase()}%`, `${name2.toLowerCase()}%`]]);
     });
     it('should handle endsWith', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -964,7 +964,7 @@ describe('sqlHelper', () => {
     });
     it('should handle endsWith with an array of values', () => {
       const name1 = 'TestUpper';
-      const name2 = faker.random.uuid();
+      const name2 = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -980,7 +980,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([[`%${name1.toLowerCase()}`, `%${name2.toLowerCase()}`]]);
     });
     it('should handle contains', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -997,7 +997,7 @@ describe('sqlHelper', () => {
     });
     it('should handle contains with an array of values', () => {
       const name1 = 'TestUpper';
-      const name2 = faker.random.uuid();
+      const name2 = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1013,7 +1013,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([[`%${name1.toLowerCase()}%`, `%${name2.toLowerCase()}%`]]);
     });
     it('should handle like', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1029,7 +1029,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name]);
     });
     it('should handle not like', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1079,7 +1079,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([]);
     });
     it('should handle like with array with a single value', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1095,7 +1095,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name]);
     });
     it('should handle not like with array with a single value', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1114,7 +1114,7 @@ describe('sqlHelper', () => {
     });
     it('should handle like with an array of values', () => {
       const name1 = 'TestUpper';
-      const name2 = faker.random.uuid();
+      const name2 = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1130,7 +1130,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([[name1.toLowerCase(), name2.toLowerCase()]]);
     });
     it('should handle like with an array of null, empty string, and single value', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1147,7 +1147,7 @@ describe('sqlHelper', () => {
     });
     it('should handle not like with an array of values', () => {
       const name1 = 'TestUpper';
-      const name2 = faker.random.uuid();
+      const name2 = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1165,7 +1165,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([[name1.toLowerCase(), name2.toLowerCase()]]);
     });
     it('should handle not like with an array of null, empty string, and single value', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1215,7 +1215,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([]);
     });
     it('should handle like with array column and array with a single value', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1231,7 +1231,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name]);
     });
     it('should handle not like with array column and array with a single value', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1249,7 +1249,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name]);
     });
     it('should handle like with array column and single value', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1265,7 +1265,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name]);
     });
     it('should handle not like with array column and a single value', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1284,7 +1284,7 @@ describe('sqlHelper', () => {
     });
     it('should handle like with array column and an array of values', () => {
       const name1 = 'TestUpper';
-      const name2 = faker.random.uuid();
+      const name2 = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1301,7 +1301,7 @@ describe('sqlHelper', () => {
     });
     it('should handle not like with array column and an array of values', () => {
       const name1 = 'TestUpper';
-      const name2 = faker.random.uuid();
+      const name2 = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1335,8 +1335,8 @@ describe('sqlHelper', () => {
       params.should.deep.equal([now]);
     });
     it('should handle or', () => {
-      const name = faker.random.uuid();
-      const store = faker.random.number();
+      const name = faker.datatype.uuid();
+      const store = faker.datatype.number();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1360,10 +1360,10 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name, name, store]);
     });
     it('should handle mixed or/and constraints', () => {
-      const id = faker.random.number();
-      const name = faker.random.uuid();
-      const store = faker.random.number();
-      const sku = faker.random.uuid();
+      const id = faker.datatype.number();
+      const name = faker.datatype.uuid();
+      const store = faker.datatype.number();
+      const sku = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1389,7 +1389,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([id, name, name, store, sku]);
     });
     it('should treat string type with array values as an =ANY() statement', () => {
-      const name = [faker.random.uuid(), faker.random.uuid()];
+      const name = [faker.datatype.uuid(), faker.datatype.uuid()];
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1460,7 +1460,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([]);
       });
       it('should handle comparing array type with single value as =ANY()', () => {
-        const value = faker.random.uuid();
+        const value = faker.datatype.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
@@ -1474,7 +1474,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with array of a single value as =ANY()', () => {
-        const value = faker.random.uuid();
+        const value = faker.datatype.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
@@ -1488,7 +1488,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with negated single value as <>ALL()', () => {
-        const value = faker.random.uuid();
+        const value = faker.datatype.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
@@ -1504,7 +1504,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with negated array of a single value as <>ALL()', () => {
-        const value = faker.random.uuid();
+        const value = faker.datatype.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
@@ -1520,7 +1520,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with array value as separate =ANY() statements', () => {
-        const values = [faker.random.uuid(), faker.random.uuid()];
+        const values = [faker.datatype.uuid(), faker.datatype.uuid()];
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
@@ -1534,7 +1534,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([values[0], values[1]]);
       });
       it('should handle comparing array type with negated array value as separate <>ALL() statements', () => {
-        const values = [faker.random.uuid(), faker.random.uuid()];
+        const values = [faker.datatype.uuid(), faker.datatype.uuid()];
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
@@ -1579,7 +1579,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([]);
       });
       it('should handle comparing array type with single value as =ANY()', () => {
-        const value = faker.random.uuid();
+        const value = faker.datatype.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
@@ -1593,7 +1593,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with array of a single value as =ANY()', () => {
-        const value = faker.random.uuid();
+        const value = faker.datatype.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
@@ -1607,7 +1607,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with negated single value as <>ALL()', () => {
-        const value = faker.random.uuid();
+        const value = faker.datatype.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
@@ -1623,7 +1623,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with negated array of a single value as <>ALL()', () => {
-        const value = faker.random.uuid();
+        const value = faker.datatype.uuid();
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
@@ -1639,7 +1639,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with array value as separate =ANY() statements', () => {
-        const values = [faker.random.uuid(), faker.random.uuid()];
+        const values = [faker.datatype.uuid(), faker.datatype.uuid()];
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
@@ -1653,7 +1653,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([values[0], values[1]]);
       });
       it('should handle comparing array type with negated array value as separate <>ALL() statements', () => {
-        const values = [faker.random.uuid(), faker.random.uuid()];
+        const values = [faker.datatype.uuid(), faker.datatype.uuid()];
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
@@ -1698,7 +1698,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal([]);
     });
     it('should handle single value array', () => {
-      const name = faker.random.uuid();
+      const name = faker.datatype.uuid();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1725,7 +1725,7 @@ describe('sqlHelper', () => {
       params.should.deep.equal(['']);
     });
     it('should treat negation of array value as an <>ALL() statement', () => {
-      const name = [faker.random.uuid(), faker.random.uuid()];
+      const name = [faker.datatype.uuid(), faker.datatype.uuid()];
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1772,7 +1772,7 @@ describe('sqlHelper', () => {
     });
     it('should use primaryKey if hydrated object is passed as a query value', () => {
       const store = {
-        id: faker.random.number(),
+        id: faker.datatype.number(),
       };
 
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
