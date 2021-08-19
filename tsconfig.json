@@ -13,6 +13,7 @@
 
     "declaration": true,
     "sourceMap": true,
+    "sourceRoot": ".",
 
     "strict": true,
     "forceConsistentCasingInFileNames": true,

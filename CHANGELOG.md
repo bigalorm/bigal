@@ -1,3 +1,7 @@
+### 9.1.4
+  * Update npms
+  * Set sourceRoot when transpiling Typescript, to help with sourcemap paths
+
 ### 9.1.3
   * Fix deprecated faker.js usage
 
