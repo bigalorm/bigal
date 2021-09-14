@@ -1987,7 +1987,11 @@ describe('ReadonlyRepository', () => {
             });
           assert.fail('Should not get here');
         } catch (ex) {
-          (ex as Error).message.should.equal('Unable to populate "translations" on SimpleWithSelfReference. "source" is not included in select array.');
+          if (ex instanceof Error) {
+            ex.message.should.equal('Unable to populate "translations" on SimpleWithSelfReference. "source" is not included in select array.');
+          } else {
+            assert.fail('Exception was not of type Error');
+          }
         }
       });
     });
