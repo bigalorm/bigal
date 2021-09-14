@@ -136,7 +136,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * @param {string|number} [options.skip] - Number of records to skip
        * @param {string|number} [options.limit] - Number of results to return
        */
-      populate<TProperty extends string & keyof PickByValueType<T, Entity>>(
+      populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(
         propertyName: TProperty,
         options?: PopulateArgs<GetValueType<PickByValueType<T, Entity>[TProperty], Entity>>,
       ): FindOneResult<T, Omit<QueryResult<T>, TProperty> & PickAsPopulated<T, TProperty>> {
@@ -162,7 +162,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
-      UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(_propertyName: TProperty): FindOneResult<T, Omit<QueryResult<T>, TProperty> & Pick<T, TProperty>> {
+      UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(
+        _propertyName: TProperty,
+      ): FindOneResult<T, Omit<QueryResult<T>, TProperty> & Pick<T, TProperty>> {
         return this;
       },
       UNSAFE_withFieldValue<TProperty extends string & keyof T, TValue extends T[TProperty]>(
@@ -304,7 +306,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * @param {string|number} [options.skip] - Number of records to skip
        * @param {string|number} [options.limit] - Number of results to return
        */
-      populate<TProperty extends string & keyof PickByValueType<T, Entity>>(
+      populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(
         propertyName: TProperty,
         options?: PopulateArgs<GetValueType<PickByValueType<T, Entity>[TProperty], Entity>>,
       ): FindResult<T, Omit<QueryResult<T>, TProperty> & PickAsPopulated<T, TProperty>> {
@@ -349,7 +351,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
-      UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(_propertyName: TProperty): FindResult<T, Omit<QueryResult<T>, TProperty> & Pick<T, TProperty>> {
+      UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(
+        _propertyName: TProperty,
+      ): FindResult<T, Omit<QueryResult<T>, TProperty> & Pick<T, TProperty>> {
         return this;
       },
       /**
@@ -704,6 +708,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     if (!column.through) {
       throw new Error(`Unable to populate multi-map collection: Missing "through" value. From ${column.target}#${populate.propertyName}`);
     }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const throughRepository = this._repositoriesByModelNameLowered[column.through.toLowerCase()] as IReadonlyRepository<any>;
     if (!throughRepository) {

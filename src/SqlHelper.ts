@@ -246,7 +246,7 @@ export function getInsertQueryAndParams<T extends Entity>({
             throw new Error(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`);
           }
 
-          const primaryKeyValue = (entityValue as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T>] as EntityFieldValue;
+          const primaryKeyValue = (entityValue as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T> & keyof T] as EntityFieldValue;
           if (_.isNil(primaryKeyValue)) {
             throw new Error(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`);
           }
@@ -355,7 +355,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
             throw new Error(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`);
           }
 
-          const primaryKeyValue = (value as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T>] as EntityFieldValue;
+          const primaryKeyValue = (value as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T> & keyof T] as EntityFieldValue;
           if (_.isNil(primaryKeyValue)) {
             throw new Error(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`);
           }

@@ -8,12 +8,12 @@ import type { WhereQuery } from './WhereQuery';
 
 export interface FindOneResult<T extends Entity, TReturn> extends ChainablePromiseLike<TReturn | null> {
   where(args: WhereQuery<T>): FindOneResult<T, TReturn>;
-  populate<TProperty extends string & keyof PickByValueType<T, Entity>>(
+  populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(
     propertyName: TProperty,
     options?: PopulateArgs<GetValueType<PickByValueType<T, Entity>[TProperty], Entity>>,
   ): FindOneResult<T, Omit<TReturn, TProperty> & PickAsPopulated<T, TProperty>>;
   sort(value?: Sort<T>): FindOneResult<T, TReturn>;
-  UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity>>(propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
+  UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
   UNSAFE_withFieldValue<TProperty extends string & keyof T, TValue extends T[TProperty]>(
     propertyName: TProperty,
     value: TValue,

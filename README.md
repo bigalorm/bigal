@@ -20,16 +20,16 @@ This ORM does not:
 ## Install
 
 ```sh
-$ npm install pg postgres-pool bigal
+npm install pg postgres-pool bigal
 ```
 
 ## Configuring
 
-#### Defining database models
+### Defining database models
 
 Model definitions need to extend `Entity`.
 
-```typescript
+```ts
 import { Entity } from 'bigal';
 import { column, primaryColumn, table } from 'bigal/decorators';
 import { Store } from './Store';
@@ -76,7 +76,7 @@ export class Product extends Entity {
 }
 ```
 
-#### Initialize repositories
+### Initialize repositories
 
 ```ts
 import {
@@ -157,17 +157,17 @@ export function shutdown() {
 
 ### `.findOne()` - Fetch a single object
 
-#### Where criteria specified as a chained method
+#### Fetch a single object with where criteria specified as a chained method
 
-```js
+```ts
 const item = await ProductRepository.findOne().where({
   id: context.params.id,
 });
 ```
 
-#### Restrict columns selected from db (query projection)
+#### Fetch a single object and restrict columns selected from db (query projection)
 
-```js
+```ts
 const item = await ProductRepository.findOne({
   select: ['name'],
 }).where({
@@ -177,7 +177,7 @@ const item = await ProductRepository.findOne({
 
 #### Populate relation - Relations can be one-to-many (ether direction) or many-to-many
 
-```js
+```ts
 const item = await ProductRepository.findOne()
   .where({
     id: context.params.id,
@@ -187,9 +187,9 @@ const item = await ProductRepository.findOne()
   });
 ```
 
-#### Sorted query before returning result
+#### Fetch a single object and perform a db sort before returning result
 
-```js
+```ts
 const item = await ProductRepository.findOne()
   .where({
     foo: context.params.foo,
@@ -201,17 +201,17 @@ const item = await ProductRepository.findOne()
 
 ### `.find()` - Fetch a multiple objects
 
-#### Where criteria specified as a chained method
+#### Fetch multiple objects with where criteria specified as a chained method
 
-```js
+```ts
 const items = await ProductRepository.find().where({
   foo: context.params.foo,
 });
 ```
 
-#### Restrict columns selected from db (query projection)
+#### Fetch multiple objects and restrict columns selected from db (query projection)
 
-```js
+```ts
 const items = await ProductRepository.find({
   select: ['name'],
 }).where({
@@ -221,7 +221,7 @@ const items = await ProductRepository.find({
 
 #### Example of an OR statement
 
-```js
+```ts
 const items = await PersonRepository.find().where({
   firstName: {
     like: ['walter', 'Jess%'],
@@ -231,7 +231,7 @@ const items = await PersonRepository.find().where({
 
 #### Example of an AND statement
 
-```js
+```ts
 const items = await PersonRepository.find().where({
   lastName: {
     '!': {
@@ -241,9 +241,9 @@ const items = await PersonRepository.find().where({
 });
 ```
 
-#### Sorted query before returning result
+#### Fetch multiple objects and perform a db sort before returning result
 
-```js
+```ts
 const items = await PersonRepository.find()
   .where({
     firstName: {
@@ -261,7 +261,7 @@ const items = await PersonRepository.find()
 
 #### Limit number results returned
 
-```js
+```ts
 const items = await PersonRepository.find()
   .where({
     age: [22, 23, 24],
@@ -271,7 +271,7 @@ const items = await PersonRepository.find()
 
 #### Skip `x` results
 
-```js
+```ts
 const items = await FooRepository.find()
   .where({
     or: [
@@ -288,7 +288,7 @@ const items = await FooRepository.find()
 
 #### Page results using `skip()` & `limit()`
 
-```js
+```ts
 const items = await FooRepository.find()
   .where({
     foo: context.params.foo,
@@ -299,7 +299,7 @@ const items = await FooRepository.find()
 
 #### Page results using `paginate`
 
-```js
+```ts
 const page = 2;
 const pageSize = 42;
 const items = await FooRepository.find()
@@ -313,7 +313,7 @@ const items = await FooRepository.find()
 
 ### `.count()` - Get the number of records matching the where criteria
 
-```js
+```ts
 const count = await PersonRepository.count().where({
   name: {
     like: 'Karl',
@@ -328,7 +328,7 @@ const count = await PersonRepository.count().where({
 
 #### Insert a single object
 
-```js
+```ts
 const item = await PersonRepository.create({
   name: 'Karl',
 });
@@ -337,7 +337,7 @@ const item = await PersonRepository.create({
 
 #### Insert a single object without returning results from the db
 
-```js
+```ts
 await PersonRepository.create(
   {
     name: 'Karl',
@@ -350,7 +350,7 @@ await PersonRepository.create(
 
 #### Insert a single object but limit columns returned from db for inserted records (query projection)
 
-```js
+```ts
 const item = await PersonRepository.create(
   {
     name: 'Karl',
@@ -366,7 +366,7 @@ const item = await PersonRepository.create(
 
 #### Insert a multiple object
 
-```js
+```ts
 const items = await PersonRepository.create([
   {
     name: 'LX',
@@ -380,7 +380,7 @@ const items = await PersonRepository.create([
 
 #### Insert a multiple object without returning results from the db
 
-```js
+```ts
 await PersonRepository.create(
   [
     {
@@ -396,9 +396,9 @@ await PersonRepository.create(
 );
 ```
 
-#### Insert a multiple object
+#### Insert multiple objects
 
-```js
+```ts
 const items = await PersonRepository.create(
   [
     {
@@ -423,7 +423,7 @@ const items = await PersonRepository.create(
 
 #### Update single record
 
-```js
+```ts
 const items = await PersonRepository.update(
   {
     id: 42,
@@ -439,7 +439,7 @@ const items = await PersonRepository.update(
 
 #### Update record without returning results from the db
 
-```js
+```ts
 await PersonRepository.update(
   {
     id: 42,
@@ -455,7 +455,7 @@ await PersonRepository.update(
 
 #### Update records and limit columns returned from db for affected records (query projection)
 
-```js
+```ts
 const items = await PersonRepository.update(
   {
     id: [42, 43],
@@ -476,7 +476,7 @@ const items = await PersonRepository.update(
 
 #### Delete single record
 
-```js
+```ts
 const items = await PersonRepository.destroy({
   id: 42,
 });
@@ -487,7 +487,7 @@ const items = await PersonRepository.destroy({
 
 #### Delete record without returning row data from the db
 
-```js
+```ts
 await PersonRepository.destroy(
   {
     id: 42,
@@ -500,7 +500,7 @@ await PersonRepository.destroy(
 
 #### Delete records and limit columns returned from db for affected records (query projection)
 
-```js
+```ts
 const items = await PersonRepository.destroy(
   {
     id: [24, 25],
@@ -526,7 +526,7 @@ export interface IMyJsonType {
 }
 
 export class Product extends Entity {
-  @primaryColumn({type: 'integer'})
+  @primaryColumn({ type: 'integer' })
   public id!: number;
 
   @column({
