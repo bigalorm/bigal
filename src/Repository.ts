@@ -87,7 +87,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
       returnSelect,
     });
 
-    const results = await this._pool.query(query, params);
+    const results = await this._pool.query<Partial<QueryResult<T>>>(query, params);
     if (returnRecords) {
       if (_.isArray(values)) {
         return this._buildInstances(results.rows);
@@ -165,7 +165,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
       returnSelect,
     });
 
-    const results = await this._pool.query(query, params);
+    const results = await this._pool.query<Partial<QueryResult<T>>>(query, params);
 
     if (returnRecords) {
       return this._buildInstances(results.rows);
@@ -236,7 +236,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
             returnSelect,
           });
 
-          const result = await modelInstance._pool.query(query, params);
+          const result = await modelInstance._pool.query<Partial<QueryResult<T>>>(query, params);
 
           if (returnRecords) {
             return resolve(modelInstance._buildInstances(result.rows));

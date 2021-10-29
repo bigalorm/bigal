@@ -1,5 +1,10 @@
 # Change Log
 
+## 9.1.6 - 2021-10-29
+
+- Update npms
+- Format markdown files
+
 ## 9.1.5 - 2021-09-14
 
 - Update npms

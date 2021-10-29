@@ -382,7 +382,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             limit: limit || 0,
           });
 
-          const results = await modelInstance._readonlyPool.query(query, params);
+          const results = await modelInstance._readonlyPool.query<Partial<QueryResult<T>>>(query, params);
           const entities = modelInstance._buildInstances(results.rows);
 
           if (populates.length) {
@@ -738,18 +738,13 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     const populateIds = new Set<PrimaryId>();
     const populateIdsByEntityId: Record<PrimaryId, PrimaryId[]> = {};
     for (const mapRecord of mapRecords) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const entityId = mapRecord[column.via];
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const populatedId = mapRecord[relatedModelColumn.via];
+      const entityId = mapRecord[column.via] as PrimaryId;
+      const populatedId = mapRecord[relatedModelColumn.via] as PrimaryId;
       populateIds.add(populatedId);
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (!populateIdsByEntityId[entityId]) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         populateIdsByEntityId[entityId] = [];
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       populateIdsByEntityId[entityId].push(populatedId);
     }
 
