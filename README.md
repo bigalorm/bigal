@@ -175,6 +175,18 @@ const item = await ProductRepository.findOne({
 });
 ```
 
+#### Fetch a single object using explicit DB pool
+
+```ts
+const poolOverride = new Pool(connectionString);
+
+const item = await ProductRepository.findOne({
+  pool: poolOverride,
+}).where({
+  id: context.params.id,
+});
+```
+
 #### Populate relation - Relations can be one-to-many (ether direction) or many-to-many
 
 ```ts
@@ -184,6 +196,21 @@ const item = await ProductRepository.findOne()
   })
   .populate('store', {
     select: ['name'],
+  });
+```
+
+#### Populate relation using explicit DB pool
+
+```ts
+const poolOverride = new Pool(connectionString);
+
+const item = await ProductRepository.findOne()
+  .where({
+    id: context.params.id,
+  })
+  .populate('store', {
+    select: ['name'],
+    pool: poolOverride,
   });
 ```
 
@@ -214,6 +241,18 @@ const items = await ProductRepository.find().where({
 ```ts
 const items = await ProductRepository.find({
   select: ['name'],
+}).where({
+  foo: context.params.foo,
+});
+```
+
+#### Fetch a multiple objects using explicit DB pool
+
+```ts
+const poolOverride = new Pool(connectionString);
+
+const item = await ProductRepository.find({
+  pool: poolOverride,
 }).where({
   foo: context.params.foo,
 });

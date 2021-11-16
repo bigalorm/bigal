@@ -1,5 +1,10 @@
 # Change Log
 
+## 9.2.0 - 2021-11-16
+
+- Update npms
+- Add ability to override db pool for `find()` and `findOne()`
+
 ## 9.1.6 - 2021-10-29
 
 - Update npms

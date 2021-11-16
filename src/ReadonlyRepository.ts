@@ -24,6 +24,7 @@ interface Populate {
   sort?: SortObject<Entity> | string;
   skip?: number;
   limit?: number;
+  pool?: Pool;
 }
 
 type PrimaryId = number | string;
@@ -76,6 +77,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     let select: (string & keyof OmitFunctionsAndEntityCollections<T>)[] | undefined;
     let where: WhereQuery<T> = {};
     let sort: SortObject<T> | string | null = null;
+    let poolOverride: Pool | undefined;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
     for (const [name, value] of Object.entries(args)) {
       let isWhereCriteria = false;
@@ -89,6 +91,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           break;
         case 'sort':
           sort = value as SortObject<T> | string;
+          break;
+        case 'pool':
+          poolOverride = value as Pool;
           break;
         default:
           select = undefined;
@@ -147,6 +152,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           sort: options?.sort,
           skip: options?.skip,
           limit: options?.limit,
+          pool: options?.pool || poolOverride,
         });
 
         return this as FindOneResult<T, Omit<QueryResult<T>, TProperty> & PickAsPopulated<T, TProperty>>;
@@ -194,7 +200,8 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             skip: 0,
           });
 
-          const results = await modelInstance._readonlyPool.query<Partial<QueryResult<T>>>(query, params);
+          const pool = poolOverride || modelInstance._readonlyPool;
+          const results = await pool.query<Partial<QueryResult<T>>>(query, params);
           if (results.rows && results.rows.length) {
             const result = modelInstance._buildInstance(results.rows[0]);
 
@@ -245,6 +252,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     let sort: SortObject<T> | string | null = null;
     let skip: number | null = null;
     let limit: number | null = null;
+    let poolOverride: Pool | undefined;
     // Args can be a FindArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
     for (const [name, value] of Object.entries(args)) {
       let isWhereCriteria = false;
@@ -264,6 +272,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           break;
         case 'limit':
           limit = value as number;
+          break;
+        case 'pool':
+          poolOverride = value as Pool;
           break;
         default:
           select = undefined;
@@ -317,6 +328,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           sort: options?.sort,
           skip: options?.skip,
           limit: options?.limit,
+          pool: options?.pool || poolOverride,
         });
 
         // TODO: Figure out the type to make this happy without having to cast to unknown
@@ -382,7 +394,8 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             limit: limit || 0,
           });
 
-          const results = await modelInstance._readonlyPool.query<Partial<QueryResult<T>>>(query, params);
+          const pool = poolOverride || modelInstance._readonlyPool;
+          const results = await pool.query<Partial<QueryResult<T>>>(query, params);
           const entities = modelInstance._buildInstances(results.rows);
 
           if (populates.length) {
@@ -646,6 +659,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       select: populate.select,
       where: populateWhere,
       sort: populate.sort,
+      pool: populate.pool,
     } as FindArgs<Entity>);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const populateResultsById = _.keyBy(populateResults, populateRepository.model.primaryKeyColumn.propertyName) as Record<number | string, any>;
@@ -679,6 +693,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       sort: populate.sort,
       skip: populate.skip,
       limit: populate.limit,
+      pool: populate.pool,
     } as FindArgs<Entity>);
 
     if (entities.length === 1) {
@@ -734,6 +749,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       where: {
         [column.via]: entityIds,
       } as WhereQuery<T>,
+      pool: populate.pool,
     });
     const populateIds = new Set<PrimaryId>();
     const populateIdsByEntityId: Record<PrimaryId, PrimaryId[]> = {};
@@ -761,6 +777,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       sort: populate.sort,
       skip: populate.skip,
       limit: populate.limit,
+      pool: populate.pool,
     } as FindArgs<Entity>);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const populateResultsById = _.keyBy(populateResults, populateModelPrimaryKeyPropertyName) as Record<PrimaryId, Entity>;

@@ -1,3 +1,5 @@
+import type { Pool } from 'postgres-pool';
+
 import type { Entity } from '../Entity';
 import type { OmitFunctionsAndEntityCollections } from '../types';
 
@@ -10,4 +12,5 @@ export interface PopulateArgs<T extends Entity> {
   sort?: Sort<T>;
   skip?: number;
   limit?: number;
+  pool?: Pool;
 }

@@ -191,6 +191,28 @@ describe('ReadonlyRepository', () => {
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 LIMIT 1');
       params!.should.deep.equal([productStore.id]);
     });
+    it('should support call with explicit pool override', async () => {
+      const poolOverride = mock(Pool);
+      const product = {
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
+      };
+
+      when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      const result = await ProductRepository.findOne({
+        pool: instance(poolOverride),
+      }).where({
+        id: product.id,
+      });
+      should.exist(result);
+      result!.should.deep.equal(product);
+
+      verify(mockedPool.query(anyString(), anything())).never();
+      const [query, params] = capture(poolOverride.query).first();
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
+      params!.should.deep.equal([product.id]);
+    });
     it('should support call with chained where constraints', async () => {
       const product = {
         id: faker.datatype.number(),
@@ -478,6 +500,84 @@ describe('ReadonlyRepository', () => {
       storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1');
       storeQueryParams!.should.deep.equal([store.id]);
     });
+    it('should support populating a single relation with implicit inherited pool override', async () => {
+      const poolOverride = mock(Pool);
+      const store = {
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
+      };
+      const product = {
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
+        store,
+      };
+
+      when(poolOverride.query(anyString(), anything())).thenResolve(
+        getQueryResult([
+          {
+            id: product.id,
+            name: product.name,
+            store: store.id,
+          },
+        ]),
+        getQueryResult([store]),
+      );
+
+      const result = await ProductRepository.findOne({
+        pool: instance(poolOverride),
+      }).populate('store');
+
+      verify(mockedPool.query(anyString(), anything())).never();
+      verify(poolOverride.query(anyString(), anything())).twice();
+      should.exist(result);
+      result!.should.deep.equal(product);
+
+      const [productQuery, productQueryParams] = capture(poolOverride.query).first();
+      productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      productQueryParams!.should.deep.equal([]);
+      const [storeQuery, storeQueryParams] = capture(poolOverride.query).second();
+      storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1');
+      storeQueryParams!.should.deep.equal([store.id]);
+    });
+    it('should support populating a single relation with explicit pool override', async () => {
+      const storePool = mock(Pool);
+
+      const store = {
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
+      };
+      const product = {
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
+        store,
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([
+          {
+            id: product.id,
+            name: product.name,
+            store: store.id,
+          },
+        ]),
+      );
+      when(storePool.query(anyString(), anything())).thenResolve(getQueryResult([store]));
+
+      const result = await ProductRepository.findOne().populate('store', {
+        pool: instance(storePool),
+      });
+      verify(mockedPool.query(anyString(), anything())).once();
+      verify(storePool.query(anyString(), anything())).once();
+      should.exist(result);
+      result!.should.deep.equal(product);
+
+      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
+      productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      productQueryParams!.should.deep.equal([]);
+      const [storeQuery, storeQueryParams] = capture(storePool.query).first();
+      storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1');
+      storeQueryParams!.should.deep.equal([store.id]);
+    });
     it('should support populating a single relation with partial select and order', async () => {
       const store = {
         id: faker.datatype.number(),
@@ -547,6 +647,87 @@ describe('ReadonlyRepository', () => {
       storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
       storeQueryParams!.should.deep.equal([]);
       const [productQuery, productQueryParams] = capture(mockedPool.query).second();
+      productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
+      productQueryParams!.should.deep.equal([store.id]);
+    });
+    it('should support populating collection with implicit inherited pool override', async () => {
+      const poolOverride = mock(Pool);
+
+      const store = new Store();
+      store.id = faker.datatype.number();
+      store.name = `store - ${faker.datatype.uuid()}`;
+
+      const product1 = new Product();
+      product1.id = faker.datatype.number();
+      product1.name = `product - ${faker.datatype.uuid()}`;
+      product1.store = store.id;
+
+      const product2 = new Product();
+      product2.id = faker.datatype.number();
+      product2.name = `product - ${faker.datatype.uuid()}`;
+      product2.store = store.id;
+
+      const storeWithProducts: QueryResultPopulated<Store, 'products'> = {
+        ...store,
+        products: [product1, product2],
+      };
+
+      when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1, product2]));
+
+      const result = await StoreRepository.findOne({
+        pool: instance(poolOverride),
+      }).populate('products');
+
+      verify(mockedPool.query(anyString(), anything())).never();
+      verify(poolOverride.query(anyString(), anything())).twice();
+      should.exist(result);
+      result!.should.deep.equal(storeWithProducts);
+      storeWithProducts.products.length.should.equal(2);
+
+      const [storeQuery, storeQueryParams] = capture(poolOverride.query).first();
+      storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
+      storeQueryParams!.should.deep.equal([]);
+      const [productQuery, productQueryParams] = capture(poolOverride.query).second();
+      productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
+      productQueryParams!.should.deep.equal([store.id]);
+    });
+    it('should support populating collection with explicit pool override', async () => {
+      const productPool = mock(Pool);
+
+      const store = new Store();
+      store.id = faker.datatype.number();
+      store.name = `store - ${faker.datatype.uuid()}`;
+
+      const product1 = new Product();
+      product1.id = faker.datatype.number();
+      product1.name = `product - ${faker.datatype.uuid()}`;
+      product1.store = store.id;
+
+      const product2 = new Product();
+      product2.id = faker.datatype.number();
+      product2.name = `product - ${faker.datatype.uuid()}`;
+      product2.store = store.id;
+
+      const storeWithProducts: QueryResultPopulated<Store, 'products'> = {
+        ...store,
+        products: [product1, product2],
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]));
+      when(productPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product2]));
+
+      const result = await StoreRepository.findOne().populate('products', {
+        pool: instance(productPool),
+      });
+      verify(mockedPool.query(anyString(), anything())).once();
+      should.exist(result);
+      result!.should.deep.equal(storeWithProducts);
+      storeWithProducts.products.length.should.equal(2);
+
+      const [storeQuery, storeQueryParams] = capture(mockedPool.query).first();
+      storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
+      storeQueryParams!.should.deep.equal([]);
+      const [productQuery, productQueryParams] = capture(productPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
       productQueryParams!.should.deep.equal([store.id]);
     });
@@ -635,6 +816,114 @@ describe('ReadonlyRepository', () => {
       productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
       productCategoryMapQueryParams!.should.deep.equal([product.id]);
       const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
+      categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
+      categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
+    });
+    it('should support populating multi-multi collection with implicit inherited pool override', async () => {
+      const poolOverride = mock(Pool);
+      const product = {
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
+      };
+      const category1 = {
+        id: faker.datatype.number(),
+        name: `category - ${faker.datatype.uuid()}`,
+      };
+      const category2 = {
+        id: faker.datatype.number(),
+        name: `category - ${faker.datatype.uuid()}`,
+      };
+      const productCategory1Map = {
+        id: faker.datatype.number(),
+        product: product.id,
+        category: category1.id,
+      };
+      const productCategory2Map = {
+        id: faker.datatype.number(),
+        product: product.id,
+        category: category2.id,
+      };
+
+      const productWithCategories = _.extend(
+        {
+          categories: [category1, category2],
+        },
+        product,
+      );
+
+      when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory1Map, productCategory2Map]), getQueryResult([category1, category2]));
+
+      const result = await ProductRepository.findOne({
+        pool: instance(poolOverride),
+      }).populate('categories');
+
+      verify(mockedPool.query(anyString(), anything())).never();
+      verify(poolOverride.query(anyString(), anything())).thrice();
+      should.exist(result);
+      result!.should.deep.equal(productWithCategories);
+
+      const [productQuery, productQueryParams] = capture(poolOverride.query).first();
+      productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      productQueryParams!.should.deep.equal([]);
+      const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(poolOverride.query).second();
+      productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
+      productCategoryMapQueryParams!.should.deep.equal([product.id]);
+      const [categoryQuery, categoryQueryParams] = capture(poolOverride.query).third();
+      categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
+      categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
+    });
+    it('should support populating multi-multi collection with explicit pool override', async () => {
+      const categoryPool = mock(Pool);
+
+      const product = {
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
+      };
+      const category1 = {
+        id: faker.datatype.number(),
+        name: `category - ${faker.datatype.uuid()}`,
+      };
+      const category2 = {
+        id: faker.datatype.number(),
+        name: `category - ${faker.datatype.uuid()}`,
+      };
+      const productCategory1Map = {
+        id: faker.datatype.number(),
+        product: product.id,
+        category: category1.id,
+      };
+      const productCategory2Map = {
+        id: faker.datatype.number(),
+        product: product.id,
+        category: category2.id,
+      };
+
+      const productWithCategories = _.extend(
+        {
+          categories: [category1, category2],
+        },
+        product,
+      );
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      when(categoryPool.query(anyString(), anything())).thenResolve(getQueryResult([productCategory1Map, productCategory2Map]), getQueryResult([category1, category2]));
+
+      const result = await ProductRepository.findOne().populate('categories', {
+        pool: instance(categoryPool),
+      });
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      verify(categoryPool.query(anyString(), anything())).twice();
+      should.exist(result);
+      result!.should.deep.equal(productWithCategories);
+
+      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
+      productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      productQueryParams!.should.deep.equal([]);
+      const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(categoryPool.query).first();
+      productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
+      productCategoryMapQueryParams!.should.deep.equal([product.id]);
+      const [categoryQuery, categoryQueryParams] = capture(categoryPool.query).second();
       categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
       categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
     });
@@ -1193,6 +1482,31 @@ describe('ReadonlyRepository', () => {
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
       params!.should.deep.equal([_.map(products, 'id'), store.id]);
     });
+    it('should support call with explicit pool override', async () => {
+      const poolOverride = mock(Pool);
+      const products = [
+        {
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
+        },
+        {
+          id: faker.datatype.number(),
+          name: `product - ${faker.datatype.uuid()}`,
+        },
+      ];
+
+      when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      const result = await ProductRepository.find({
+        pool: instance(poolOverride),
+      });
+      should.exist(result);
+      result.should.deep.equal(products);
+
+      verify(mockedPool.query(anyString(), anything())).never();
+      const [query, params] = capture(poolOverride.query).first();
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+      params!.should.deep.equal([]);
+    });
     it('should support call with chained where constraints', async () => {
       const store = {
         id: faker.datatype.number(),
@@ -1663,6 +1977,66 @@ describe('ReadonlyRepository', () => {
         storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=ANY($1::INTEGER[])');
         storeQueryParams!.should.deep.equal([[store1.id, store2.id]]);
       });
+      it('should support populating a single relation with implicit inherited pool override', async () => {
+        const poolOverride = mock(Pool);
+        when(poolOverride.query(anyString(), anything())).thenResolve(
+          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store')]),
+          getQueryResult([_.pick(store1, 'id', 'name')]),
+        );
+
+        const results = await ProductRepository.find({
+          pool: instance(poolOverride),
+        }).populate('store');
+
+        verify(mockedPool.query(anyString(), anything())).never();
+        verify(poolOverride.query(anyString(), anything())).twice();
+        results.should.deep.equal([
+          {
+            ..._.pick(product1, 'id', 'name'),
+            store: store1,
+          },
+          {
+            ..._.pick(product3, 'id', 'name'),
+            store: store1,
+          },
+        ]);
+
+        const [productQuery, productQueryParams] = capture(poolOverride.query).first();
+        productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        productQueryParams!.should.deep.equal([]);
+        const [storeQuery, storeQueryParams] = capture(poolOverride.query).second();
+        storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1');
+        storeQueryParams!.should.deep.equal([store1.id]);
+      });
+      it('should support populating a single relation with explicit pool override', async () => {
+        const storePool = mock(Pool);
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store')]));
+        when(storePool.query(anyString(), anything())).thenResolve(getQueryResult([_.pick(store1, 'id', 'name')]));
+
+        const results = await ProductRepository.find().populate('store', {
+          pool: instance(storePool),
+        });
+
+        verify(mockedPool.query(anyString(), anything())).once();
+        verify(storePool.query(anyString(), anything())).once();
+        results.should.deep.equal([
+          {
+            ..._.pick(product1, 'id', 'name'),
+            store: store1,
+          },
+          {
+            ..._.pick(product3, 'id', 'name'),
+            store: store1,
+          },
+        ]);
+
+        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
+        productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        productQueryParams!.should.deep.equal([]);
+        const [storeQuery, storeQueryParams] = capture(storePool.query).first();
+        storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1');
+        storeQueryParams!.should.deep.equal([store1.id]);
+      });
       it('should support populating a single relation with partial select and sort', async () => {
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]),
@@ -1717,6 +2091,71 @@ describe('ReadonlyRepository', () => {
         productQuery.should.equal('SELECT "id","name" FROM "stores"');
         productQueryParams!.should.deep.equal([]);
         const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
+        storeQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=ANY($1::INTEGER[])');
+        storeQueryParams!.should.deep.equal([[store1.id, store2.id]]);
+      });
+      it('should support populating one-to-many collection with implicit inherited pool override', async () => {
+        const poolOverride = mock(Pool);
+        when(poolOverride.query(anyString(), anything())).thenResolve(
+          getQueryResult([_.pick(store1, 'id', 'name'), _.pick(store2, 'id', 'name')]),
+          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]),
+        );
+
+        const results = await StoreRepository.find({
+          pool: instance(poolOverride),
+        }).populate('products');
+
+        verify(mockedPool.query(anyString(), anything())).never();
+        verify(poolOverride.query(anyString(), anything())).twice();
+        results.should.deep.equal([
+          {
+            ..._.pick(store1, 'id', 'name'),
+            products: [_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store')],
+          },
+          {
+            ..._.pick(store2, 'id', 'name'),
+            products: [_.pick(product2, 'id', 'name', 'store')],
+          },
+        ]);
+        results[0].products.length.should.equal(2);
+        results[0].products[0].id.should.equal(product1.id);
+
+        const [productQuery, productQueryParams] = capture(poolOverride.query).first();
+        productQuery.should.equal('SELECT "id","name" FROM "stores"');
+        productQueryParams!.should.deep.equal([]);
+        const [storeQuery, storeQueryParams] = capture(poolOverride.query).second();
+        storeQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=ANY($1::INTEGER[])');
+        storeQueryParams!.should.deep.equal([[store1.id, store2.id]]);
+      });
+      it('should support populating one-to-many collection with explicit pool override', async () => {
+        const productPool = mock(Pool);
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([_.pick(store1, 'id', 'name'), _.pick(store2, 'id', 'name')]));
+        when(productPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]),
+        );
+
+        const results = await StoreRepository.find().populate('products', {
+          pool: instance(productPool),
+        });
+        verify(mockedPool.query(anyString(), anything())).once();
+        verify(productPool.query(anyString(), anything())).once();
+        results.should.deep.equal([
+          {
+            ..._.pick(store1, 'id', 'name'),
+            products: [_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store')],
+          },
+          {
+            ..._.pick(store2, 'id', 'name'),
+            products: [_.pick(product2, 'id', 'name', 'store')],
+          },
+        ]);
+        results[0].products.length.should.equal(2);
+        results[0].products[0].id.should.equal(product1.id);
+
+        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
+        productQuery.should.equal('SELECT "id","name" FROM "stores"');
+        productQueryParams!.should.deep.equal([]);
+        const [storeQuery, storeQueryParams] = capture(productPool.query).first();
         storeQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=ANY($1::INTEGER[])');
         storeQueryParams!.should.deep.equal([[store1.id, store2.id]]);
       });
@@ -1783,6 +2222,88 @@ describe('ReadonlyRepository', () => {
         productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
         productCategoryQueryParams!.should.deep.equal([[product1.id, product3.id, product2.id]]);
         const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
+        categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
+        categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
+      });
+      it('should support populating multi-multi collection with implicit inherited pool override', async () => {
+        const poolOverride = mock(Pool);
+        when(poolOverride.query(anyString(), anything()))
+          .thenResolve(getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]))
+          .thenResolve(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
+          .thenResolve(getQueryResult([_.pick(category1, 'id', 'name'), _.pick(category2, 'id', 'name')]));
+
+        const results = await ProductRepository.find({
+          pool: instance(poolOverride),
+        }).populate('categories');
+
+        verify(mockedPool.query(anyString(), anything())).never();
+        verify(poolOverride.query(anyString(), anything())).thrice();
+        results.should.deep.equal([
+          {
+            ..._.pick(product1, 'id', 'name', 'store'),
+            categories: [_.pick(category1, 'id', 'name'), _.pick(category2, 'id', 'name')],
+          },
+          {
+            ..._.pick(product3, 'id', 'name', 'store'),
+            categories: [_.pick(category1, 'id', 'name')],
+          },
+          {
+            ..._.pick(product2, 'id', 'name', 'store'),
+            categories: [_.pick(category1, 'id', 'name')],
+          },
+        ]);
+        results[0].categories.length.should.equal(2);
+        results[0].categories[0].id.should.equal(category1.id);
+
+        const [productQuery, productQueryParams] = capture(poolOverride.query).first();
+        productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        productQueryParams!.should.deep.equal([]);
+        const [productCategoryQuery, productCategoryQueryParams] = capture(poolOverride.query).second();
+        productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
+        productCategoryQueryParams!.should.deep.equal([[product1.id, product3.id, product2.id]]);
+        const [categoryQuery, categoryQueryParams] = capture(poolOverride.query).third();
+        categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
+        categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
+      });
+      it('should support populating multi-multi collection with explicit pool override', async () => {
+        const productPool = mock(Pool);
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]),
+        );
+        when(productPool.query(anyString(), anything()))
+          .thenResolve(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
+          .thenResolve(getQueryResult([_.pick(category1, 'id', 'name'), _.pick(category2, 'id', 'name')]));
+
+        const results = await ProductRepository.find().populate('categories', {
+          pool: instance(productPool),
+        });
+
+        verify(mockedPool.query(anyString(), anything())).once();
+        verify(productPool.query(anyString(), anything())).twice();
+        results.should.deep.equal([
+          {
+            ..._.pick(product1, 'id', 'name', 'store'),
+            categories: [_.pick(category1, 'id', 'name'), _.pick(category2, 'id', 'name')],
+          },
+          {
+            ..._.pick(product3, 'id', 'name', 'store'),
+            categories: [_.pick(category1, 'id', 'name')],
+          },
+          {
+            ..._.pick(product2, 'id', 'name', 'store'),
+            categories: [_.pick(category1, 'id', 'name')],
+          },
+        ]);
+        results[0].categories.length.should.equal(2);
+        results[0].categories[0].id.should.equal(category1.id);
+
+        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
+        productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        productQueryParams!.should.deep.equal([]);
+        const [productCategoryQuery, productCategoryQueryParams] = capture(productPool.query).first();
+        productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
+        productCategoryQueryParams!.should.deep.equal([[product1.id, product3.id, product2.id]]);
+        const [categoryQuery, categoryQueryParams] = capture(productPool.query).second();
         categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
         categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
       });
