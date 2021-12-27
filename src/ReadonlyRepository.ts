@@ -74,7 +74,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
   public findOne(args: FindOneArgs<T> | WhereQuery<T> = {}): FindOneResult<T, QueryResult<T>> {
     const { stack } = new Error(`${this.model.name}.findOne()`);
 
-    let select: (string & keyof OmitFunctionsAndEntityCollections<T>)[] | undefined;
+    let select: Set<string & keyof OmitFunctionsAndEntityCollections<T>> | undefined;
     let where: WhereQuery<T> = {};
     let sort: SortObject<T> | string | null = null;
     let poolOverride: Pool | undefined;
@@ -84,7 +84,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
       switch (name) {
         case 'select':
-          select = value as (string & keyof OmitFunctionsAndEntityCollections<T>)[];
+          if (value) {
+            select = new Set(value as (string & keyof OmitFunctionsAndEntityCollections<T>)[]);
+          }
+
           break;
         case 'where':
           where = value as WhereQuery<T>;
@@ -145,6 +148,15 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         propertyName: TProperty,
         options?: PopulateArgs<GetValueType<PickByValueType<T, Entity>[TProperty], Entity>>,
       ): FindOneResult<T, Omit<QueryResult<T>, TProperty> & PickAsPopulated<T, TProperty>> {
+        // Add the column if the property is a single relation and not included in the list of select columns
+        if (select && !select.has(propertyName as unknown as string & keyof OmitFunctionsAndEntityCollections<T>)) {
+          for (const column of modelInstance.model.columns) {
+            if ((column as ColumnModelMetadata).model && column.propertyName === propertyName) {
+              select.add(column.propertyName as string & keyof OmitFunctionsAndEntityCollections<T>);
+            }
+          }
+        }
+
         populates.push({
           propertyName,
           where: options?.where,
@@ -193,7 +205,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           const { query, params } = getSelectQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
-            select,
+            select: select ? Array.from(select) : undefined,
             where,
             sorts,
             limit: 1,
@@ -247,7 +259,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
   public find(args: FindArgs<T> | WhereQuery<T> = {}): FindResult<T, QueryResult<T>> {
     const { stack } = new Error(`${this.model.name}.find()`);
 
-    let select: (string & keyof OmitFunctionsAndEntityCollections<T>)[] | undefined;
+    let select: Set<string & keyof OmitFunctionsAndEntityCollections<T>> | undefined;
     let where: WhereQuery<T> = {};
     let sort: SortObject<T> | string | null = null;
     let skip: number | null = null;
@@ -259,7 +271,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
       switch (name) {
         case 'select':
-          select = value as (string & keyof OmitFunctionsAndEntityCollections<T>)[];
+          if (value) {
+            select = new Set(value as (string & keyof OmitFunctionsAndEntityCollections<T>)[]);
+          }
+
           break;
         case 'where':
           where = value as WhereQuery<T>;
@@ -321,6 +336,15 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         propertyName: TProperty,
         options?: PopulateArgs<GetValueType<PickByValueType<T, Entity>[TProperty], Entity>>,
       ): FindResult<T, Omit<QueryResult<T>, TProperty> & PickAsPopulated<T, TProperty>> {
+        // Add the column if the property is a single relation and not included in the list of select columns
+        if (select && !select.has(propertyName as unknown as string & keyof OmitFunctionsAndEntityCollections<T>)) {
+          for (const column of modelInstance.model.columns) {
+            if ((column as ColumnModelMetadata).model && column.propertyName === propertyName) {
+              select.add(column.propertyName as string & keyof OmitFunctionsAndEntityCollections<T>);
+            }
+          }
+        }
+
         populates.push({
           propertyName,
           where: options?.where,
@@ -387,7 +411,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           const { query, params } = getSelectQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
-            select,
+            select: select ? Array.from(select) : undefined,
             where,
             sorts,
             skip: skip || 0,

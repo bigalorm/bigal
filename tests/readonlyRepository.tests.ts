@@ -245,7 +245,7 @@ describe('ReadonlyRepository', () => {
         }),
       ]);
       should.exist(result);
-      result!.should.deep.equal(product);
+      result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
@@ -576,6 +576,44 @@ describe('ReadonlyRepository', () => {
       productQueryParams!.should.deep.equal([]);
       const [storeQuery, storeQueryParams] = capture(storePool.query).first();
       storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1');
+      storeQueryParams!.should.deep.equal([store.id]);
+    });
+    it('should support populating a single relation when column is missing from partial select', async () => {
+      const store = {
+        id: faker.datatype.number(),
+        name: `store - ${faker.datatype.uuid()}`,
+      };
+      const product = {
+        id: faker.datatype.number(),
+        name: `product - ${faker.datatype.uuid()}`,
+        store,
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([
+          {
+            id: product.id,
+            name: product.name,
+            store: store.id,
+          },
+        ]),
+        getQueryResult([store]),
+      );
+
+      const result = await ProductRepository.findOne({
+        select: ['name'],
+      }).populate('store', {
+        select: ['name'],
+      });
+      verify(mockedPool.query(anyString(), anything())).twice();
+      should.exist(result);
+      result!.should.deep.equal(product);
+
+      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
+      productQuery.should.equal('SELECT "name","store_id" AS "store","id" FROM "products" LIMIT 1');
+      productQueryParams!.should.deep.equal([]);
+      const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
+      storeQuery.should.equal('SELECT "name","id" FROM "stores" WHERE "id"=$1');
       storeQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating a single relation with partial select and order', async () => {
@@ -2064,6 +2102,36 @@ describe('ReadonlyRepository', () => {
         productQueryParams!.should.deep.equal([]);
         const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
         storeQuery.should.equal('SELECT "id" FROM "stores" WHERE "id"=ANY($1::INTEGER[]) ORDER BY "name"');
+        storeQueryParams!.should.deep.equal([[store1.id, store2.id]]);
+      });
+      it('should support populating a single relation when column is missing from partial select', async () => {
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]),
+          getQueryResult([_.pick(store1, 'id'), _.pick(store2, 'id')]),
+        );
+
+        const results = await ProductRepository.find({
+          select: ['name'],
+        }).populate('store', {
+          select: ['id'],
+        });
+        verify(mockedPool.query(anyString(), anything())).twice();
+        results.should.deep.equal([
+          {
+            ..._.pick(product1, 'id', 'name'),
+            store: _.pick(store1, 'id'),
+          },
+          {
+            ..._.pick(product2, 'id', 'name'),
+            store: _.pick(store2, 'id'),
+          },
+        ]);
+
+        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
+        productQuery.should.equal('SELECT "name","store_id" AS "store","id" FROM "products"');
+        productQueryParams!.should.deep.equal([]);
+        const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
+        storeQuery.should.equal('SELECT "id" FROM "stores" WHERE "id"=ANY($1::INTEGER[])');
         storeQueryParams!.should.deep.equal([[store1.id, store2.id]]);
       });
       it('should support populating one-to-many collection', async () => {

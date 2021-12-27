@@ -14,7 +14,7 @@ import type { CreateUpdateParams, OmitFunctionsAndEntityCollections } from './ty
 
 interface QueryAndParams {
   query: string;
-  params: unknown[];
+  params: readonly unknown[];
 }
 
 /* eslint-disable @typescript-eslint/no-use-before-define */
@@ -42,9 +42,9 @@ export function getSelectQueryAndParams<T extends Entity>({
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
-  select?: (string & keyof OmitFunctionsAndEntityCollections<T>)[];
+  select?: readonly (string & keyof OmitFunctionsAndEntityCollections<T>)[];
   where?: WhereQuery<T>;
-  sorts: OrderBy<T>[];
+  sorts: readonly OrderBy<T>[];
   skip: number;
   limit: number;
 }): QueryAndParams {
@@ -169,7 +169,7 @@ export function getInsertQueryAndParams<T extends Entity>({
   model: ModelMetadata<T>;
   values: CreateUpdateParams<T> | CreateUpdateParams<T>[];
   returnRecords?: boolean;
-  returnSelect?: (string & keyof OmitFunctionsAndEntityCollections<T>)[];
+  returnSelect?: readonly (string & keyof OmitFunctionsAndEntityCollections<T>)[];
 }): QueryAndParams {
   const entitiesToInsert = _.isArray(values) ? values : [values];
   const columnsToInsert = [];
@@ -437,7 +437,7 @@ export function getDeleteQueryAndParams<T extends Entity>({
   model: ModelMetadata<T>;
   where?: WhereQuery<T>;
   returnRecords?: boolean;
-  returnSelect?: (string & keyof OmitFunctionsAndEntityCollections<T>)[];
+  returnSelect?: readonly (string & keyof OmitFunctionsAndEntityCollections<T>)[];
 }): QueryAndParams {
   let query = `DELETE FROM "${model.tableName}"`;
 
@@ -473,26 +473,29 @@ export function getDeleteQueryAndParams<T extends Entity>({
  * @returns {string} SQL columns
  * @private
  */
-export function getColumnsToSelect<T extends Entity>({ model, select }: { model: ModelMetadata<T>; select?: (string & keyof OmitFunctionsAndEntityCollections<T>)[] }): string {
+export function getColumnsToSelect<T extends Entity>({ model, select }: { model: ModelMetadata<T>; select?: readonly (string & keyof OmitFunctionsAndEntityCollections<T>)[] }): string {
+  let selectColumns: Set<string>;
   if (select) {
     const { primaryKeyColumn } = model;
 
-    // Include primary key column if it's not defined
-    if (primaryKeyColumn && !select.includes(primaryKeyColumn.propertyName as string & keyof OmitFunctionsAndEntityCollections<T>)) {
-      select.push(primaryKeyColumn.propertyName as string & keyof OmitFunctionsAndEntityCollections<T>);
+    selectColumns = new Set(select);
+
+    // Ensure primary key column is specified
+    if (primaryKeyColumn) {
+      selectColumns.add(primaryKeyColumn.propertyName);
     }
   } else {
     // eslint-disable-next-line no-param-reassign
-    select = [];
+    selectColumns = new Set();
     for (const column of model.columns) {
       if (!(column as ColumnCollectionMetadata).collection) {
-        select.push(column.propertyName as string & keyof OmitFunctionsAndEntityCollections<T>);
+        selectColumns.add(column.propertyName);
       }
     }
   }
 
   let query = '';
-  for (const [index, propertyName] of select.entries()) {
+  for (const [index, propertyName] of Array.from(selectColumns).entries()) {
     const column = model.columnsByPropertyName[propertyName];
     if (!column) {
       throw new Error(`Unable to find column for property: ${propertyName} on ${model.tableName}`);
@@ -565,7 +568,7 @@ export function buildWhereStatement<T extends Entity>({
  * @returns {string} SQL order by statement
  * @private
  */
-export function buildOrderStatement<T extends Entity>({ model, sorts }: { model: ModelMetadata<T>; sorts: OrderBy<T>[] }): string {
+export function buildOrderStatement<T extends Entity>({ model, sorts }: { model: ModelMetadata<T>; sorts: readonly OrderBy<T>[] }): string {
   if (_.isNil(sorts) || !_.some(sorts)) {
     return '';
   }
@@ -620,7 +623,7 @@ function buildWhere<T extends Entity>({
   propertyName?: string;
   comparer?: Comparer | string;
   isNegated?: boolean;
-  value?: WhereClauseValue<string> | WhereClauseValue<T> | WhereQuery<T> | WhereQuery<T>[] | string;
+  value?: WhereClauseValue<string> | WhereClauseValue<T> | WhereQuery<T> | string | readonly WhereQuery<T>[];
   params: unknown[];
 }): string {
   switch (comparer || propertyName) {
@@ -995,7 +998,7 @@ function buildOrOperatorStatement<T extends Entity>({
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   isNegated: boolean;
-  value: WhereQuery<T>[];
+  value: readonly WhereQuery<T>[];
   params: unknown[];
 }): string {
   const orClauses = [];
@@ -1027,7 +1030,7 @@ interface ComparisonOperatorStatementParams<T extends Entity> {
   propertyName: string;
   comparer?: Comparer | string;
   isNegated: boolean;
-  value?: string[] | WhereClauseValue<T> | string;
+  value?: WhereClauseValue<T> | string | readonly string[];
   params: unknown[];
 }
 

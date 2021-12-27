@@ -1,5 +1,11 @@
 # Change Log
 
+## 9.2.2 - 2021-12-27
+
+- Fix to always include populate column names in select query
+- Use readonly arrays where possible when building sql
+- Update npms
+
 ## 9.2.1 - 2021-11-16
 
 - Update npms

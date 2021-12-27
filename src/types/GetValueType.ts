@@ -1,1 +1,1 @@
-export type GetValueType<T, TValueType> = T extends TValueType[] ? (T extends (infer U)[] ? U : never) : T extends TValueType ? T : never;
+export type GetValueType<T, TValueType> = T extends TValueType[] ? (T extends (infer U)[] ? Extract<U, TValueType> : never) : T extends TValueType ? T : never;
