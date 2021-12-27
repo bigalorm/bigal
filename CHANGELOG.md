@@ -1,5 +1,9 @@
 # Change Log
 
+## 9.2.3 - 2021-12-27
+
+- Update npms
+
 ## 9.2.2 - 2021-12-27
 
 - Fix to always include populate column names in select query

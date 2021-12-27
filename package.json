@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "9.2.2",
+  "version": "9.2.3",
   "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
   "main": "index.js",
   "types": "index.d.ts",
@@ -24,7 +24,7 @@
     "@types/pg": "^8.6.3",
     "lodash": "^4.17.21",
     "pg": "8.7.1",
-    "postgres-pool": "^5.0.8"
+    "postgres-pool": "^5.0.9"
   },
   "devDependencies": {
     "@types/chai": "^4.3.0",
