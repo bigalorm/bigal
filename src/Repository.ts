@@ -222,7 +222,10 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
 
         return this;
       },
-      async then(resolve: (result: QueryResult<T>[] | void) => QueryResult<T>[] | void, reject: (err: Error) => void): Promise<QueryResult<T>[] | void> {
+      async then<TResult = QueryResult<T>[], TErrorResult = void>(
+        resolve: (result: QueryResult<T>[] | void) => PromiseLike<TResult> | TResult,
+        reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
+      ): Promise<TErrorResult | TResult> {
         if (_.isString(where)) {
           return reject(new Error('The query cannot be a string, it must be an object'));
         }
@@ -239,10 +242,10 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
           const result = await modelInstance._pool.query<Partial<QueryResult<T>>>(query, params);
 
           if (returnRecords) {
-            return resolve(modelInstance._buildInstances(result.rows));
+            return await resolve(modelInstance._buildInstances(result.rows));
           }
 
-          return resolve();
+          return await resolve();
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {

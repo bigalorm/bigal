@@ -196,10 +196,13 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this as FindOneResult<T, Omit<QueryResult<T>, TProperty> & PickAsType<T, TProperty, TValue>>;
       },
-      async then(resolve: (result: QueryResult<T> | null) => Promise<QueryResult<T>> | QueryResult<T> | null, reject: (err: Error) => void): Promise<QueryResult<T> | null> {
+      async then<TResult = QueryResult<T> | null, TErrorResult = void>(
+        resolve: (result: QueryResult<T> | null) => PromiseLike<TResult> | TResult,
+        reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
+      ): Promise<TErrorResult | TResult> {
         try {
           if (_.isString(where)) {
-            throw new Error('The query cannot be a string, it must be an object');
+            return await reject(new Error('The query cannot be a string, it must be an object'));
           }
 
           const { query, params } = getSelectQueryAndParams({
@@ -239,9 +242,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             typedException.stack = stack;
           }
 
-          reject(typedException);
-
-          return null;
+          return reject(typedException);
         }
       },
     };
@@ -401,11 +402,13 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         const safePage = Math.max(page, 1);
         return this.skip(safePage * paginateLimit - paginateLimit).limit(paginateLimit);
       },
-      async then(resolve: (result: QueryResult<T>[]) => QueryResult<T>[], reject: (err: Error) => void): Promise<QueryResult<T>[]> {
+      async then<TResult = QueryResult<T>[], TErrorResult = void>(
+        resolve: (result: QueryResult<T>[]) => PromiseLike<TResult> | TResult,
+        reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
+      ): Promise<TErrorResult | TResult> {
         try {
           if (_.isString(where)) {
-            reject(new Error('The query cannot be a string, it must be an object'));
-            return [];
+            return await reject(new Error('The query cannot be a string, it must be an object'));
           }
 
           const { query, params } = getSelectQueryAndParams({
@@ -426,7 +429,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             await modelInstance.populateFields(entities, populates);
           }
 
-          return resolve(entities);
+          return await resolve(entities);
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
@@ -435,8 +438,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             typedException.stack = stack;
           }
 
-          reject(typedException);
-          return [];
+          return reject(typedException);
         }
       },
     };
@@ -464,7 +466,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
-      async then(resolve: (result: number) => number, reject: (err: Error) => void): Promise<number> {
+      async then<TResult = number, TErrorResult = void>(
+        resolve: (result: number) => PromiseLike<TResult> | TResult,
+        reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
+      ): Promise<TErrorResult | TResult> {
         try {
           const { query, params } = getCountQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
@@ -475,7 +480,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           const result = await modelInstance._pool.query<{ count: string }>(query, params);
 
           const originalValue = result.rows[0].count;
-          return resolve(Number(originalValue));
+          return await resolve(Number(originalValue));
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
@@ -484,8 +489,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             typedException.stack = stack;
           }
 
-          reject(typedException);
-          return 0;
+          return reject(typedException);
         }
       },
     };
@@ -540,7 +544,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
   protected _buildInstances(rows: Partial<QueryResult<T>>[]): QueryResult<T>[] {
     if (_.isNil(rows)) {
-      return rows;
+      return [];
     }
 
     return rows.map((row: Partial<QueryResult<T>>) => this._buildInstance(row));

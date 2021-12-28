@@ -15,6 +15,9 @@ import {
   Category,
   Classroom,
   KitchenSink,
+  LevelOne,
+  LevelThree,
+  LevelTwo,
   ParkingSpace,
   Product,
   ProductCategory,
@@ -44,6 +47,9 @@ describe('ReadonlyRepository', () => {
   let should: Chai.Should;
   const mockedPool: Pool = mock(Pool);
   /* eslint-disable @typescript-eslint/naming-convention */
+  let LevelOneRepository: Repository<LevelOne>;
+  let LevelTwoRepository: Repository<LevelTwo>;
+  let LevelThreeRepository: Repository<LevelThree>;
   let ProductRepository: Repository<Product>;
   let ReadonlyProductRepository: ReadonlyRepository<ReadonlyProduct>;
   let ReadonlyKitchenSinkRepository: ReadonlyRepository<KitchenSink>;
@@ -64,6 +70,9 @@ describe('ReadonlyRepository', () => {
         Classroom, //
         Category,
         KitchenSink,
+        LevelOne,
+        LevelTwo,
+        LevelThree,
         ParkingSpace,
         Product,
         ProductCategory,
@@ -80,6 +89,9 @@ describe('ReadonlyRepository', () => {
       pool: instance(mockedPool),
     });
 
+    LevelOneRepository = repositoriesByModelName.LevelOne as Repository<LevelOne>;
+    LevelTwoRepository = repositoriesByModelName.LevelTwo as Repository<LevelTwo>;
+    LevelThreeRepository = repositoriesByModelName.LevelThree as Repository<LevelThree>;
     ProductRepository = repositoriesByModelName.Product as Repository<Product>;
     ReadonlyProductRepository = repositoriesByModelName.ReadonlyProduct as ReadonlyRepository<ReadonlyProduct>;
     ReadonlyKitchenSinkRepository = repositoriesByModelName.KitchenSink as ReadonlyRepository<KitchenSink>;
@@ -244,7 +256,7 @@ describe('ReadonlyRepository', () => {
           id: product.id,
         }),
       ]);
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -1337,7 +1349,8 @@ describe('ReadonlyRepository', () => {
       });
       assert(result);
       result.should.deep.equal(simpleQueryResult);
-      result.message?.id.should.equal(simple.message.id);
+      assert(result.message);
+      result.message.id.should.equal(simple.message.id);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store","message" FROM "simple" WHERE ("name"=$1 AND "id"=$2) AND "id"=$3 LIMIT 1');
@@ -1808,6 +1821,77 @@ describe('ReadonlyRepository', () => {
       result1[0].instanceFunction().should.equal(`${result.name} bar!`);
       result2[0].instanceFunction().should.equal(`${result.name} bar!`);
     });
+    it('should allow types when used in promise.all with other queries', async () => {
+      const three1: LevelThree = {
+        id: `three1: ${faker.datatype.uuid()}`,
+        three: `three1: ${faker.datatype.uuid()}`,
+        foo: `three1: ${faker.datatype.uuid()}`,
+      };
+      const three2: LevelThree = {
+        id: `three2: ${faker.datatype.uuid()}`,
+        three: `three2: ${faker.datatype.uuid()}`,
+        foo: `three2: ${faker.datatype.uuid()}`,
+      };
+      const two: LevelTwo = {
+        id: `two: ${faker.datatype.uuid()}`,
+        two: `two: ${faker.datatype.uuid()}`,
+        foo: `two: ${faker.datatype.uuid()}`,
+        levelThree: three1.id,
+      };
+      const one: LevelOne = {
+        id: `one: ${faker.datatype.uuid()}`,
+        one: `one: ${faker.datatype.uuid()}`,
+        foo: `one: ${faker.datatype.uuid()}`,
+        levelTwo: two.id,
+      };
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([one]), getQueryResult([two]), getQueryResult([three1, three2]));
+
+      assert(three1.foo);
+      assert(three2.foo);
+
+      const [ones, twoResult, threes] = await Promise.all([
+        LevelOneRepository.find({
+          select: ['one'],
+        }).where({
+          foo: [one.foo, two.foo, three1.foo.toUpperCase(), three2.foo.toUpperCase()],
+        }),
+        LevelTwoRepository.findOne(),
+        LevelThreeRepository.find({
+          select: ['three', 'foo'],
+        }).where({
+          foo: [three1.foo, three2.foo],
+        }),
+      ]);
+
+      verify(mockedPool.query(anyString(), anything())).thrice();
+      ones.should.deep.equal([one]);
+      ones.length.should.equal(1);
+      ones[0].one.should.deep.equal(one.one);
+
+      assert(twoResult);
+      twoResult.should.deep.equal(two);
+      twoResult.two.should.deep.equal(two.two);
+
+      threes.should.deep.equal([three1, three2]);
+      threes.length.should.equal(2);
+      threes[0].three.should.equal(three1.three);
+      threes[1].three.should.equal(three2.three);
+
+      const [levelOneQuery, levelOneQueryParams] = capture(mockedPool.query).first();
+      levelOneQuery.should.equal('SELECT "one","id" FROM "level_one" WHERE "foo"=ANY($1::TEXT[])');
+      assert(levelOneQueryParams);
+      levelOneQueryParams.should.deep.equal([[one.foo, two.foo, three1.foo.toUpperCase(), three2.foo.toUpperCase()]]);
+
+      const [levelTwoQuery, levelTwoQueryParams] = capture(mockedPool.query).second();
+      levelTwoQuery.should.equal('SELECT "id","two","foo","level_three_id" AS "levelThree" FROM "level_two" LIMIT 1');
+      assert(levelTwoQueryParams);
+      levelTwoQueryParams.should.deep.equal([]);
+
+      const [levelThreeQuery, levelThreeQueryParams] = capture(mockedPool.query).third();
+      levelThreeQuery.should.equal('SELECT "three","foo","id" FROM "level_three" WHERE "foo"=ANY($1::TEXT[])');
+      assert(levelThreeQueryParams);
+      levelThreeQueryParams.should.deep.equal([[three1.foo, three2.foo]]);
+    });
     it('should support retaining original field - UNSAFE_withOriginalFieldType()', async () => {
       const store = new Store();
       store.id = faker.datatype.number();
@@ -1860,6 +1944,10 @@ describe('ReadonlyRepository', () => {
       let source2: SimpleWithSelfReference;
       let translation1: SimpleWithSelfReference;
       let translation2: SimpleWithSelfReference;
+
+      let levelOneItem: LevelOne;
+      let levelTwoItem: LevelTwo;
+      let levelThreeItem: LevelThree;
 
       before(() => {
         store1 = new Store();
@@ -1957,6 +2045,20 @@ describe('ReadonlyRepository', () => {
         translation2.id = faker.datatype.uuid();
         translation2.name = 'translation2';
         translation2.source = source1.id;
+
+        levelThreeItem = new LevelThree();
+        levelThreeItem.id = faker.datatype.uuid();
+        levelThreeItem.three = `Three - ${faker.datatype.uuid()}`;
+
+        levelTwoItem = new LevelTwo();
+        levelTwoItem.id = faker.datatype.uuid();
+        levelTwoItem.two = `Two - ${faker.datatype.uuid()}`;
+        levelTwoItem.levelThree = levelThreeItem.id;
+
+        levelOneItem = new LevelOne();
+        levelOneItem.id = faker.datatype.uuid();
+        levelOneItem.one = `One - ${faker.datatype.uuid()}`;
+        levelOneItem.levelTwo = levelTwoItem.id;
       });
 
       it('should support populating a single relation - same/shared', async () => {
@@ -2558,7 +2660,7 @@ describe('ReadonlyRepository', () => {
         translationsQuery.should.equal('SELECT "id","name","source_id" AS "source" FROM "simple" WHERE "source_id"=ANY($1::TEXT[])');
         translationsQueryParams!.should.deep.equal([[source1.id, source2.id]]);
       });
-      it('should support populating self reference and not explicitly selecting relation column', async () => {
+      it('should throw when attempting to populate collection and not not explicitly specifying relation column', async () => {
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([_.pick(source1, 'id', 'name'), _.pick(source2, 'id', 'name')]),
           getQueryResult([_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')]),

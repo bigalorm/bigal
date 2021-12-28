@@ -1,5 +1,9 @@
 # Change Log
 
+## 9.2.4 - 2021-12-28
+
+- Fix PromiseLike signatures. Remove ChainablePromiseLike
+
 ## 9.2.3 - 2021-12-27
 
 - Update npms

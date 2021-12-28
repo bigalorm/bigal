@@ -1,4 +1,3 @@
-import type { ChainablePromiseLike } from '../ChainablePromiseLike';
 import type { Entity } from '../Entity';
 import type { GetValueType, PickAsPopulated, PickByValueType, PickAsType, QueryResult } from '../types';
 
@@ -6,7 +5,7 @@ import type { PopulateArgs } from './PopulateArgs';
 import type { Sort } from './Sort';
 import type { WhereQuery } from './WhereQuery';
 
-export interface FindOneResult<T extends Entity, TReturn> extends ChainablePromiseLike<TReturn | null> {
+export interface FindOneResult<T extends Entity, TReturn> extends PromiseLike<TReturn | null> {
   where(args: WhereQuery<T>): FindOneResult<T, TReturn>;
   populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(
     propertyName: TProperty,
