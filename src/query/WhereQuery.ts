@@ -1,15 +1,10 @@
 import type { Entity, NotEntityBrand } from '../Entity';
-import type { EntityPrimitiveOrId, ExcludeFunctionsAndEntityCollections, QueryResult } from '../types';
+import type { EntityPrimitiveOrId, ExcludeEntityCollections, ExcludeFunctions } from '../types';
 
 export type WhereClauseValue<TValue> = TValue extends NotEntityBrand | undefined
   ? Exclude<TValue, undefined>
   : TValue extends Entity
-  ?
-      | Exclude<EntityPrimitiveOrId<TValue>, undefined>
-      | Exclude<EntityPrimitiveOrId<TValue>, undefined>[]
-      | Exclude<Pick<QueryResult<TValue>, 'id'>, undefined>
-      | Exclude<Pick<QueryResult<TValue>, 'id'>, undefined>[]
-      | null
+  ? { id: unknown }[] | Exclude<EntityPrimitiveOrId<TValue>, undefined> | Exclude<EntityPrimitiveOrId<TValue>, undefined>[] | { id: unknown } | null
   : Exclude<(TValue | null)[] | TValue, undefined> | null;
 
 export type StringConstraint<TValue extends string> = {
@@ -33,12 +28,15 @@ export type WhereQueryStatement<TValue> = TValue extends string
   : NegatableConstraint<WhereClauseValue<TValue>>;
 
 export type WhereQuery<T extends Entity> = {
-  [K in keyof T as ExcludeFunctionsAndEntityCollections<T[K], K>]?: K extends 'id'
-    ? WhereQueryStatement<T | T[K]>
-    : T[K] extends (infer U)[] | undefined
+  // Exclude entity collections and functions. Make the rest of the properties optional
+  [K in keyof T as ExcludeEntityCollections<T[K], ExcludeFunctions<T[K], K>>]?: K extends 'id'
+    ? WhereQueryStatement<T | T[K]> // Allow nested where query statements
+    : T[K] extends (infer U)[] | undefined // If property type is an array, allow where query statements for the array type
     ? WhereQueryStatement<U>
-    : // NOTE: The extra parts (| Exclude<...>) at the end of the next line are needed for arrays of union types
-      Exclude<(T[K] | null)[] | T[K], undefined> | WhereQueryStatement<T[K]> | { '!': Exclude<(T[K] | null)[] | T[K], undefined> };
+    :
+        | Exclude<(T[K] | null)[] | T[K], undefined> // Allow arrays or single object of type
+        | WhereQueryStatement<T[K]> // Allow nested where query statements
+        | { '!': Exclude<(T[K] | null)[] | T[K], undefined> }; // Allow arrays of union types
 } & {
   or?: WhereQuery<T>[];
 };

@@ -1,7 +1,7 @@
 import type { Entity } from './Entity';
 import type { ModelMetadata } from './metadata';
 import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, WhereQuery } from './query';
-import type { QueryResult } from './types/QueryResult';
+import type { QueryResult } from './types';
 
 export interface IReadonlyRepository<T extends Entity> {
   readonly model: ModelMetadata<T>;
@@ -13,7 +13,14 @@ export interface IReadonlyRepository<T extends Entity> {
    * @param {object} [args.where] - Object representing the where query
    * @param {string|object|string[]|object[]} [args.sort] - Property name(s) to sort by
    */
-  findOne(args: FindOneArgs<T> | WhereQuery<T>): FindOneResult<T, QueryResult<T>>;
+  findOne<
+    // Optional keys specified as args.select
+    K extends string & keyof T,
+    // Return type used to pass through to all chained methods
+    TReturn = QueryResult<Pick<T, K | 'id'>> | null,
+  >(
+    args: FindOneArgs<T, K> | WhereQuery<T>,
+  ): FindOneResult<T, TReturn>;
 
   /**
    * Gets a collection of objects
@@ -24,7 +31,14 @@ export interface IReadonlyRepository<T extends Entity> {
    * @param {string|number} [args.skip] - Number of records to skip
    * @param {string|number} [args.limit] - Number of results to return
    */
-  find(args: FindArgs<T> | WhereQuery<T>): FindResult<T, QueryResult<T>>;
+  find<
+    // Optional keys specified as args.select
+    K extends string & keyof T,
+    // Return type used to pass through to all chained methods
+    TReturn = QueryResult<Pick<T, K | 'id'>>,
+  >(
+    args: FindArgs<T, K> | WhereQuery<T>,
+  ): FindResult<T, TReturn>;
 
   /**
    * Gets a count of rows matching the where query
