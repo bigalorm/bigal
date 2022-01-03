@@ -3,11 +3,11 @@ import assert from 'assert';
 import chai from 'chai';
 import * as faker from 'faker';
 import _ from 'lodash';
-import type { QueryResult } from 'pg';
+import type { QueryResult as PgQueryResult } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { Repository, ReadonlyRepository, QueryResultPopulated, NotEntity } from '../src';
+import type { Repository, ReadonlyRepository, QueryResult, QueryResultPopulated, NotEntity } from '../src';
 import { initialize } from '../src';
 
 import type { IJsonLikeEntity } from './models';
@@ -33,7 +33,7 @@ import {
   TeacherClassroom,
 } from './models';
 
-function getQueryResult<T>(rows: T[] = []): QueryResult<T> {
+function getQueryResult<T>(rows: T[] = []): PgQueryResult<T> {
   return {
     command: 'select',
     rowCount: 1,
@@ -117,8 +117,8 @@ describe('ReadonlyRepository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
       const result = await ReadonlyProductRepository.findOne();
-      should.exist(result);
-      result!.should.deep.equal(product);
+      assert(result);
+      result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "readonly_products" LIMIT 1');
@@ -139,8 +139,8 @@ describe('ReadonlyRepository', () => {
         },
         sort: 'name asc',
       });
-      should.exist(result);
-      result!.should.deep.equal(product);
+      assert(result);
+      result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "name","id" FROM "products" WHERE "id"=$1 ORDER BY "name" LIMIT 1');
@@ -157,8 +157,8 @@ describe('ReadonlyRepository', () => {
       const result = await ProductRepository.findOne({
         id: product.id,
       });
-      should.exist(result);
-      result!.should.deep.equal(product);
+      assert(result);
+      result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
@@ -174,8 +174,8 @@ describe('ReadonlyRepository', () => {
       const result = await ProductRepository.findOne({
         id: product,
       });
-      should.exist(result);
-      result!.should.deep.equal(product);
+      assert(result);
+      result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
@@ -196,8 +196,8 @@ describe('ReadonlyRepository', () => {
       const result = await ProductRepository.findOne({
         store: productStore,
       });
-      should.exist(result);
-      result!.should.deep.equal(product);
+      assert(result);
+      result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 LIMIT 1');
@@ -217,8 +217,8 @@ describe('ReadonlyRepository', () => {
       }).where({
         id: product.id,
       });
-      should.exist(result);
-      result!.should.deep.equal(product);
+      assert(result);
+      result.should.deep.equal(product);
 
       verify(mockedPool.query(anyString(), anything())).never();
       const [query, params] = capture(poolOverride.query).first();
@@ -236,8 +236,8 @@ describe('ReadonlyRepository', () => {
       const result = await ProductRepository.findOne().where({
         id: product.id,
       });
-      should.exist(result);
-      result!.should.deep.equal(product);
+      assert(result);
+      result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
@@ -272,8 +272,8 @@ describe('ReadonlyRepository', () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
       const result = await ProductRepository.findOne().sort('name asc');
-      should.exist(result);
-      result!.should.deep.equal(product);
+      assert(result);
+      result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "name" LIMIT 1');
@@ -295,9 +295,9 @@ describe('ReadonlyRepository', () => {
         );
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
-        should.exist(result);
+        assert(result);
 
-        result!.should.deep.equal({
+        result.should.deep.equal({
           id,
           name,
           intColumn: numberValue,
@@ -324,8 +324,8 @@ describe('ReadonlyRepository', () => {
         );
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
-        should.exist(result);
-        result!.should.deep.equal({
+        assert(result);
+        result.should.deep.equal({
           id,
           name,
           intColumn: 42,
@@ -352,8 +352,8 @@ describe('ReadonlyRepository', () => {
         );
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
-        should.exist(result);
-        result!.should.deep.equal({
+        assert(result);
+        result.should.deep.equal({
           id,
           name,
           intColumn: numberValue,
@@ -380,8 +380,8 @@ describe('ReadonlyRepository', () => {
         );
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
-        should.exist(result);
-        result!.should.deep.equal({
+        assert(result);
+        result.should.deep.equal({
           id,
           name,
           intColumn: largeNumberValue,
@@ -408,8 +408,8 @@ describe('ReadonlyRepository', () => {
         );
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
-        should.exist(result);
-        result!.should.deep.equal({
+        assert(result);
+        result.should.deep.equal({
           id,
           name,
           floatColumn: numberValue,
@@ -436,8 +436,8 @@ describe('ReadonlyRepository', () => {
         );
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
-        should.exist(result);
-        result!.should.deep.equal({
+        assert(result);
+        result.should.deep.equal({
           id,
           name,
           floatColumn: numberValue,
@@ -464,8 +464,8 @@ describe('ReadonlyRepository', () => {
         );
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
-        should.exist(result);
-        result!.should.deep.equal({
+        assert(result);
+        result.should.deep.equal({
           id,
           name,
           floatColumn: largeNumberValue,
@@ -502,8 +502,8 @@ describe('ReadonlyRepository', () => {
 
       const result = await ProductRepository.findOne().populate('store');
       verify(mockedPool.query(anyString(), anything())).twice();
-      should.exist(result);
-      result!.should.deep.equal(product);
+      assert(result);
+      result.should.deep.equal(product);
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -541,8 +541,8 @@ describe('ReadonlyRepository', () => {
 
       verify(mockedPool.query(anyString(), anything())).never();
       verify(poolOverride.query(anyString(), anything())).twice();
-      should.exist(result);
-      result!.should.deep.equal(product);
+      assert(result);
+      result.should.deep.equal(product);
 
       const [productQuery, productQueryParams] = capture(poolOverride.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -580,8 +580,8 @@ describe('ReadonlyRepository', () => {
       });
       verify(mockedPool.query(anyString(), anything())).once();
       verify(storePool.query(anyString(), anything())).once();
-      should.exist(result);
-      result!.should.deep.equal(product);
+      assert(result);
+      result.should.deep.equal(product);
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -618,8 +618,8 @@ describe('ReadonlyRepository', () => {
         select: ['name'],
       });
       verify(mockedPool.query(anyString(), anything())).twice();
-      should.exist(result);
-      result!.should.deep.equal(product);
+      assert(result);
+      result.should.deep.equal(product);
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "name","store_id" AS "store","id" FROM "products" LIMIT 1');
@@ -655,8 +655,8 @@ describe('ReadonlyRepository', () => {
         sort: 'name',
       });
       verify(mockedPool.query(anyString(), anything())).twice();
-      should.exist(result);
-      result!.should.deep.equal(product);
+      assert(result);
+      result.should.deep.equal(product);
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -682,15 +682,18 @@ describe('ReadonlyRepository', () => {
 
       const storeWithProducts: QueryResultPopulated<Store, 'products'> = {
         ...store,
-        products: [product1, product2],
+        products: [product1 as QueryResult<Product>, product2 as QueryResult<Product>],
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1, product2]));
 
       const result = await StoreRepository.findOne().populate('products');
       verify(mockedPool.query(anyString(), anything())).twice();
-      should.exist(result);
-      result!.should.deep.equal(storeWithProducts);
+      assert(result);
+      result.should.deep.equal(storeWithProducts);
+      result.products.length.should.equal(2);
+      result.products[0].id.should.equal(product1.id);
+      result.products[1].id.should.equal(product2.id);
       storeWithProducts.products.length.should.equal(2);
 
       const [storeQuery, storeQueryParams] = capture(mockedPool.query).first();
@@ -719,7 +722,7 @@ describe('ReadonlyRepository', () => {
 
       const storeWithProducts: QueryResultPopulated<Store, 'products'> = {
         ...store,
-        products: [product1, product2],
+        products: [product1 as QueryResult<Product>, product2 as QueryResult<Product>],
       };
 
       when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1, product2]));
@@ -730,8 +733,8 @@ describe('ReadonlyRepository', () => {
 
       verify(mockedPool.query(anyString(), anything())).never();
       verify(poolOverride.query(anyString(), anything())).twice();
-      should.exist(result);
-      result!.should.deep.equal(storeWithProducts);
+      assert(result);
+      result.should.deep.equal(storeWithProducts);
       storeWithProducts.products.length.should.equal(2);
 
       const [storeQuery, storeQueryParams] = capture(poolOverride.query).first();
@@ -760,7 +763,7 @@ describe('ReadonlyRepository', () => {
 
       const storeWithProducts: QueryResultPopulated<Store, 'products'> = {
         ...store,
-        products: [product1, product2],
+        products: [product1 as QueryResult<Product>, product2 as QueryResult<Product>],
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]));
@@ -770,8 +773,8 @@ describe('ReadonlyRepository', () => {
         pool: instance(productPool),
       });
       verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result!.should.deep.equal(storeWithProducts);
+      assert(result);
+      result.should.deep.equal(storeWithProducts);
       storeWithProducts.products.length.should.equal(2);
 
       const [storeQuery, storeQueryParams] = capture(mockedPool.query).first();
@@ -811,8 +814,8 @@ describe('ReadonlyRepository', () => {
         sort: 'aliases',
       });
       verify(mockedPool.query(anyString(), anything())).twice();
-      should.exist(result);
-      result!.should.deep.equal(storeWithProducts);
+      assert(result);
+      result.should.deep.equal(storeWithProducts);
 
       const [storeQuery, storeQueryParams] = capture(mockedPool.query).first();
       storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
@@ -856,8 +859,8 @@ describe('ReadonlyRepository', () => {
 
       const result = await ProductRepository.findOne().populate('categories');
       verify(mockedPool.query(anyString(), anything())).thrice();
-      should.exist(result);
-      result!.should.deep.equal(productWithCategories);
+      assert(result);
+      result.should.deep.equal(productWithCategories);
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -909,8 +912,8 @@ describe('ReadonlyRepository', () => {
 
       verify(mockedPool.query(anyString(), anything())).never();
       verify(poolOverride.query(anyString(), anything())).thrice();
-      should.exist(result);
-      result!.should.deep.equal(productWithCategories);
+      assert(result);
+      result.should.deep.equal(productWithCategories);
 
       const [productQuery, productQueryParams] = capture(poolOverride.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -964,8 +967,8 @@ describe('ReadonlyRepository', () => {
 
       verify(mockedPool.query(anyString(), anything())).once();
       verify(categoryPool.query(anyString(), anything())).twice();
-      should.exist(result);
-      result!.should.deep.equal(productWithCategories);
+      assert(result);
+      result.should.deep.equal(productWithCategories);
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -1015,8 +1018,8 @@ describe('ReadonlyRepository', () => {
         sort: 'name desc',
       });
       verify(mockedPool.query(anyString(), anything())).thrice();
-      should.exist(result);
-      result!.should.deep.equal(productWithCategories);
+      assert(result);
+      result.should.deep.equal(productWithCategories);
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -1182,8 +1185,8 @@ describe('ReadonlyRepository', () => {
         })
         .sort('store desc');
       verify(mockedPool.query(anyString(), anything())).times(4);
-      should.exist(result);
-      result!.should.deep.equal(fullProduct);
+      assert(result);
+      result.should.deep.equal(fullProduct);
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 1');
@@ -1210,11 +1213,11 @@ describe('ReadonlyRepository', () => {
 
       verify(mockedPool.query(anyString(), anything())).twice();
 
-      should.exist(result1);
-      result1!.should.deep.equal(result2);
-      result1!.instanceFunction().should.equal(`${result.name} bar!`);
-      should.exist(result2);
-      result2!.instanceFunction().should.equal(`${result.name} bar!`);
+      assert(result1);
+      result1.should.deep.equal(result2);
+      result1.instanceFunction().should.equal(`${result.name} bar!`);
+      assert(result2);
+      result2.instanceFunction().should.equal(`${result.name} bar!`);
     });
     it('should not create an object/assign instance functions to null results', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([null]));
@@ -1252,8 +1255,8 @@ describe('ReadonlyRepository', () => {
           },
         ],
       });
-      should.exist(result);
-      result!.should.deep.equal(simple);
+      assert(result);
+      result.should.deep.equal(simple);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","other_ids" AS "otherIds" FROM "simple" WHERE (("id"=$1) OR (($2=ANY("other_ids") OR $3=ANY("other_ids")))) LIMIT 1');
@@ -1464,7 +1467,7 @@ describe('ReadonlyRepository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find();
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -1498,7 +1501,7 @@ describe('ReadonlyRepository', () => {
         skip: 5,
         limit: 24,
       });
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -1526,7 +1529,7 @@ describe('ReadonlyRepository', () => {
         id: _.map(products, 'id'),
         store,
       });
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -1550,7 +1553,7 @@ describe('ReadonlyRepository', () => {
       const result = await ProductRepository.find({
         pool: instance(poolOverride),
       });
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(products);
 
       verify(mockedPool.query(anyString(), anything())).never();
@@ -1578,7 +1581,7 @@ describe('ReadonlyRepository', () => {
       const result = await ProductRepository.find().where({
         store: store.id,
       });
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -1617,7 +1620,7 @@ describe('ReadonlyRepository', () => {
           like: ['Foo', 'BAR'],
         },
       });
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -1648,7 +1651,7 @@ describe('ReadonlyRepository', () => {
           },
         },
       });
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -1677,7 +1680,7 @@ describe('ReadonlyRepository', () => {
           store: store.id,
         }),
       ]);
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -1698,7 +1701,7 @@ describe('ReadonlyRepository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find().sort('name asc');
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -1719,7 +1722,7 @@ describe('ReadonlyRepository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find().limit(42);
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -1740,7 +1743,7 @@ describe('ReadonlyRepository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find().skip(24);
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -1764,7 +1767,7 @@ describe('ReadonlyRepository', () => {
         page: 3,
         limit: 100,
       });
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -1798,7 +1801,7 @@ describe('ReadonlyRepository', () => {
         .sort('store desc');
 
       verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
+      assert(result);
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -1815,8 +1818,8 @@ describe('ReadonlyRepository', () => {
       const result1 = await ReadonlyKitchenSinkRepository.find();
       const result2 = await ReadonlyKitchenSinkRepository.find();
       verify(mockedPool.query(anyString(), anything())).twice();
-      should.exist(result1);
-      should.exist(result2);
+      assert(result1);
+      assert(result2);
       result1.should.deep.equal(result2);
       result1[0].instanceFunction().should.equal(`${result.name} bar!`);
       result2[0].instanceFunction().should.equal(`${result.name} bar!`);
@@ -2564,8 +2567,7 @@ describe('ReadonlyRepository', () => {
         categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
         categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
 
-        const boxedResults = results as QueryResultPopulated<Product, 'categories' | 'store'>[];
-        boxedResults[0].store.id.should.equal(store1.id);
+        results[0].store.id.should.equal(store1.id);
       });
       it('should support populating multiple properties with partial select and sort', async () => {
         when(mockedPool.query(anyString(), anything()))
@@ -2574,7 +2576,12 @@ describe('ReadonlyRepository', () => {
           .thenResolve(getQueryResult([teacher1Classroom]))
           .thenResolve(getQueryResult([_.pick(classroom, 'id', 'name')]));
 
-        async function getTeachers(): Promise<QueryResultPopulated<Teacher, 'classrooms' | 'parkingSpace'>[]> {
+        async function getTeachers(): Promise<
+          (Omit<QueryResult<Teacher>, 'parkingSpace'> & {
+            parkingSpace: QueryResult<Pick<ParkingSpace, 'getLotAndName' | 'id' | 'name'>> | null;
+            classrooms: QueryResult<Pick<Classroom, 'id' | 'name'>>[];
+          })[]
+        > {
           return TeacherRepository.find()
             .where({
               isActive: true,
@@ -2709,7 +2716,7 @@ describe('ReadonlyRepository', () => {
       );
 
       const result = await ProductRepository.count();
-      should.exist(result);
+      assert(result);
       result.should.equal(products.length);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -2744,7 +2751,7 @@ describe('ReadonlyRepository', () => {
         id: _.map(products, 'id'),
         store,
       });
-      should.exist(result);
+      assert(result);
       result.should.equal(products.length);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -2778,7 +2785,7 @@ describe('ReadonlyRepository', () => {
       const result = await ProductRepository.count().where({
         store: store.id,
       });
-      should.exist(result);
+      assert(result);
       result.should.equal(products.length);
 
       const [query, params] = capture(mockedPool.query).first();
@@ -2814,7 +2821,7 @@ describe('ReadonlyRepository', () => {
           store: store.id,
         }),
       ]);
-      should.exist(result);
+      assert(result);
       result.should.equal(products.length);
 
       const [query, params] = capture(mockedPool.query).first();
