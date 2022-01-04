@@ -4,6 +4,7 @@ export * from './KitchenSink';
 export * from './LevelOne';
 export * from './LevelTwo';
 export * from './LevelThree';
+export * from './ParkingLot';
 export * from './ParkingSpace';
 export * from './Product';
 export * from './ProductCategory';

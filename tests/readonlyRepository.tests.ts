@@ -7,10 +7,10 @@ import type { QueryResult as PgQueryResult } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { Repository, ReadonlyRepository, QueryResult, QueryResultPopulated, NotEntity } from '../src';
+import type { Repository, ReadonlyRepository, QueryResult, QueryResultPopulated } from '../src';
 import { initialize } from '../src';
 
-import type { IJsonLikeEntity } from './models';
+import type { ParkingLot } from './models';
 import {
   Category,
   Classroom,
@@ -26,12 +26,12 @@ import {
   SimpleWithRelationAndJson,
   SimpleWithSelfReference,
   SimpleWithStringCollection,
-  SimpleWithStringId,
   SimpleWithUnion,
   Store,
   Teacher,
   TeacherClassroom,
 } from './models';
+import * as generator from './utils/generator';
 
 function getQueryResult<T>(rows: T[] = []): PgQueryResult<T> {
   return {
@@ -109,12 +109,16 @@ describe('ReadonlyRepository', () => {
   });
 
   describe('#findOne()', () => {
-    it('should support call without constraints', async () => {
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-      };
+    let store: QueryResult<Store>;
+    let product: QueryResult<Product>;
+    beforeEach(() => {
+      store = generator.store();
+      product = generator.product({
+        store: store.id,
+      });
+    });
 
+    it('should support call without constraints', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
       const result = await ReadonlyProductRepository.findOne();
       assert(result);
@@ -125,12 +129,8 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([]);
     });
     it('should support call with constraints as a parameter', async () => {
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-      };
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      const productResult = _.pick(product, 'id', 'name');
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([productResult]));
 
       const result = await ProductRepository.findOne({
         select: ['name'],
@@ -140,18 +140,27 @@ describe('ReadonlyRepository', () => {
         sort: 'name asc',
       });
       assert(result);
-      result.should.deep.equal(product);
+      result.should.deep.equal(productResult);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "name","id" FROM "products" WHERE "id"=$1 ORDER BY "name" LIMIT 1');
       params!.should.deep.equal([product.id]);
     });
-    it('should support call with where constraint as a parameter', async () => {
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-      };
+    it('should support call with sort as a parameter', async () => {
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
+      const result = await ProductRepository.findOne({
+        sort: 'name',
+      });
+      assert(result);
+      result.should.deep.equal(product);
+      result.name.should.equal(product.name);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "readonly_products" LIMIT 1 ORDER BY "name"');
+      params!.should.deep.equal([product.id]);
+    });
+    it('should support call with where constraint as a parameter', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
       const result = await ProductRepository.findOne({
@@ -165,10 +174,6 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([product.id]);
     });
     it('should support call with where constraint as a parameter and querying id by entity value', async () => {
-      const product = new Product();
-      product.id = faker.datatype.number();
-      product.name = `product - ${faker.datatype.uuid()}`;
-
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
       const result = await ProductRepository.findOne({
@@ -182,33 +187,20 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([product.id]);
     });
     it('should support call with where constraint as a parameter and querying property by entity value', async () => {
-      const productStore = new Store();
-      productStore.id = faker.datatype.number();
-      productStore.name = `store - ${faker.datatype.uuid()}`;
-
-      const product = new Product();
-      product.id = faker.datatype.number();
-      product.name = `product - ${faker.datatype.uuid()}`;
-      product.store = productStore.id;
-
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
       const result = await ProductRepository.findOne({
-        store: productStore,
+        store,
       });
       assert(result);
       result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 LIMIT 1');
-      params!.should.deep.equal([productStore.id]);
+      params!.should.deep.equal([store.id]);
     });
     it('should support call with explicit pool override', async () => {
       const poolOverride = mock(Pool);
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-      };
 
       when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
@@ -226,11 +218,6 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([product.id]);
     });
     it('should support call with chained where constraints', async () => {
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-      };
-
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
       const result = await ProductRepository.findOne().where({
@@ -244,11 +231,6 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([product.id]);
     });
     it('should support call with chained where constraints - Promise.all', async () => {
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-      };
-
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
       const [result] = await Promise.all([
@@ -264,11 +246,6 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([product.id]);
     });
     it('should support call with chained sort', async () => {
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-      };
-
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
       const result = await ProductRepository.findOne().sort('name asc');
@@ -479,31 +456,15 @@ describe('ReadonlyRepository', () => {
       });
     });
     it('should support populating a single relation', async () => {
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-        store,
-      };
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([
-          {
-            id: product.id,
-            name: product.name,
-            store: store.id,
-          },
-        ]),
-        getQueryResult([store]),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
 
       const result = await ProductRepository.findOne().populate('store');
       verify(mockedPool.query(anyString(), anything())).twice();
       assert(result);
-      result.should.deep.equal(product);
+      result.should.deep.equal({
+        ...product,
+        store,
+      });
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -514,26 +475,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should support populating a single relation with implicit inherited pool override', async () => {
       const poolOverride = mock(Pool);
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-        store,
-      };
 
-      when(poolOverride.query(anyString(), anything())).thenResolve(
-        getQueryResult([
-          {
-            id: product.id,
-            name: product.name,
-            store: store.id,
-          },
-        ]),
-        getQueryResult([store]),
-      );
+      when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
 
       const result = await ProductRepository.findOne({
         pool: instance(poolOverride),
@@ -554,25 +497,7 @@ describe('ReadonlyRepository', () => {
     it('should support populating a single relation with explicit pool override', async () => {
       const storePool = mock(Pool);
 
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-        store,
-      };
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([
-          {
-            id: product.id,
-            name: product.name,
-            store: store.id,
-          },
-        ]),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
       when(storePool.query(anyString(), anything())).thenResolve(getQueryResult([store]));
 
       const result = await ProductRepository.findOne().populate('store', {
@@ -581,7 +506,10 @@ describe('ReadonlyRepository', () => {
       verify(mockedPool.query(anyString(), anything())).once();
       verify(storePool.query(anyString(), anything())).once();
       assert(result);
-      result.should.deep.equal(product);
+      result.should.deep.equal({
+        ...product,
+        store,
+      });
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -591,26 +519,9 @@ describe('ReadonlyRepository', () => {
       storeQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating a single relation when column is missing from partial select', async () => {
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-        store,
-      };
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([
-          {
-            id: product.id,
-            name: product.name,
-            store: store.id,
-          },
-        ]),
-        getQueryResult([store]),
-      );
+      const productResult = _.pick(product, 'id', 'name', 'store');
+      const storeResult = _.pick(store, 'id', 'name');
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([productResult]), getQueryResult([storeResult]));
 
       const result = await ProductRepository.findOne({
         select: ['name'],
@@ -619,7 +530,10 @@ describe('ReadonlyRepository', () => {
       });
       verify(mockedPool.query(anyString(), anything())).twice();
       assert(result);
-      result.should.deep.equal(product);
+      result.should.deep.equal({
+        ...productResult,
+        store: storeResult,
+      });
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "name","store_id" AS "store","id" FROM "products" LIMIT 1');
@@ -628,27 +542,35 @@ describe('ReadonlyRepository', () => {
       storeQuery.should.equal('SELECT "name","id" FROM "stores" WHERE "id"=$1');
       storeQueryParams!.should.deep.equal([store.id]);
     });
-    it('should support populating a single relation with partial select and order', async () => {
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-        store,
-      };
+    it('should support populating a single relation as QueryResult with partial select', async () => {
+      const levelThreeItem = generator.levelThree();
+      const levelTwoItem = generator.levelTwo({ levelThree: levelThreeItem.id });
+      const levelOneItem = generator.levelOne({ levelTwo: levelTwoItem.id });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([
-          {
-            id: product.id,
-            name: product.name,
-            store: store.id,
-          },
-        ]),
-        getQueryResult([store]),
-      );
+      const levelOneResult = _.pick(levelOneItem, 'id', 'one', 'levelTwo');
+      const levelTwoResult = _.pick(levelTwoItem, 'id', 'two', 'levelThree');
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([levelOneResult]), getQueryResult([levelTwoResult]));
+
+      const result = await LevelOneRepository.findOne({
+        select: ['one', 'levelTwo'],
+      }).populate('levelTwo', {
+        select: ['two', 'levelThree'],
+      });
+      verify(mockedPool.query(anyString(), anything())).twice();
+      assert(result);
+      result.should.deep.equal({
+        ...levelOneResult,
+        levelTwo: levelTwoResult,
+      });
+
+      result.levelTwo.levelThree.should.equal(levelThreeItem.id);
+      // Verify string functions are available - aka, that the type is not LevelThree | string.
+      result.levelTwo.levelThree.toUpperCase().should.equal(levelThreeItem.id.toUpperCase());
+    });
+    it('should support populating a single relation with partial select and order', async () => {
+      const storeResult = _.pick(store, 'id', 'name');
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
 
       const result = await ProductRepository.findOne().populate('store', {
         select: ['name'],
@@ -656,7 +578,10 @@ describe('ReadonlyRepository', () => {
       });
       verify(mockedPool.query(anyString(), anything())).twice();
       assert(result);
-      result.should.deep.equal(product);
+      result.should.deep.equal({
+        ...product,
+        store: storeResult,
+      });
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -666,23 +591,16 @@ describe('ReadonlyRepository', () => {
       storeQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating collection', async () => {
-      const store = new Store();
-      store.id = faker.datatype.number();
-      store.name = `store - ${faker.datatype.uuid()}`;
-
-      const product1 = new Product();
-      product1.id = faker.datatype.number();
-      product1.name = `product - ${faker.datatype.uuid()}`;
-      product1.store = store.id;
-
-      const product2 = new Product();
-      product2.id = faker.datatype.number();
-      product2.name = `product - ${faker.datatype.uuid()}`;
-      product2.store = store.id;
+      const product1 = generator.product({
+        store: store.id,
+      });
+      const product2 = generator.product({
+        store: store.id,
+      });
 
       const storeWithProducts: QueryResultPopulated<Store, 'products'> = {
         ...store,
-        products: [product1 as QueryResult<Product>, product2 as QueryResult<Product>],
+        products: [product1, product2],
       };
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1, product2]));
@@ -694,7 +612,10 @@ describe('ReadonlyRepository', () => {
       result.products.length.should.equal(2);
       result.products[0].id.should.equal(product1.id);
       result.products[1].id.should.equal(product2.id);
+      // Make sure QueryResultPopulated types look ok
       storeWithProducts.products.length.should.equal(2);
+      storeWithProducts.products[0].id.should.equal(product1.id);
+      storeWithProducts.products[1].id.should.equal(product2.id);
 
       const [storeQuery, storeQueryParams] = capture(mockedPool.query).first();
       storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
@@ -706,24 +627,12 @@ describe('ReadonlyRepository', () => {
     it('should support populating collection with implicit inherited pool override', async () => {
       const poolOverride = mock(Pool);
 
-      const store = new Store();
-      store.id = faker.datatype.number();
-      store.name = `store - ${faker.datatype.uuid()}`;
-
-      const product1 = new Product();
-      product1.id = faker.datatype.number();
-      product1.name = `product - ${faker.datatype.uuid()}`;
-      product1.store = store.id;
-
-      const product2 = new Product();
-      product2.id = faker.datatype.number();
-      product2.name = `product - ${faker.datatype.uuid()}`;
-      product2.store = store.id;
-
-      const storeWithProducts: QueryResultPopulated<Store, 'products'> = {
-        ...store,
-        products: [product1 as QueryResult<Product>, product2 as QueryResult<Product>],
-      };
+      const product1 = generator.product({
+        store: store.id,
+      });
+      const product2 = generator.product({
+        store: store.id,
+      });
 
       when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1, product2]));
 
@@ -734,8 +643,10 @@ describe('ReadonlyRepository', () => {
       verify(mockedPool.query(anyString(), anything())).never();
       verify(poolOverride.query(anyString(), anything())).twice();
       assert(result);
-      result.should.deep.equal(storeWithProducts);
-      storeWithProducts.products.length.should.equal(2);
+      result.should.deep.equal({
+        ...store,
+        products: [product1, product2],
+      });
 
       const [storeQuery, storeQueryParams] = capture(poolOverride.query).first();
       storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
@@ -747,24 +658,12 @@ describe('ReadonlyRepository', () => {
     it('should support populating collection with explicit pool override', async () => {
       const productPool = mock(Pool);
 
-      const store = new Store();
-      store.id = faker.datatype.number();
-      store.name = `store - ${faker.datatype.uuid()}`;
-
-      const product1 = new Product();
-      product1.id = faker.datatype.number();
-      product1.name = `product - ${faker.datatype.uuid()}`;
-      product1.store = store.id;
-
-      const product2 = new Product();
-      product2.id = faker.datatype.number();
-      product2.name = `product - ${faker.datatype.uuid()}`;
-      product2.store = store.id;
-
-      const storeWithProducts: QueryResultPopulated<Store, 'products'> = {
-        ...store,
-        products: [product1 as QueryResult<Product>, product2 as QueryResult<Product>],
-      };
+      const product1 = generator.product({
+        store: store.id,
+      });
+      const product2 = generator.product({
+        store: store.id,
+      });
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]));
       when(productPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product2]));
@@ -774,8 +673,10 @@ describe('ReadonlyRepository', () => {
       });
       verify(mockedPool.query(anyString(), anything())).once();
       assert(result);
-      result.should.deep.equal(storeWithProducts);
-      storeWithProducts.products.length.should.equal(2);
+      result.should.deep.equal({
+        ...store,
+        products: [product1, product2],
+      });
 
       const [storeQuery, storeQueryParams] = capture(mockedPool.query).first();
       storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
@@ -785,29 +686,17 @@ describe('ReadonlyRepository', () => {
       productQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating collection with partial select and order', async () => {
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
-      const product1 = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
+      const product1 = generator.product({
         store: store.id,
-      };
-      const product2 = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
+      });
+      const product2 = generator.product({
         store: store.id,
-      };
+      });
 
-      const storeWithProducts = _.extend(
-        {
-          products: [product1, product2],
-        },
-        store,
-      );
+      const product1Result = _.pick(product1, 'id', 'name');
+      const product2Result = _.pick(product2, 'id', 'name');
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1, product2]));
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1Result, product2Result]));
 
       const result = await StoreRepository.findOne().populate('products', {
         select: ['name'],
@@ -815,7 +704,10 @@ describe('ReadonlyRepository', () => {
       });
       verify(mockedPool.query(anyString(), anything())).twice();
       assert(result);
-      result.should.deep.equal(storeWithProducts);
+      result.should.deep.equal({
+        ...store,
+        products: [product1Result, product2Result],
+      });
 
       const [storeQuery, storeQueryParams] = capture(mockedPool.query).first();
       storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
@@ -825,42 +717,20 @@ describe('ReadonlyRepository', () => {
       productQueryParams!.should.deep.equal([store.id]);
     });
     it('should support populating multi-multi collection', async () => {
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-      };
-      const category1 = {
-        id: faker.datatype.number(),
-        name: `category - ${faker.datatype.uuid()}`,
-      };
-      const category2 = {
-        id: faker.datatype.number(),
-        name: `category - ${faker.datatype.uuid()}`,
-      };
-      const productCategory1Map = {
-        id: faker.datatype.number(),
-        product: product.id,
-        category: category1.id,
-      };
-      const productCategory2Map = {
-        id: faker.datatype.number(),
-        product: product.id,
-        category: category2.id,
-      };
-
-      const productWithCategories = _.extend(
-        {
-          categories: [category1, category2],
-        },
-        product,
-      );
+      const category1 = generator.category();
+      const category2 = generator.category();
+      const productCategory1Map = generator.productCategory(product, category1);
+      const productCategory2Map = generator.productCategory(product, category2);
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory1Map, productCategory2Map]), getQueryResult([category1, category2]));
 
       const result = await ProductRepository.findOne().populate('categories');
       verify(mockedPool.query(anyString(), anything())).thrice();
       assert(result);
-      result.should.deep.equal(productWithCategories);
+      result.should.deep.equal({
+        ...product,
+        categories: [category1, category2],
+      });
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -874,35 +744,10 @@ describe('ReadonlyRepository', () => {
     });
     it('should support populating multi-multi collection with implicit inherited pool override', async () => {
       const poolOverride = mock(Pool);
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-      };
-      const category1 = {
-        id: faker.datatype.number(),
-        name: `category - ${faker.datatype.uuid()}`,
-      };
-      const category2 = {
-        id: faker.datatype.number(),
-        name: `category - ${faker.datatype.uuid()}`,
-      };
-      const productCategory1Map = {
-        id: faker.datatype.number(),
-        product: product.id,
-        category: category1.id,
-      };
-      const productCategory2Map = {
-        id: faker.datatype.number(),
-        product: product.id,
-        category: category2.id,
-      };
-
-      const productWithCategories = _.extend(
-        {
-          categories: [category1, category2],
-        },
-        product,
-      );
+      const category1 = generator.category();
+      const category2 = generator.category();
+      const productCategory1Map = generator.productCategory(product, category1);
+      const productCategory2Map = generator.productCategory(product, category2);
 
       when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory1Map, productCategory2Map]), getQueryResult([category1, category2]));
 
@@ -913,7 +758,10 @@ describe('ReadonlyRepository', () => {
       verify(mockedPool.query(anyString(), anything())).never();
       verify(poolOverride.query(anyString(), anything())).thrice();
       assert(result);
-      result.should.deep.equal(productWithCategories);
+      result.should.deep.equal({
+        ...product,
+        categories: [category1, category2],
+      });
 
       const [productQuery, productQueryParams] = capture(poolOverride.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -928,35 +776,10 @@ describe('ReadonlyRepository', () => {
     it('should support populating multi-multi collection with explicit pool override', async () => {
       const categoryPool = mock(Pool);
 
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-      };
-      const category1 = {
-        id: faker.datatype.number(),
-        name: `category - ${faker.datatype.uuid()}`,
-      };
-      const category2 = {
-        id: faker.datatype.number(),
-        name: `category - ${faker.datatype.uuid()}`,
-      };
-      const productCategory1Map = {
-        id: faker.datatype.number(),
-        product: product.id,
-        category: category1.id,
-      };
-      const productCategory2Map = {
-        id: faker.datatype.number(),
-        product: product.id,
-        category: category2.id,
-      };
-
-      const productWithCategories = _.extend(
-        {
-          categories: [category1, category2],
-        },
-        product,
-      );
+      const category1 = generator.category();
+      const category2 = generator.category();
+      const productCategory1Map = generator.productCategory(product, category1);
+      const productCategory2Map = generator.productCategory(product, category2);
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
       when(categoryPool.query(anyString(), anything())).thenResolve(getQueryResult([productCategory1Map, productCategory2Map]), getQueryResult([category1, category2]));
@@ -968,7 +791,10 @@ describe('ReadonlyRepository', () => {
       verify(mockedPool.query(anyString(), anything())).once();
       verify(categoryPool.query(anyString(), anything())).twice();
       assert(result);
-      result.should.deep.equal(productWithCategories);
+      result.should.deep.equal({
+        ...product,
+        categories: [category1, category2],
+      });
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -981,37 +807,19 @@ describe('ReadonlyRepository', () => {
       categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
     });
     it('should support populating multi-multi collection with partial select and order', async () => {
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-      };
-      const category1 = {
-        id: faker.datatype.number(),
-        name: `category - ${faker.datatype.uuid()}`,
-      };
-      const category2 = {
-        id: faker.datatype.number(),
-        name: `category - ${faker.datatype.uuid()}`,
-      };
-      const productCategory1Map = {
-        id: faker.datatype.number(),
-        product: product.id,
-        category: category1.id,
-      };
-      const productCategory2Map = {
-        id: faker.datatype.number(),
-        product: product.id,
-        category: category2.id,
-      };
+      const category1 = generator.category();
+      const category2 = generator.category();
+      const productCategory1Map = generator.productCategory(product, category1);
+      const productCategory2Map = generator.productCategory(product, category2);
 
-      const productWithCategories = _.extend(
-        {
-          categories: [category1, category2],
-        },
-        product,
+      const category1Result = _.pick(category1, 'id', 'name');
+      const category2Result = _.pick(category2, 'id', 'name');
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(
+        getQueryResult([product]),
+        getQueryResult([productCategory1Map, productCategory2Map]),
+        getQueryResult([category1Result, category2Result]),
       );
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory1Map, productCategory2Map]), getQueryResult([category1, category2]));
 
       const result = await ProductRepository.findOne().populate('categories', {
         select: ['name'],
@@ -1019,7 +827,10 @@ describe('ReadonlyRepository', () => {
       });
       verify(mockedPool.query(anyString(), anything())).thrice();
       assert(result);
-      result.should.deep.equal(productWithCategories);
+      result.should.deep.equal({
+        ...product,
+        categories: [category1Result, category2Result],
+      });
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -1032,24 +843,19 @@ describe('ReadonlyRepository', () => {
       categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
     });
     it('should support populating self reference collection', async () => {
-      const source1 = new SimpleWithSelfReference();
-      source1.id = faker.datatype.uuid();
-      source1.name = 'Source';
+      const source1 = generator.simpleWithSelfReference();
+      const translation1 = generator.simpleWithSelfReference({
+        name: 'translation1',
+        source: source1.id,
+      });
+      const translation2 = generator.simpleWithSelfReference({
+        name: 'translation2',
+        source: source1.id,
+      });
 
-      const translation1 = new SimpleWithSelfReference();
-      translation1.id = faker.datatype.uuid();
-      translation1.name = 'translation1';
-      translation1.source = source1.id;
+      const source1Result = _.pick(source1, 'id', 'name');
 
-      const translation2 = new SimpleWithSelfReference();
-      translation2.id = faker.datatype.uuid();
-      translation2.name = 'translation2';
-      translation2.source = source1.id;
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([_.pick(source1, 'id', 'name')]),
-        getQueryResult([_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')]),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([source1Result]), getQueryResult([translation1, translation2]));
 
       const result = await SimpleWithSelfReferenceRepository.findOne({
         select: ['name'],
@@ -1061,8 +867,8 @@ describe('ReadonlyRepository', () => {
       verify(mockedPool.query(anyString(), anything())).twice();
       assert(result);
       result.should.deep.equal({
-        ..._.pick(source1, 'id', 'name'),
-        translations: [_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')],
+        ...source1Result,
+        translations: [translation1, translation2],
       });
       result.translations.length.should.equal(2);
       result.translations[0].id.should.equal(translation1.id);
@@ -1075,24 +881,21 @@ describe('ReadonlyRepository', () => {
       translationsQueryParams!.should.deep.equal([source1.id]);
     });
     it('should support populating collection and not explicitly selecting relation column', async () => {
-      const source1 = new SimpleWithSelfReference();
-      source1.id = faker.datatype.uuid();
-      source1.name = 'Source';
+      const source1 = generator.simpleWithSelfReference();
+      const translation1 = generator.simpleWithSelfReference({
+        name: 'translation1',
+        source: source1.id,
+      });
+      const translation2 = generator.simpleWithSelfReference({
+        name: 'translation2',
+        source: source1.id,
+      });
 
-      const translation1 = new SimpleWithSelfReference();
-      translation1.id = faker.datatype.uuid();
-      translation1.name = 'translation1';
-      translation1.source = source1.id;
+      const source1Result = _.pick(source1, 'id', 'name');
+      const translation1Result = _.pick(translation1, 'id', 'name');
+      const translation2Result = _.pick(translation2, 'id', 'name');
 
-      const translation2 = new SimpleWithSelfReference();
-      translation2.id = faker.datatype.uuid();
-      translation2.name = 'translation2';
-      translation2.source = source1.id;
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([_.pick(source1, 'id', 'name')]),
-        getQueryResult([_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')]),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([source1Result]), getQueryResult([translation1Result, translation2Result]));
 
       const result = await SimpleWithSelfReferenceRepository.findOne({
         select: ['name'],
@@ -1106,8 +909,8 @@ describe('ReadonlyRepository', () => {
       verify(mockedPool.query(anyString(), anything())).twice();
       assert(result);
       result.should.deep.equal({
-        ..._.pick(source1, 'id', 'name'),
-        translations: [_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')],
+        ...source1Result,
+        translations: [translation1Result, translation2Result],
       });
       result.translations.length.should.equal(2);
       result.translations[0].id.should.equal(translation1.id);
@@ -1120,41 +923,10 @@ describe('ReadonlyRepository', () => {
       translationsQueryParams!.should.deep.equal([source1.id]);
     });
     it('should support complex query with multiple chained modifiers', async () => {
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
-      const product = {
-        id: faker.datatype.number(),
-        name: `product - ${faker.datatype.uuid()}`,
-        store: store.id,
-      };
-      const category1 = {
-        id: faker.datatype.number(),
-        name: `category - ${faker.datatype.uuid()}`,
-      };
-      const category2 = {
-        id: faker.datatype.number(),
-        name: `category - ${faker.datatype.uuid()}`,
-      };
-      const productCategory1Map = {
-        id: faker.datatype.number(),
-        product: product.id,
-        category: category1.id,
-      };
-      const productCategory2Map = {
-        id: faker.datatype.number(),
-        product: product.id,
-        category: category2.id,
-      };
-
-      const fullProduct = _.defaults(
-        {
-          store,
-          categories: [category1, category2],
-        },
-        product,
-      );
+      const category1 = generator.category();
+      const category2 = generator.category();
+      const productCategory1Map = generator.productCategory(product, category1);
+      const productCategory2Map = generator.productCategory(product, category2);
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([product]),
@@ -1186,7 +958,11 @@ describe('ReadonlyRepository', () => {
         .sort('store desc');
       verify(mockedPool.query(anyString(), anything())).times(4);
       assert(result);
-      result.should.deep.equal(fullProduct);
+      result.should.deep.equal({
+        ...product,
+        store,
+        categories: [category1, category2],
+      });
 
       const [productQuery, productQueryParams] = capture(mockedPool.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 1');
@@ -1229,19 +1005,11 @@ describe('ReadonlyRepository', () => {
       should.not.exist(result);
     });
     it('should allow querying required string array', async () => {
-      const anotherSimple = new SimpleWithStringId();
-      anotherSimple.id = faker.datatype.uuid();
-      anotherSimple.name = 'anotherSimple';
-
-      const otherSimple = new SimpleWithStringId();
-      otherSimple.id = faker.datatype.uuid();
-      otherSimple.name = 'otherSimple';
-      otherSimple.otherId = anotherSimple;
-
-      const simple = new SimpleWithStringCollection();
-      simple.id = faker.datatype.number();
-      simple.name = `product - ${faker.datatype.uuid()}`;
-      simple.otherIds = [faker.datatype.uuid(), faker.datatype.uuid()];
+      const anotherSimple = generator.simpleWithStringId();
+      const otherSimple = generator.simpleWithStringId({
+        otherId: anotherSimple.id,
+      });
+      const simple = generator.simpleWithStringCollection();
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
 
@@ -1251,7 +1019,7 @@ describe('ReadonlyRepository', () => {
             id: simple.id,
           },
           {
-            otherIds: [otherSimple.id, otherSimple.otherId.id],
+            otherIds: [otherSimple.id, anotherSimple.id],
           },
         ],
       });
@@ -1263,11 +1031,7 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([simple.id, otherSimple.id, anotherSimple.id]);
     });
     it('should support an object with an enum/union field', async () => {
-      const simple = {
-        id: faker.datatype.number(),
-        name: `simple - ${faker.datatype.uuid()}`,
-        status: 'Foobar',
-      };
+      const simple = generator.simpleWithUnion();
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
       const result = await SimpleWithUnionRepository.findOne().where({
@@ -1281,11 +1045,7 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([['Bar', 'Foo']]);
     });
     it('should support an object with negated enum/union field', async () => {
-      const simple = {
-        id: faker.datatype.number(),
-        name: `simple - ${faker.datatype.uuid()}`,
-        status: 'Foobar',
-      };
+      const simple = generator.simpleWithUnion();
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
       const result = await SimpleWithUnionRepository.findOne().where({
@@ -1301,13 +1061,7 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([['Bar', 'Foo']]);
     });
     it('should support an object with a json field', async () => {
-      const simple = {
-        id: faker.datatype.number(),
-        name: `simple - ${faker.datatype.uuid()}`,
-        keyValue: {
-          foo: 42,
-        },
-      };
+      const simple = generator.simpleWithJson();
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
       const result = await SimpleWithJsonRepository.findOne();
@@ -1320,27 +1074,11 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([]);
     });
     it('should support an object with a json field (with id property)', async () => {
-      const store = new Store();
-      store.id = faker.datatype.number();
-      store.name = `store - ${faker.datatype.uuid()}`;
-
-      const simple = new SimpleWithRelationAndJson();
-      simple.id = faker.datatype.number();
-      simple.name = `simple - ${faker.datatype.uuid()}`;
-      simple.store = store;
-      simple.message = {
-        id: 'foo',
-        message: 'bar',
-      } as NotEntity<IJsonLikeEntity>;
-
-      const simpleQueryResult = {
-        id: simple.id,
-        name: simple.name,
+      const simple = generator.simpleWithRelationAndJson({
         store: store.id,
-        message: simple.message,
-      };
+      });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simpleQueryResult]));
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
       const result = await SimpleWithRelationAndJsonRepository.findOne().where({
         or: [
           {
@@ -1351,7 +1089,7 @@ describe('ReadonlyRepository', () => {
         id: 42,
       });
       assert(result);
-      result.should.deep.equal(simpleQueryResult);
+      result.should.deep.equal(simple);
       assert(result.message);
       result.message.id.should.equal(simple.message.id);
 
@@ -1360,53 +1098,31 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([simple.name, simple.id, 42]);
     });
     it('should support an object with a json field (with id property) and populate statement', async () => {
-      const store = new Store();
-      store.id = faker.datatype.number();
-      store.name = `store - ${faker.datatype.uuid()}`;
-
-      const simple = new SimpleWithRelationAndJson();
-      simple.id = faker.datatype.number();
-      simple.name = `simple - ${faker.datatype.uuid()}`;
-      simple.store = store;
-      simple.message = {
-        id: 'foo',
-        message: 'bar',
-      } as NotEntity<IJsonLikeEntity>;
-
-      const simpleQueryResult = {
-        id: simple.id,
-        name: simple.name,
+      const simple = generator.simpleWithRelationAndJson({
         store: store.id,
-        message: simple.message,
-      };
+      });
 
-      const storeQueryResult = {
-        id: store.id,
-        name: store.name,
-      };
+      const storeResult = _.pick(store, 'id', 'name');
 
       when(mockedPool.query(anyString(), anything()))
-        .thenResolve(getQueryResult([simpleQueryResult]))
-        .thenResolve(getQueryResult([storeQueryResult]));
+        .thenResolve(getQueryResult([simple]))
+        .thenResolve(getQueryResult([storeResult]));
       const result = await SimpleWithRelationAndJsonRepository.findOne().populate('store', {
         select: ['name'],
       });
       assert(result);
       result.should.deep.equal({
-        ...simpleQueryResult,
-        store: storeQueryResult,
+        ...simple,
+        store: storeResult,
       });
-      result.message?.id.should.equal(simple.message.id);
+      assert(result.message);
+      result.message.id.should.equal(simple.message.id);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","store_id" AS "store","message" FROM "simple" LIMIT 1');
       params!.should.deep.equal([]);
     });
     it('should support retaining original field - UNSAFE_withOriginalFieldType()', async () => {
-      const store = new Store();
-      store.id = faker.datatype.number();
-      store.name = 'Store';
-
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([
           {
@@ -1430,10 +1146,6 @@ describe('ReadonlyRepository', () => {
       productResult.store.name?.should.equal(store.name);
     });
     it('should support manually setting a field - UNSAFE_withFieldValue()', async () => {
-      const store = new Store();
-      store.id = faker.datatype.number();
-      store.name = 'Store';
-
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([
           {
@@ -1453,16 +1165,19 @@ describe('ReadonlyRepository', () => {
     });
   });
   describe('#find()', () => {
+    let store: QueryResult<Store>;
+    beforeEach(() => {
+      store = generator.store();
+    });
+
     it('should support call without constraints', async () => {
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
@@ -1475,19 +1190,13 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([]);
     });
     it('should support call with constraints as a parameter', async () => {
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
@@ -1509,19 +1218,13 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([_.map(products, 'id'), store.id]);
     });
     it('should support call with where constraint as a parameter', async () => {
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
@@ -1539,14 +1242,12 @@ describe('ReadonlyRepository', () => {
     it('should support call with explicit pool override', async () => {
       const poolOverride = mock(Pool);
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult(products));
@@ -1562,19 +1263,13 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([]);
     });
     it('should support call with chained where constraints', async () => {
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
@@ -1590,16 +1285,12 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with chained where constraints - array ILIKE array of values', async () => {
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-          serialNumber: faker.datatype.uuid(),
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-          serialNumber: faker.datatype.uuid(),
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
@@ -1631,16 +1322,14 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with chained where constraints - NOT ILIKE array of values', async () => {
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
+        generator.product({
+          store: store.id,
           sku: faker.datatype.uuid(),
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
+        }),
+        generator.product({
+          store: store.id,
           sku: faker.datatype.uuid(),
-        },
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
@@ -1659,19 +1348,13 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([['foo', 'bar']]);
     });
     it('should support call with chained where constraints - Promise.all', async () => {
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
@@ -1689,14 +1372,12 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with chained sort', async () => {
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
@@ -1710,14 +1391,12 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with chained limit', async () => {
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
@@ -1731,14 +1410,12 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with chained skip', async () => {
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
@@ -1752,14 +1429,12 @@ describe('ReadonlyRepository', () => {
     });
     it('should support call with chained paginate', async () => {
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
@@ -1775,19 +1450,13 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([]);
     });
     it('should support complex query with multiple chained modifiers', async () => {
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
@@ -1825,28 +1494,20 @@ describe('ReadonlyRepository', () => {
       result2[0].instanceFunction().should.equal(`${result.name} bar!`);
     });
     it('should allow types when used in promise.all with other queries', async () => {
-      const three1: LevelThree = {
-        id: `three1: ${faker.datatype.uuid()}`,
-        three: `three1: ${faker.datatype.uuid()}`,
+      const three1 = generator.levelThree({
         foo: `three1: ${faker.datatype.uuid()}`,
-      };
-      const three2: LevelThree = {
-        id: `three2: ${faker.datatype.uuid()}`,
-        three: `three2: ${faker.datatype.uuid()}`,
+      });
+      const three2 = generator.levelThree({
         foo: `three2: ${faker.datatype.uuid()}`,
-      };
-      const two: LevelTwo = {
-        id: `two: ${faker.datatype.uuid()}`,
-        two: `two: ${faker.datatype.uuid()}`,
+      });
+      const two = generator.levelTwo({
         foo: `two: ${faker.datatype.uuid()}`,
         levelThree: three1.id,
-      };
-      const one: LevelOne = {
-        id: `one: ${faker.datatype.uuid()}`,
-        one: `one: ${faker.datatype.uuid()}`,
+      });
+      const one = generator.levelOne({
         foo: `one: ${faker.datatype.uuid()}`,
         levelTwo: two.id,
-      };
+      });
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([one]), getQueryResult([two]), getQueryResult([three1, three2]));
 
       assert(three1.foo);
@@ -1896,20 +1557,11 @@ describe('ReadonlyRepository', () => {
       levelThreeQueryParams.should.deep.equal([[three1.foo, three2.foo]]);
     });
     it('should support retaining original field - UNSAFE_withOriginalFieldType()', async () => {
-      const store = new Store();
-      store.id = faker.datatype.number();
-      store.name = 'Store';
+      const product = generator.product({
+        store: store.id,
+      });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([
-          {
-            id: faker.datatype.number(),
-            name: 'Product',
-            store: store.id,
-          },
-        ]),
-        getQueryResult([store]),
-      );
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
 
       const products = await ProductRepository.find().UNSAFE_withOriginalFieldType('store');
       products.length.should.equal(1);
@@ -1925,161 +1577,102 @@ describe('ReadonlyRepository', () => {
       productResult.store.name?.should.equal(store.name);
     });
     describe('populate', () => {
-      let store1: Store;
-      let store2: Store;
-      let product1: Product;
-      let product2: Product;
-      let product3: Product;
-      let category1: Category;
-      let category2: Category;
-      let product1Category1: ProductCategory;
-      let product1Category2: ProductCategory;
-      let product2Category1: ProductCategory;
-      let product3Category1: ProductCategory;
+      let store1: QueryResult<Store>;
+      let store2: QueryResult<Store>;
+      let product1: QueryResult<Product>;
+      let product2: QueryResult<Product>;
+      let product3: QueryResult<Product>;
+      let category1: QueryResult<Category>;
+      let category2: QueryResult<Category>;
+      let product1Category1: QueryResult<ProductCategory>;
+      let product1Category2: QueryResult<ProductCategory>;
+      let product2Category1: QueryResult<ProductCategory>;
+      let product3Category1: QueryResult<ProductCategory>;
 
-      let teacher1: Teacher;
-      let teacher2: Teacher;
-      let parkingSpace: ParkingSpace;
-      let classroom: Classroom;
-      let teacher1Classroom: TeacherClassroom;
+      let teacher1: QueryResult<Teacher>;
+      let teacher2: QueryResult<Teacher>;
+      let parkingLot: QueryResult<ParkingLot>;
+      let parkingSpace: QueryResult<ParkingSpace>;
+      let classroom: QueryResult<Classroom>;
+      let teacher1Classroom: QueryResult<TeacherClassroom>;
 
-      let source1: SimpleWithSelfReference;
-      let source2: SimpleWithSelfReference;
-      let translation1: SimpleWithSelfReference;
-      let translation2: SimpleWithSelfReference;
+      let source1: QueryResult<SimpleWithSelfReference>;
+      let source2: QueryResult<SimpleWithSelfReference>;
+      let translation1: QueryResult<SimpleWithSelfReference>;
+      let translation2: QueryResult<SimpleWithSelfReference>;
 
-      let levelOneItem: LevelOne;
-      let levelTwoItem: LevelTwo;
-      let levelThreeItem: LevelThree;
+      let levelOneItem: QueryResult<LevelOne>;
+      let levelTwoItem: QueryResult<LevelTwo>;
+      let levelThreeItem: QueryResult<LevelThree>;
 
       before(() => {
-        store1 = new Store();
-        store1.id = faker.datatype.number();
-        store1.name = `store1 - ${store1.id}`;
+        store1 = generator.store();
+        store2 = generator.store();
 
-        store2 = new Store();
-        store2.id = faker.datatype.number();
-        store2.name = `store2 - ${store2.id}`;
+        product1 = generator.product({
+          store: store1.id,
+        });
+        product2 = generator.product({
+          store: store2.id,
+        });
+        product3 = generator.product({
+          store: store1.id,
+        });
 
-        product1 = new Product();
-        product1.id = faker.datatype.number();
-        product1.name = `product1 - ${product1.id}`;
-        product1.store = store1.id;
+        category1 = generator.category();
+        category2 = generator.category();
 
-        product2 = new Product();
-        product2.id = faker.datatype.number();
-        product2.name = `product2 - ${product2.id}`;
-        product2.store = store2.id;
+        product1Category1 = generator.productCategory(product1.id, category1.id);
+        product1Category2 = generator.productCategory(product1.id, category2.id);
+        product2Category1 = generator.productCategory(product2, category1);
+        product3Category1 = generator.productCategory(product2, category1);
 
-        product3 = new Product();
-        product3.id = faker.datatype.number();
-        product3.name = `product3 - ${product2.id}`;
-        product3.store = store1.id;
+        parkingLot = generator.parkingLot();
+        parkingSpace = generator.parkingSpace({
+          parkingLot: parkingLot.id,
+        });
 
-        category1 = new Category();
-        category1.id = faker.datatype.number();
-        category1.name = `category1 - ${category1.id}`;
+        teacher1 = generator.teacher({
+          parkingSpace: parkingSpace.id,
+        });
+        teacher2 = generator.teacher();
 
-        category2 = new Category();
-        category2.id = faker.datatype.number();
-        category2.name = `category2 - ${category2.id}`;
+        classroom = generator.classroom();
 
-        product1Category1 = new ProductCategory();
-        product1Category1.id = faker.datatype.number();
-        product1Category1.product = product1.id;
-        product1Category1.category = category1.id;
+        teacher1Classroom = generator.teacherClassroom(teacher1, classroom);
 
-        product1Category2 = new ProductCategory();
-        product1Category2.id = faker.datatype.number();
-        product1Category2.product = product1.id;
-        product1Category2.category = category2.id;
+        source1 = generator.simpleWithSelfReference();
+        source2 = generator.simpleWithSelfReference();
 
-        product2Category1 = new ProductCategory();
-        product2Category1.id = faker.datatype.number();
-        product2Category1.product = product2.id;
-        product2Category1.category = category1.id;
+        translation1 = generator.simpleWithSelfReference({
+          source: source1.id,
+        });
+        translation2 = generator.simpleWithSelfReference({
+          source: source1.id,
+        });
 
-        product3Category1 = new ProductCategory();
-        product3Category1.id = faker.datatype.number();
-        product3Category1.product = product3.id;
-        product3Category1.category = category1.id;
-
-        teacher1 = new Teacher();
-        teacher1.id = faker.datatype.uuid();
-        teacher1.firstName = faker.name.firstName();
-        teacher1.lastName = faker.name.lastName();
-        teacher1.isActive = true;
-
-        teacher2 = new Teacher();
-        teacher2.id = faker.datatype.uuid();
-        teacher2.firstName = faker.name.firstName();
-        teacher2.lastName = faker.name.lastName();
-        teacher2.isActive = true;
-
-        parkingSpace = new ParkingSpace();
-        parkingSpace.id = faker.datatype.uuid();
-        parkingSpace.name = faker.datatype.number().toString();
-
-        teacher1.parkingSpace = parkingSpace.id;
-
-        classroom = new Classroom();
-        classroom.id = faker.datatype.uuid();
-        classroom.name = faker.datatype.number().toString();
-
-        teacher1Classroom = new TeacherClassroom();
-        teacher1Classroom.id = faker.datatype.uuid();
-        teacher1Classroom.teacher = teacher1.id;
-        teacher1Classroom.classroom = classroom.id;
-
-        source1 = new SimpleWithSelfReference();
-        source1.id = faker.datatype.uuid();
-        source1.name = 'Source';
-
-        source2 = new SimpleWithSelfReference();
-        source2.id = faker.datatype.uuid();
-        source2.name = 'Source2';
-
-        translation1 = new SimpleWithSelfReference();
-        translation1.id = faker.datatype.uuid();
-        translation1.name = 'translation1';
-        translation1.source = source1.id;
-
-        translation2 = new SimpleWithSelfReference();
-        translation2.id = faker.datatype.uuid();
-        translation2.name = 'translation2';
-        translation2.source = source1.id;
-
-        levelThreeItem = new LevelThree();
-        levelThreeItem.id = faker.datatype.uuid();
-        levelThreeItem.three = `Three - ${faker.datatype.uuid()}`;
-
-        levelTwoItem = new LevelTwo();
-        levelTwoItem.id = faker.datatype.uuid();
-        levelTwoItem.two = `Two - ${faker.datatype.uuid()}`;
-        levelTwoItem.levelThree = levelThreeItem.id;
-
-        levelOneItem = new LevelOne();
-        levelOneItem.id = faker.datatype.uuid();
-        levelOneItem.one = `One - ${faker.datatype.uuid()}`;
-        levelOneItem.levelTwo = levelTwoItem.id;
+        levelThreeItem = generator.levelThree();
+        levelTwoItem = generator.levelTwo({
+          levelThree: levelThreeItem.id,
+        });
+        levelOneItem = generator.levelOne({
+          levelTwo: levelTwoItem.id,
+        });
       });
 
       it('should support populating a single relation - same/shared', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(
-          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store')]),
-          getQueryResult([_.pick(store1, 'id', 'name')]),
-        );
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product3]), getQueryResult([store]));
 
         const results = await ProductRepository.find().populate('store');
         verify(mockedPool.query(anyString(), anything())).twice();
         results.should.deep.equal([
           {
-            ..._.pick(product1, 'id', 'name'),
-            store: store1,
+            ...product1,
+            store,
           },
           {
-            ..._.pick(product3, 'id', 'name'),
-            store: store1,
+            ...product3,
+            store,
           },
         ]);
 
@@ -2092,11 +1685,11 @@ describe('ReadonlyRepository', () => {
       });
       it('should support populating a single relation - different', async () => {
         when(mockedPool.query(anyString(), anything())).thenResolve(
-          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]),
+          getQueryResult([product1, product2]),
           getQueryResult([
             // NOTE: Swapping the order to make sure that order doesn't matter
-            _.pick(store2, 'id', 'name'),
-            _.pick(store1, 'id', 'name'),
+            store2,
+            store1,
           ]),
         );
 
@@ -2104,11 +1697,11 @@ describe('ReadonlyRepository', () => {
         verify(mockedPool.query(anyString(), anything())).twice();
         results.should.deep.equal([
           {
-            ..._.pick(product1, 'id', 'name'),
+            ...product1,
             store: store1,
           },
           {
-            ..._.pick(product2, 'id', 'name'),
+            ...product2,
             store: store2,
           },
         ]);
@@ -2122,10 +1715,8 @@ describe('ReadonlyRepository', () => {
       });
       it('should support populating a single relation with implicit inherited pool override', async () => {
         const poolOverride = mock(Pool);
-        when(poolOverride.query(anyString(), anything())).thenResolve(
-          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store')]),
-          getQueryResult([_.pick(store1, 'id', 'name')]),
-        );
+
+        when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([product1, product3]), getQueryResult([store1]));
 
         const results = await ProductRepository.find({
           pool: instance(poolOverride),
@@ -2135,11 +1726,11 @@ describe('ReadonlyRepository', () => {
         verify(poolOverride.query(anyString(), anything())).twice();
         results.should.deep.equal([
           {
-            ..._.pick(product1, 'id', 'name'),
+            ...product1,
             store: store1,
           },
           {
-            ..._.pick(product3, 'id', 'name'),
+            ...product3,
             store: store1,
           },
         ]);
@@ -2153,8 +1744,9 @@ describe('ReadonlyRepository', () => {
       });
       it('should support populating a single relation with explicit pool override', async () => {
         const storePool = mock(Pool);
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store')]));
-        when(storePool.query(anyString(), anything())).thenResolve(getQueryResult([_.pick(store1, 'id', 'name')]));
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product3]));
+        when(storePool.query(anyString(), anything())).thenResolve(getQueryResult([store1]));
 
         const results = await ProductRepository.find().populate('store', {
           pool: instance(storePool),
@@ -2164,11 +1756,11 @@ describe('ReadonlyRepository', () => {
         verify(storePool.query(anyString(), anything())).once();
         results.should.deep.equal([
           {
-            ..._.pick(product1, 'id', 'name'),
+            ...product1,
             store: store1,
           },
           {
-            ..._.pick(product3, 'id', 'name'),
+            ...product3,
             store: store1,
           },
         ]);
@@ -2180,11 +1772,33 @@ describe('ReadonlyRepository', () => {
         storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1');
         storeQueryParams!.should.deep.equal([store1.id]);
       });
+      it('should support populating a single relation as QueryResult with partial select', async () => {
+        const levelOneResult = _.pick(levelOneItem, 'id', 'one', 'levelTwo');
+        const levelTwoResult = _.pick(levelTwoItem, 'id', 'two', 'levelThree');
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([levelOneResult]), getQueryResult([levelTwoResult]));
+
+        const results = await LevelOneRepository.find({
+          select: ['one', 'levelTwo'],
+        }).populate('levelTwo', {
+          select: ['two', 'levelThree'],
+        });
+        verify(mockedPool.query(anyString(), anything())).twice();
+        results.should.deep.equal([
+          {
+            ...levelOneResult,
+            levelTwo: levelTwoResult,
+          },
+        ]);
+
+        results[0].levelTwo.levelThree.should.equal(levelThreeItem.id);
+        results[0].levelTwo.levelThree.toUpperCase().should.equal(levelThreeItem.id.toUpperCase());
+      });
       it('should support populating a single relation with partial select and sort', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(
-          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]),
-          getQueryResult([_.pick(store1, 'id'), _.pick(store2, 'id')]),
-        );
+        const store1Result = _.pick(store1, 'id');
+        const store2Result = _.pick(store2, 'id');
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product2]), getQueryResult([store1Result, store2Result]));
 
         const results = await ProductRepository.find().populate('store', {
           select: ['id'],
@@ -2193,12 +1807,12 @@ describe('ReadonlyRepository', () => {
         verify(mockedPool.query(anyString(), anything())).twice();
         results.should.deep.equal([
           {
-            ..._.pick(product1, 'id', 'name'),
-            store: _.pick(store1, 'id'),
+            ...product1,
+            store: store1Result,
           },
           {
-            ..._.pick(product2, 'id', 'name'),
-            store: _.pick(store2, 'id'),
+            ...product2,
+            store: store2Result,
           },
         ]);
 
@@ -2210,10 +1824,12 @@ describe('ReadonlyRepository', () => {
         storeQueryParams!.should.deep.equal([[store1.id, store2.id]]);
       });
       it('should support populating a single relation when column is missing from partial select', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(
-          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]),
-          getQueryResult([_.pick(store1, 'id'), _.pick(store2, 'id')]),
-        );
+        const product1Result = _.pick(product1, 'id', 'name', 'store');
+        const product2Result = _.pick(product2, 'id', 'name', 'store');
+        const store1Result = _.pick(store1, 'id');
+        const store2Result = _.pick(store2, 'id');
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1Result, product2Result]), getQueryResult([store1Result, store2Result]));
 
         const results = await ProductRepository.find({
           select: ['name'],
@@ -2223,12 +1839,12 @@ describe('ReadonlyRepository', () => {
         verify(mockedPool.query(anyString(), anything())).twice();
         results.should.deep.equal([
           {
-            ..._.pick(product1, 'id', 'name'),
-            store: _.pick(store1, 'id'),
+            ...product1Result,
+            store: store1Result,
           },
           {
-            ..._.pick(product2, 'id', 'name'),
-            store: _.pick(store2, 'id'),
+            ...product2Result,
+            store: store2Result,
           },
         ]);
 
@@ -2240,21 +1856,18 @@ describe('ReadonlyRepository', () => {
         storeQueryParams!.should.deep.equal([[store1.id, store2.id]]);
       });
       it('should support populating one-to-many collection', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(
-          getQueryResult([_.pick(store1, 'id', 'name'), _.pick(store2, 'id', 'name')]),
-          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]),
-        );
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store1, store2]), getQueryResult([product1, product3, product2]));
 
         const results = await StoreRepository.find().populate('products');
         verify(mockedPool.query(anyString(), anything())).twice();
         results.should.deep.equal([
           {
-            ..._.pick(store1, 'id', 'name'),
-            products: [_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store')],
+            ...store1,
+            products: [product1, product3],
           },
           {
-            ..._.pick(store2, 'id', 'name'),
-            products: [_.pick(product2, 'id', 'name', 'store')],
+            ...store2,
+            products: [product2],
           },
         ]);
         results[0].products.length.should.equal(2);
@@ -2269,10 +1882,8 @@ describe('ReadonlyRepository', () => {
       });
       it('should support populating one-to-many collection with implicit inherited pool override', async () => {
         const poolOverride = mock(Pool);
-        when(poolOverride.query(anyString(), anything())).thenResolve(
-          getQueryResult([_.pick(store1, 'id', 'name'), _.pick(store2, 'id', 'name')]),
-          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]),
-        );
+
+        when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([store1, store2]), getQueryResult([product1, product3, product2]));
 
         const results = await StoreRepository.find({
           pool: instance(poolOverride),
@@ -2282,12 +1893,12 @@ describe('ReadonlyRepository', () => {
         verify(poolOverride.query(anyString(), anything())).twice();
         results.should.deep.equal([
           {
-            ..._.pick(store1, 'id', 'name'),
-            products: [_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store')],
+            ...store1,
+            products: [product1, product3],
           },
           {
-            ..._.pick(store2, 'id', 'name'),
-            products: [_.pick(product2, 'id', 'name', 'store')],
+            ...store2,
+            products: [product2],
           },
         ]);
         results[0].products.length.should.equal(2);
@@ -2302,10 +1913,9 @@ describe('ReadonlyRepository', () => {
       });
       it('should support populating one-to-many collection with explicit pool override', async () => {
         const productPool = mock(Pool);
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([_.pick(store1, 'id', 'name'), _.pick(store2, 'id', 'name')]));
-        when(productPool.query(anyString(), anything())).thenResolve(
-          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]),
-        );
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store1, store2]));
+        when(productPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product3, product2]));
 
         const results = await StoreRepository.find().populate('products', {
           pool: instance(productPool),
@@ -2314,12 +1924,12 @@ describe('ReadonlyRepository', () => {
         verify(productPool.query(anyString(), anything())).once();
         results.should.deep.equal([
           {
-            ..._.pick(store1, 'id', 'name'),
-            products: [_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store')],
+            ...store1,
+            products: [product1, product3],
           },
           {
-            ..._.pick(store2, 'id', 'name'),
-            products: [_.pick(product2, 'id', 'name', 'store')],
+            ...store2,
+            products: [product2],
           },
         ]);
         results[0].products.length.should.equal(2);
@@ -2333,10 +1943,11 @@ describe('ReadonlyRepository', () => {
         storeQueryParams!.should.deep.equal([[store1.id, store2.id]]);
       });
       it('should support populating one-to-many collection with partial select and sort', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(
-          getQueryResult([_.pick(store1, 'id', 'name'), _.pick(store2, 'id', 'name')]),
-          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]),
-        );
+        const product1Result = _.pick(product1, 'id', 'name', 'sku', 'store');
+        const product2Result = _.pick(product2, 'id', 'name', 'sku', 'store');
+        const product3Result = _.pick(product3, 'id', 'name', 'sku', 'store');
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store1, store2]), getQueryResult([product1Result, product3Result, product2Result]));
 
         const results = await StoreRepository.find().populate('products', {
           select: ['name', 'sku', 'store'],
@@ -2345,12 +1956,12 @@ describe('ReadonlyRepository', () => {
         verify(mockedPool.query(anyString(), anything())).twice();
         results.should.deep.equal([
           {
-            ..._.pick(store1, 'id', 'name'),
-            products: [_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store')],
+            ...store1,
+            products: [product1Result, product3Result],
           },
           {
-            ..._.pick(store2, 'id', 'name'),
-            products: [_.pick(product2, 'id', 'name', 'store')],
+            ...store2,
+            products: [product2Result],
           },
         ]);
         results[0].products.length.should.equal(2);
@@ -2365,24 +1976,24 @@ describe('ReadonlyRepository', () => {
       });
       it('should support populating multi-multi collection', async () => {
         when(mockedPool.query(anyString(), anything()))
-          .thenResolve(getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]))
+          .thenResolve(getQueryResult([product1, product3, product2]))
           .thenResolve(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
-          .thenResolve(getQueryResult([_.pick(category1, 'id', 'name'), _.pick(category2, 'id', 'name')]));
+          .thenResolve(getQueryResult([category1, category2]));
 
         const results = await ProductRepository.find().populate('categories');
         verify(mockedPool.query(anyString(), anything())).thrice();
         results.should.deep.equal([
           {
-            ..._.pick(product1, 'id', 'name', 'store'),
-            categories: [_.pick(category1, 'id', 'name'), _.pick(category2, 'id', 'name')],
+            ...product1,
+            categories: [category1, category2],
           },
           {
-            ..._.pick(product3, 'id', 'name', 'store'),
-            categories: [_.pick(category1, 'id', 'name')],
+            ...product3,
+            categories: [category1],
           },
           {
-            ..._.pick(product2, 'id', 'name', 'store'),
-            categories: [_.pick(category1, 'id', 'name')],
+            ...product2,
+            categories: [category1],
           },
         ]);
         results[0].categories.length.should.equal(2);
@@ -2401,9 +2012,9 @@ describe('ReadonlyRepository', () => {
       it('should support populating multi-multi collection with implicit inherited pool override', async () => {
         const poolOverride = mock(Pool);
         when(poolOverride.query(anyString(), anything()))
-          .thenResolve(getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]))
+          .thenResolve(getQueryResult([product1, product3, product2]))
           .thenResolve(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
-          .thenResolve(getQueryResult([_.pick(category1, 'id', 'name'), _.pick(category2, 'id', 'name')]));
+          .thenResolve(getQueryResult([category1, category2]));
 
         const results = await ProductRepository.find({
           pool: instance(poolOverride),
@@ -2413,16 +2024,16 @@ describe('ReadonlyRepository', () => {
         verify(poolOverride.query(anyString(), anything())).thrice();
         results.should.deep.equal([
           {
-            ..._.pick(product1, 'id', 'name', 'store'),
-            categories: [_.pick(category1, 'id', 'name'), _.pick(category2, 'id', 'name')],
+            ...product1,
+            categories: [category1, category2],
           },
           {
-            ..._.pick(product3, 'id', 'name', 'store'),
-            categories: [_.pick(category1, 'id', 'name')],
+            ...product3,
+            categories: [category1],
           },
           {
-            ..._.pick(product2, 'id', 'name', 'store'),
-            categories: [_.pick(category1, 'id', 'name')],
+            ...product2,
+            categories: [category1],
           },
         ]);
         results[0].categories.length.should.equal(2);
@@ -2440,12 +2051,10 @@ describe('ReadonlyRepository', () => {
       });
       it('should support populating multi-multi collection with explicit pool override', async () => {
         const productPool = mock(Pool);
-        when(mockedPool.query(anyString(), anything())).thenResolve(
-          getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]),
-        );
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product3, product2]));
         when(productPool.query(anyString(), anything()))
           .thenResolve(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
-          .thenResolve(getQueryResult([_.pick(category1, 'id', 'name'), _.pick(category2, 'id', 'name')]));
+          .thenResolve(getQueryResult([category1, category2]));
 
         const results = await ProductRepository.find().populate('categories', {
           pool: instance(productPool),
@@ -2455,16 +2064,16 @@ describe('ReadonlyRepository', () => {
         verify(productPool.query(anyString(), anything())).twice();
         results.should.deep.equal([
           {
-            ..._.pick(product1, 'id', 'name', 'store'),
-            categories: [_.pick(category1, 'id', 'name'), _.pick(category2, 'id', 'name')],
+            ...product1,
+            categories: [category1, category2],
           },
           {
-            ..._.pick(product3, 'id', 'name', 'store'),
-            categories: [_.pick(category1, 'id', 'name')],
+            ...product3,
+            categories: [category1],
           },
           {
-            ..._.pick(product2, 'id', 'name', 'store'),
-            categories: [_.pick(category1, 'id', 'name')],
+            ...product2,
+            categories: [category1],
           },
         ]);
         results[0].categories.length.should.equal(2);
@@ -2481,10 +2090,13 @@ describe('ReadonlyRepository', () => {
         categoryQueryParams!.should.deep.equal([[category1.id, category2.id]]);
       });
       it('should support populating multi-multi collection with partial select and sort', async () => {
+        const category1Result = _.pick(category1, 'id');
+        const category2Result = _.pick(category2, 'id');
+
         when(mockedPool.query(anyString(), anything()))
-          .thenResolve(getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]))
+          .thenResolve(getQueryResult([product1, product3, product2]))
           .thenResolve(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
-          .thenResolve(getQueryResult([_.pick(category1, 'id'), _.pick(category2, 'id')]));
+          .thenResolve(getQueryResult([category1Result, category2Result]));
 
         const results = await ProductRepository.find().populate('categories', {
           select: ['id'],
@@ -2493,16 +2105,16 @@ describe('ReadonlyRepository', () => {
         verify(mockedPool.query(anyString(), anything())).thrice();
         results.should.deep.equal([
           {
-            ..._.pick(product1, 'id', 'name', 'store'),
-            categories: [_.pick(category1, 'id'), _.pick(category2, 'id')],
+            ...product1,
+            categories: [category1Result, category2Result],
           },
           {
-            ..._.pick(product3, 'id', 'name', 'store'),
-            categories: [_.pick(category1, 'id')],
+            ...product3,
+            categories: [category1Result],
           },
           {
-            ..._.pick(product2, 'id', 'name', 'store'),
-            categories: [_.pick(category1, 'id')],
+            ...product2,
+            categories: [category1Result],
           },
         ]);
         results[0].categories.length.should.equal(2);
@@ -2520,33 +2132,33 @@ describe('ReadonlyRepository', () => {
       });
       it('should support populating multiple properties', async () => {
         when(mockedPool.query(anyString(), anything()))
-          .thenResolve(getQueryResult([_.pick(product1, 'id', 'name', 'store'), _.pick(product3, 'id', 'name', 'store'), _.pick(product2, 'id', 'name', 'store')]))
+          .thenResolve(getQueryResult([product1, product3, product2]))
           .thenResolve(
             getQueryResult([
               // NOTE: Swapping the order to make sure that order doesn't matter
-              _.pick(store2, 'id', 'name'),
-              _.pick(store1, 'id', 'name'),
+              store2,
+              store1,
             ]),
           )
           .thenResolve(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
-          .thenResolve(getQueryResult([_.pick(category1, 'id', 'name'), _.pick(category2, 'id', 'name')]));
+          .thenResolve(getQueryResult([category1, category2]));
 
         const results = await ProductRepository.find().populate('store').populate('categories');
         results.should.deep.equal([
           {
-            ..._.pick(product1, 'id', 'name', 'store'),
+            ...product1,
             store: store1,
-            categories: [_.pick(category1, 'id', 'name'), _.pick(category2, 'id', 'name')],
+            categories: [category1, category2],
           },
           {
-            ..._.pick(product3, 'id', 'name', 'store'),
+            ...product3,
             store: store1,
-            categories: [_.pick(category1, 'id', 'name')],
+            categories: [category1],
           },
           {
-            ..._.pick(product2, 'id', 'name', 'store'),
+            ...product2,
             store: store2,
-            categories: [_.pick(category1, 'id', 'name')],
+            categories: [category1],
           },
         ]);
         verify(mockedPool.query(anyString(), anything())).times(4);
@@ -2570,11 +2182,14 @@ describe('ReadonlyRepository', () => {
         results[0].store.id.should.equal(store1.id);
       });
       it('should support populating multiple properties with partial select and sort', async () => {
+        const parkingSpaceResult = _.pick(parkingSpace, 'id', 'name');
+        const classroomResult = _.pick(classroom, 'id', 'name');
+
         when(mockedPool.query(anyString(), anything()))
-          .thenResolve(getQueryResult([_.pick(teacher1, 'id', 'firstName', 'lastName', 'isActive', 'parkingSpace'), _.pick(teacher2, 'id', 'firstName', 'lastName', 'isActive', 'parkingSpace')]))
-          .thenResolve(getQueryResult([_.pick(parkingSpace, 'id', 'name')]))
+          .thenResolve(getQueryResult([teacher1, teacher2]))
+          .thenResolve(getQueryResult([parkingSpaceResult]))
           .thenResolve(getQueryResult([teacher1Classroom]))
-          .thenResolve(getQueryResult([_.pick(classroom, 'id', 'name')]));
+          .thenResolve(getQueryResult([classroomResult]));
 
         async function getTeachers(): Promise<
           (Omit<QueryResult<Teacher>, 'parkingSpace'> & {
@@ -2603,12 +2218,12 @@ describe('ReadonlyRepository', () => {
         const results = await getTeachers();
         results.should.deep.equal([
           {
-            ..._.pick(teacher1, 'id', 'firstName', 'lastName', 'isActive'),
-            parkingSpace: _.pick(parkingSpace, 'id', 'name'),
-            classrooms: [_.pick(classroom, 'id', 'name')],
+            ...teacher1,
+            parkingSpace: parkingSpaceResult,
+            classrooms: [parkingSpaceResult],
           },
           {
-            ..._.pick(teacher2, 'id', 'firstName', 'lastName', 'isActive'),
+            teacher2,
             parkingSpace: undefined,
             classrooms: [],
           },
@@ -2634,10 +2249,10 @@ describe('ReadonlyRepository', () => {
         categoryQueryParams!.should.deep.equal([classroom.id, 'classroom%']);
       });
       it('should support populating self reference', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(
-          getQueryResult([_.pick(source1, 'id', 'name'), _.pick(source2, 'id', 'name')]),
-          getQueryResult([_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')]),
-        );
+        const source1Result = _.pick(source1, 'id', 'name');
+        const source2Result = _.pick(source2, 'id', 'name');
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([source1Result, source2Result]), getQueryResult([translation1, translation2]));
 
         const results = await SimpleWithSelfReferenceRepository.find({
           select: ['name'],
@@ -2649,11 +2264,11 @@ describe('ReadonlyRepository', () => {
         verify(mockedPool.query(anyString(), anything())).twice();
         results.should.deep.equal([
           {
-            ..._.pick(source1, 'id', 'name'),
-            translations: [_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')],
+            ...source1Result,
+            translations: [translation1, translation2],
           },
           {
-            ..._.pick(source2, 'id', 'name'),
+            ...source2Result,
             translations: [],
           },
         ]);
@@ -2668,10 +2283,12 @@ describe('ReadonlyRepository', () => {
         translationsQueryParams!.should.deep.equal([[source1.id, source2.id]]);
       });
       it('should throw when attempting to populate collection and not not explicitly specifying relation column', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(
-          getQueryResult([_.pick(source1, 'id', 'name'), _.pick(source2, 'id', 'name')]),
-          getQueryResult([_.pick(translation1, 'id', 'name', 'source'), _.pick(translation2, 'id', 'name', 'source')]),
-        );
+        const source1Result = _.pick(source1, 'id', 'name');
+        const source2Result = _.pick(source2, 'id', 'name');
+        const translation1Result = _.pick(translation1, 'id', 'name', 'source');
+        const translation2Result = _.pick(translation2, 'id', 'name', 'source');
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([source1Result, source2Result]), getQueryResult([translation1Result, translation2Result]));
 
         try {
           await SimpleWithSelfReferenceRepository.find({
@@ -2695,16 +2312,19 @@ describe('ReadonlyRepository', () => {
     });
   });
   describe('#count()', () => {
+    let store: QueryResult<Store>;
+    beforeEach(() => {
+      store = generator.store();
+    });
+
     it('should support call without constraints', async () => {
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
@@ -2724,19 +2344,13 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([]);
     });
     it('should support call constraints as a parameter', async () => {
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
@@ -2759,19 +2373,13 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([_.map(products, 'id'), store.id]);
     });
     it('should support call with chained where constraints', async () => {
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
@@ -2793,19 +2401,13 @@ describe('ReadonlyRepository', () => {
       params!.should.deep.equal([store.id]);
     });
     it('should support call with chained where constraints - Promise.all', async () => {
-      const store = {
-        id: faker.datatype.number(),
-        name: `store - ${faker.datatype.uuid()}`,
-      };
       const products = [
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
-        {
-          id: faker.datatype.number(),
-          name: `product - ${faker.datatype.uuid()}`,
-        },
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
