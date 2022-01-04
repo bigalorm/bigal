@@ -17,7 +17,7 @@ export interface IReadonlyRepository<T extends Entity> {
     // Optional keys specified as args.select
     K extends string & keyof T,
     // Return type used to pass through to all chained methods
-    TReturn = QueryResult<Pick<T, K | 'id'>> | null,
+    TReturn = QueryResult<Pick<T, K | 'id'>>,
   >(
     args: FindOneArgs<T, K> | WhereQuery<T>,
   ): FindOneResult<T, TReturn>;

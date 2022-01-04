@@ -71,7 +71,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
    * @param {object} [args.where] - Object representing the where query
    * @param {string|object} [args.sort] - Property name(s) to sort by
    */
-  public findOne<K extends string & keyof T, TReturn = QueryResult<Pick<T, K | keyof PickFunctions<T> | 'id'>> | null>(args: FindOneArgs<T, K> | WhereQuery<T> = {}): FindOneResult<T, TReturn> {
+  public findOne<K extends string & keyof T, TReturn = QueryResult<Pick<T, K | keyof PickFunctions<T> | 'id'>>>(args: FindOneArgs<T, K> | WhereQuery<T> = {}): FindOneResult<T, TReturn> {
     const { stack } = new Error(`${this.model.name}.findOne()`);
 
     let select: Set<string> | undefined;
