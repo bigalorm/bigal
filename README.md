@@ -59,7 +59,7 @@ export class Product extends Entity {
     defaultsTo: [],
     name: 'alias_names',
   })
-  public aliases!: string[];
+  public aliases?: string[];
 
   @column({
     model: () => Store.name,
@@ -554,6 +554,35 @@ const items = await PersonRepository.destroy(
 > Note: The primary key will always be included. To only return the primary key value, pass an empty array
 
 ### Known issues
+
+#### Entity collections must be optional
+
+BigAl expects that all entity collection properties must be optional. There will be some type issues with QueryResult
+if you make a collection non-optional.
+
+For example:
+
+```ts
+export class Store extends Entity {
+  @primaryColumn({ type: 'integer' })
+  public id!: number;
+
+  @column({
+    type: 'string',
+    required: true,
+  })
+  public name!: string;
+
+  // This property MUST be optional
+  @column({
+    collection: () => Product.name,
+    via: 'store',
+  })
+  public products?: Product[];
+}
+```
+
+#### Non-entity object arrays
 
 If you have a json property, with an `id` field, on an entity model, TypeScript will probably think it is a BigAl
 entity due to how the type system works. In that case, you'll want to wrap the type with `NotEntity<>`. For example:
