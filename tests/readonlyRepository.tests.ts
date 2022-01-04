@@ -149,7 +149,7 @@ describe('ReadonlyRepository', () => {
     it('should support call with sort as a parameter', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
-      const result = await ProductRepository.findOne({
+      const result = await ReadonlyProductRepository.findOne({
         sort: 'name',
       });
       assert(result);
@@ -157,8 +157,8 @@ describe('ReadonlyRepository', () => {
       result.name.should.equal(product.name);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "readonly_products" LIMIT 1 ORDER BY "name"');
-      params!.should.deep.equal([product.id]);
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "readonly_products" ORDER BY "name" LIMIT 1');
+      params!.should.deep.equal([]);
     });
     it('should support call with where constraint as a parameter', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
@@ -485,7 +485,10 @@ describe('ReadonlyRepository', () => {
       verify(mockedPool.query(anyString(), anything())).never();
       verify(poolOverride.query(anyString(), anything())).twice();
       assert(result);
-      result.should.deep.equal(product);
+      result.should.deep.equal({
+        ...product,
+        store,
+      });
 
       const [productQuery, productQueryParams] = capture(poolOverride.query).first();
       productQuery.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
@@ -1625,7 +1628,7 @@ describe('ReadonlyRepository', () => {
         product1Category1 = generator.productCategory(product1.id, category1.id);
         product1Category2 = generator.productCategory(product1.id, category2.id);
         product2Category1 = generator.productCategory(product2, category1);
-        product3Category1 = generator.productCategory(product2, category1);
+        product3Category1 = generator.productCategory(product3, category1);
 
         parkingLot = generator.parkingLot();
         parkingSpace = generator.parkingSpace({
@@ -1661,18 +1664,18 @@ describe('ReadonlyRepository', () => {
       });
 
       it('should support populating a single relation - same/shared', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product3]), getQueryResult([store]));
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product3]), getQueryResult([store1]));
 
         const results = await ProductRepository.find().populate('store');
         verify(mockedPool.query(anyString(), anything())).twice();
         results.should.deep.equal([
           {
             ...product1,
-            store,
+            store: store1,
           },
           {
             ...product3,
-            store,
+            store: store1,
           },
         ]);
 
@@ -2220,10 +2223,10 @@ describe('ReadonlyRepository', () => {
           {
             ...teacher1,
             parkingSpace: parkingSpaceResult,
-            classrooms: [parkingSpaceResult],
+            classrooms: [classroomResult],
           },
           {
-            teacher2,
+            ...teacher2,
             parkingSpace: undefined,
             classrooms: [],
           },
