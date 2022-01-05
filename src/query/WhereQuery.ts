@@ -6,15 +6,15 @@ type ExcludeUndefined<T> = Exclude<T, undefined>;
 export type LiteralValues<TValue> = (ExcludeUndefined<TValue> | null)[] | ExcludeUndefined<TValue> | null;
 
 export type WhereClauseValue<TValue> = TValue extends NotEntityBrand | undefined
-  ? Exclude<TValue, undefined> // If the value is not an entity, return the type without undefined
-  : Extract<ExcludeUndefined<TValue>, Entity> extends Entity // Otherwise if the type extends Entity
-  ?
+  ? Exclude<TValue, NotEntityBrand | undefined> // If the value is a NotEntityBrand, return the type without undefined
+  : Extract<TValue, Entity> extends undefined // Otherwise if the type does not extend Entity
+  ? LiteralValues<TValue>
+  :
       | (ExcludeUndefined<Exclude<TValue, Entity>> | null)[] // Allow an array of the literal value (non-entity)
       | (Pick<Extract<ExcludeUndefined<TValue>, Entity>, 'id'> | null)[] // Allow an array of objects with the id property
       | ExcludeUndefined<Exclude<TValue, Entity>> // Allow a single literal value
       | Pick<Extract<ExcludeUndefined<TValue>, Entity>, 'id'> // Allow a single object with the id property
-      | null
-  : LiteralValues<TValue>; // Otherwise allow literal values
+      | null;
 
 export type StringConstraint<TValue extends string> = {
   [P in 'contains' | 'endsWith' | 'like' | 'startsWith']?: LiteralValues<TValue>;
