@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "10.0.0-beta1",
+  "version": "10.0.0-beta5",
   "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
   "main": "index.js",
   "types": "index.d.ts",
@@ -58,6 +58,7 @@
     "typescript": "^4.5.4"
   },
   "scripts": {
+    "check:types": "tsc -p tsconfig.lint.json --noEmit",
     "prebuild": "rimraf dist",
     "build": "tsc",
     "test": "mocha -r ts-node/register tests/**/*.tests.ts",
@@ -65,7 +66,7 @@
     "lint:code": "eslint --fix --ext .ts src tests",
     "lint": "run-p lint:*",
     "lint-staged": "lint-staged",
-    "dist": "if [ -d \"src\" ]; then rm -rf dist && npm run build && npm run lint && npm run test && cp package.json dist && cp package-lock.json dist && cp *.md dist && cp LICENSE dist && cp .npmignore dist && cd dist && npm publish; fi",
+    "dist": "if [ -d \"src\" ]; then rm -rf dist && npm run build && npm run lint && npm run test && cp package.json dist && cp package-lock.json dist && cp *.md dist && cp LICENSE dist && cp .npmignore dist && cd dist && npm publish --tag beta; fi",
     "prepublishOnly": "if [ -d \"src\" ]; then echo \"Please use: npm run dist\" && exit 125; fi && pinst --disable",
     "postinstall": "husky install",
     "postpublish": "pinst --enable"
