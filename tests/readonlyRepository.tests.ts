@@ -1128,7 +1128,8 @@ describe('ReadonlyRepository', () => {
       const result = await SimpleWithJsonRepository.findOne();
       assert(result);
       result.should.deep.equal(simple);
-      result.keyValue?.should.deep.equal(simple.keyValue);
+      assert(result.keyValue);
+      result.keyValue.should.deep.equal(simple.keyValue);
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","bar","key_value" AS "keyValue" FROM "simple" LIMIT 1');
@@ -1207,7 +1208,8 @@ describe('ReadonlyRepository', () => {
 
       productResult.store = storeResult;
       productResult.store.id.should.equal(store.id);
-      productResult.store.name?.should.equal(store.name);
+      assert(productResult.store.name);
+      productResult.store.name.should.equal(store.name);
     });
     it('should support manually setting a field - UNSAFE_withFieldValue()', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(
@@ -1225,7 +1227,8 @@ describe('ReadonlyRepository', () => {
       assert(productResult);
 
       productResult.store.id.should.equal(store.id);
-      productResult.store.name?.should.equal(store.name);
+      assert(productResult.store.name);
+      productResult.store.name.should.equal(store.name);
     });
   });
   describe('#find()', () => {
@@ -1653,7 +1656,8 @@ describe('ReadonlyRepository', () => {
 
       productResult.store = storeResult;
       productResult.store.id.should.equal(store.id);
-      productResult.store.name?.should.equal(store.name);
+      assert(productResult.store.name);
+      productResult.store.name.should.equal(store.name);
     });
     describe('populate', () => {
       let store1: QueryResult<Store>;
