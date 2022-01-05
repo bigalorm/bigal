@@ -1587,6 +1587,8 @@ describe('ReadonlyRepository', () => {
       });
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([one]), getQueryResult([two]), getQueryResult([three1, three2]));
 
+      assert(one.foo);
+      assert(two.foo);
       assert(three1.foo);
       assert(three2.foo);
 

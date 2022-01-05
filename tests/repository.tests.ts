@@ -10,7 +10,7 @@ import { anyString, anything, capture, instance, mock, reset, verify, when } fro
 import type { CreateUpdateParams, QueryResult, Repository } from '../src';
 import { initialize } from '../src';
 
-import { Product, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store } from './models';
+import { Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store } from './models';
 import * as generator from './utils/generator';
 
 function getQueryResult<T>(rows: T[] = []): PostgresQueryResult<T> {
@@ -26,24 +26,24 @@ function getQueryResult<T>(rows: T[] = []): PostgresQueryResult<T> {
 describe('Repository', () => {
   let should: Chai.Should;
   const mockedPool: Pool = mock(Pool);
-  // eslint-disable-next-line @typescript-eslint/naming-convention
+  /* eslint-disable @typescript-eslint/naming-convention */
   let ProductRepository: Repository<Product>;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
+  let ProductCategoryRepository: Repository<ProductCategory>;
   let SimpleWithStringCollectionRepository: Repository<SimpleWithStringCollection>;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   let StoreRepository: Repository<Store>;
-  // eslint-disable-next-line @typescript-eslint/naming-convention
   let ProductWithCreateUpdateDateTrackingRepository: Repository<ProductWithCreateUpdateDateTracking>;
+  /* eslint-enable @typescript-eslint/naming-convention */
 
   before(() => {
     should = chai.should();
 
     const repositoriesByModelName = initialize({
-      models: [Product, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store],
+      models: [Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store],
       pool: instance(mockedPool),
     });
 
     ProductRepository = repositoriesByModelName.Product as Repository<Product>;
+    ProductCategoryRepository = repositoriesByModelName.ProductCategory as Repository<ProductCategory>;
     SimpleWithStringCollectionRepository = repositoriesByModelName.SimpleWithStringCollection as Repository<SimpleWithStringCollection>;
     StoreRepository = repositoriesByModelName.Store as Repository<Store>;
     ProductWithCreateUpdateDateTrackingRepository = repositoriesByModelName.ProductWithCreateUpdateDateTracking as Repository<ProductWithCreateUpdateDateTracking>;
@@ -262,6 +262,29 @@ describe('Repository', () => {
       query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([product.name, [], store.id]);
+    });
+    it('should allow partial Entity (omitting some required fields) as a value parameter', async () => {
+      const category = generator.category();
+      const product: Pick<Product, 'id' | 'name'> = generator.product({
+        store: store.id,
+      });
+      const productCategory = generator.productCategory(product, category);
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([productCategory]));
+
+      const result = await ProductCategoryRepository.create({
+        product,
+        category,
+      });
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      should.exist(result);
+      result.should.deep.equal(productCategory);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('INSERT INTO "product__category" ("product_id","category_id") VALUES ($1,$2) RETURNING "id","product_id" AS "product","category_id" AS "category"');
+      assert(params);
+      params.should.deep.equal([product.id, category.id]);
     });
     it(`should allow populated (Pick<T, 'id'>) value parameters`, async () => {
       const product = generator.product({
@@ -527,6 +550,33 @@ describe('Repository', () => {
       query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([product.name, store.id, product.id]);
+    });
+    it('should allow partial Entity (omitting some required fields) as a value parameter', async () => {
+      const category = generator.category();
+      const product: Pick<Product, 'id' | 'name'> = generator.product({
+        store: store.id,
+      });
+      const productCategory = generator.productCategory(product, category);
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([productCategory]));
+
+      const results = await ProductCategoryRepository.update(
+        {
+          id: productCategory.id,
+        },
+        {
+          product,
+          category,
+        },
+      );
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      results.should.deep.equal([productCategory]);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('UPDATE "product__category" SET "product_id"=$1,"category_id"=$2 WHERE "id"=$3 RETURNING "id","product_id" AS "product","category_id" AS "category"');
+      assert(params);
+      params.should.deep.equal([product.id, category.id, productCategory.id]);
     });
   });
   describe('#destroy()', () => {

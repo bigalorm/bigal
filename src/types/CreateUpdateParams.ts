@@ -1,6 +1,5 @@
 import type { Entity, NotEntityBrand } from '../Entity';
 
-import type { EntityPrimitiveOrId } from './EntityPrimitiveOrId';
 import type { ExcludeEntityCollections } from './ExcludeEntityCollections';
 import type { ExcludeFunctions } from './ExcludeFunctions';
 
@@ -10,7 +9,7 @@ import type { ExcludeFunctions } from './ExcludeFunctions';
 export type CreateUpdateParams<T extends Entity> = {
   [K in keyof T as ExcludeEntityCollections<NonNullable<T[K]>, ExcludeFunctions<T[K], K>>]?: T[K] extends NotEntityBrand | undefined
     ? T[K]
-    : T[K] extends Entity
-    ? EntityPrimitiveOrId<T[K]> | { id: unknown }
+    : Extract<T[K], Entity> extends Entity
+    ? Exclude<T[K], Entity> | Pick<Extract<T[K], Entity>, 'id'>
     : T[K];
 };

@@ -44,7 +44,7 @@ export function category(args?: Partial<QueryResult<Category>>): QueryResult<Cat
   return Object.assign(item, args);
 }
 
-export function productCategory(productInput: QueryResult<Product> | number, categoryInput: QueryResult<Category> | number): QueryResult<ProductCategory> {
+export function productCategory(productInput: Pick<QueryResult<Product>, 'id'> | number, categoryInput: Pick<QueryResult<Category>, 'id'> | number): QueryResult<ProductCategory> {
   return {
     id: faker.datatype.number(),
     product: (productInput as QueryResult<Product>).id || (productInput as number),
@@ -70,7 +70,7 @@ export function classroom(args?: Partial<QueryResult<Classroom>>): QueryResult<C
   return Object.assign(item, args);
 }
 
-export function teacherClassroom(teacherInput: QueryResult<Teacher> | string, classroomInput: QueryResult<Classroom> | string): QueryResult<TeacherClassroom> {
+export function teacherClassroom(teacherInput: Pick<QueryResult<Teacher>, 'id'> | string, classroomInput: Pick<QueryResult<Classroom>, 'id'> | string): QueryResult<TeacherClassroom> {
   return {
     id: `TeacherClassroom - ${faker.datatype.uuid()}`,
     teacher: (teacherInput as QueryResult<Teacher>).id || (teacherInput as string),

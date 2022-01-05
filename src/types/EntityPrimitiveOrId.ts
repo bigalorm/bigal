@@ -1,3 +1,3 @@
 import type { Entity } from '../Entity';
 
-export type EntityPrimitiveOrId<T extends Entity, TIdKey extends keyof T = 'id'> = T extends Entity ? Exclude<T, Entity> | Pick<T, TIdKey> : T;
+export type EntityPrimitiveOrId<T extends Entity> = Extract<NonNullable<T>, Entity> extends Entity ? Exclude<NonNullable<T>, Entity> | Pick<T, 'id'> : T;
