@@ -1,6 +1,6 @@
 # Change Log
 
-## 10.0.0-beta1 - 2022-01-03
+## 10.0.0 - 2022-01-07
 
 - Fix populated entities to be QueryResult
 - Improve return types when doing partial selects
