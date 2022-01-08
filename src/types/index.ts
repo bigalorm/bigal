@@ -13,3 +13,4 @@ export * from './PickFunctions';
 export * from './Populated';
 export * from './QueryResult';
 export * from './QueryResultPopulated';
+export * from './QueryResultOptionalPopulated';
