@@ -8,7 +8,7 @@ import type { ExcludeEntityCollections } from './ExcludeEntityCollections';
  */
 export type QueryResult<T extends Entity> = Extract<
   {
-    [K in keyof T as ExcludeEntityCollections<T[K], K>]: T[K] extends NotEntityBrand | undefined ? T[K] : Exclude<T[K], Entity>;
+    [K in keyof T as ExcludeEntityCollections<NonNullable<T[K]>, K>]: T[K] extends NotEntityBrand | undefined ? T[K] : Exclude<T[K], Entity>;
   },
   T
 >;

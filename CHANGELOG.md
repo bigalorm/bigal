@@ -1,5 +1,12 @@
 # Change Log
 
+## 10.0.0 - 2022-01-07
+
+- Fix populated entities to be QueryResult
+- Improve return types when doing partial selects
+- Be less restrictive with dependency versions
+- Drop node 12 support
+
 ## 9.2.4 - 2021-12-28
 
 - Fix PromiseLike signatures. Remove ChainablePromiseLike

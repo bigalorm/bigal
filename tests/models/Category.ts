@@ -1,4 +1,4 @@
-import { column, table } from '../../src/decorators';
+import { column, table } from '../../src';
 
 import { ModelBase } from './ModelBase';
 // eslint-disable-next-line import/no-cycle
@@ -21,5 +21,5 @@ export class Category extends ModelBase {
     through: () => ProductCategory.name,
     via: 'category',
   })
-  public products!: Product[];
+  public products?: Product[];
 }

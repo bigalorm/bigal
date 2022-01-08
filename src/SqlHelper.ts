@@ -10,7 +10,7 @@ import type {
   ModelMetadata,
 } from './metadata';
 import type { Comparer, OrderBy, WhereClauseValue, WhereQuery } from './query';
-import type { CreateUpdateParams, OmitFunctionsAndEntityCollections } from './types';
+import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types';
 
 interface QueryAndParams {
   query: string;
@@ -42,7 +42,7 @@ export function getSelectQueryAndParams<T extends Entity>({
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
-  select?: readonly (string & keyof OmitFunctionsAndEntityCollections<T>)[];
+  select?: readonly (string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
   where?: WhereQuery<T>;
   sorts: readonly OrderBy<T>[];
   skip: number;
@@ -169,7 +169,7 @@ export function getInsertQueryAndParams<T extends Entity>({
   model: ModelMetadata<T>;
   values: CreateUpdateParams<T> | CreateUpdateParams<T>[];
   returnRecords?: boolean;
-  returnSelect?: readonly (string & keyof OmitFunctionsAndEntityCollections<T>)[];
+  returnSelect?: readonly (string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
 }): QueryAndParams {
   const entitiesToInsert = _.isArray(values) ? values : [values];
   const columnsToInsert = [];
@@ -317,7 +317,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
   where: WhereQuery<T>;
   values: CreateUpdateParams<T>;
   returnRecords?: boolean;
-  returnSelect?: (string & keyof OmitFunctionsAndEntityCollections<T>)[];
+  returnSelect?: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
 }): QueryAndParams {
   for (const column of model.updateDateColumns) {
     if (_.isUndefined(values[column.propertyName as string & keyof CreateUpdateParams<T>])) {
@@ -437,7 +437,7 @@ export function getDeleteQueryAndParams<T extends Entity>({
   model: ModelMetadata<T>;
   where?: WhereQuery<T>;
   returnRecords?: boolean;
-  returnSelect?: readonly (string & keyof OmitFunctionsAndEntityCollections<T>)[];
+  returnSelect?: readonly (string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
 }): QueryAndParams {
   let query = `DELETE FROM "${model.tableName}"`;
 
@@ -473,7 +473,7 @@ export function getDeleteQueryAndParams<T extends Entity>({
  * @returns {string} SQL columns
  * @private
  */
-export function getColumnsToSelect<T extends Entity>({ model, select }: { model: ModelMetadata<T>; select?: readonly (string & keyof OmitFunctionsAndEntityCollections<T>)[] }): string {
+export function getColumnsToSelect<T extends Entity>({ model, select }: { model: ModelMetadata<T>; select?: readonly (string & keyof OmitFunctions<OmitEntityCollections<T>>)[] }): string {
   let selectColumns: Set<string>;
   if (select) {
     const { primaryKeyColumn } = model;

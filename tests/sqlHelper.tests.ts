@@ -1,3 +1,5 @@
+import assert from 'assert';
+
 import chai from 'chai';
 import * as faker from 'faker';
 import { Pool } from 'postgres-pool';
@@ -895,8 +897,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "store_id"=$1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "store_id"=$1');
       params.should.deep.equal([storeId]);
     });
     it('should use property name if columnName is not defined', () => {
@@ -909,8 +911,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name"=$1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name"=$1');
       params.should.deep.equal([name]);
     });
     it('should handle startsWith', () => {
@@ -925,8 +927,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name" ILIKE $1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`${name}%`]);
     });
     it('should handle startsWith with an array of values', () => {
@@ -942,8 +944,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([[`${name1.toLowerCase()}%`, `${name2.toLowerCase()}%`]]);
     });
     it('should handle endsWith', () => {
@@ -958,8 +960,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name" ILIKE $1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`%${name}`]);
     });
     it('should handle endsWith with an array of values', () => {
@@ -975,8 +977,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([[`%${name1.toLowerCase()}`, `%${name2.toLowerCase()}`]]);
     });
     it('should handle contains', () => {
@@ -991,8 +993,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name" ILIKE $1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([`%${name}%`]);
     });
     it('should handle contains with an array of values', () => {
@@ -1008,8 +1010,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([[`%${name1.toLowerCase()}%`, `%${name2.toLowerCase()}%`]]);
     });
     it('should handle like', () => {
@@ -1024,8 +1026,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name" ILIKE $1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([name]);
     });
     it('should handle not like', () => {
@@ -1042,8 +1044,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name" NOT ILIKE $1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name" NOT ILIKE $1');
       params.should.deep.equal([name]);
     });
     it('should handle like with an empty value', () => {
@@ -1057,8 +1059,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name" = \'\'');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name" = \'\'');
       params.should.deep.equal([]);
     });
     it('should handle not like with an empty value', () => {
@@ -1074,8 +1076,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name" != \'\'');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name" != \'\'');
       params.should.deep.equal([]);
     });
     it('should handle like with array with a single value', () => {
@@ -1090,8 +1092,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name" ILIKE $1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name" ILIKE $1');
       params.should.deep.equal([name]);
     });
     it('should handle not like with array with a single value', () => {
@@ -1108,8 +1110,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name" NOT ILIKE $1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name" NOT ILIKE $1');
       params.should.deep.equal([name]);
     });
     it('should handle like with an array of values', () => {
@@ -1125,8 +1127,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
       params.should.deep.equal([[name1.toLowerCase(), name2.toLowerCase()]]);
     });
     it('should handle like with an array of null, empty string, and single value', () => {
@@ -1141,8 +1143,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE ("name" IS NULL OR "name" = \'\' OR "name" ILIKE $1)');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE ("name" IS NULL OR "name" = \'\' OR "name" ILIKE $1)');
       params.should.deep.equal([name]);
     });
     it('should handle not like with an array of values', () => {
@@ -1160,8 +1162,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE lower("name")<>ALL($1::TEXT[])');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE lower("name")<>ALL($1::TEXT[])');
       params.should.deep.equal([[name1.toLowerCase(), name2.toLowerCase()]]);
     });
     it('should handle not like with an array of null, empty string, and single value', () => {
@@ -1178,8 +1180,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name" IS NOT NULL AND "name" != \'\' AND "name" NOT ILIKE $1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name" IS NOT NULL AND "name" != \'\' AND "name" NOT ILIKE $1');
       params.should.deep.equal([name]);
     });
     it('should handle like with an empty array', () => {
@@ -1193,8 +1195,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE 1<>1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE 1<>1');
       params.should.deep.equal([]);
     });
     it('should handle not like with an empty array', () => {
@@ -1210,8 +1212,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE 1=1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE 1=1');
       params.should.deep.equal([]);
     });
     it('should handle like with array column and array with a single value', () => {
@@ -1226,8 +1228,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
       params.should.deep.equal([name]);
     });
     it('should handle not like with array column and array with a single value', () => {
@@ -1244,8 +1246,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
       params.should.deep.equal([name]);
     });
     it('should handle like with array column and single value', () => {
@@ -1260,8 +1262,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
       params.should.deep.equal([name]);
     });
     it('should handle not like with array column and a single value', () => {
@@ -1278,8 +1280,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
       params.should.deep.equal([name]);
     });
     it('should handle like with array column and an array of values', () => {
@@ -1295,8 +1297,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")=ANY($1::TEXT[]))');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")=ANY($1::TEXT[]))');
       params.should.deep.equal([[name1.toLowerCase(), name2.toLowerCase()]]);
     });
     it('should handle not like with array column and an array of values', () => {
@@ -1314,8 +1316,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")<>ALL($1::TEXT[]))');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")<>ALL($1::TEXT[]))');
       params.should.deep.equal([[name1.toLowerCase(), name2.toLowerCase()]]);
     });
     it('should handle date value', () => {
@@ -1330,8 +1332,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "created_at">$1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "created_at">$1');
       params.should.deep.equal([now]);
     });
     it('should handle or', () => {
@@ -1355,8 +1357,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE (("name"=$1) OR ("name"<>$2 AND "store_id"=$3))');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE (("name"=$1) OR ("name"<>$2 AND "store_id"=$3))');
       params.should.deep.equal([name, name, store]);
     });
     it('should handle mixed or/and constraints', () => {
@@ -1384,8 +1386,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "id"=$1 AND (("name"=$2) OR ("name"<>$3 AND "store_id"=$4)) AND "sku"=$5');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "id"=$1 AND (("name"=$2) OR ("name"<>$3 AND "store_id"=$4)) AND "sku"=$5');
       params.should.deep.equal([id, name, name, store, sku]);
     });
     it('should treat string type with array values as an =ANY() statement', () => {
@@ -1398,8 +1400,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name"=ANY($1::TEXT[])');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name"=ANY($1::TEXT[])');
       params.should.deep.equal([name]);
     });
     it('should treat integer type with array values as an =ANY() statement', () => {
@@ -1413,8 +1415,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "int_column"=ANY($1::INTEGER[])');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "int_column"=ANY($1::INTEGER[])');
       params.should.deep.equal([values]);
     });
     it('should treat float type with array values as an =ANY() statement', () => {
@@ -1428,8 +1430,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "float_column"=ANY($1::NUMERIC[])');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "float_column"=ANY($1::NUMERIC[])');
       params.should.deep.equal([values]);
     });
     describe('type: "array"', () => {
@@ -1442,8 +1444,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE "array_column"=\'{}\'');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "array_column"=\'{}\'');
         params.should.deep.equal([]);
       });
       it('should handle comparing array type as an array of null or empty', () => {
@@ -1455,8 +1457,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE ("array_column" IS NULL OR "array_column"=\'{}\')');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE ("array_column" IS NULL OR "array_column"=\'{}\')');
         params.should.deep.equal([]);
       });
       it('should handle comparing array type with single value as =ANY()', () => {
@@ -1469,8 +1471,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1=ANY("array_column")');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE $1=ANY("array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with array of a single value as =ANY()', () => {
@@ -1483,8 +1485,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1=ANY("array_column")');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE $1=ANY("array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with negated single value as <>ALL()', () => {
@@ -1499,8 +1501,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1<>ALL("array_column")');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE $1<>ALL("array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with negated array of a single value as <>ALL()', () => {
@@ -1515,8 +1517,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1<>ALL("array_column")');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE $1<>ALL("array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with array value as separate =ANY() statements', () => {
@@ -1529,8 +1531,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE ($1=ANY("array_column") OR $2=ANY("array_column"))');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE ($1=ANY("array_column") OR $2=ANY("array_column"))');
         params.should.deep.equal([values[0], values[1]]);
       });
       it('should handle comparing array type with negated array value as separate <>ALL() statements', () => {
@@ -1545,8 +1547,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1<>ALL("array_column") AND $2<>ALL("array_column")');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE $1<>ALL("array_column") AND $2<>ALL("array_column")');
         params.should.deep.equal([values[0], values[1]]);
       });
     });
@@ -1560,8 +1562,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE "string_array_column"=\'{}\'');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "string_array_column"=\'{}\'');
         params.should.deep.equal([]);
       });
       it('should handle comparing array type as an array of null or empty', () => {
@@ -1574,8 +1576,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE ("string_array_column" IS NULL OR "string_array_column"=\'{}\')');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE ("string_array_column" IS NULL OR "string_array_column"=\'{}\')');
         params.should.deep.equal([]);
       });
       it('should handle comparing array type with single value as =ANY()', () => {
@@ -1588,8 +1590,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1=ANY("string_array_column")');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE $1=ANY("string_array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with array of a single value as =ANY()', () => {
@@ -1602,8 +1604,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1=ANY("string_array_column")');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE $1=ANY("string_array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with negated single value as <>ALL()', () => {
@@ -1618,8 +1620,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1<>ALL("string_array_column")');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE $1<>ALL("string_array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with negated array of a single value as <>ALL()', () => {
@@ -1634,8 +1636,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1<>ALL("string_array_column")');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE $1<>ALL("string_array_column")');
         params.should.deep.equal([value]);
       });
       it('should handle comparing array type with array value as separate =ANY() statements', () => {
@@ -1648,8 +1650,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE ($1=ANY("string_array_column") OR $2=ANY("string_array_column"))');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE ($1=ANY("string_array_column") OR $2=ANY("string_array_column"))');
         params.should.deep.equal([values[0], values[1]]);
       });
       it('should handle comparing array type with negated array value as separate <>ALL() statements', () => {
@@ -1664,8 +1666,8 @@ describe('sqlHelper', () => {
           },
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        whereStatement!.should.equal('WHERE $1<>ALL("string_array_column") AND $2<>ALL("string_array_column")');
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE $1<>ALL("string_array_column") AND $2<>ALL("string_array_column")');
         params.should.deep.equal([values[0], values[1]]);
       });
     });
@@ -1678,8 +1680,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE 1<>1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE 1<>1');
       params.should.deep.equal([]);
     });
     it('should treat negated empty array value as "true"', () => {
@@ -1693,8 +1695,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE 1=1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE 1=1');
       params.should.deep.equal([]);
     });
     it('should handle single value array', () => {
@@ -1707,8 +1709,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name"=$1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name"=$1');
       params.should.deep.equal([name]);
     });
     it('should handle an array value with NULL explicitly', () => {
@@ -1720,8 +1722,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE ("name" IS NULL OR "name"=$1)');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE ("name" IS NULL OR "name"=$1)');
       params.should.deep.equal(['']);
     });
     it('should treat negation of array value as an <>ALL() statement', () => {
@@ -1736,8 +1738,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name"<>ALL($1::TEXT[])');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name"<>ALL($1::TEXT[])');
       params.should.deep.equal([name]);
     });
     it('should treat negation of empty array value as "true"', () => {
@@ -1751,8 +1753,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE 1=1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE 1=1');
       params.should.deep.equal([]);
     });
     it('should treat negation of array value with NULL explicitly as AND statements', () => {
@@ -1766,8 +1768,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "name" IS NOT NULL AND "name"<>$1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "name" IS NOT NULL AND "name"<>$1');
       params.should.deep.equal(['']);
     });
     it('should use primaryKey if hydrated object is passed as a query value', () => {
@@ -1783,8 +1785,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      whereStatement!.should.equal('WHERE "store_id"=$1');
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "store_id"=$1');
       params.should.deep.equal([store.id]);
     });
   });

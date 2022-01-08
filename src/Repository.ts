@@ -12,7 +12,7 @@ import type {
 } from './query';
 import { ReadonlyRepository } from './ReadonlyRepository';
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper';
-import type { CreateUpdateParams, OmitFunctionsAndEntityCollections, QueryResult } from './types';
+import type { CreateUpdateParams, QueryResult, OmitEntityCollections, OmitFunctions } from './types';
 
 export class Repository<T extends Entity> extends ReadonlyRepository<T> implements IRepository<T> {
   /**
@@ -70,7 +70,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
     }
 
     let returnRecords = true;
-    let returnSelect: (string & keyof OmitFunctionsAndEntityCollections<T>)[] | undefined;
+    let returnSelect: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[] | undefined;
     if (options) {
       if ((options as DoNotReturnRecords).returnRecords === false) {
         returnRecords = false;
@@ -147,7 +147,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
     }
 
     let returnRecords = true;
-    let returnSelect: (string & keyof OmitFunctionsAndEntityCollections<T>)[] | undefined;
+    let returnSelect: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[] | undefined;
     if (options) {
       if ((options as DoNotReturnRecords).returnRecords === false) {
         returnRecords = false;

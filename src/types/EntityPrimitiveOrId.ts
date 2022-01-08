@@ -1,3 +1,9 @@
 import type { Entity } from '../Entity';
 
-export type EntityPrimitiveOrId<T extends Entity, TIdKey extends keyof T = 'id'> = T extends Entity ? Exclude<T, Entity> | Pick<T, TIdKey> : T;
+export type EntityPrimitiveOrId<T> = T extends []
+  ? T extends (infer U)[]
+    ? EntityPrimitiveOrId<U>[]
+    : T // Unable to determine array type, so return original
+  : Extract<NonNullable<T>, Entity> extends undefined
+  ? T
+  : Exclude<NonNullable<T>, Entity> | Pick<Extract<NonNullable<T>, Entity>, 'id'>;
