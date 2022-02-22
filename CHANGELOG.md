@@ -1,5 +1,10 @@
 # Change Log
 
+## 10.0.1 - 2022-02-22
+
+- Update npms
+- Update husky to support Apple silicon homebrew package links
+
 ## 10.0.0 - 2022-01-07
 
 - Fix populated entities to be QueryResult
