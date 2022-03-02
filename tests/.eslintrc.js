@@ -14,6 +14,8 @@ module.exports = {
   },
   rules: {
     'max-classes-per-file': 'off',
+    // TODO: 2022-03-02 - Re-evaluate after npm update
+    '@typescript-eslint/no-misused-promises': 'off',
     '@typescript-eslint/no-non-null-assertion': 'off',
     '@typescript-eslint/no-unsafe-argument': 'off',
     '@typescript-eslint/no-unsafe-assignment': 'off',
