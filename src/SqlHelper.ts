@@ -753,7 +753,7 @@ function buildWhere<T extends Entity>({
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         propertyName: propertyName!,
         isNegated,
-        value: value as WhereClauseValue<T>,
+        value: value as LikeOperatorStatementParams<T>['value'],
         params,
       });
     default: {
@@ -1034,7 +1034,11 @@ interface ComparisonOperatorStatementParams<T extends Entity> {
   params: unknown[];
 }
 
-function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isNegated, value, params }: ComparisonOperatorStatementParams<T>): string {
+interface LikeOperatorStatementParams<T extends Entity> extends Omit<ComparisonOperatorStatementParams<T>, 'value'> {
+  value: string | readonly string[] | null;
+}
+
+function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isNegated, value, params }: LikeOperatorStatementParams<T>): string {
   if (_.isArray(value)) {
     if (!value.length) {
       if (isNegated) {
@@ -1045,9 +1049,8 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
     }
 
     if (value.length > 1) {
-      const orConstraints = [];
-      const valueWithoutNullOrEmpty = [];
-      for (const item of value) {
+      const orConstraints: string[] = [];
+      for (const item of value as readonly string[]) {
         if (_.isNull(item)) {
           orConstraints.push(
             buildLikeOperatorStatement({
@@ -1069,63 +1072,31 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
             }),
           );
         } else {
-          valueWithoutNullOrEmpty.push(item);
-        }
-      }
-
-      if (orConstraints.length) {
-        if (valueWithoutNullOrEmpty.length) {
           orConstraints.push(
             buildLikeOperatorStatement({
               model,
               propertyName,
               isNegated,
-              value: valueWithoutNullOrEmpty,
+              value: item,
               params,
             }),
           );
         }
-
-        if (orConstraints.length === 1) {
-          return orConstraints[0];
-        }
-
-        if (isNegated) {
-          return orConstraints.join(' AND ');
-        }
-
-        return `(${orConstraints.join(' OR ')})`;
       }
 
-      // Should be a string array at this point
-      const lowerValues = value.map((val: unknown) => {
-        if (typeof val === 'string') {
-          return val.toLowerCase();
-        }
-
-        return val;
-      });
-
-      // NOTE: This is doing a case-insensitive pattern match
-      params.push(lowerValues);
-
-      const column = model.columnsByPropertyName[propertyName];
-      if (!column) {
-        throw new Error(`Unable to find property ${propertyName} on model ${model.name}`);
+      if (orConstraints.length === 1) {
+        return orConstraints[0];
       }
 
-      const columnType = (column as ColumnTypeMetadata).type && (column as ColumnTypeMetadata).type.toLowerCase();
-      if (columnType === 'array' || columnType === 'string[]') {
-        return `EXISTS(SELECT 1 FROM (SELECT unnest("${column.name}") AS "unnested_${column.name}") __unnested WHERE lower("unnested_${column.name}")${isNegated ? '<>ALL' : '=ANY'}($${
-          params.length
-        }::TEXT[]))`;
+      if (isNegated) {
+        return orConstraints.join(' AND ');
       }
 
-      return `lower("${column.name}")${isNegated ? '<>ALL' : '=ANY'}($${params.length}::TEXT[])`;
+      return `(${orConstraints.join(' OR ')})`;
     }
 
     // eslint-disable-next-line no-param-reassign
-    value = value[0] as WhereClauseValue<T> | string;
+    value = value[0] as string | null;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -1143,7 +1114,7 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
       // NOTE: This is doing a case-insensitive pattern match
       params.push(value);
 
-      const columnType = (column as ColumnTypeMetadata).type && (column as ColumnTypeMetadata).type.toLowerCase();
+      const columnType = (column as ColumnTypeMetadata).type?.toLowerCase();
       if (columnType === 'array' || columnType === 'string[]') {
         return `${isNegated ? 'NOT ' : ''}EXISTS(SELECT 1 FROM (SELECT unnest("${column.name}") AS "unnested_${column.name}") __unnested WHERE "unnested_${column.name}" ILIKE $${params.length})`;
       }

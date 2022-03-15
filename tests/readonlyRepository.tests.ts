@@ -1388,10 +1388,10 @@ describe('ReadonlyRepository', () => {
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal(
-        'SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE (("name" ILIKE $1) OR ("name" ILIKE $2)) AND EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")=ANY($3::TEXT[]))',
+        'SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE (("name" ILIKE $1) OR ("name" ILIKE $2)) AND (EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $3) OR EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $4))',
       );
       assert(params);
-      params.should.deep.equal(['product', 'Foo Bar', ['foo', 'bar']]);
+      params.should.deep.equal(['product', 'Foo Bar', 'Foo', 'BAR']);
     });
     it('should support call with chained where constraints - NOT ILIKE array of values', async () => {
       const products = [
@@ -1417,9 +1417,9 @@ describe('ReadonlyRepository', () => {
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE lower("sku")<>ALL($1::TEXT[])');
+      query.should.equal('SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "sku" NOT ILIKE $1 AND "sku" NOT ILIKE $2');
       assert(params);
-      params.should.deep.equal([['foo', 'bar']]);
+      params.should.deep.equal(['Foo', 'BAR']);
     });
     it('should support call with chained where constraints - Promise.all', async () => {
       const products = [

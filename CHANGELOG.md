@@ -1,5 +1,12 @@
 # Change Log
 
+## 10.0.3 - 2022-03-15
+
+- Update npms
+- Fix string comparison operators with arrays. Wildcard characters in array values passed to `startsWith`, `contains`,
+  and `endsWith` were ignored. This fix changes the generated SQL to explicitly evaluate each array value individually
+  using `ilike`
+
 ## 10.0.2 - 2022-03-02
 
 - Update npms

@@ -5,9 +5,8 @@ import * as faker from 'faker';
 import { Pool } from 'postgres-pool';
 import { mock } from 'ts-mockito';
 
-import type { IReadonlyRepository, IRepository, Entity } from '../src';
 import { initialize } from '../src';
-import type { ModelMetadata } from '../src/metadata';
+import type { IReadonlyRepository, IRepository, Entity, ModelMetadata } from '../src';
 import * as sqlHelper from '../src/SqlHelper';
 
 import {
@@ -945,8 +944,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
-      params.should.deep.equal([[`${name1.toLowerCase()}%`, `${name2.toLowerCase()}%`]]);
+      whereStatement.should.equal('WHERE ("name" ILIKE $1 OR "name" ILIKE $2)');
+      params.should.deep.equal([`${name1}%`, `${name2}%`]);
     });
     it('should handle endsWith', () => {
       const name = faker.datatype.uuid();
@@ -978,8 +977,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
-      params.should.deep.equal([[`%${name1.toLowerCase()}`, `%${name2.toLowerCase()}`]]);
+      whereStatement.should.equal('WHERE ("name" ILIKE $1 OR "name" ILIKE $2)');
+      params.should.deep.equal([`%${name1}`, `%${name2}`]);
     });
     it('should handle contains', () => {
       const name = faker.datatype.uuid();
@@ -1011,8 +1010,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
-      params.should.deep.equal([[`%${name1.toLowerCase()}%`, `%${name2.toLowerCase()}%`]]);
+      whereStatement.should.equal('WHERE ("name" ILIKE $1 OR "name" ILIKE $2)');
+      params.should.deep.equal([`%${name1}%`, `%${name2}%`]);
     });
     it('should handle like', () => {
       const name = faker.datatype.uuid();
@@ -1128,8 +1127,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE lower("name")=ANY($1::TEXT[])');
-      params.should.deep.equal([[name1.toLowerCase(), name2.toLowerCase()]]);
+      whereStatement.should.equal('WHERE ("name" ILIKE $1 OR "name" ILIKE $2)');
+      params.should.deep.equal([name1, name2]);
     });
     it('should handle like with an array of null, empty string, and single value', () => {
       const name = faker.datatype.uuid();
@@ -1163,8 +1162,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE lower("name")<>ALL($1::TEXT[])');
-      params.should.deep.equal([[name1.toLowerCase(), name2.toLowerCase()]]);
+      whereStatement.should.equal('WHERE "name" NOT ILIKE $1 AND "name" NOT ILIKE $2');
+      params.should.deep.equal([name1, name2]);
     });
     it('should handle not like with an array of null, empty string, and single value', () => {
       const name = faker.datatype.uuid();
@@ -1298,8 +1297,10 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")=ANY($1::TEXT[]))');
-      params.should.deep.equal([[name1.toLowerCase(), name2.toLowerCase()]]);
+      whereStatement.should.equal(
+        'WHERE (EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1) OR EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $2))',
+      );
+      params.should.deep.equal([name1, name2]);
     });
     it('should handle not like with array column and an array of values', () => {
       const name1 = 'TestUpper';
@@ -1317,8 +1318,10 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE lower("unnested_alias_names")<>ALL($1::TEXT[]))');
-      params.should.deep.equal([[name1.toLowerCase(), name2.toLowerCase()]]);
+      whereStatement.should.equal(
+        'WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1) AND NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $2)',
+      );
+      params.should.deep.equal([name1, name2]);
     });
     it('should handle date value', () => {
       const now = new Date();
