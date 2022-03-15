@@ -1,5 +1,9 @@
 # Change Log
 
+## 10.1.0 - 2022-03-15
+
+- Add ability to override db pool for `count()`
+
 ## 10.0.3 - 2022-03-15
 
 - Update npms

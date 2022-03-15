@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "10.0.3",
+  "version": "10.1.0",
   "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
   "main": "index.js",
   "types": "index.d.ts",

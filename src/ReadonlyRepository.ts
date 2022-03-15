@@ -6,6 +6,7 @@ import type { IReadonlyRepository } from './IReadonlyRepository';
 import type { IRepository } from './IRepository';
 import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
 import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, WhereQuery, SortObject, SortObjectValue } from './query';
+import type { CountArgs } from './query/CountArgs';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
 import type { GetValueType, PickByValueType, QueryResult, PickAsType, OmitEntityCollections, OmitFunctions, PickFunctions, Populated } from './types';
 
@@ -442,11 +443,37 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
   /**
    * Gets a count of rows matching the where query
-   * @param {object} [where] - Object representing the where query
+   * @param {object} [args] - Arguments
+   * @param {object} [args.where] - Object representing the where query
+   * @param {object} [args.pool] - Override the db pool to use for the query
    * @returns {number} Number of records matching the where criteria
    */
-  public count(where?: WhereQuery<T>): CountResult<T> {
+  public count(args: CountArgs<T> | WhereQuery<T> = {}): CountResult<T> {
     const { stack } = new Error(`${this.model.name}.count()`);
+
+    let where: WhereQuery<T> = {};
+    let poolOverride: Pool | undefined;
+    // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
+    for (const [name, value] of Object.entries(args)) {
+      let isWhereCriteria = false;
+
+      switch (name) {
+        case 'where':
+          where = value as WhereQuery<T>;
+          break;
+        case 'pool':
+          poolOverride = value as Pool;
+          break;
+        default:
+          where = args as WhereQuery<T>;
+          isWhereCriteria = true;
+          break;
+      }
+
+      if (isWhereCriteria) {
+        break;
+      }
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
@@ -473,7 +500,8 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             where,
           });
 
-          const result = await modelInstance._pool.query<{ count: string }>(query, params);
+          const pool = poolOverride || modelInstance._readonlyPool;
+          const result = await pool.query<{ count: string }>(query, params);
 
           const originalValue = result.rows[0].count;
           return resolve(Number(originalValue));

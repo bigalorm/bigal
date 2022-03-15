@@ -2469,6 +2469,38 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+    it('should support call with explicit pool override', async () => {
+      const products = [
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
+      ];
+
+      const poolOverride = mock(Pool);
+
+      when(poolOverride.query(anyString(), anything())).thenResolve(
+        getQueryResult([
+          {
+            count: products.length,
+          },
+        ]),
+      );
+
+      const result = await ProductRepository.count({
+        pool: instance(poolOverride),
+      });
+      assert(result);
+      result.should.deep.equal(products.length);
+
+      verify(mockedPool.query(anyString(), anything())).never();
+      const [query, params] = capture(poolOverride.query).first();
+      query.should.equal('SELECT count(*) AS "count" FROM "products"');
+      assert(params);
+      params.should.deep.equal([]);
+    });
     it('should support call constraints as a parameter', async () => {
       const products = [
         generator.product({
@@ -2524,6 +2556,40 @@ describe('ReadonlyRepository', () => {
       result.should.equal(products.length);
 
       const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
+      assert(params);
+      params.should.deep.equal([store.id]);
+    });
+    it('should support call with explicit pool override and chained where constraints', async () => {
+      const products = [
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
+      ];
+
+      const poolOverride = mock(Pool);
+
+      when(poolOverride.query(anyString(), anything())).thenResolve(
+        getQueryResult([
+          {
+            count: products.length,
+          },
+        ]),
+      );
+
+      const result = await ProductRepository.count({
+        pool: instance(poolOverride),
+      }).where({
+        store: store.id,
+      });
+      assert(result);
+      result.should.equal(products.length);
+
+      verify(mockedPool.query(anyString(), anything())).never();
+      const [query, params] = capture(poolOverride.query).first();
       query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
       assert(params);
       params.should.deep.equal([store.id]);
