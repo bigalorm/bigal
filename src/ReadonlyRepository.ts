@@ -200,7 +200,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       ): Promise<TErrorResult | TResult> {
         try {
           if (_.isString(where)) {
-            return await reject(new Error('The query cannot be a string, it must be an object'));
+            return reject(new Error('The query cannot be a string, it must be an object'));
           }
 
           const { query, params } = getSelectQueryAndParams({
@@ -228,10 +228,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
               result[manuallySetField.propertyName as string & keyof T] = manuallySetField.value;
             }
 
-            return await resolve(result as unknown as TReturn);
+            return resolve(result as unknown as TReturn);
           }
 
-          return await resolve(null);
+          return resolve(null);
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
@@ -404,7 +404,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       ): Promise<TErrorResult | TResult> {
         try {
           if (_.isString(where)) {
-            return await reject(new Error('The query cannot be a string, it must be an object'));
+            return reject(new Error('The query cannot be a string, it must be an object'));
           }
 
           const { query, params } = getSelectQueryAndParams({
@@ -425,7 +425,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             await modelInstance.populateFields(entities, populates);
           }
 
-          return await resolve(entities as unknown as TReturn[]);
+          return resolve(entities as unknown as TReturn[]);
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
@@ -476,7 +476,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           const result = await modelInstance._pool.query<{ count: string }>(query, params);
 
           const originalValue = result.rows[0].count;
-          return await resolve(Number(originalValue));
+          return resolve(Number(originalValue));
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {

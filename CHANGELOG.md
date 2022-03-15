@@ -6,6 +6,7 @@
 - Fix string comparison operators with arrays. Wildcard characters in array values passed to `startsWith`, `contains`,
   and `endsWith` were ignored. This fix changes the generated SQL to explicitly evaluate each array value individually
   using `ilike`
+- Remove unnecessary `await` operators from `then()` functions
 
 ## 10.0.2 - 2022-03-02
 

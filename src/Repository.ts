@@ -242,10 +242,10 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
           const result = await modelInstance._pool.query<Partial<QueryResult<T>>>(query, params);
 
           if (returnRecords) {
-            return await resolve(modelInstance._buildInstances(result.rows));
+            return resolve(modelInstance._buildInstances(result.rows));
           }
 
-          return await resolve();
+          return resolve();
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
