@@ -1,4 +1,4 @@
-import * as faker from 'faker';
+import { faker } from '@faker-js/faker';
 
 import type { NotEntity, QueryResult } from '../../src';
 import type { IJsonLikeEntity, ProductCategory, SimpleWithRelationAndJson, TeacherClassroom } from '../models';

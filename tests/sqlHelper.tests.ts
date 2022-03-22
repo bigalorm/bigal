@@ -1,7 +1,7 @@
 import assert from 'assert';
 
+import { faker } from '@faker-js/faker';
 import chai from 'chai';
-import * as faker from 'faker';
 import { Pool } from 'postgres-pool';
 import { mock } from 'ts-mockito';
 
