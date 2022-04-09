@@ -10,6 +10,7 @@ import type {
   ModelMetadata,
 } from './metadata';
 import type { Comparer, OrderBy, WhereClauseValue, WhereQuery } from './query';
+import type { OnConflictOptions } from './query/OnConflictOptions';
 import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types';
 
 interface QueryAndParams {
@@ -154,25 +155,29 @@ export function getCountQueryAndParams<T extends Entity>({
  * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by model name
  * @param {object} args.model - Model schema
  * @param {object|object[]} args.values - Values to insert. Insert multiple records by passing an array of values.
+ * @param {object} [args.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
  * @param {boolean} [args.returnRecords=true] - Determines if inserted records should be returned
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: object[]}}
  */
-export function getInsertQueryAndParams<T extends Entity>({
+export function getInsertQueryAndParams<T extends Entity, K extends string & keyof OmitFunctions<OmitEntityCollections<T>> = string & keyof OmitFunctions<OmitEntityCollections<T>>>({
   repositoriesByModelNameLowered,
   model,
   values,
   returnRecords = true,
   returnSelect,
+  onConflict,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   values: CreateUpdateParams<T> | CreateUpdateParams<T>[];
   returnRecords?: boolean;
-  returnSelect?: readonly (string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
+  returnSelect?: readonly K[];
+  onConflict?: OnConflictOptions<T, K>['onConflict'];
 }): QueryAndParams {
   const entitiesToInsert = _.isArray(values) ? values : [values];
   const columnsToInsert = [];
+  const columnsToMerge = [];
   // Set defaulted property values and verify required columns have a value specified
   for (const column of model.columns) {
     const collectionColumn = column as ColumnCollectionMetadata;
@@ -212,6 +217,16 @@ export function getInsertQueryAndParams<T extends Entity>({
 
       if (includePropertyName) {
         columnsToInsert.push(column);
+      }
+
+      if (onConflict?.action === 'merge') {
+        if (onConflict.merge) {
+          if (onConflict.merge.includes(column.propertyName as K)) {
+            columnsToMerge.push(column);
+          }
+        } else if (!column.createDate && !column.primary) {
+          columnsToMerge.push(column);
+        }
       }
     }
   }
@@ -277,6 +292,63 @@ export function getInsertQueryAndParams<T extends Entity>({
     }
 
     query += `(${valueCollection.join(',')})`;
+  }
+
+  if (onConflict) {
+    query += ' ON CONFLICT (';
+    for (const [index, target] of onConflict.targets.entries()) {
+      if (index > 0) {
+        query += ',';
+      }
+
+      query += target;
+    }
+
+    query += ') ';
+
+    if (onConflict.action === 'ignore') {
+      if (onConflict.where) {
+        const { whereStatement } = buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model,
+          where: onConflict.where,
+          params,
+        });
+
+        if (whereStatement) {
+          query += `${whereStatement} `;
+        }
+      }
+
+      query += 'DO NOTHING';
+    } else {
+      query += 'DO UPDATE SET ';
+
+      for (const [index, column] of columnsToMerge.entries()) {
+        if (index > 0) {
+          query += ',';
+        }
+
+        if (column.version) {
+          query += `"${column.name}"="${column.name}"+1`;
+        } else {
+          query += `"${column.name}"=EXCLUDED."${column.name}"`;
+        }
+      }
+
+      if (onConflict.where) {
+        const { whereStatement } = buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model,
+          where: onConflict.where,
+          params,
+        });
+
+        if (whereStatement) {
+          query += ` ${whereStatement}`;
+        }
+      }
+    }
   }
 
   if (returnRecords) {
@@ -473,7 +545,13 @@ export function getDeleteQueryAndParams<T extends Entity>({
  * @returns {string} SQL columns
  * @private
  */
-export function getColumnsToSelect<T extends Entity>({ model, select }: { model: ModelMetadata<T>; select?: readonly (string & keyof OmitFunctions<OmitEntityCollections<T>>)[] }): string {
+export function getColumnsToSelect<T extends Entity, K extends string & keyof OmitFunctions<OmitEntityCollections<T>> = string & keyof OmitFunctions<OmitEntityCollections<T>>>({
+  model,
+  select,
+}: {
+  model: ModelMetadata<T>;
+  select?: readonly K[];
+}): string {
   let selectColumns: Set<string>;
   if (select) {
     const { primaryKeyColumn } = model;

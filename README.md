@@ -403,7 +403,7 @@ const item = await PersonRepository.create(
 
 > Note: The primary key will always be included. To only return the primary key value, pass an empty array
 
-#### Insert a multiple object
+#### Insert multiple objects
 
 ```ts
 const items = await PersonRepository.create([
@@ -417,7 +417,7 @@ const items = await PersonRepository.create([
 // items = [{ id: 24, name: 'LX', createdAt: ... }, { id: 25, name: 'Big Al', createdAt: ... }]
 ```
 
-#### Insert a multiple object without returning results from the db
+#### Insert multiple objects without returning results from the db
 
 ```ts
 await PersonRepository.create(
@@ -435,7 +435,7 @@ await PersonRepository.create(
 );
 ```
 
-#### Insert multiple objects
+#### Insert multiple objects with limited return properties
 
 ```ts
 const items = await PersonRepository.create(
@@ -457,6 +457,58 @@ const items = await PersonRepository.create(
 > Note: The primary key will always be included. To only return the primary key value, pass an empty array
 
 ---
+
+#### Insert a single object with onConflict ignore (ON CONFLICT DO NOTHING)
+
+```ts
+const item = await PersonRepository.create(
+  {
+    name: 'Karl',
+  },
+  {
+    onConflict: {
+      action: 'ignore',
+      targets: ['name'],
+    },
+  },
+);
+// item = { id: 42, name: 'Karl', createdAt: ... }
+```
+
+#### Insert a single object with onConflict merge (ON CONFLICT DO UPDATE) - Update all data
+
+```ts
+const item = await PersonRepository.create(
+  {
+    name: 'Karl',
+  },
+  {
+    onConflict: {
+      action: 'merge',
+      targets: ['ssn'],
+    },
+  },
+);
+// item = { id: 42, name: 'Karl', createdAt: ... }
+```
+
+#### Insert a single object with onConflict merge (ON CONFLICT DO UPDATE) - Update specific data
+
+```ts
+const item = await PersonRepository.create(
+  {
+    name: 'Karl',
+  },
+  {
+    onConflict: {
+      action: 'merge',
+      targets: ['ssn'],
+      merge: ['name', 'age'],
+    },
+  },
+);
+// item = { id: 42, name: 'Karl', createdAt: ... }
+```
 
 ### `.update()` - Update objects
 

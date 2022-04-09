@@ -10,37 +10,39 @@ import type {
   WhereQuery,
   DeleteOptions,
 } from './query';
+import type { CreateOptions } from './query/CreateOptions';
+import type { OnConflictOptions } from './query/OnConflictOptions';
 import { ReadonlyRepository } from './ReadonlyRepository';
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper';
 import type { CreateUpdateParams, QueryResult, OmitEntityCollections, OmitFunctions } from './types';
 
 export class Repository<T extends Entity> extends ReadonlyRepository<T> implements IRepository<T> {
   /**
-   * Creates a objects using the specified values
+   * Creates an object using the specified values
    * @param {object} values - Values to insert as multiple new objects.
    * @param {object} [options]
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object}
    */
-  public create(values: CreateUpdateParams<T>, options?: ReturnSelect<T>): Promise<QueryResult<T>>;
+  public create(values: CreateUpdateParams<T>, options?: Partial<OnConflictOptions<T>> & ReturnSelect<T>): Promise<QueryResult<T>>;
 
   /**
-   * Creates a objects using the specified values
+   * Creates an object or objects using the specified values
    * @param {object|object[]} values - Values to insert as multiple new objects.
    * @param {object} options
    * @param {boolean} options.returnRecords - Determines if inserted records should be returned
    * @returns {void}
    */
-  public create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options: DoNotReturnRecords): Promise<void>;
+  public create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options: DoNotReturnRecords & Partial<OnConflictOptions<T>>): Promise<void>;
 
   /**
-   * Creates a objects using the specified values
+   * Creates objects using the specified values
    * @param {object[]} values - Values to insert as multiple new objects.
    * @param {object} [options]
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public create(values: CreateUpdateParams<T>[], options?: ReturnSelect<T>): Promise<QueryResult<T>[]>;
+  public create(values: CreateUpdateParams<T>[], options?: Partial<OnConflictOptions<T>> & ReturnSelect<T>): Promise<QueryResult<T>[]>;
 
   /**
    * Creates an object using the specified values
@@ -50,7 +52,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object|object[]|void} Return value from the db
    */
-  public async create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options?: CreateUpdateOptions<T>): Promise<QueryResult<T> | QueryResult<T>[] | void> {
+  public async create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options?: CreateOptions<T>): Promise<QueryResult<T> | QueryResult<T>[] | void> {
     if (this.model.readonly) {
       throw new Error(`${this.model.name} is readonly.`);
     }
@@ -85,6 +87,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
       values,
       returnRecords,
       returnSelect,
+      onConflict: options?.onConflict,
     });
 
     const results = await this._pool.query<Partial<QueryResult<T>>>(query, params);
