@@ -147,6 +147,193 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
+    it('should support ignoring on conflict', async () => {
+      const product = generator.product({
+        store: store.id,
+      });
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      const result = await ProductRepository.create(
+        {
+          name: product.name,
+          store: product.store,
+        },
+        {
+          onConflict: {
+            action: 'ignore',
+            targets: ['name'],
+          },
+        },
+      );
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      should.exist(result);
+      result.should.deep.equal(product);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal(
+        'INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO NOTHING RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"',
+      );
+      assert(params);
+      params.should.deep.equal([product.name, [], product.store]);
+    });
+    it('should support ignoring on conflict with returnRecords=false', async () => {
+      const product = generator.product({
+        store: store.id,
+      });
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      await ProductRepository.create(
+        {
+          name: product.name,
+          store: product.store,
+        },
+        {
+          onConflict: {
+            action: 'ignore',
+            targets: ['name'],
+          },
+          returnRecords: false,
+        },
+      );
+
+      verify(mockedPool.query(anyString(), anything())).once();
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO NOTHING');
+      assert(params);
+      params.should.deep.equal([product.name, [], product.store]);
+    });
+    it('should support ignoring on conflict with specified returnSelect', async () => {
+      const product = generator.product({
+        store: store.id,
+      });
+
+      const returnValue = _.pick(product, ['id', 'name']);
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([returnValue]));
+
+      const result = await ProductRepository.create(
+        {
+          name: product.name,
+          store: product.store,
+        },
+        {
+          onConflict: {
+            action: 'ignore',
+            targets: ['name'],
+          },
+          returnSelect: ['id', 'name'],
+        },
+      );
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      should.exist(result);
+      result.should.deep.equal(returnValue);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO NOTHING RETURNING "id","name"');
+      assert(params);
+      params.should.deep.equal([product.name, [], product.store]);
+    });
+    it('should support merge on conflict', async () => {
+      const product = generator.product({
+        store: store.id,
+      });
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      const result = await ProductRepository.create(
+        {
+          name: product.name,
+          store: product.store,
+        },
+        {
+          onConflict: {
+            action: 'merge',
+            targets: ['name'],
+            merge: ['name'],
+          },
+        },
+      );
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      should.exist(result);
+      result.should.deep.equal(product);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal(
+        'INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"',
+      );
+      assert(params);
+      params.should.deep.equal([product.name, [], product.store]);
+    });
+    it('should support merging on conflict with returnRecords=false', async () => {
+      const product = generator.product({
+        store: store.id,
+      });
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      await ProductRepository.create(
+        {
+          name: product.name,
+          store: product.store,
+        },
+        {
+          onConflict: {
+            action: 'merge',
+            targets: ['name', 'store'],
+            merge: ['name', 'sku', 'aliases'],
+          },
+          returnRecords: false,
+        },
+      );
+
+      verify(mockedPool.query(anyString(), anything())).once();
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal(
+        'INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name","store_id") DO UPDATE SET "name"=EXCLUDED."name","sku"=EXCLUDED."sku","alias_names"=EXCLUDED."alias_names"',
+      );
+      assert(params);
+      params.should.deep.equal([product.name, [], product.store]);
+    });
+    it('should support merging on conflict with specified returnSelect', async () => {
+      const product = generator.product({
+        store: store.id,
+      });
+
+      const returnValue = _.pick(product, ['id', 'name']);
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([returnValue]));
+
+      const result = await ProductRepository.create(
+        {
+          name: product.name,
+          store: product.store,
+        },
+        {
+          onConflict: {
+            action: 'merge',
+            targets: ['name'],
+            merge: ['name'],
+          },
+          returnSelect: ['id', 'name'],
+        },
+      );
+
+      verify(mockedPool.query(anyString(), anything())).once();
+      should.exist(result);
+      result.should.deep.equal(returnValue);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name" RETURNING "id","name"');
+      assert(params);
+      params.should.deep.equal([product.name, [], product.store]);
+    });
     it('should return empty array results if empty value array is specified', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([]));
 

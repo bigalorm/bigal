@@ -176,6 +176,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
   onConflict?: OnConflictOptions<T, K>['onConflict'];
 }): QueryAndParams {
   const entitiesToInsert = _.isArray(values) ? values : [values];
+  const conflictTargetColumns = [];
   const columnsToInsert = [];
   const columnsToMerge = [];
   // Set defaulted property values and verify required columns have a value specified
@@ -219,13 +220,19 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
         columnsToInsert.push(column);
       }
 
-      if (onConflict?.action === 'merge') {
-        if (onConflict.merge) {
-          if (onConflict.merge.includes(column.propertyName as K)) {
+      if (onConflict) {
+        if (onConflict.targets.includes(column.propertyName as K)) {
+          conflictTargetColumns.push(column);
+        }
+
+        if (onConflict.action === 'merge') {
+          if (onConflict.merge) {
+            if (onConflict.merge.includes(column.propertyName as K)) {
+              columnsToMerge.push(column);
+            }
+          } else if (!column.createDate && !column.primary) {
             columnsToMerge.push(column);
           }
-        } else if (!column.createDate && !column.primary) {
-          columnsToMerge.push(column);
         }
       }
     }
@@ -296,17 +303,17 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
 
   if (onConflict) {
     query += ' ON CONFLICT (';
-    for (const [index, target] of onConflict.targets.entries()) {
+    for (const [index, targetColumn] of conflictTargetColumns.entries()) {
       if (index > 0) {
         query += ',';
       }
 
-      query += target;
+      query += `"${targetColumn.name}"`;
     }
 
     query += ') ';
 
-    if (onConflict.action === 'ignore') {
+    if (onConflict.action === 'ignore' || (onConflict.merge && !onConflict.merge.length)) {
       if (onConflict.where) {
         const { whereStatement } = buildWhereStatement({
           repositoriesByModelNameLowered,

@@ -8,36 +8,40 @@ import type {
   ReturnSelect,
   WhereQuery,
 } from './query';
+import type { CreateOptions } from './query/CreateOptions';
+import type { OnConflictOptions } from './query/OnConflictOptions';
 import type { CreateUpdateParams, QueryResult } from './types';
 
 export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
   /**
-   * Creates a objects using the specified values
+   * Creates an object using the specified values
    * @param {object} values - Values to insert as multiple new objects.
    * @param {object} [options]
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
+   * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {object}
    */
-  create(values: CreateUpdateParams<T>, options?: ReturnSelect<T>): Promise<QueryResult<T>>;
+  create(values: CreateUpdateParams<T>, options?: OnConflictOptions<T> | (Partial<OnConflictOptions<T>> & ReturnSelect<T>)): Promise<QueryResult<T>>;
 
   /**
-   * Creates a objects using the specified values
+   * Creates an object or objects using the specified values
    * @param {object|object[]} values - Values to insert as multiple new objects.
    * @param {object} options
    * @param {boolean} options.returnRecords - Determines if inserted records should be returned
+   * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {void}
    */
-  create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options: DoNotReturnRecords): Promise<void>;
+  create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options: DoNotReturnRecords & Partial<OnConflictOptions<T>>): Promise<void>;
 
   /**
-   * Creates a objects using the specified values
+   * Creates objects using the specified values
    * @param {object[]} values - Values to insert as multiple new objects.
    * @param {object} [options]
-   * @param {boolean} [options.returnRecords=true] - Determines if inserted records should be returned
+   * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  create(values: CreateUpdateParams<T>[], options?: ReturnSelect<T>): Promise<QueryResult<T>[]>;
+  create(values: CreateUpdateParams<T>[], options?: (OnConflictOptions<T> & Partial<ReturnSelect<T>>) | (Partial<OnConflictOptions<T>> & ReturnSelect<T>)): Promise<QueryResult<T>[]>;
 
   /**
    * Creates an object using the specified values
@@ -45,9 +49,10 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {object} [options]
    * @param {boolean} [options.returnRecords=true] - Determines if inserted records should be returned
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
+   * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {object|object[]|void} Return value from the db
    */
-  create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options?: CreateUpdateOptions<T>): Promise<QueryResult<T> | QueryResult<T>[] | void>;
+  create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options?: CreateOptions<T>): Promise<QueryResult<T> | QueryResult<T>[] | void>;
 
   /**
    * Updates object(s) matching the where query, with the specified values

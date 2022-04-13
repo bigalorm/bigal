@@ -23,6 +23,7 @@ export * from './SimpleWithStringCollection';
 export * from './SimpleWithStringId';
 export * from './SimpleWithUnion';
 export * from './SimpleWithUpdatedAt';
+export * from './SimpleWithVersion';
 export * from './Store';
 export * from './Student';
 export * from './StudentClassroom';

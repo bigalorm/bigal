@@ -25,6 +25,8 @@ import {
   SimpleWithCreatedAtAndUpdatedAt,
   SimpleWithJson,
   SimpleWithUpdatedAt,
+  SimpleWithStringId,
+  SimpleWithVersion,
 } from './models';
 
 type RepositoriesByModelNameLowered = Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
@@ -52,7 +54,9 @@ describe('sqlHelper', () => {
         SimpleWithCreatedAt,
         SimpleWithCreatedAtAndUpdatedAt,
         SimpleWithJson,
+        SimpleWithStringId,
         SimpleWithUpdatedAt,
+        SimpleWithVersion,
         Store,
       ],
       pool: mockedPool,
@@ -541,6 +545,236 @@ describe('sqlHelper', () => {
 
       query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)`);
       params.should.deep.equal([name1, name2, [], [], storeId1, storeId2]);
+    });
+    describe('onConflict', () => {
+      describe('ignore', () => {
+        it('should ignore conflicts for specified targets', () => {
+          const name = faker.datatype.uuid();
+          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithStringId>({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithstringid.model as ModelMetadata<SimpleWithStringId>,
+            values: {
+              name,
+            },
+            onConflict: {
+              action: 'ignore',
+              targets: ['name', 'otherId'],
+            },
+          });
+
+          query.should.equal(
+            `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("name") VALUES ($1) ON CONFLICT ("name","other_id") DO NOTHING RETURNING "id","name","other_id" AS "otherId"`,
+          );
+          params.should.deep.equal([name]);
+        });
+        it('should include where statement if defined', () => {
+          const name = faker.datatype.uuid();
+          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithStringId>({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithstringid.model as ModelMetadata<SimpleWithStringId>,
+            values: {
+              name,
+            },
+            onConflict: {
+              action: 'ignore',
+              targets: ['name'],
+              where: {
+                otherId: [null, ''],
+              },
+            },
+          });
+
+          query.should.equal(
+            `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("name") VALUES ($1) ON CONFLICT ("name") WHERE ("other_id" IS NULL OR "other_id"=$2) DO NOTHING RETURNING "id","name","other_id" AS "otherId"`,
+          );
+          params.should.deep.equal([name, '']);
+        });
+      });
+      describe('merge', () => {
+        it('should increment version columns', () => {
+          const name = faker.datatype.uuid();
+          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithVersion>({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithversion.model as ModelMetadata<SimpleWithVersion>,
+            values: {
+              name,
+            },
+            onConflict: {
+              action: 'merge',
+              targets: ['name'],
+            },
+          });
+
+          query.should.equal(
+            `INSERT INTO "${repositoriesByModelNameLowered.simplewithversion.model.tableName}" ("name","version") VALUES ($1,$2) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name","version"="version"+1 RETURNING "id","name","version"`,
+          );
+          params.should.deep.equal([name, 1]);
+        });
+        it('should update non-primary and non-createDate columns if merge is undefined', () => {
+          const beforeTime = new Date();
+          const name = faker.datatype.uuid();
+          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithCreatedAtAndUpdatedAt>({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithcreatedatandupdatedat.model as ModelMetadata<SimpleWithCreatedAtAndUpdatedAt>,
+            values: {
+              name,
+            },
+            onConflict: {
+              action: 'merge',
+              targets: ['name'],
+            },
+          });
+
+          query.should.equal(
+            `INSERT INTO "${repositoriesByModelNameLowered.simplewithcreatedatandupdatedat.model.tableName}" ("name","created_at","updated_at") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name","updated_at"=EXCLUDED."updated_at" RETURNING "id","name","created_at" AS "createdAt","updated_at" AS "updatedAt"`,
+          );
+
+          params.should.have.length(3);
+          const afterTime = new Date();
+          for (const [index, value] of params.entries()) {
+            if (index === 0) {
+              (value as string).should.equal(name);
+            } else {
+              const valueDate = value as Date;
+              (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
+            }
+          }
+        });
+        it('should update primaryColumn if explicitly specified', () => {
+          const id = faker.datatype.uuid();
+          const name = faker.datatype.uuid();
+          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithStringId>({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithstringid.model as ModelMetadata<SimpleWithStringId>,
+            values: {
+              id,
+              name,
+            },
+            onConflict: {
+              action: 'merge',
+              targets: ['name'],
+              merge: ['id'],
+            },
+          });
+
+          query.should.equal(
+            `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("id","name") VALUES ($1,$2) ON CONFLICT ("name") DO UPDATE SET "id"=EXCLUDED."id" RETURNING "id","name","other_id" AS "otherId"`,
+          );
+          params.should.deep.equal([id, name]);
+        });
+        it('should update createDateColumn if explicitly specified', () => {
+          const beforeTime = new Date();
+          const name = faker.datatype.uuid();
+          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithCreatedAt>({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithcreatedat.model as ModelMetadata<SimpleWithCreatedAt>,
+            values: {
+              name,
+            },
+            onConflict: {
+              action: 'merge',
+              targets: ['name'],
+              merge: ['createdAt'],
+            },
+          });
+
+          query.should.equal(
+            `INSERT INTO "${repositoriesByModelNameLowered.simplewithcreatedat.model.tableName}" ("name","created_at") VALUES ($1,$2) ON CONFLICT ("name") DO UPDATE SET "created_at"=EXCLUDED."created_at" RETURNING "id","name","created_at" AS "createdAt"`,
+          );
+
+          params.should.have.length(2);
+          const afterTime = new Date();
+          for (const [index, value] of params.entries()) {
+            if (index === 0) {
+              (value as string).should.equal(name);
+            } else {
+              const valueDate = value as Date;
+              (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
+            }
+          }
+        });
+        it('should limit columns to update if merge is defined', () => {
+          const storeId = faker.datatype.number();
+          const name = faker.datatype.uuid();
+          const sku = faker.datatype.uuid();
+
+          const { query, params } = sqlHelper.getInsertQueryAndParams<Product>({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+            values: {
+              store: storeId,
+              name,
+              sku,
+            },
+            onConflict: {
+              action: 'merge',
+              targets: ['store', 'sku'],
+              merge: ['name', 'aliases'],
+            },
+          });
+
+          query.should.equal(
+            `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","sku","alias_names","store_id") VALUES ($1,$2,$3,$4) ON CONFLICT ("sku","store_id") DO UPDATE SET "name"=EXCLUDED."name","alias_names"=EXCLUDED."alias_names" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"`,
+          );
+          params.should.deep.equal([name, sku, [], storeId]);
+        });
+        it('should ignore if merge is empty', () => {
+          const beforeTime = new Date();
+          const name = faker.datatype.uuid();
+          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithCreatedAt>({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithcreatedat.model as ModelMetadata<SimpleWithCreatedAt>,
+            values: {
+              name,
+            },
+            onConflict: {
+              action: 'merge',
+              targets: ['name'],
+              merge: [],
+            },
+          });
+
+          query.should.equal(
+            `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("name","created_at") VALUES ($1,$2) ON CONFLICT ("name") DO NOTHING RETURNING "id","name","created_at" AS "createdAt"`,
+          );
+          params.should.have.length(2);
+          const afterTime = new Date();
+          for (const [index, value] of params.entries()) {
+            if (index === 0) {
+              (value as string).should.equal(name);
+            } else {
+              const valueDate = value as Date;
+              (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
+            }
+          }
+        });
+        it('should include where statement if defined', () => {
+          const id = faker.datatype.uuid();
+          const name = faker.datatype.uuid();
+          const otherId = faker.datatype.uuid();
+          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithStringId>({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithstringid.model as ModelMetadata<SimpleWithStringId>,
+            values: {
+              id,
+              name,
+              otherId,
+            },
+            onConflict: {
+              action: 'merge',
+              targets: ['name'],
+              where: {
+                otherId: [null, ''],
+              },
+            },
+          });
+
+          query.should.equal(
+            `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("id","name","other_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name","other_id"=EXCLUDED."other_id" WHERE ("other_id" IS NULL OR "other_id"=$4) RETURNING "id","name","other_id" AS "otherId"`,
+          );
+          params.should.deep.equal([id, name, otherId, '']);
+        });
+      });
     });
   });
   describe('#getUpdateQueryAndParams()', () => {

@@ -22,15 +22,17 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {object} values - Values to insert as multiple new objects.
    * @param {object} [options]
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
+   * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {object}
    */
-  public create(values: CreateUpdateParams<T>, options?: Partial<OnConflictOptions<T>> & ReturnSelect<T>): Promise<QueryResult<T>>;
+  public create(values: CreateUpdateParams<T>, options?: OnConflictOptions<T> | (Partial<OnConflictOptions<T>> & ReturnSelect<T>)): Promise<QueryResult<T>>;
 
   /**
    * Creates an object or objects using the specified values
    * @param {object|object[]} values - Values to insert as multiple new objects.
    * @param {object} options
    * @param {boolean} options.returnRecords - Determines if inserted records should be returned
+   * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {void}
    */
   public create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options: DoNotReturnRecords & Partial<OnConflictOptions<T>>): Promise<void>;
@@ -39,10 +41,11 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * Creates objects using the specified values
    * @param {object[]} values - Values to insert as multiple new objects.
    * @param {object} [options]
+   * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public create(values: CreateUpdateParams<T>[], options?: Partial<OnConflictOptions<T>> & ReturnSelect<T>): Promise<QueryResult<T>[]>;
+  public create(values: CreateUpdateParams<T>[], options?: (OnConflictOptions<T> & Partial<ReturnSelect<T>>) | (Partial<OnConflictOptions<T>> & ReturnSelect<T>)): Promise<QueryResult<T>[]>;
 
   /**
    * Creates an object using the specified values
@@ -50,6 +53,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {object} [options]
    * @param {boolean} [options.returnRecords=true] - Determines if inserted records should be returned
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
+   * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {object|object[]|void} Return value from the db
    */
   public async create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options?: CreateOptions<T>): Promise<QueryResult<T> | QueryResult<T>[] | void> {
