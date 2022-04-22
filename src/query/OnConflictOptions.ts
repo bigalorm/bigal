@@ -7,14 +7,13 @@ export interface OnConflictIgnoreOptions<T extends Entity, K extends string & ke
   onConflict: {
     action: 'ignore';
     targets: K[];
-    where?: WhereQuery<T>;
   };
 }
 
 export interface OnConflictMergeOptions<T extends Entity, K extends string & keyof OmitFunctions<OmitEntityCollections<T>> = string & keyof OmitFunctions<OmitEntityCollections<T>>> {
   onConflict: {
     action: 'merge';
-    targets: K[];
+    targets: K[] | { columns: K[]; where: WhereQuery<T> };
     merge?: K[];
     where?: WhereQuery<T>;
   };
