@@ -1,5 +1,10 @@
 # Change Log
 
+## 10.3.0 - 2022-04-25
+
+- Add where clause for conflict resolution. Thanks @shortstuffsushi!
+- Update npms
+
 ## 10.2.0 - 2022-04-13
 
 - Add `onConflict` options to `create()` to support `ON CONFLICT DO NOTHING` and `ON CONFLICT DO UPDATE`
