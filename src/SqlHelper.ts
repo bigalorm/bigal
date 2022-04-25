@@ -229,8 +229,11 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
         }
 
         if (onConflict.action === 'merge') {
-          if (onConflict.merge) {
-            if (onConflict.merge.includes(column.propertyName as K)) {
+          if ((Array.isArray(onConflict.merge) && onConflict.merge.length) || (!Array.isArray(onConflict.merge) && onConflict.merge?.columns?.length)) {
+            if (
+              (Array.isArray(onConflict.merge) && onConflict.merge.includes(column.propertyName as K)) ||
+              (!Array.isArray(onConflict.merge) && onConflict.merge.columns?.includes(column.propertyName as K))
+            ) {
               columnsToMerge.push(column);
             }
           } else if (!column.createDate && !column.primary) {
@@ -330,7 +333,13 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
       }
     }
 
-    if (onConflict.action === 'ignore' || (onConflict.merge && !onConflict.merge.length)) {
+    const isMergeWithoutColumnsSpecified =
+      onConflict.action === 'merge' && //
+      onConflict.merge &&
+      ((Array.isArray(onConflict.merge) && !onConflict.merge.length) || //
+        (!Array.isArray(onConflict.merge) && !onConflict.merge.columns?.length && !onConflict.merge.where));
+
+    if (onConflict.action === 'ignore' || isMergeWithoutColumnsSpecified) {
       query += 'DO NOTHING';
     } else {
       query += 'DO UPDATE SET ';
@@ -347,11 +356,11 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
         }
       }
 
-      if (onConflict.where) {
+      if (!Array.isArray(onConflict.merge) && onConflict.merge?.where) {
         const { whereStatement } = buildWhereStatement({
           repositoriesByModelNameLowered,
           model,
-          where: onConflict.where,
+          where: onConflict.merge.where,
           params,
         });
 

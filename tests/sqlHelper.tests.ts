@@ -726,7 +726,7 @@ describe('sqlHelper', () => {
             }
           }
         });
-        it('should include where statement if defined', () => {
+        it('should include where statement if defined on the merge', () => {
           const id = faker.datatype.uuid();
           const name = faker.datatype.uuid();
           const otherId = faker.datatype.uuid();
@@ -741,8 +741,10 @@ describe('sqlHelper', () => {
             onConflict: {
               action: 'merge',
               targets: ['name'],
-              where: {
-                otherId: [null, ''],
+              merge: {
+                where: {
+                  otherId: [null, ''],
+                },
               },
             },
           });

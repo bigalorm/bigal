@@ -14,8 +14,7 @@ export interface OnConflictMergeOptions<T extends Entity, K extends string & key
   onConflict: {
     action: 'merge';
     targets: K[] | { columns: K[]; where: WhereQuery<T> };
-    merge?: K[];
-    where?: WhereQuery<T>;
+    merge?: K[] | { columns?: K[]; where?: WhereQuery<T> };
   };
 }
 
