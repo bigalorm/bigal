@@ -567,28 +567,6 @@ describe('sqlHelper', () => {
           );
           params.should.deep.equal([name]);
         });
-        it('should include where statement if defined', () => {
-          const name = faker.datatype.uuid();
-          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithStringId>({
-            repositoriesByModelNameLowered,
-            model: repositoriesByModelNameLowered.simplewithstringid.model as ModelMetadata<SimpleWithStringId>,
-            values: {
-              name,
-            },
-            onConflict: {
-              action: 'ignore',
-              targets: ['name'],
-              where: {
-                otherId: [null, ''],
-              },
-            },
-          });
-
-          query.should.equal(
-            `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("name") VALUES ($1) ON CONFLICT ("name") WHERE ("other_id" IS NULL OR "other_id"=$2) DO NOTHING RETURNING "id","name","other_id" AS "otherId"`,
-          );
-          params.should.deep.equal([name, '']);
-        });
       });
       describe('merge', () => {
         it('should increment version columns', () => {
@@ -773,6 +751,42 @@ describe('sqlHelper', () => {
             `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("id","name","other_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name","other_id"=EXCLUDED."other_id" WHERE ("other_id" IS NULL OR "other_id"=$4) RETURNING "id","name","other_id" AS "otherId"`,
           );
           params.should.deep.equal([id, name, otherId, '']);
+        });
+        it('should use a where clause on the index specification if provided on the targets', () => {
+          const beforeTime = new Date();
+          const name = faker.datatype.uuid();
+          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithCreatedAt>({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithcreatedat.model as ModelMetadata<SimpleWithCreatedAt>,
+            values: {
+              name,
+            },
+            onConflict: {
+              action: 'merge',
+              targets: {
+                columns: ['name'],
+                where: { name: 'foo' },
+              },
+              merge: ['createdAt'],
+            },
+          });
+
+          query.should.equal(
+            `INSERT INTO "${repositoriesByModelNameLowered.simplewithcreatedat.model.tableName}" ("name","created_at") VALUES ($1,$2) ON CONFLICT ("name") WHERE "name"=$3 DO UPDATE SET "created_at"=EXCLUDED."created_at" RETURNING "id","name","created_at" AS "createdAt"`,
+          );
+
+          params.should.have.length(3);
+          const afterTime = new Date();
+          for (const [index, value] of params.entries()) {
+            if (index === 0) {
+              (value as string).should.equal(name);
+            } else if (index === 1) {
+              const valueDate = value as Date;
+              (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
+            } else {
+              (value as string).should.equal('foo');
+            }
+          }
         });
       });
     });

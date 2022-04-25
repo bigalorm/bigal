@@ -221,7 +221,10 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
       }
 
       if (onConflict) {
-        if (onConflict.targets.includes(column.propertyName as K)) {
+        if (
+          (Array.isArray(onConflict.targets) && onConflict.targets.includes(column.propertyName as K)) ||
+          (!Array.isArray(onConflict.targets) && onConflict.targets.columns.includes(column.propertyName as K))
+        ) {
           conflictTargetColumns.push(column);
         }
 
@@ -313,20 +316,21 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
 
     query += ') ';
 
-    if (onConflict.action === 'ignore' || (onConflict.merge && !onConflict.merge.length)) {
-      if (onConflict.where) {
-        const { whereStatement } = buildWhereStatement({
-          repositoriesByModelNameLowered,
-          model,
-          where: onConflict.where,
-          params,
-        });
+    // ON CONFLICT (foo, bar) WHERE baz = 1
+    if (!Array.isArray(onConflict.targets)) {
+      const { whereStatement } = buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model,
+        where: onConflict.targets.where,
+        params,
+      });
 
-        if (whereStatement) {
-          query += `${whereStatement} `;
-        }
+      if (whereStatement) {
+        query += `${whereStatement} `;
       }
+    }
 
+    if (onConflict.action === 'ignore' || (onConflict.merge && !onConflict.merge.length)) {
       query += 'DO NOTHING';
     } else {
       query += 'DO UPDATE SET ';
