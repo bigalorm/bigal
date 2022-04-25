@@ -179,6 +179,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
   const conflictTargetColumns = [];
   const columnsToInsert = [];
   const columnsToMerge = [];
+  let hasEmptyMergeColumns = false;
   // Set defaulted property values and verify required columns have a value specified
   for (const column of model.columns) {
     const collectionColumn = column as ColumnCollectionMetadata;
@@ -229,8 +230,10 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
         }
 
         if (onConflict.action === 'merge') {
-          if (onConflict.merge) {
-            if (onConflict.merge.includes(column.propertyName as K)) {
+          const mergeColumns = Array.isArray(onConflict.merge) ? onConflict.merge : onConflict.merge?.columns;
+          if (mergeColumns) {
+            hasEmptyMergeColumns = !mergeColumns.length;
+            if (mergeColumns.includes(column.propertyName as K)) {
               columnsToMerge.push(column);
             }
           } else if (!column.createDate && !column.primary) {
@@ -330,7 +333,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
       }
     }
 
-    if (onConflict.action === 'ignore' || (onConflict.merge && !onConflict.merge.length)) {
+    if (onConflict.action === 'ignore' || hasEmptyMergeColumns) {
       query += 'DO NOTHING';
     } else {
       query += 'DO UPDATE SET ';
@@ -347,11 +350,11 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
         }
       }
 
-      if (onConflict.where) {
+      if (!Array.isArray(onConflict.merge) && onConflict.merge?.where) {
         const { whereStatement } = buildWhereStatement({
           repositoriesByModelNameLowered,
           model,
-          where: onConflict.where,
+          where: onConflict.merge.where,
           params,
         });
 

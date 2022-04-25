@@ -3,19 +3,30 @@ import type { OmitEntityCollections, OmitFunctions } from '../types';
 
 import type { WhereQuery } from './WhereQuery';
 
+type OnConflictTargets<T extends Entity, K extends string & keyof OmitFunctions<OmitEntityCollections<T>> = string & keyof OmitFunctions<OmitEntityCollections<T>>> =
+  | K[]
+  | {
+      columns: K[];
+      where: WhereQuery<T>;
+    };
+
 export interface OnConflictIgnoreOptions<T extends Entity, K extends string & keyof OmitFunctions<OmitEntityCollections<T>> = string & keyof OmitFunctions<OmitEntityCollections<T>>> {
   onConflict: {
     action: 'ignore';
-    targets: K[];
+    targets: OnConflictTargets<T, K>;
   };
 }
 
 export interface OnConflictMergeOptions<T extends Entity, K extends string & keyof OmitFunctions<OmitEntityCollections<T>> = string & keyof OmitFunctions<OmitEntityCollections<T>>> {
   onConflict: {
     action: 'merge';
-    targets: K[] | { columns: K[]; where: WhereQuery<T> };
-    merge?: K[];
-    where?: WhereQuery<T>;
+    targets: OnConflictTargets<T, K>;
+    merge?:
+      | K[]
+      | {
+          columns?: K[];
+          where: WhereQuery<T>;
+        };
   };
 }
 

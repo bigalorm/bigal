@@ -726,7 +726,7 @@ describe('sqlHelper', () => {
             }
           }
         });
-        it('should include where statement if defined', () => {
+        it('should include where statement if defined for merge', () => {
           const id = faker.datatype.uuid();
           const name = faker.datatype.uuid();
           const otherId = faker.datatype.uuid();
@@ -741,14 +741,45 @@ describe('sqlHelper', () => {
             onConflict: {
               action: 'merge',
               targets: ['name'],
-              where: {
-                otherId: [null, ''],
+              merge: {
+                where: {
+                  otherId: [null, ''],
+                },
               },
             },
           });
 
           query.should.equal(
             `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("id","name","other_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name","other_id"=EXCLUDED."other_id" WHERE ("other_id" IS NULL OR "other_id"=$4) RETURNING "id","name","other_id" AS "otherId"`,
+          );
+          params.should.deep.equal([id, name, otherId, '']);
+        });
+        it('should include where statement and merge explicit columns if defined', () => {
+          const id = faker.datatype.uuid();
+          const name = faker.datatype.uuid();
+          const otherId = faker.datatype.uuid();
+          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithStringId>({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithstringid.model as ModelMetadata<SimpleWithStringId>,
+            values: {
+              id,
+              name,
+              otherId,
+            },
+            onConflict: {
+              action: 'merge',
+              targets: ['name'],
+              merge: {
+                columns: ['name'],
+                where: {
+                  otherId: [null, ''],
+                },
+              },
+            },
+          });
+
+          query.should.equal(
+            `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("id","name","other_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name" WHERE ("other_id" IS NULL OR "other_id"=$4) RETURNING "id","name","other_id" AS "otherId"`,
           );
           params.should.deep.equal([id, name, otherId, '']);
         });
