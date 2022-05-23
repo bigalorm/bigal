@@ -1,5 +1,9 @@
 # Change Log
 
+## 10.3.1 - 2022-05-23
+
+- Update npms
+
 ## 10.3.0 - 2022-04-25
 
 - Add where clause for conflict resolution. Thanks @shortstuffsushi!
