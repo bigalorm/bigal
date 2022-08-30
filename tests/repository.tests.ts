@@ -3,7 +3,7 @@ import assert from 'assert';
 import { faker } from '@faker-js/faker';
 import chai from 'chai';
 import * as _ from 'lodash';
-import type { QueryResult as PostgresQueryResult } from 'pg';
+import type { QueryResult as PostgresQueryResult, QueryResultRow } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
@@ -13,7 +13,7 @@ import { initialize } from '../src';
 import { Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store } from './models';
 import * as generator from './utils/generator';
 
-function getQueryResult<T>(rows: T[] = []): PostgresQueryResult<T> {
+function getQueryResult<T extends QueryResultRow>(rows: T[] = []): PostgresQueryResult<T> {
   return {
     command: 'select',
     rowCount: 1,

@@ -3,7 +3,7 @@ import assert from 'assert';
 import { faker } from '@faker-js/faker';
 import chai from 'chai';
 import _ from 'lodash';
-import type { QueryResult as PgQueryResult } from 'pg';
+import type { QueryResult as PgQueryResult, QueryResultRow } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
@@ -33,7 +33,7 @@ import {
 } from './models';
 import * as generator from './utils/generator';
 
-function getQueryResult<T>(rows: T[] = []): PgQueryResult<T> {
+function getQueryResult<T extends QueryResultRow>(rows: T[]): PgQueryResult<T> {
   return {
     command: 'select',
     rowCount: 1,
@@ -1054,7 +1054,13 @@ describe('ReadonlyRepository', () => {
       result2.instanceFunction().should.equal(`${result.name} bar!`);
     });
     it('should not create an object/assign instance functions to null results', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([null]));
+      when(mockedPool.query(anyString(), anything())).thenResolve({
+        command: 'select',
+        rowCount: 1,
+        oid: 1,
+        fields: [],
+        rows: [null],
+      });
 
       const result = await ReadonlyKitchenSinkRepository.findOne();
 
