@@ -29,7 +29,9 @@ export type NegatableConstraint<TValue> =
       '!': TValue;
     };
 
-export type WhereQueryStatement<TValue> = [TValue] extends [string]
+export type WhereQueryStatement<TValue> = [TValue] extends [string] // Avoid distributive conditional type check for union types
+  ? NegatableConstraint<StringConstraint<TValue> | WhereClauseValue<TValue>>
+  : TValue extends string // Handle string types not covered by the previous check. Eg string | null
   ? NegatableConstraint<StringConstraint<TValue> | WhereClauseValue<TValue>>
   : TValue extends Date | number
   ? NegatableConstraint<NumberOrDateConstraint<TValue> | WhereClauseValue<TValue>>

@@ -95,7 +95,7 @@ describe('Repository', () => {
       result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
@@ -118,7 +118,7 @@ describe('Repository', () => {
       result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
@@ -173,7 +173,7 @@ describe('Repository', () => {
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal(
-        'INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO NOTHING RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"',
+        'INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO NOTHING RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"',
       );
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
@@ -265,7 +265,7 @@ describe('Repository', () => {
 
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal(
-        'INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"',
+        'INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name" RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"',
       );
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
@@ -368,7 +368,9 @@ describe('Repository', () => {
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal(
+        'INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"',
+      );
       assert(params);
       params.should.deep.equal([products[0].name, products[1].name, [], [], products[0].store, products[1].store]);
     });
@@ -421,7 +423,7 @@ describe('Repository', () => {
       result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([product.name, [], store.id]);
     });
@@ -446,7 +448,7 @@ describe('Repository', () => {
       result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([product.name, [], store.id]);
     });
@@ -494,7 +496,7 @@ describe('Repository', () => {
       result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([product.name, [], store.id]);
     });
@@ -563,7 +565,7 @@ describe('Repository', () => {
       result.should.deep.equal(product);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
@@ -621,7 +623,7 @@ describe('Repository', () => {
       result.should.deep.equal([product]);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([product.name, product.store, product.id]);
     });
@@ -648,7 +650,7 @@ describe('Repository', () => {
       results.should.deep.equal([product]);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([product.name, product.store, product.id]);
     });
@@ -705,7 +707,7 @@ describe('Repository', () => {
       results.should.deep.equal([product]);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([product.name, store.id, product.id]);
     });
@@ -734,7 +736,7 @@ describe('Repository', () => {
       results.should.deep.equal([product]);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([product.name, store.id, product.id]);
     });
@@ -809,7 +811,7 @@ describe('Repository', () => {
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('DELETE FROM "products" RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([]);
     });
@@ -901,7 +903,7 @@ describe('Repository', () => {
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('DELETE FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([_.map(products, 'id'), store.id]);
     });
@@ -944,7 +946,7 @@ describe('Repository', () => {
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" WHERE "store_id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('DELETE FROM "products" WHERE "store_id"=$1 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([store.id]);
     });
@@ -991,7 +993,7 @@ describe('Repository', () => {
       result.should.deep.equal(products);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" WHERE "store_id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"');
+      query.should.equal('DELETE FROM "products" WHERE "store_id"=$1 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([store.id]);
     });

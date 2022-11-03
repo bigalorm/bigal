@@ -81,7 +81,7 @@ describe('sqlHelper', () => {
         });
 
         query.should.equal(
-          `SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`,
+          `SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`,
         );
         params.should.deep.equal([]);
       });
@@ -129,7 +129,7 @@ describe('sqlHelper', () => {
         });
 
         query.should.equal(
-          `SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "name"=$1 LIMIT 1`,
+          `SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "name"=$1 LIMIT 1`,
         );
         params.should.deep.equal([name]);
       });
@@ -150,7 +150,7 @@ describe('sqlHelper', () => {
         });
 
         query.should.equal(
-          `SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" ORDER BY "name" LIMIT 1`,
+          `SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" ORDER BY "name" LIMIT 1`,
         );
         params.should.deep.equal([]);
       });
@@ -167,7 +167,7 @@ describe('sqlHelper', () => {
         });
 
         query.should.equal(
-          `SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1 OFFSET 100`,
+          `SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1 OFFSET 100`,
         );
         params.should.deep.equal([]);
       });
@@ -184,7 +184,7 @@ describe('sqlHelper', () => {
         });
 
         query.should.equal(
-          `SELECT "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 100`,
+          `SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 100`,
         );
         params.should.deep.equal([]);
       });
@@ -396,7 +396,7 @@ describe('sqlHelper', () => {
       });
 
       query.should.equal(
-        `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"`,
+        `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"`,
       );
       params.should.deep.equal([name, [], store.id]);
     });
@@ -435,7 +435,7 @@ describe('sqlHelper', () => {
       });
 
       query.should.equal(
-        `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"`,
+        `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"`,
       );
       params.should.deep.equal([name, [], storeId]);
     });
@@ -518,7 +518,7 @@ describe('sqlHelper', () => {
       });
 
       query.should.equal(
-        `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"`,
+        `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"`,
       );
       params.should.deep.equal([name1, name2, [], [], storeId1, storeId2]);
     });
@@ -692,7 +692,7 @@ describe('sqlHelper', () => {
           });
 
           query.should.equal(
-            `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","sku","alias_names","store_id") VALUES ($1,$2,$3,$4) ON CONFLICT ("sku","store_id") DO UPDATE SET "name"=EXCLUDED."name","alias_names"=EXCLUDED."alias_names" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store"`,
+            `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","sku","alias_names","store_id") VALUES ($1,$2,$3,$4) ON CONFLICT ("sku","store_id") DO UPDATE SET "name"=EXCLUDED."name","alias_names"=EXCLUDED."alias_names" RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"`,
           );
           params.should.deep.equal([name, sku, [], storeId]);
         });
@@ -919,7 +919,7 @@ describe('sqlHelper', () => {
       });
 
       query.should.equal(
-        `UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
+        `UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
       params.should.deep.equal([name, store.id]);
     });
@@ -964,7 +964,7 @@ describe('sqlHelper', () => {
       });
 
       query.should.equal(
-        `UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1 WHERE "store_id"=$2 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
+        `UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1 WHERE "store_id"=$2 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
       params.should.deep.equal([name, store.id]);
     });
@@ -986,7 +986,7 @@ describe('sqlHelper', () => {
       });
 
       query.should.equal(
-        `UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
+        `UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
       params.should.deep.equal([name, storeId, productId]);
     });
@@ -1040,7 +1040,7 @@ describe('sqlHelper', () => {
       });
 
       query.should.equal(
-        `DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
+        `DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
       params.should.deep.equal([]);
     });
@@ -1059,7 +1059,7 @@ describe('sqlHelper', () => {
       });
 
       query.should.equal(
-        `DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" WHERE "store_id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
+        `DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" WHERE "store_id"=$1 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
       params.should.deep.equal([store.id]);
     });
@@ -1075,7 +1075,7 @@ describe('sqlHelper', () => {
       });
 
       query.should.equal(
-        `DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" WHERE "id"=$1 RETURNING "id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
+        `DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" WHERE "id"=$1 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
       params.should.deep.equal([productId]);
     });
@@ -1116,14 +1116,14 @@ describe('sqlHelper', () => {
         select: undefined,
       });
 
-      query.should.equal('"id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
+      query.should.equal('"id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
     });
     it('should include all columns if select is undefined (implicit)', () => {
       const query = sqlHelper.getColumnsToSelect({
         model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
       });
 
-      query.should.equal('"id","name","sku","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
+      query.should.equal('"id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
     });
     it('should include primaryKey column if select is empty', () => {
       const query = sqlHelper.getColumnsToSelect({

@@ -24,6 +24,11 @@ export class Product extends ModelBase {
   public sku?: string;
 
   @column({
+    type: 'string',
+  })
+  public location?: string | null;
+
+  @column({
     type: 'string[]',
     defaultsTo: [],
     name: 'alias_names',
