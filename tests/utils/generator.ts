@@ -12,6 +12,7 @@ import {
   ParkingSpace,
   Product,
   SimpleWithJson,
+  SimpleWithOptionalEnum,
   SimpleWithSelfReference,
   SimpleWithStringCollection,
   SimpleWithStringId,
@@ -147,6 +148,15 @@ export function simpleWithUnion(args?: Partial<QueryResult<SimpleWithUnion>>): Q
   const item = new SimpleWithUnion();
   item.id = faker.datatype.number();
   item.name = `WithUnion - ${faker.datatype.uuid()}`;
+  item.status = 'Foobar';
+
+  return Object.assign(item, args);
+}
+
+export function simpleWithOptionalEnum(args?: Partial<QueryResult<SimpleWithOptionalEnum>>): QueryResult<SimpleWithOptionalEnum> {
+  const item = new SimpleWithOptionalEnum();
+  item.id = faker.datatype.number();
+  item.name = `WithEnum - ${faker.datatype.uuid()}`;
   item.status = 'Foobar';
 
   return Object.assign(item, args);

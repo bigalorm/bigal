@@ -2,13 +2,12 @@ import type { Entity, NotEntityBrand } from '../Entity';
 import type { ExcludeEntityCollections, ExcludeFunctions } from '../types';
 
 type ExcludeUndefined<T> = Exclude<T, undefined>;
-
-export type LiteralValues<TValue> = (ExcludeUndefined<TValue> | null)[] | ExcludeUndefined<TValue> | null;
+export type LiteralValues<TValue> = (TValue | null)[] | TValue | null;
 
 export type WhereClauseValue<TValue> = TValue extends NotEntityBrand | undefined
   ? Exclude<TValue, NotEntityBrand | undefined> // If the value is a NotEntityBrand, return the type without undefined
   : Extract<TValue, Entity> extends undefined // Otherwise if the type does not extend Entity
-  ? LiteralValues<TValue>
+  ? LiteralValues<ExcludeUndefined<TValue>>
   :
       | (ExcludeUndefined<Exclude<TValue, Entity>> | null)[] // Allow an array of the literal value (non-entity)
       | (Pick<Extract<ExcludeUndefined<TValue>, Entity>, 'id'> | null)[] // Allow an array of objects with the id property
@@ -17,11 +16,11 @@ export type WhereClauseValue<TValue> = TValue extends NotEntityBrand | undefined
       | null;
 
 export type StringConstraint<TValue extends string> = {
-  [P in 'contains' | 'endsWith' | 'like' | 'startsWith']?: LiteralValues<TValue>;
+  [P in 'contains' | 'endsWith' | 'like' | 'startsWith']?: LiteralValues<ExcludeUndefined<TValue>>;
 };
 
 export type NumberOrDateConstraint<TValue extends Date | number> = {
-  [P in '<' | '<=' | '>' | '>=']?: LiteralValues<TValue>;
+  [P in '<' | '<=' | '>' | '>=']?: LiteralValues<ExcludeUndefined<TValue>>;
 };
 
 export type NegatableConstraint<TValue> =
@@ -30,7 +29,7 @@ export type NegatableConstraint<TValue> =
       '!': TValue;
     };
 
-export type WhereQueryStatement<TValue> = TValue extends string
+export type WhereQueryStatement<TValue> = [TValue] extends [string]
   ? NegatableConstraint<StringConstraint<TValue> | WhereClauseValue<TValue>>
   : TValue extends Date | number
   ? NegatableConstraint<NumberOrDateConstraint<TValue> | WhereClauseValue<TValue>>
@@ -41,12 +40,10 @@ export type WhereQuery<T extends Entity> = {
   [K in keyof T as ExcludeEntityCollections<T[K], ExcludeFunctions<T[K], K>>]?: K extends 'id'
     ? WhereQueryStatement<T | T[K]> // Allow nested where query statements
     : T[K] extends (infer U)[] | undefined // If property type is an array, allow where query statements for the array type
-    ? WhereQueryStatement<U>
+    ? WhereQueryStatement<ExcludeUndefined<U>>
     :
-        | (ExcludeUndefined<T[K]> | null)[] // Allow array of type
-        | T[K] // Allow Single object of type
-        | WhereQueryStatement<T[K]> // Allow nested where query statements
-        | { '!': LiteralValues<T[K]> }; // Allow arrays of union types
+        | NegatableConstraint<LiteralValues<ExcludeUndefined<T[K]>>> // Allow Single object and arrays of type
+        | WhereQueryStatement<ExcludeUndefined<T[K]>>; // Allow nested where query statements
 } & {
   or?: WhereQuery<T>[];
 };

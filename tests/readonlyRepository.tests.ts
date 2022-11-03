@@ -9,6 +9,7 @@ import { anyString, anything, capture, instance, mock, reset, verify, when } fro
 
 import type { Repository, ReadonlyRepository, QueryResult, QueryResultPopulated } from '../src';
 import { initialize } from '../src';
+import type { WhereQuery } from '../src/query';
 
 import type { ParkingLot } from './models';
 import {
@@ -23,6 +24,7 @@ import {
   ProductCategory,
   ReadonlyProduct,
   SimpleWithJson,
+  SimpleWithOptionalEnum,
   SimpleWithRelationAndJson,
   SimpleWithSelfReference,
   SimpleWithStringCollection,
@@ -55,6 +57,7 @@ describe('ReadonlyRepository', () => {
   let ReadonlyKitchenSinkRepository: ReadonlyRepository<KitchenSink>;
   let StoreRepository: Repository<Store>;
   let SimpleWithJsonRepository: Repository<SimpleWithJson>;
+  let SimpleWithOptionalEnumRepository: Repository<SimpleWithOptionalEnum>;
   let SimpleWithRelationAndJsonRepository: Repository<SimpleWithRelationAndJson>;
   let SimpleWithSelfReferenceRepository: Repository<SimpleWithSelfReference>;
   let SimpleWithStringCollectionRepository: Repository<SimpleWithStringCollection>;
@@ -78,6 +81,7 @@ describe('ReadonlyRepository', () => {
         ProductCategory,
         ReadonlyProduct,
         SimpleWithJson,
+        SimpleWithOptionalEnum,
         SimpleWithRelationAndJson,
         SimpleWithSelfReference,
         SimpleWithStringCollection,
@@ -97,6 +101,7 @@ describe('ReadonlyRepository', () => {
     ReadonlyKitchenSinkRepository = repositoriesByModelName.KitchenSink as ReadonlyRepository<KitchenSink>;
     StoreRepository = repositoriesByModelName.Store as Repository<Store>;
     SimpleWithJsonRepository = repositoriesByModelName.SimpleWithJson as Repository<SimpleWithJson>;
+    SimpleWithOptionalEnumRepository = repositoriesByModelName.SimpleWithOptionalEnum as Repository<SimpleWithOptionalEnum>;
     SimpleWithRelationAndJsonRepository = repositoriesByModelName.SimpleWithRelationAndJson as Repository<SimpleWithRelationAndJson>;
     SimpleWithSelfReferenceRepository = repositoriesByModelName.SimpleWithSelfReference as Repository<SimpleWithSelfReference>;
     SimpleWithStringCollectionRepository = repositoriesByModelName.SimpleWithStringCollection as Repository<SimpleWithStringCollection>;
@@ -1126,6 +1131,100 @@ describe('ReadonlyRepository', () => {
       query.should.equal('SELECT "id","name","status" FROM "simple" WHERE "status"<>ALL($1::TEXT[]) LIMIT 1');
       assert(params);
       params.should.deep.equal([['Bar', 'Foo']]);
+    });
+    it('should support an object with an optional enum/union field', async () => {
+      const simple = generator.simpleWithOptionalEnum();
+
+      const whereClause: WhereQuery<SimpleWithOptionalEnum> = {
+        name: simple.name,
+      };
+
+      const { status } = simple;
+
+      if (status) {
+        whereClause.status = {
+          like: status,
+        };
+      }
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      const result = await SimpleWithOptionalEnumRepository.findOne().where(whereClause);
+      assert(result);
+      result.should.deep.equal(simple);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","status" FROM "simple" WHERE "name"=$1 AND "status" ILIKE $2 LIMIT 1');
+      assert(params);
+      params.should.deep.equal([simple.name, status]);
+    });
+    it('should support an object with an optional enum/union array', async () => {
+      const simple = generator.simpleWithOptionalEnum();
+
+      const whereClause: WhereQuery<SimpleWithOptionalEnum> = {
+        name: simple.name,
+        status: {
+          like: ['Bar', 'Foo', null],
+        },
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      const result = await SimpleWithOptionalEnumRepository.findOne().where(whereClause);
+      assert(result);
+      result.should.deep.equal(simple);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","status" FROM "simple" WHERE "name"=$1 AND ("status" ILIKE $2 OR "status" ILIKE $3 OR "status" IS NULL) LIMIT 1');
+      assert(params);
+      params.should.deep.equal([simple.name, 'Bar', 'Foo']);
+    });
+    it('should support an object with an optional negated enum/union field', async () => {
+      const simple = generator.simpleWithOptionalEnum();
+
+      const whereClause: WhereQuery<SimpleWithOptionalEnum> = {
+        name: simple.name,
+      };
+
+      const { status } = simple;
+
+      if (status) {
+        whereClause.status = {
+          '!': {
+            like: status,
+          },
+        };
+      }
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      const result = await SimpleWithOptionalEnumRepository.findOne().where(whereClause);
+      assert(result);
+      result.should.deep.equal(simple);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","status" FROM "simple" WHERE "name"=$1 AND "status" NOT ILIKE $2 LIMIT 1');
+      assert(params);
+      params.should.deep.equal([simple.name, status]);
+    });
+    it('should support an object with an optional negated enum/union array', async () => {
+      const simple = generator.simpleWithOptionalEnum();
+
+      const whereClause: WhereQuery<SimpleWithOptionalEnum> = {
+        name: simple.name,
+        status: {
+          '!': {
+            like: ['Bar', 'Foo', null],
+          },
+        },
+      };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      const result = await SimpleWithOptionalEnumRepository.findOne().where(whereClause);
+      assert(result);
+      result.should.deep.equal(simple);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","status" FROM "simple" WHERE "name"=$1 AND "status" NOT ILIKE $2 AND "status" NOT ILIKE $3 AND "status" IS NOT NULL LIMIT 1');
+      assert(params);
+      params.should.deep.equal([simple.name, 'Bar', 'Foo']);
     });
     it('should support an object with a json field', async () => {
       const simple = generator.simpleWithJson();

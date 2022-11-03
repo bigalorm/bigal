@@ -17,6 +17,7 @@ export * from './SimpleWithCollections';
 export * from './SimpleWithCreatedAt';
 export * from './SimpleWithCreatedAtAndUpdatedAt';
 export * from './SimpleWithJson';
+export * from './SimpleWithOptionalEnum';
 export * from './SimpleWithRelationAndJson';
 export * from './SimpleWithSelfReference';
 export * from './SimpleWithStringCollection';
