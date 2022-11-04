@@ -1,5 +1,10 @@
 # Change Log
 
+## 10.4.0 - 2022-11-03
+
+- Fix string comparison where constraint with union values
+- Update npms
+
 ## 10.3.4 - 2022-10-11
 
 - Update npms
