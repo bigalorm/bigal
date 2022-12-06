@@ -1,5 +1,9 @@
 # Change Log
 
+## 10.4.1 - 2022-12-06
+
+- Update npms
+
 ## 10.4.0 - 2022-11-03
 
 - Fix string comparison where constraint with union values
