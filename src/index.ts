@@ -86,16 +86,21 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
   // Add dictionary to quickly find a column by propertyName, for applying ColumnModifierMetadata records
   const columnsByPropertyNameForModel: Record<string, ColumnsByPropertyName> = {};
   for (const column of metadataStorage.columns) {
-    columnsByPropertyNameForModel[column.target] = columnsByPropertyNameForModel[column.target] || {};
-    columnsByPropertyNameForModel[column.target][column.propertyName] = column;
+    const columns = columnsByPropertyNameForModel[column.target] || {};
+    columns[column.propertyName] = column;
+
+    columnsByPropertyNameForModel[column.target] = columns;
   }
 
   type ColumnModifiersByPropertyName = Record<string, ColumnModifierMetadata[]>;
   const columnModifiersByPropertyNameForModel: Record<string, ColumnModifiersByPropertyName> = {};
   for (const columnModifier of metadataStorage.columnModifiers) {
-    columnModifiersByPropertyNameForModel[columnModifier.target] = columnModifiersByPropertyNameForModel[columnModifier.target] || {};
-    columnModifiersByPropertyNameForModel[columnModifier.target][columnModifier.propertyName] = columnModifiersByPropertyNameForModel[columnModifier.target][columnModifier.propertyName] || [];
-    columnModifiersByPropertyNameForModel[columnModifier.target][columnModifier.propertyName].push(columnModifier);
+    const columnModifiersForModel = columnModifiersByPropertyNameForModel[columnModifier.target] || {};
+    const columnModifiersForProperty = columnModifiersForModel[columnModifier.propertyName] || [];
+    columnModifiersForProperty.push(columnModifier);
+
+    columnModifiersForModel[columnModifier.propertyName] = columnModifiersForProperty;
+    columnModifiersByPropertyNameForModel[columnModifier.target] = columnModifiersForModel;
   }
 
   // Aggregate columns from inherited classes
@@ -105,7 +110,7 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
     let modelMetadata: ModelMetadata<Entity> | undefined;
     let inheritedColumnsByPropertyName: ColumnsByPropertyName = {};
     const inheritedColumnModifiersByPropertyName: ColumnModifiersByPropertyName = {};
-    for (const inheritedClass of inheritanceTreesByModelName[model.name]) {
+    for (const inheritedClass of inheritanceTreesByModelName[model.name] ?? []) {
       modelMetadata = modelMetadataByModelName[inheritedClass.name] || modelMetadata;
       const columnsByPropertyName = columnsByPropertyNameForModel[inheritedClass.name] || {};
 
@@ -140,9 +145,9 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
 
   // Process all column modifiers to augment any @column definitions
   for (const [modelName, columnModifiersByPropertyName] of Object.entries(columnModifiersByPropertyNameForModel)) {
-    columnsByPropertyNameForModel[modelName] = columnsByPropertyNameForModel[modelName] || {};
+    const columnsByPropertyName = columnsByPropertyNameForModel[modelName] || {};
     for (const [propertyName, columnModifiers] of Object.entries(columnModifiersByPropertyName)) {
-      const column = columnsByPropertyNameForModel[modelName][propertyName];
+      const column = columnsByPropertyName[propertyName];
       if (column) {
         for (const columnModifier of columnModifiers) {
           Object.assign(column, _.omit(columnModifier, ['target', 'name', 'propertyName', 'type', 'model']));
@@ -168,13 +173,13 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
         }
 
         if (columnDetails.model) {
-          columnsByPropertyNameForModel[modelName][propertyName] = new ColumnModelMetadata({
+          columnsByPropertyName[propertyName] = new ColumnModelMetadata({
             ...columnDetails,
             name: columnDetails.name,
             model: columnDetails.model,
           });
         } else if (columnDetails.type) {
-          columnsByPropertyNameForModel[modelName][propertyName] = new ColumnTypeMetadata({
+          columnsByPropertyName[propertyName] = new ColumnTypeMetadata({
             ...columnDetails,
             name: columnDetails.name,
             type: columnDetails.type,
@@ -182,6 +187,8 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
         }
       }
     }
+
+    columnsByPropertyNameForModel[modelName] = columnsByPropertyName;
   }
 
   const repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>> = {};

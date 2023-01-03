@@ -216,8 +216,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
           const pool = poolOverride || modelInstance._readonlyPool;
           const results = await pool.query<Partial<QueryResult<T>>>(query, params);
-          if (results.rows && results.rows.length) {
-            const result = modelInstance._buildInstance(results.rows[0]);
+          const firstResult = _.first(results.rows);
+          if (firstResult) {
+            const result = modelInstance._buildInstance(firstResult);
 
             if (populates.length) {
               await modelInstance.populateFields([result], populates);
@@ -503,7 +504,8 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           const pool = poolOverride || modelInstance._readonlyPool;
           const result = await pool.query<{ count: string }>(query, params);
 
-          const originalValue = result.rows[0].count;
+          const firstResult = _.first(result.rows);
+          const originalValue = firstResult ? firstResult.count : 0;
           return await resolve(Number(originalValue));
         } catch (ex) {
           const typedException = ex as Error;
@@ -749,8 +751,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     } as FindArgs<Entity>);
 
     if (entities.length === 1) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (entities[0][populate.propertyName as string & keyof QueryResult<T>] as any) = populateResults;
+      for (const entity of entities) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (entity[populate.propertyName as string & keyof QueryResult<T>] as any) = populateResults;
+      }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const populateResultsByEntityId = _.groupBy(populateResults, column.via) as Record<PrimaryId, any>;
@@ -809,11 +813,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       const entityId = mapRecord[column.via] as PrimaryId;
       const populatedId = mapRecord[relatedModelColumn.via] as PrimaryId;
       populateIds.add(populatedId);
-      if (!populateIdsByEntityId[entityId]) {
-        populateIdsByEntityId[entityId] = [];
-      }
+      const entityPopulateIds = populateIdsByEntityId[entityId] || [];
+      entityPopulateIds.push(populatedId);
 
-      populateIdsByEntityId[entityId].push(populatedId);
+      populateIdsByEntityId[entityId] = entityPopulateIds;
     }
 
     const populateWhere = _.merge(

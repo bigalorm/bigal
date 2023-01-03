@@ -29,13 +29,35 @@ import {
   SimpleWithVersion,
 } from './models';
 
-type RepositoriesByModelNameLowered = Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+interface RepositoriesByModelName {
+  Category: IRepository<Entity>;
+  KitchenSink: IRepository<Entity>;
+  Product: IRepository<Entity>;
+  ProductCategory: IRepository<Entity>;
+  ProductWithCreatedAt: IRepository<Entity>;
+  ProductWithCreateUpdateDateTracking: IRepository<Entity>;
+  ReadonlyProduct: IReadonlyRepository<Entity>;
+  RequiredPropertyWithDefaultValue: IRepository<Entity>;
+  RequiredPropertyWithDefaultValueFunction: IRepository<Entity>;
+  SimpleWithCollections: IRepository<Entity>;
+  SimpleWithCreatedAt: IRepository<Entity>;
+  SimpleWithCreatedAtAndUpdatedAt: IRepository<Entity>;
+  SimpleWithJson: IRepository<Entity>;
+  SimpleWithStringId: IRepository<Entity>;
+  SimpleWithUpdatedAt: IRepository<Entity>;
+  SimpleWithVersion: IRepository<Entity>;
+  Store: IRepository<Entity>;
+}
+
+type LowerCaseKeys<T, K extends string & keyof T = string & keyof T> = {
+  [P in Lowercase<K>]: T[K];
+};
 
 describe('sqlHelper', () => {
   let should: Chai.Should;
   const mockedPool: Pool = mock(Pool);
-  let repositoriesByModelName: RepositoriesByModelNameLowered;
-  const repositoriesByModelNameLowered: RepositoriesByModelNameLowered = {};
+  let repositoriesByModelName: RepositoriesByModelName;
+  const repositoriesByModelNameLowered = {} as LowerCaseKeys<RepositoriesByModelName>;
 
   before(() => {
     should = chai.should();
@@ -60,10 +82,12 @@ describe('sqlHelper', () => {
         Store,
       ],
       pool: mockedPool,
-    });
+    }) as unknown as RepositoriesByModelName;
 
     for (const [modelName, repository] of Object.entries(repositoriesByModelName)) {
+      // @ts-expect-error - Expect model names to match up
       repositoriesByModelName[modelName] = repository;
+      // @ts-expect-error - Expect lower case model names to match up
       repositoriesByModelNameLowered[modelName.toLowerCase()] = repository;
     }
   });

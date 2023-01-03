@@ -100,8 +100,9 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
         return this._buildInstances(results.rows);
       }
 
-      if (results.rows && results.rows.length) {
-        return this._buildInstance(results.rows[0]);
+      const firstResult = _.first(results.rows);
+      if (firstResult) {
+        return this._buildInstance(firstResult);
       }
 
       throw new Error('Unknown error getting created rows back from the database');

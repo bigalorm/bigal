@@ -372,7 +372,7 @@ describe('Repository', () => {
         'INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"',
       );
       assert(params);
-      params.should.deep.equal([products[0].name, products[1].name, [], [], products[0].store, products[1].store]);
+      params.should.deep.equal([products[0]!.name, products[1]!.name, [], [], products[0]!.store, products[1]!.store]);
     });
     it('should return void if multiple values are specified and returnRecords=false', async () => {
       const products = [
@@ -404,7 +404,7 @@ describe('Repository', () => {
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)');
       assert(params);
-      params.should.deep.equal([products[0].name, products[1].name, [], [], products[0].store, products[1].store]);
+      params.should.deep.equal([products[0]!.name, products[1]!.name, [], [], products[0]!.store, products[1]!.store]);
     });
     it('should allow populated value parameters', async () => {
       const product = generator.product({

@@ -294,7 +294,12 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
         }
       }
 
-      valueCollections[entityIndex].push(value);
+      const valuesForEntityIndex = valueCollections[entityIndex];
+      if (!valuesForEntityIndex) {
+        throw new Error('Error trying to get insert values for entity index');
+      }
+
+      valuesForEntityIndex.push(value);
     }
   }
 
@@ -1030,7 +1035,7 @@ function buildWhere<T extends Entity>({
         }
 
         if (orConstraints.length === 1) {
-          return orConstraints[0];
+          return orConstraints[0] ?? '';
         }
 
         if (isNegated) {
@@ -1107,7 +1112,7 @@ function buildOrOperatorStatement<T extends Entity>({
   }
 
   if (orClauses.length === 1) {
-    return orClauses[0];
+    return orClauses[0] ?? '';
   }
 
   if (isNegated) {
@@ -1177,7 +1182,7 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
       }
 
       if (orConstraints.length === 1) {
-        return orConstraints[0];
+        return orConstraints[0] ?? '';
       }
 
       if (isNegated) {
