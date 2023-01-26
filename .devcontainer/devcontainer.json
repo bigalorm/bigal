@@ -1,0 +1,16 @@
+{
+  "name": "bigal",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "EditorConfig.EditorConfig"
+      ]
+    }
+  },
+  "postCreateCommand": "npm install"
+}
