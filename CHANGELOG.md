@@ -1,5 +1,15 @@
 # Change Log
 
+## 11.0.0 - 2023-02-07
+
+### BREAKING CHANGES
+
+- Drop support for Node.js 14
+
+### MAINTENANCE
+
+- Update npms
+
 ## 10.4.2 - 2023-01-03
 
 - Update npms
