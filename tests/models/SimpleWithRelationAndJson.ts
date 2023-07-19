@@ -1,5 +1,4 @@
-import type { NotEntity } from '../../src';
-import { column, table } from '../../src';
+import { NotEntity, column, table } from '../../src';
 
 import { ModelBase } from './ModelBase';
 import { Store } from './Store';

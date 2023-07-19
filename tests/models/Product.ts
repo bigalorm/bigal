@@ -50,7 +50,7 @@ export class Product extends ModelBase {
 
   // Example instance method
   public nameAndSku(): string {
-    return `${this.name} - ${this.sku || 'no sku'}`;
+    return `${this.name} - ${this.sku ?? 'no sku'}`;
   }
 
   // Example lifecycle method that gets overwritten by subclasses

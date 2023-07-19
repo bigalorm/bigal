@@ -86,7 +86,7 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
   // Add dictionary to quickly find a column by propertyName, for applying ColumnModifierMetadata records
   const columnsByPropertyNameForModel: Record<string, ColumnsByPropertyName> = {};
   for (const column of metadataStorage.columns) {
-    const columns = columnsByPropertyNameForModel[column.target] || {};
+    const columns = columnsByPropertyNameForModel[column.target] ?? {};
     columns[column.propertyName] = column;
 
     columnsByPropertyNameForModel[column.target] = columns;
@@ -95,8 +95,8 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
   type ColumnModifiersByPropertyName = Record<string, ColumnModifierMetadata[]>;
   const columnModifiersByPropertyNameForModel: Record<string, ColumnModifiersByPropertyName> = {};
   for (const columnModifier of metadataStorage.columnModifiers) {
-    const columnModifiersForModel = columnModifiersByPropertyNameForModel[columnModifier.target] || {};
-    const columnModifiersForProperty = columnModifiersForModel[columnModifier.propertyName] || [];
+    const columnModifiersForModel = columnModifiersByPropertyNameForModel[columnModifier.target] ?? {};
+    const columnModifiersForProperty = columnModifiersForModel[columnModifier.propertyName] ?? [];
     columnModifiersForProperty.push(columnModifier);
 
     columnModifiersForModel[columnModifier.propertyName] = columnModifiersForProperty;
@@ -111,8 +111,8 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
     let inheritedColumnsByPropertyName: ColumnsByPropertyName = {};
     const inheritedColumnModifiersByPropertyName: ColumnModifiersByPropertyName = {};
     for (const inheritedClass of inheritanceTreesByModelName[model.name] ?? []) {
-      modelMetadata = modelMetadataByModelName[inheritedClass.name] || modelMetadata;
-      const columnsByPropertyName = columnsByPropertyNameForModel[inheritedClass.name] || {};
+      modelMetadata = modelMetadataByModelName[inheritedClass.name] ?? modelMetadata;
+      const columnsByPropertyName = columnsByPropertyNameForModel[inheritedClass.name] ?? {};
 
       inheritedColumnsByPropertyName = {
         ...inheritedColumnsByPropertyName,
@@ -124,9 +124,9 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
         delete inheritedColumnModifiersByPropertyName[propertyName];
       }
 
-      const columnModifiersByPropertyName = columnModifiersByPropertyNameForModel[inheritedClass.name] || {};
+      const columnModifiersByPropertyName = columnModifiersByPropertyNameForModel[inheritedClass.name] ?? {};
       for (const [propertyName, columnModifiers] of Object.entries(columnModifiersByPropertyName)) {
-        inheritedColumnModifiersByPropertyName[propertyName] = [...(inheritedColumnModifiersByPropertyName[propertyName] || []), ...(columnModifiers || [])];
+        inheritedColumnModifiersByPropertyName[propertyName] = [...(inheritedColumnModifiersByPropertyName[propertyName] ?? []), ...(columnModifiers ?? [])];
       }
     }
 
@@ -145,7 +145,7 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
 
   // Process all column modifiers to augment any @column definitions
   for (const [modelName, columnModifiersByPropertyName] of Object.entries(columnModifiersByPropertyNameForModel)) {
-    const columnsByPropertyName = columnsByPropertyNameForModel[modelName] || {};
+    const columnsByPropertyName = columnsByPropertyNameForModel[modelName] ?? {};
     for (const [propertyName, columnModifiers] of Object.entries(columnModifiersByPropertyName)) {
       const column = columnsByPropertyName[propertyName];
       if (column) {
@@ -217,7 +217,7 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
       }
 
       modelPool = modelConnection.pool || pool;
-      modelReadonlyPool = modelConnection.readonlyPool || modelPool;
+      modelReadonlyPool = modelConnection.readonlyPool ?? modelPool;
     }
 
     let repository: ReadonlyRepository<Entity> | Repository<Entity>;

@@ -1,5 +1,6 @@
 import type { CreateUpdateParams } from './types';
 
+// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 export type EntityFieldValue = boolean[] | Date | number[] | Record<string, unknown> | string[] | boolean | number | string | unknown | null;
 
 export abstract class Entity {

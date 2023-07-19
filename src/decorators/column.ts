@@ -39,7 +39,7 @@ export function column(dbColumnNameOrOptions?: ColumnOptions | string, options?:
     }
 
     if (!dbColumnName) {
-      dbColumnName = options.name || _.snakeCase(propertyName);
+      dbColumnName = options.name ?? _.snakeCase(propertyName);
     }
 
     const metadataStorage = getMetadataStorage();

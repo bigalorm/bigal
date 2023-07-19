@@ -273,8 +273,8 @@ describe('ReadonlyRepository', () => {
     });
     describe('Parse number columns', () => {
       it('should parse integer columns from integer query value', async () => {
-        const id = faker.datatype.number();
-        const name = faker.datatype.uuid();
+        const id = faker.number.int();
+        const name = faker.string.uuid();
         const numberValue = 42;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -303,8 +303,8 @@ describe('ReadonlyRepository', () => {
         params.should.deep.equal([]);
       });
       it('should parse integer columns from float strings query value', async () => {
-        const id = faker.datatype.number();
-        const name = faker.datatype.uuid();
+        const id = faker.number.int();
+        const name = faker.string.uuid();
         const numberValue = 42.24;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -332,8 +332,8 @@ describe('ReadonlyRepository', () => {
         params.should.deep.equal([]);
       });
       it('should parse integer columns that return as number', async () => {
-        const id = faker.datatype.number();
-        const name = faker.datatype.uuid();
+        const id = faker.number.int();
+        const name = faker.string.uuid();
         const numberValue = 42;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -361,8 +361,8 @@ describe('ReadonlyRepository', () => {
         params.should.deep.equal([]);
       });
       it('should ignore large integer columns values', async () => {
-        const id = faker.datatype.number();
-        const name = faker.datatype.uuid();
+        const id = faker.number.int();
+        const name = faker.string.uuid();
         const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0`;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -390,8 +390,8 @@ describe('ReadonlyRepository', () => {
         params.should.deep.equal([]);
       });
       it('should parse float columns return as float strings', async () => {
-        const id = faker.datatype.number();
-        const name = faker.datatype.uuid();
+        const id = faker.number.int();
+        const name = faker.string.uuid();
         const numberValue = 42.24;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -419,8 +419,8 @@ describe('ReadonlyRepository', () => {
         params.should.deep.equal([]);
       });
       it('should parse float columns return as number', async () => {
-        const id = faker.datatype.number();
-        const name = faker.datatype.uuid();
+        const id = faker.number.int();
+        const name = faker.string.uuid();
         const numberValue = 42.24;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -448,8 +448,8 @@ describe('ReadonlyRepository', () => {
         params.should.deep.equal([]);
       });
       it('should ignore large float columns', async () => {
-        const id = faker.datatype.number();
-        const name = faker.datatype.uuid();
+        const id = faker.number.int();
+        const name = faker.string.uuid();
         const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0.42`;
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([
@@ -1042,8 +1042,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should have instance functions be equal across multiple queries', async () => {
       const result = {
-        id: faker.datatype.number(),
-        name: `sink - ${faker.datatype.uuid()}`,
+        id: faker.number.int(),
+        name: `sink - ${faker.string.uuid()}`,
       };
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([result]));
 
@@ -1296,7 +1296,7 @@ describe('ReadonlyRepository', () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([
           {
-            id: faker.datatype.number(),
+            id: faker.number.int(),
             name: 'Product',
             store: store.id,
           },
@@ -1320,7 +1320,7 @@ describe('ReadonlyRepository', () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([
           {
-            id: faker.datatype.number(),
+            id: faker.number.int(),
             name: 'Product',
             store: store.id,
           },
@@ -1502,11 +1502,11 @@ describe('ReadonlyRepository', () => {
       const products = [
         generator.product({
           store: store.id,
-          sku: faker.datatype.uuid(),
+          sku: faker.string.uuid(),
         }),
         generator.product({
           store: store.id,
-          sku: faker.datatype.uuid(),
+          sku: faker.string.uuid(),
         }),
       ];
 
@@ -1654,7 +1654,7 @@ describe('ReadonlyRepository', () => {
       ];
 
       // Will always be true in this test
-      const location = store.name?.toLowerCase().trim() || '';
+      const location = store.name?.toLowerCase().trim() ?? '';
       if (store.name) {
         orStatements.push({
           location: {
@@ -1712,8 +1712,8 @@ describe('ReadonlyRepository', () => {
     });
     it('should have instance functions be equal across multiple queries', async () => {
       const result = {
-        id: faker.datatype.number(),
-        name: `sink - ${faker.datatype.uuid()}`,
+        id: faker.number.int(),
+        name: `sink - ${faker.string.uuid()}`,
       };
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([result]));
 
@@ -1728,17 +1728,17 @@ describe('ReadonlyRepository', () => {
     });
     it('should allow types when used in promise.all with other queries', async () => {
       const three1 = generator.levelThree({
-        foo: `three1: ${faker.datatype.uuid()}`,
+        foo: `three1: ${faker.string.uuid()}`,
       });
       const three2 = generator.levelThree({
-        foo: `three2: ${faker.datatype.uuid()}`,
+        foo: `three2: ${faker.string.uuid()}`,
       });
       const two = generator.levelTwo({
-        foo: `two: ${faker.datatype.uuid()}`,
+        foo: `two: ${faker.string.uuid()}`,
         levelThree: three1.id,
       });
       const one = generator.levelOne({
-        foo: `one: ${faker.datatype.uuid()}`,
+        foo: `one: ${faker.string.uuid()}`,
         levelTwo: two.id,
       });
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([one]), getQueryResult([two]), getQueryResult([three1, three2]));

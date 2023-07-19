@@ -29,7 +29,7 @@ export function createDateColumn(dbColumnNameOrOptions?: ColumnTypeOptions | str
       }
 
       if (!dbColumnName) {
-        dbColumnName = options.name || _.snakeCase(propertyName);
+        dbColumnName = options.name ?? _.snakeCase(propertyName);
       }
 
       metadataStorage.columns.push(
@@ -45,7 +45,7 @@ export function createDateColumn(dbColumnNameOrOptions?: ColumnTypeOptions | str
     } else {
       metadataStorage.columnModifiers.push({
         target: object.constructor.name,
-        name: dbColumnName || _.snakeCase(propertyName),
+        name: dbColumnName ?? _.snakeCase(propertyName),
         propertyName,
         createDate: true,
         required: options ? options.required : undefined,

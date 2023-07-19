@@ -31,7 +31,7 @@ export function primaryColumn(dbColumnNameOrOptions?: ColumnOptions | string, op
       }
 
       if (!dbColumnName) {
-        dbColumnName = options.name || _.snakeCase(propertyName);
+        dbColumnName = options.name ?? _.snakeCase(propertyName);
       }
 
       const { type } = options as ColumnTypeOptions;
@@ -66,7 +66,7 @@ export function primaryColumn(dbColumnNameOrOptions?: ColumnOptions | string, op
       const metadataStorage = getMetadataStorage();
       metadataStorage.columnModifiers.push({
         target: object.constructor.name,
-        name: dbColumnName || _.snakeCase(propertyName),
+        name: dbColumnName ?? _.snakeCase(propertyName),
         propertyName,
         primary: true,
         required: options ? options.required : undefined,

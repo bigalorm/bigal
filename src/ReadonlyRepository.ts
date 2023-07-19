@@ -49,7 +49,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     this._modelMetadata = modelMetadata;
     this._type = type;
     this._pool = pool;
-    this._readonlyPool = readonlyPool || pool;
+    this._readonlyPool = readonlyPool ?? pool;
     this._repositoriesByModelNameLowered = repositoriesByModelNameLowered;
 
     for (const column of modelMetadata.columns) {
@@ -165,7 +165,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           sort: options?.sort,
           skip: options?.skip,
           limit: options?.limit,
-          pool: options?.pool || poolOverride,
+          pool: options?.pool ?? poolOverride,
         });
 
         return this as FindOneResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>>;
@@ -214,7 +214,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             skip: 0,
           });
 
-          const pool = poolOverride || modelInstance._readonlyPool;
+          const pool = poolOverride ?? modelInstance._readonlyPool;
           const results = await pool.query<Partial<QueryResult<T>>>(query, params);
           const firstResult = _.first(results.rows);
           if (firstResult) {
@@ -225,8 +225,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             }
 
             for (const manuallySetField of manuallySetFields) {
-              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-              // @ts-ignore - Ignoring unknown is not a key
+              // @ts-expect-error - Ignoring unknown is not a key
               result[manuallySetField.propertyName as string & keyof T] = manuallySetField.value;
             }
 
@@ -237,7 +236,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
-            typedException.stack += `\n${stack || ''}`;
+            typedException.stack += `\n${stack ?? ''}`;
           } else {
             typedException.stack = stack;
           }
@@ -354,7 +353,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           sort: options?.sort,
           skip: options?.skip,
           limit: options?.limit,
-          pool: options?.pool || poolOverride,
+          pool: options?.pool ?? poolOverride,
         });
 
         return this as unknown as FindResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>>;
@@ -415,11 +414,11 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
             where,
             sorts,
-            skip: skip || 0,
-            limit: limit || 0,
+            skip: skip ?? 0,
+            limit: limit ?? 0,
           });
 
-          const pool = poolOverride || modelInstance._readonlyPool;
+          const pool = poolOverride ?? modelInstance._readonlyPool;
           const results = await pool.query<Partial<QueryResult<T>>>(query, params);
           const entities = modelInstance._buildInstances(results.rows);
 
@@ -431,7 +430,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
-            typedException.stack += `\n${stack || ''}`;
+            typedException.stack += `\n${stack ?? ''}`;
           } else {
             typedException.stack = stack;
           }
@@ -501,7 +500,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             where,
           });
 
-          const pool = poolOverride || modelInstance._readonlyPool;
+          const pool = poolOverride ?? modelInstance._readonlyPool;
           const result = await pool.query<{ count: string }>(query, params);
 
           const firstResult = _.first(result.rows);
@@ -510,7 +509,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
-            typedException.stack += `\n${stack || ''}`;
+            typedException.stack += `\n${stack ?? ''}`;
           } else {
             typedException.stack = stack;
           }
@@ -536,8 +535,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         try {
           const value = Number(originalValue);
           if (_.isFinite(value) && value.toString() === originalValue) {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore - string cannot be used to index type T
+            // @ts-expect-error - string cannot be used to index type T
             instance[name] = value;
           }
         } catch (ex) {
@@ -554,8 +552,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           if (_.isFinite(value) && value.toString() === originalValue) {
             const valueAsInt = _.toInteger(value);
             if (Number.isSafeInteger(valueAsInt)) {
-              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-              // @ts-ignore - string cannot be used to index type T
+              // @ts-expect-error - string cannot be used to index type T
               instance[name] = valueAsInt;
             }
           }
@@ -813,7 +810,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       const entityId = mapRecord[column.via] as PrimaryId;
       const populatedId = mapRecord[relatedModelColumn.via] as PrimaryId;
       populateIds.add(populatedId);
-      const entityPopulateIds = populateIdsByEntityId[entityId] || [];
+      const entityPopulateIds = populateIdsByEntityId[entityId] ?? [];
       entityPopulateIds.push(populatedId);
 
       populateIdsByEntityId[entityId] = entityPopulateIds;
@@ -840,7 +837,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     for (const entity of entities) {
       const populatedItems = [];
       const entityId = entity[primaryKeyPropertyName] as unknown as PrimaryId;
-      const populateIdsForEntity = populateIdsByEntityId[entityId] || [];
+      const populateIdsForEntity = populateIdsByEntityId[entityId] ?? [];
       for (const id of populateIdsForEntity) {
         const populatedItem = populateResultsById[id];
         if (populatedItem) {

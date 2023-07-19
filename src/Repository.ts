@@ -216,7 +216,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
     const returnSelect = options?.returnSelect;
-    const returnRecords = options?.returnRecords || !!returnSelect;
+    const returnRecords = options?.returnRecords ?? !!returnSelect;
 
     return {
       /**

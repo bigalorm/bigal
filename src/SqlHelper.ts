@@ -203,8 +203,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
       for (const entity of entitiesToInsert) {
         // If there is a default value for the property and it is not defined, use the default
         if (hasDefaultValue && _.isUndefined(entity[column.propertyName as string & keyof CreateUpdateParams<T>])) {
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore - string is not assignable to T[string & keyof T] | undefined
+          // @ts-expect-error - string is not assignable to T[string & keyof T] | undefined
           entity[column.propertyName as string & keyof CreateUpdateParams<T>] = defaultValue;
         }
 
@@ -413,7 +412,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
   for (const column of model.updateDateColumns) {
     if (_.isUndefined(values[column.propertyName as string & keyof CreateUpdateParams<T>])) {
       // eslint-disable-next-line no-param-reassign, @typescript-eslint/ban-ts-comment
-      // @ts-ignore - Date is not assignable to T[string & keyof T]
+      // @ts-expect-error - Date is not assignable to T[string & keyof T]
       values[column.propertyName as string & keyof CreateUpdateParams<T>] = new Date();
     }
   }
@@ -718,12 +717,13 @@ function buildWhere<T extends Entity>({
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   propertyName?: string;
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   comparer?: Comparer | string;
   isNegated?: boolean;
   value?: WhereClauseValue<string> | WhereClauseValue<T> | WhereQuery<T> | string | readonly WhereQuery<T>[];
   params: unknown[];
 }): string {
-  switch (comparer || propertyName) {
+  switch (comparer ?? propertyName) {
     case '!':
     case 'not':
       return buildWhere({
@@ -746,7 +746,7 @@ function buildWhere<T extends Entity>({
       if (_.isArray(value)) {
         const values = (value as string[]).map((val) => {
           if (!_.isString(val)) {
-            throw new Error(`Expected all array values to be strings for "contains" constraint. Property (${propertyName || ''}) in model (${model.name}).`);
+            throw new Error(`Expected all array values to be strings for "contains" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`);
           }
 
           return `%${val}%`;
@@ -775,12 +775,12 @@ function buildWhere<T extends Entity>({
         });
       }
 
-      throw new Error(`Expected value to be a string for "contains" constraint. Property (${propertyName || ''}) in model (${model.name}).`);
+      throw new Error(`Expected value to be a string for "contains" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`);
     case 'startsWith':
       if (_.isArray(value)) {
         const values = (value as string[]).map((val) => {
           if (!_.isString(val)) {
-            throw new Error(`Expected all array values to be strings for "startsWith" constraint. Property (${propertyName || ''}) in model (${model.name}).`);
+            throw new Error(`Expected all array values to be strings for "startsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`);
           }
 
           return `${val}%`;
@@ -809,12 +809,12 @@ function buildWhere<T extends Entity>({
         });
       }
 
-      throw new Error(`Expected value to be a string for "startsWith" constraint. Property (${propertyName || ''}) in model (${model.name}).`);
+      throw new Error(`Expected value to be a string for "startsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`);
     case 'endsWith':
       if (_.isArray(value)) {
         const values = (value as string[]).map((val) => {
           if (!_.isString(val)) {
-            throw new Error(`Expected all array values to be strings for "endsWith" constraint. Property (${propertyName || ''}) in model (${model.name}).`);
+            throw new Error(`Expected all array values to be strings for "endsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`);
           }
 
           return `%${val}`;
@@ -843,7 +843,7 @@ function buildWhere<T extends Entity>({
         });
       }
 
-      throw new Error(`Expected value to be a string for "endsWith" constraint. Property (${propertyName || ''}) in model (${model.name}).`);
+      throw new Error(`Expected value to be a string for "endsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`);
     case 'like':
       return buildLikeOperatorStatement({
         model,
@@ -855,7 +855,7 @@ function buildWhere<T extends Entity>({
       });
     default: {
       if (_.isUndefined(value)) {
-        throw new Error(`Attempting to query with an undefined value. ${propertyName || ''} on ${model.name}`);
+        throw new Error(`Attempting to query with an undefined value. ${propertyName ?? ''} on ${model.name}`);
       }
 
       if (propertyName) {
@@ -908,7 +908,7 @@ function buildWhere<T extends Entity>({
         if (!value.length) {
           const columnTypeFromPropertyName = propertyName ? (model.columnsByPropertyName[propertyName] as ColumnTypeMetadata) : null;
           const columnTypeFromComparer = comparer ? (model.columnsByPropertyName[comparer] as ColumnTypeMetadata) : null;
-          const arrayColumn = columnTypeFromPropertyName || columnTypeFromComparer;
+          const arrayColumn = columnTypeFromPropertyName ?? columnTypeFromComparer;
 
           if (arrayColumn) {
             const arrayColumnType = arrayColumn.type ? arrayColumn.type.toLowerCase() : '';
@@ -968,7 +968,7 @@ function buildWhere<T extends Entity>({
         } else if (valueWithoutNull.length) {
           const columnTypeFromPropertyName = propertyName ? (model.columnsByPropertyName[propertyName] as ColumnTypeMetadata) : null;
           const columnTypeFromComparer = comparer ? (model.columnsByPropertyName[comparer] as ColumnTypeMetadata) : null;
-          const columnType = columnTypeFromPropertyName || columnTypeFromComparer;
+          const columnType = columnTypeFromPropertyName ?? columnTypeFromComparer;
 
           if (columnType) {
             let columnTypeLowered = columnType.type ? columnType.type.toLowerCase() : '';
@@ -1048,6 +1048,7 @@ function buildWhere<T extends Entity>({
       if (_.isObject(value) && !_.isDate(value)) {
         const andValues: string[] = [];
         for (const [key, where] of Object.entries(value)) {
+          // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
           let subQueryComparer: Comparer | string | undefined;
           if (isComparer(key)) {
             subQueryComparer = key;
@@ -1125,6 +1126,7 @@ function buildOrOperatorStatement<T extends Entity>({
 interface ComparisonOperatorStatementParams<T extends Entity> {
   model: ModelMetadata<T>;
   propertyName: string;
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
   comparer?: Comparer | string;
   isNegated: boolean;
   value?: WhereClauseValue<T> | string | readonly string[];

@@ -99,7 +99,7 @@ export class ModelMetadata<T extends Entity> {
     this.name = name;
     this.type = type;
     this.connection = connection;
-    this.tableName = tableName || _.snakeCase(name);
+    this.tableName = tableName ?? _.snakeCase(name);
     this.readonly = readonly;
   }
 }

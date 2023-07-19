@@ -528,8 +528,7 @@ describe('Repository', () => {
       product.categories = [];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]));
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore - Collections are excluded from values type
+      // @ts-expect-error - Collections are excluded from values type
       const result = await StoreRepository.create({
         name: store.name,
         products: [product],
@@ -552,8 +551,7 @@ describe('Repository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore - Collections are excluded from values type
+      // @ts-expect-error - Collections are excluded from values type
       const result = await ProductRepository.create({
         name: product.name,
         store: product.store,
@@ -585,7 +583,7 @@ describe('Repository', () => {
         ]),
       );
 
-      const id = faker.datatype.number();
+      const id = faker.number.int();
 
       await ProductWithCreateUpdateDateTrackingRepository.update(
         {

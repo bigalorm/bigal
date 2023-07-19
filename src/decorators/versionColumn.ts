@@ -28,7 +28,7 @@ export function versionColumn(dbColumnNameOrOptions?: ColumnTypeOptions | string
       }
 
       if (!dbColumnName) {
-        dbColumnName = options.name || _.snakeCase(propertyName);
+        dbColumnName = options.name ?? _.snakeCase(propertyName);
       }
 
       const metadataStorage = getMetadataStorage();
@@ -46,7 +46,7 @@ export function versionColumn(dbColumnNameOrOptions?: ColumnTypeOptions | string
       const metadataStorage = getMetadataStorage();
       metadataStorage.columnModifiers.push({
         target: object.constructor.name,
-        name: dbColumnName || _.snakeCase(propertyName),
+        name: dbColumnName ?? _.snakeCase(propertyName),
         propertyName,
         version: true,
         required: options ? options.required : undefined,

@@ -29,7 +29,7 @@ export function table<T extends Entity>(dbNameOrTableOptions?: TableOptions | st
 
     if (!options.name) {
       // eslint-disable-next-line no-param-reassign
-      options.name = dbTableName || _.snakeCase(className);
+      options.name = dbTableName ?? _.snakeCase(className);
     }
 
     const metadataStorage = getMetadataStorage<T>();
@@ -37,7 +37,7 @@ export function table<T extends Entity>(dbNameOrTableOptions?: TableOptions | st
       name: className,
       type: classObject,
       tableName: options.name,
-      readonly: options.readonly || false,
+      readonly: options.readonly ?? false,
       connection: options.connection,
     });
 
