@@ -2,17 +2,16 @@ import _ from 'lodash';
 
 import type { ColumnModifierMetadata } from '../metadata';
 import { ColumnTypeMetadata, getMetadataStorage } from '../metadata';
+import type { ClassLike } from '../types';
 
 import type { ColumnTypeOptions } from './ColumnTypeOptions';
 
-// eslint-disable-next-line @typescript-eslint/ban-types
-type ReturnFunctionType = (object: object, propertyName: string) => void;
+type ReturnFunctionType = (object: ClassLike, propertyName: string) => void;
 
 export function versionColumn(options?: ColumnTypeOptions): ReturnFunctionType;
 export function versionColumn(dbColumnName: string, options?: ColumnTypeOptions): ReturnFunctionType;
 export function versionColumn(dbColumnNameOrOptions?: ColumnTypeOptions | string, options?: ColumnTypeOptions): ReturnFunctionType {
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  return function versionColumnDecorator(object: object, propertyName: string): void {
+  return function versionColumnDecorator(object: ClassLike, propertyName: string): void {
     let dbColumnName: string | undefined;
     if (typeof dbColumnNameOrOptions === 'string') {
       dbColumnName = dbColumnNameOrOptions;

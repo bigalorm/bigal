@@ -6,20 +6,19 @@ import {
   ColumnModelMetadata,
   ColumnTypeMetadata,
 } from '../metadata';
+import type { ClassLike } from '../types';
 
 import type { ColumnCollectionOptions } from './ColumnCollectionOptions';
 import type { ColumnModelOptions } from './ColumnModelOptions';
 import type { ColumnTypeOptions } from './ColumnTypeOptions';
 
 type ColumnOptions = ColumnCollectionOptions | ColumnModelOptions | ColumnTypeOptions;
-// eslint-disable-next-line @typescript-eslint/ban-types
-type ReturnFunctionType = (object: object, propertyName: string) => void;
+type ReturnFunctionType = (object: ClassLike, propertyName: string) => void;
 
 export function column(options?: ColumnOptions): ReturnFunctionType;
 export function column(dbColumnName: string, options?: ColumnOptions): ReturnFunctionType;
 export function column(dbColumnNameOrOptions?: ColumnOptions | string, options?: ColumnOptions): ReturnFunctionType {
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  return function columnDecorator(object: object, propertyName: string): void {
+  return function columnDecorator(object: ClassLike, propertyName: string): void {
     if (!dbColumnNameOrOptions) {
       // eslint-disable-next-line no-param-reassign
       dbColumnNameOrOptions = _.snakeCase(propertyName);

@@ -2,20 +2,19 @@ import _ from 'lodash';
 
 import type { ColumnModifierMetadata } from '../metadata';
 import { ColumnModelMetadata, ColumnTypeMetadata, getMetadataStorage } from '../metadata';
+import type { ClassLike } from '../types';
 
 import type { ColumnModelOptions } from './ColumnModelOptions';
 import type { ColumnTypeOptions } from './ColumnTypeOptions';
 
 type ColumnOptions = ColumnModelOptions | ColumnTypeOptions;
 
-// eslint-disable-next-line @typescript-eslint/ban-types
-type ReturnFunctionType = (object: object, propertyName: string) => void;
+type ReturnFunctionType = (object: ClassLike, propertyName: string) => void;
 
 export function primaryColumn(options?: ColumnOptions): ReturnFunctionType;
 export function primaryColumn(dbColumnName: string, options?: ColumnOptions): ReturnFunctionType;
 export function primaryColumn(dbColumnNameOrOptions?: ColumnOptions | string, options?: ColumnOptions): ReturnFunctionType {
-  // eslint-disable-next-line @typescript-eslint/ban-types
-  return function primaryColumnDecorator(object: object, propertyName: string): void {
+  return function primaryColumnDecorator(object: ClassLike, propertyName: string): void {
     let dbColumnName: string | undefined;
     if (typeof dbColumnNameOrOptions === 'string') {
       dbColumnName = dbColumnNameOrOptions;

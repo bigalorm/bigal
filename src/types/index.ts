@@ -1,3 +1,4 @@
+export * from './ClassLike';
 export * from './CreateUpdateParams';
 export * from './EntityPrimitiveOrId';
 export * from './ExcludeEntityCollections';
