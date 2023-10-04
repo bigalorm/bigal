@@ -637,7 +637,7 @@ export function buildWhereStatement<T extends Entity>({
   params: unknown[];
 } {
   let whereStatement;
-  if (_.isObject(where)) {
+  if (_.isObject(where) && Object.keys(where).length) {
     whereStatement = buildWhere({
       repositoriesByModelNameLowered,
       model,
@@ -645,6 +645,10 @@ export function buildWhereStatement<T extends Entity>({
       value: where,
       params,
     });
+
+    if (!whereStatement) {
+      throw new QueryError(`WHERE statement is unexpectedly empty.`, model, where);
+    }
   }
 
   if (whereStatement) {
@@ -1043,7 +1047,11 @@ function buildWhere<T extends Entity>({
           return orConstraints.join(' AND ');
         }
 
-        return `(${orConstraints.join(' OR ')})`;
+        if (orConstraints.length) {
+          return `(${orConstraints.join(' OR ')})`;
+        }
+
+        return '';
       }
 
       if (_.isObject(value) && !_.isDate(value)) {
@@ -1110,7 +1118,9 @@ function buildOrOperatorStatement<T extends Entity>({
       params,
     });
 
-    orClauses.push(`(${orClause})`);
+    if (orClause) {
+      orClauses.push(`(${orClause})`);
+    }
   }
 
   if (orClauses.length === 1) {
@@ -1121,7 +1131,11 @@ function buildOrOperatorStatement<T extends Entity>({
     return orClauses.join(' AND ');
   }
 
-  return `(${orClauses.join(' OR ')})`;
+  if (orClauses.length) {
+    return `(${orClauses.join(' OR ')})`;
+  }
+
+  return '';
 }
 
 interface ComparisonOperatorStatementParams<T extends Entity> {
@@ -1192,7 +1206,11 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
         return orConstraints.join(' AND ');
       }
 
-      return `(${orConstraints.join(' OR ')})`;
+      if (orConstraints.length) {
+        return `(${orConstraints.join(' OR ')})`;
+      }
+
+      return '';
     }
 
     // eslint-disable-next-line no-param-reassign
