@@ -1,6 +1,7 @@
 import * as _ from 'lodash';
 
 import type { Entity, EntityFieldValue } from './Entity';
+import { QueryError } from './errors';
 import type { IReadonlyRepository } from './IReadonlyRepository';
 import type { IRepository } from './IRepository';
 import type {
@@ -84,7 +85,7 @@ export function getSelectQueryAndParams<T extends Entity>({
     }
 
     if (!_.isFinite(limit)) {
-      throw new Error('Limit should be a number');
+      throw new QueryError('Limit should be a number', model, where);
     }
 
     query += ` LIMIT ${limit}`;
@@ -97,7 +98,7 @@ export function getSelectQueryAndParams<T extends Entity>({
     }
 
     if (!_.isFinite(skip)) {
-      throw new Error('Skip should be a number');
+      throw new QueryError('Skip should be a number', model, where);
     }
 
     query += ` OFFSET ${skip}`;
@@ -201,7 +202,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
       const hasDefaultValue = !_.isUndefined(defaultValue);
       let includePropertyName = false;
       for (const entity of entitiesToInsert) {
-        // If there is a default value for the property and it is not defined, use the default
+        // If there is a default value for the property and if it is not defined, use the default
         if (hasDefaultValue && _.isUndefined(entity[column.propertyName as string & keyof CreateUpdateParams<T>])) {
           // @ts-expect-error - string is not assignable to T[string & keyof T] | undefined
           entity[column.propertyName as string & keyof CreateUpdateParams<T>] = defaultValue;
@@ -209,7 +210,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
 
         if (_.isUndefined(entity[column.propertyName as string & keyof CreateUpdateParams<T>])) {
           if (column.required) {
-            throw new Error(`Create statement for "${model.name}" is missing value for required field: ${column.propertyName}`);
+            throw new QueryError(`Create statement for "${model.name}" is missing value for required field: ${column.propertyName}`, model);
           }
         } else {
           includePropertyName = true;
@@ -265,17 +266,17 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
           const relatedModelRepository = repositoriesByModelNameLowered[relatedModelName.toLowerCase()];
 
           if (!relatedModelRepository) {
-            throw new Error(`Unable to find model schema (${relatedModelName}) specified as model type for "${column.propertyName}" on "${model.name}"`);
+            throw new QueryError(`Unable to find model schema (${relatedModelName}) specified as model type for "${column.propertyName}" on "${model.name}"`, model);
           }
 
           const relatedModelPrimaryKey = relatedModelRepository.model.primaryKeyColumn;
           if (!relatedModelPrimaryKey) {
-            throw new Error(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`);
+            throw new QueryError(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`, model);
           }
 
           const primaryKeyValue = (entityValue as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T> & keyof T] as EntityFieldValue;
           if (_.isNil(primaryKeyValue)) {
-            throw new Error(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`);
+            throw new QueryError(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`, model);
           }
 
           params.push(primaryKeyValue);
@@ -295,7 +296,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
 
       const valuesForEntityIndex = valueCollections[entityIndex];
       if (!valuesForEntityIndex) {
-        throw new Error('Error trying to get insert values for entity index');
+        throw new QueryError('Error trying to get insert values for entity index', model);
       }
 
       valuesForEntityIndex.push(value);
@@ -437,17 +438,17 @@ export function getUpdateQueryAndParams<T extends Entity>({
           const relatedModelRepository = repositoriesByModelNameLowered[relatedModelName.toLowerCase()];
 
           if (!relatedModelRepository) {
-            throw new Error(`Unable to find model schema (${relatedModelName}) specified as model type for "${propertyName}" on "${model.name}"`);
+            throw new QueryError(`Unable to find model schema (${relatedModelName}) specified as model type for "${propertyName}" on "${model.name}"`, model);
           }
 
           const relatedModelPrimaryKey = relatedModelRepository.model.primaryKeyColumn;
           if (!relatedModelPrimaryKey) {
-            throw new Error(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`);
+            throw new QueryError(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`, model);
           }
 
           const primaryKeyValue = (value as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T> & keyof T] as EntityFieldValue;
           if (_.isNil(primaryKeyValue)) {
-            throw new Error(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`);
+            throw new QueryError(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`, model);
           }
 
           params.push(primaryKeyValue);
@@ -594,7 +595,7 @@ export function getColumnsToSelect<T extends Entity, K extends string & keyof Om
   for (const [index, propertyName] of Array.from(selectColumns).entries()) {
     const column = model.columnsByPropertyName[propertyName];
     if (!column) {
-      throw new Error(`Unable to find column for property: ${propertyName} on ${model.tableName}`);
+      throw new QueryError(`Unable to find column for property: ${propertyName} on ${model.tableName}`, model);
     }
 
     if (index > 0) {
@@ -679,7 +680,7 @@ export function buildOrderStatement<T extends Entity>({ model, sorts }: { model:
     const { propertyName, descending } = orderProperty;
     const column = model.columnsByPropertyName[propertyName];
     if (!column) {
-      throw new Error(`Property (${propertyName}) not found in model (${model.name}).`);
+      throw new QueryError(`Property (${propertyName}) not found in model (${model.name}).`, model);
     }
 
     orderStatement += `"${column.name}"`;
@@ -746,7 +747,7 @@ function buildWhere<T extends Entity>({
       if (_.isArray(value)) {
         const values = (value as string[]).map((val) => {
           if (!_.isString(val)) {
-            throw new Error(`Expected all array values to be strings for "contains" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`);
+            throw new QueryError(`Expected all array values to be strings for "contains" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
           }
 
           return `%${val}%`;
@@ -775,12 +776,12 @@ function buildWhere<T extends Entity>({
         });
       }
 
-      throw new Error(`Expected value to be a string for "contains" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`);
+      throw new QueryError(`Expected value to be a string for "contains" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
     case 'startsWith':
       if (_.isArray(value)) {
         const values = (value as string[]).map((val) => {
           if (!_.isString(val)) {
-            throw new Error(`Expected all array values to be strings for "startsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`);
+            throw new QueryError(`Expected all array values to be strings for "startsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
           }
 
           return `${val}%`;
@@ -809,12 +810,12 @@ function buildWhere<T extends Entity>({
         });
       }
 
-      throw new Error(`Expected value to be a string for "startsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`);
+      throw new QueryError(`Expected value to be a string for "startsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
     case 'endsWith':
       if (_.isArray(value)) {
         const values = (value as string[]).map((val) => {
           if (!_.isString(val)) {
-            throw new Error(`Expected all array values to be strings for "endsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`);
+            throw new QueryError(`Expected all array values to be strings for "endsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
           }
 
           return `%${val}`;
@@ -843,7 +844,7 @@ function buildWhere<T extends Entity>({
         });
       }
 
-      throw new Error(`Expected value to be a string for "endsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`);
+      throw new QueryError(`Expected value to be a string for "endsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
     case 'like':
       return buildLikeOperatorStatement({
         model,
@@ -855,7 +856,7 @@ function buildWhere<T extends Entity>({
       });
     default: {
       if (_.isUndefined(value)) {
-        throw new Error(`Attempting to query with an undefined value. ${propertyName ?? ''} on ${model.name}`);
+        throw new QueryError(`Attempting to query with an undefined value. ${propertyName ?? ''} on ${model.name}`, model);
       }
 
       if (propertyName) {
@@ -879,12 +880,12 @@ function buildWhere<T extends Entity>({
             const relatedModelRepository = repositoriesByModelNameLowered[column.model.toLowerCase()];
 
             if (!relatedModelRepository) {
-              throw new Error(`Unable to find model schema (${column.model}) specified in where clause for "${column.propertyName}"`);
+              throw new QueryError(`Unable to find model schema (${column.model}) specified in where clause for "${column.propertyName}"`, model);
             }
 
             const relatedModelPrimaryKey = relatedModelRepository.model.primaryKeyColumn;
             if (!relatedModelPrimaryKey) {
-              throw new Error(`Unable to find primary key column for ${column.model} specified in where clause for ${model.name}.${column.propertyName}`);
+              throw new QueryError(`Unable to find primary key column for ${column.model} specified in where clause for ${model.name}.${column.propertyName}`, model);
             }
 
             const primaryKeyValue = (value as unknown as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T];
@@ -993,12 +994,12 @@ function buildWhere<T extends Entity>({
                   const relatedModelRepository = repositoriesByModelNameLowered[columnAsModelType.model.toLowerCase()];
 
                   if (!relatedModelRepository) {
-                    throw new Error(`Unable to find model schema (${columnAsModelType.model}) specified in where clause for "${columnAsModelType.propertyName}"`);
+                    throw new QueryError(`Unable to find model schema (${columnAsModelType.model}) specified in where clause for "${columnAsModelType.propertyName}"`, model);
                   }
 
                   const relatedModelPrimaryKey = relatedModelRepository.model.primaryKeyColumn as ColumnTypeMetadata;
                   if (!relatedModelPrimaryKey) {
-                    throw new Error(`Unable to find primary key column for ${columnAsModelType.model} specified in where clause for ${model.name}.${columnAsModelType.propertyName}`);
+                    throw new QueryError(`Unable to find primary key column for ${columnAsModelType.model} specified in where clause for ${model.name}.${columnAsModelType.propertyName}`, model);
                   }
 
                   columnTypeLowered = relatedModelPrimaryKey.type ? relatedModelPrimaryKey.type.toLowerCase() : '';
@@ -1201,7 +1202,7 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const column = model.columnsByPropertyName[propertyName];
   if (!column) {
-    throw new Error(`Unable to find property ${propertyName} on model ${model.name}`);
+    throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
   }
 
   if (_.isNull(value)) {
@@ -1224,13 +1225,13 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
     return `"${column.name}" ${isNegated ? '!=' : '='} ''`;
   }
 
-  throw new Error(`Expected value to be a string for "like" constraint. Property (${propertyName}) in model (${model.name}).`);
+  throw new QueryError(`Expected value to be a string for "like" constraint. Property (${propertyName}) in model (${model.name}).`, model);
 }
 
 function buildComparisonOperatorStatement<T extends Entity>({ model, propertyName, comparer, isNegated, value, params = [] }: ComparisonOperatorStatementParams<T>): string {
   const column = model.columnsByPropertyName[propertyName];
   if (!column) {
-    throw new Error(`Unable to find property ${propertyName} on model ${model.name}`);
+    throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
   }
 
   if (_.isNull(value)) {
@@ -1245,25 +1246,25 @@ function buildComparisonOperatorStatement<T extends Entity>({ model, propertyNam
   switch (comparer) {
     case '<':
       if (!supportsLessThanGreaterThan) {
-        throw new Error(`< operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`);
+        throw new QueryError(`< operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`, model);
       }
 
       return `"${column.name}"${isNegated ? '>=' : '<'}$${params.length}`;
     case '<=':
       if (!supportsLessThanGreaterThan) {
-        throw new Error(`<= operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`);
+        throw new QueryError(`<= operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`, model);
       }
 
       return `"${column.name}"${isNegated ? '>' : '<='}$${params.length}`;
     case '>':
       if (!supportsLessThanGreaterThan) {
-        throw new Error(`> operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`);
+        throw new QueryError(`> operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`, model);
       }
 
       return `"${column.name}"${isNegated ? '<=' : '>'}$${params.length}`;
     case '>=':
       if (!supportsLessThanGreaterThan) {
-        throw new Error(`>= operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`);
+        throw new QueryError(`>= operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`, model);
       }
 
       return `"${column.name}"${isNegated ? '<' : '>='}$${params.length}`;
