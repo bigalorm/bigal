@@ -7,6 +7,7 @@ import { mock } from 'ts-mockito';
 
 import { initialize } from '../src';
 import type { IReadonlyRepository, IRepository, Entity, ModelMetadata } from '../src';
+import { QueryError } from '../src/errors';
 import * as sqlHelper from '../src/SqlHelper';
 
 import {
@@ -1179,7 +1180,7 @@ describe('sqlHelper', () => {
             store: undefined,
           },
         });
-      }).should.throw(Error, `Attempting to query with an undefined value. store on ${repositoriesByModelNameLowered.product.model.name}`);
+      }).should.throw(QueryError, `Attempting to query with an undefined value. store on ${repositoriesByModelNameLowered.product.model.name}`);
     });
     it('should use column name if defined', () => {
       const storeId = faker.number.int();
@@ -1658,6 +1659,74 @@ describe('sqlHelper', () => {
       assert(whereStatement);
       whereStatement.should.equal('WHERE (("name"=$1) OR ("name"<>$2 AND "store_id"=$3))');
       params.should.deep.equal([name, name, store]);
+    });
+    it('should throw for empty or', () => {
+      ((): void => {
+        sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: {
+            or: [],
+          },
+        });
+      }).should.throw(QueryError, `WHERE statement is unexpectedly empty.`);
+    });
+    it('should handle or with a int field and a string array field', () => {
+      const alias1 = faker.string.uuid();
+      const alias2 = faker.string.uuid();
+      const alias3 = faker.string.uuid();
+      const store = faker.number.int();
+      const store2 = faker.number.int();
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          or: [
+            {
+              store,
+              aliases: alias1,
+            },
+            {
+              store,
+              aliases: alias2,
+            },
+            {
+              store: store2,
+              aliases: alias3,
+            },
+          ],
+        },
+      });
+
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE (("store_id"=$1 AND $2=ANY("alias_names")) OR ("store_id"=$3 AND $4=ANY("alias_names")) OR ("store_id"=$5 AND $6=ANY("alias_names")))');
+      params.should.deep.equal([store, alias1, store, alias2, store2, alias3]);
+    });
+    it('should handle or with two string fields', () => {
+      const name = faker.string.uuid();
+      const name1 = faker.string.uuid();
+      const location1 = faker.string.uuid();
+      const location2 = faker.string.uuid();
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          or: [
+            {
+              name,
+              location: location1,
+            },
+            {
+              name: name1,
+              location: location2,
+            },
+          ],
+        },
+      });
+
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE (("name"=$1 AND "location"=$2) OR ("name"=$3 AND "location"=$4))');
+      params.should.deep.equal([name, location1, name1, location2]);
     });
     it('should handle mixed or/and constraints', () => {
       const id = faker.number.int();

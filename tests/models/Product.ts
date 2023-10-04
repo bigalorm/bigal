@@ -33,7 +33,7 @@ export class Product extends ModelBase {
     defaultsTo: [],
     name: 'alias_names',
   })
-  public aliases?: string[];
+  public aliases!: string[];
 
   @column({
     model: 'store', // NOTE: Lower case to test that case doesn't matter
