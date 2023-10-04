@@ -1,5 +1,20 @@
 # Change Log
 
+## 12.0.0 - 2023-10-04
+
+### BREAKING CHANGES (12.0.0)
+
+- Drop support for Node.js 16
+
+### NON-BREAKING CHANGES (12.0.0)
+
+- Throw `QueryError`, with additional metadata
+- Throw error if query has an empty `or` statement
+
+### MAINTENANCE (12.0.0)
+
+- Update npms
+
 ## 11.0.2 - 2023-07-18
 
 - Update npms
@@ -10,11 +25,11 @@
 
 ## 11.0.0 - 2023-02-07
 
-### BREAKING CHANGES
+### BREAKING CHANGES (11.0.0)
 
 - Drop support for Node.js 14
 
-### MAINTENANCE
+### MAINTENANCE (11.0.0)
 
 - Update npms
 
