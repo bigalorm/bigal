@@ -14,7 +14,6 @@ This ORM does not:
 
 ## Compatibility
 
-- Node.js v16 or above
 - [PostgreSQL](http://www.postgresql.org/) 14 or above. Lower versions _should_ work.
 
 ## Install
