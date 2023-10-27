@@ -1,5 +1,9 @@
 # Change Log
 
+## 12.0.1 - 2023-10-27
+
+- Update npms
+
 ## 12.0.0 - 2023-10-04
 
 ### BREAKING CHANGES (12.0.0)
