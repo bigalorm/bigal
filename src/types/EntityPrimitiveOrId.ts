@@ -5,5 +5,5 @@ export type EntityPrimitiveOrId<T> = T extends []
     ? EntityPrimitiveOrId<U>[]
     : T // Unable to determine array type, so return original
   : Extract<NonNullable<T>, Entity> extends undefined
-  ? T
-  : Exclude<NonNullable<T>, Entity> | Pick<Extract<NonNullable<T>, Entity>, 'id'>;
+    ? T
+    : Exclude<NonNullable<T>, Entity> | Pick<Extract<NonNullable<T>, Entity>, 'id'>;
