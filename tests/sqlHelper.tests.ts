@@ -1177,6 +1177,120 @@ describe('sqlHelper', () => {
       query.should.equal(`UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3`);
       params.should.deep.equal([name, storeId, productId]);
     });
+    describe('maxLength', () => {
+      it('Should allow update when maxLength set but column not required AND value not set', () => {
+        const itemId = faker.number.int();
+        const itemName = faker.string.uuid();
+
+        const { query, params } = sqlHelper.getUpdateQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          where: {
+            id: itemId,
+          },
+          values: {
+            name: itemName,
+          },
+          returnRecords: false,
+        });
+
+        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "name"=$1 WHERE "id"=$2`);
+        params.should.deep.equal([itemName, itemId]);
+      });
+      it('Should not enforce maxLength when not set for column', () => {
+        const itemId = faker.number.int();
+        const externalId = 'a'.repeat(1000);
+
+        const { query, params } = sqlHelper.getUpdateQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          where: {
+            id: itemId,
+          },
+          values: {
+            externalIdNoMaxLength: externalId,
+          },
+          returnRecords: false,
+        });
+
+        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "external_id_no_max_length"=$1 WHERE "id"=$2`);
+        params.should.deep.equal([externalId, itemId]);
+      });
+      it('Should allow update (string) when under maxLength', () => {
+        const itemId = faker.number.int();
+        const externalId = 'a'.repeat(5);
+
+        const { query, params } = sqlHelper.getUpdateQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          where: {
+            id: itemId,
+          },
+          values: {
+            externalIdString: externalId,
+          },
+          returnRecords: false,
+        });
+
+        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "external_id_string"=$1 WHERE "id"=$2`);
+        params.should.deep.equal([externalId, itemId]);
+      });
+      it('Should throw error on update (string) when above maxLength', () => {
+        const itemId = faker.number.int();
+        const externalId = 'a'.repeat(6);
+
+        ((): void => {
+          sqlHelper.getUpdateQueryAndParams({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+            where: {
+              id: itemId,
+            },
+            values: {
+              externalIdString: externalId,
+            },
+            returnRecords: false,
+          });
+        }).should.throw(QueryError, `Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
+      });
+      it('Should allow update (string[]) when under maxLength', () => {
+        const itemId = faker.number.int();
+        const externalIds = ['a'.repeat(10), 'b'.repeat(10)];
+
+        const { query, params } = sqlHelper.getUpdateQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          where: {
+            id: itemId,
+          },
+          values: {
+            externalIdStringArray: externalIds,
+          },
+          returnRecords: false,
+        });
+
+        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "external_id_string_array"=$1 WHERE "id"=$2`);
+        params.should.deep.equal([externalIds, itemId]);
+      });
+      it('Should throw error on update (string[]) when above maxLength', () => {
+        const itemId = faker.number.int();
+        const externalIds = ['a'.repeat(11), 'b'.repeat(10)];
+
+        ((): void => {
+          sqlHelper.getUpdateQueryAndParams({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+            where: {
+              id: itemId,
+            },
+            values: {
+              externalIdStringArray: externalIds,
+            },
+            returnRecords: false,
+          });
+        }).should.throw(QueryError, `Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
+      });
+    });
   });
   describe('#getDeleteQueryAndParams()', () => {
     it('should delete all records if no where statement is defined', () => {

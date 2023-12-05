@@ -457,7 +457,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
 
           for (const normalizedValue of normalizedValues) {
             if (normalizedValue.length > maxLength) {
-              throw new QueryError(`Create statement for "${model.name}" contains a value that exceeds maxLength on field: ${column.propertyName}`, model);
+              throw new QueryError(`Update statement for "${model.name}" contains a value that exceeds maxLength on field: ${column.propertyName}`, model);
             }
           }
         }
