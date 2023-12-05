@@ -36,4 +36,12 @@ export class ImportedItem extends Entity {
     maxLength: 10,
   })
   public externalIdStringArray?: string[];
+
+  @column({
+    type: 'integer',
+    required: false,
+    name: 'unrelated',
+    maxLength: 2,
+  })
+  public unrelated?: number;
 }

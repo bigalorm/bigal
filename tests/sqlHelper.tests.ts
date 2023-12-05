@@ -887,6 +887,27 @@ describe('sqlHelper', () => {
         query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","external_id_no_max_length") VALUES ($1,$2,$3)`);
         params.should.deep.equal([itemId, itemName, externalId]);
       });
+      it('Should not enforce maxLength when set on unsupported column type', () => {
+        const itemId = faker.number.int();
+        const itemName = faker.string.uuid();
+        const unrelatedValue = 12345; // maxLength: 2
+
+        const { query, params } = sqlHelper.getInsertQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          values: [
+            {
+              id: itemId,
+              name: itemName,
+              unrelated: unrelatedValue,
+            },
+          ],
+          returnRecords: false,
+        });
+
+        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","unrelated") VALUES ($1,$2,$3)`);
+        params.should.deep.equal([itemId, itemName, unrelatedValue]);
+      });
       it('Should allow insert (string) when under maxLength', () => {
         const itemId = faker.number.int();
         const itemName = faker.string.uuid();
@@ -1215,6 +1236,25 @@ describe('sqlHelper', () => {
 
         query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "external_id_no_max_length"=$1 WHERE "id"=$2`);
         params.should.deep.equal([externalId, itemId]);
+      });
+      it('Should not enforce maxLength when set on unsupported column type', () => {
+        const itemId = faker.number.int();
+        const unrelatedValue = 12345; // maxLength: 2
+
+        const { query, params } = sqlHelper.getUpdateQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          where: {
+            id: itemId,
+          },
+          values: {
+            unrelated: unrelatedValue,
+          },
+          returnRecords: false,
+        });
+
+        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "unrelated"=$1 WHERE "id"=$2`);
+        params.should.deep.equal([unrelatedValue, itemId]);
       });
       it('Should allow update (string) when under maxLength', () => {
         const itemId = faker.number.int();
