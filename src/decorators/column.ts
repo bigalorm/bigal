@@ -91,6 +91,7 @@ export function column(dbColumnNameOrOptions?: ColumnOptions | string, options?:
         type: columnTypeOptions.type,
         defaultsTo: columnTypeOptions.defaultsTo,
         enum: columnTypeOptions.enum,
+        maxLength: columnTypeOptions.maxLength,
       }),
     );
   };
