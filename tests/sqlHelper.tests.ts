@@ -12,26 +12,28 @@ import * as sqlHelper from '../src/SqlHelper';
 
 import {
   Category,
+  ImportedItem,
+  KitchenSink,
   Product,
   ProductCategory,
-  ProductWithCreateUpdateDateTracking,
   ProductWithCreatedAt,
+  ProductWithCreateUpdateDateTracking,
   ReadonlyProduct,
-  Store,
-  KitchenSink,
   RequiredPropertyWithDefaultValue,
   RequiredPropertyWithDefaultValueFunction,
   SimpleWithCollections,
   SimpleWithCreatedAt,
   SimpleWithCreatedAtAndUpdatedAt,
   SimpleWithJson,
-  SimpleWithUpdatedAt,
   SimpleWithStringId,
+  SimpleWithUpdatedAt,
   SimpleWithVersion,
+  Store,
 } from './models';
 
 interface RepositoriesByModelName {
   Category: IRepository<Entity>;
+  ImportedItem: IRepository<Entity>;
   KitchenSink: IRepository<Entity>;
   Product: IRepository<Entity>;
   ProductCategory: IRepository<Entity>;
@@ -65,6 +67,7 @@ describe('sqlHelper', () => {
     repositoriesByModelName = initialize({
       models: [
         Category,
+        ImportedItem,
         KitchenSink,
         Product,
         ProductCategory,
@@ -841,6 +844,130 @@ describe('sqlHelper', () => {
             }
           }
         });
+      });
+    });
+    describe('maxLength', () => {
+      it('Should allow insert when maxLength set but column not required AND value not set', () => {
+        const itemId = faker.number.int();
+        const itemName = faker.string.uuid();
+
+        const { query, params } = sqlHelper.getInsertQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          values: [
+            {
+              id: itemId,
+              name: itemName,
+            },
+          ],
+          returnRecords: false,
+        });
+
+        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name") VALUES ($1,$2)`);
+        params.should.deep.equal([itemId, itemName]);
+      });
+      it('Should not enforce maxLength when not set for column', () => {
+        const itemId = faker.number.int();
+        const itemName = faker.string.uuid();
+        const externalId = 'a'.repeat(1000);
+
+        const { query, params } = sqlHelper.getInsertQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          values: [
+            {
+              id: itemId,
+              name: itemName,
+              externalIdNoMaxLength: externalId,
+            },
+          ],
+          returnRecords: false,
+        });
+
+        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","external_id_no_max_length") VALUES ($1,$2,$3)`);
+        params.should.deep.equal([itemId, itemName, externalId]);
+      });
+      it('Should allow insert (string) when under maxLength', () => {
+        const itemId = faker.number.int();
+        const itemName = faker.string.uuid();
+        const externalId = 'a'.repeat(5);
+
+        const { query, params } = sqlHelper.getInsertQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          values: [
+            {
+              id: itemId,
+              name: itemName,
+              externalIdString: externalId,
+            },
+          ],
+          returnRecords: false,
+        });
+
+        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","external_id_string") VALUES ($1,$2,$3)`);
+        params.should.deep.equal([itemId, itemName, externalId]);
+      });
+      it('Should throw error on insert (string) when above maxLength', () => {
+        const itemId = faker.number.int();
+        const itemName = faker.string.uuid();
+        const externalId = 'a'.repeat(6);
+
+        ((): void => {
+          sqlHelper.getInsertQueryAndParams({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+            values: [
+              {
+                id: itemId,
+                name: itemName,
+                externalIdString: externalId,
+              },
+            ],
+            returnRecords: false,
+          });
+        }).should.throw(QueryError, `Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
+      });
+      it('Should allow insert (string[]) when under maxLength', () => {
+        const itemId = faker.number.int();
+        const itemName = faker.string.uuid();
+        const externalIds = ['a'.repeat(10), 'b'.repeat(10)];
+
+        const { query, params } = sqlHelper.getInsertQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          values: [
+            {
+              id: itemId,
+              name: itemName,
+              externalIdStringArray: externalIds,
+            },
+          ],
+          returnRecords: false,
+        });
+
+        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","external_id_string_array") VALUES ($1,$2,$3)`);
+        params.should.deep.equal([itemId, itemName, externalIds]);
+      });
+      it('Should throw error on insert (string[]) when above maxLength', () => {
+        const itemId = faker.number.int();
+        const itemName = faker.string.uuid();
+        const externalIds = ['a'.repeat(11), 'b'.repeat(10)];
+
+        ((): void => {
+          sqlHelper.getInsertQueryAndParams({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+            values: [
+              {
+                id: itemId,
+                name: itemName,
+                externalIdStringArray: externalIds,
+              },
+            ],
+            returnRecords: false,
+          });
+        }).should.throw(QueryError, `Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
     });
   });
