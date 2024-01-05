@@ -848,7 +848,7 @@ describe('sqlHelper', () => {
     });
     describe('maxLength', () => {
       it('should allow insert when maxLength set but column not required AND value not set', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const itemName = faker.string.uuid();
 
         const { query, params } = sqlHelper.getInsertQueryAndParams({
@@ -867,7 +867,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([itemId, itemName]);
       });
       it('should not enforce maxLength when not set for column', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const itemName = faker.string.uuid();
         const externalId = 'a'.repeat(1000);
 
@@ -888,7 +888,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([itemId, itemName, externalId]);
       });
       it('should not enforce maxLength when set on unsupported column type', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const itemName = faker.string.uuid();
         const unrelatedValue = 12345; // maxLength: 2
 
@@ -909,7 +909,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([itemId, itemName, unrelatedValue]);
       });
       it('should allow insert (string) when under maxLength', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const itemName = faker.string.uuid();
         const externalId = 'a'.repeat(5);
 
@@ -930,7 +930,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([itemId, itemName, externalId]);
       });
       it('should throw error on insert (string) when above maxLength', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const itemName = faker.string.uuid();
         const externalId = 'a'.repeat(6);
 
@@ -950,7 +950,7 @@ describe('sqlHelper', () => {
         }).should.throw(QueryError, `Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
       it('should allow insert (string[]) when under maxLength', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const itemName = faker.string.uuid();
         const externalIds = ['a'.repeat(10), 'b'.repeat(10)];
 
@@ -971,7 +971,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([itemId, itemName, externalIds]);
       });
       it('should throw error on insert (string[]) when above maxLength', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const itemName = faker.string.uuid();
         const externalIds = ['a'.repeat(11), 'b'.repeat(10)];
 
@@ -1200,7 +1200,7 @@ describe('sqlHelper', () => {
     });
     describe('maxLength', () => {
       it('should allow update when maxLength set but column not required AND value not set', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const itemName = faker.string.uuid();
 
         const { query, params } = sqlHelper.getUpdateQueryAndParams({
@@ -1219,7 +1219,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([itemName, itemId]);
       });
       it('should not enforce maxLength when not set for column', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const externalId = 'a'.repeat(1000);
 
         const { query, params } = sqlHelper.getUpdateQueryAndParams({
@@ -1238,7 +1238,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([externalId, itemId]);
       });
       it('should not enforce maxLength when set on unsupported column type', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const unrelatedValue = 12345; // maxLength: 2
 
         const { query, params } = sqlHelper.getUpdateQueryAndParams({
@@ -1257,7 +1257,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([unrelatedValue, itemId]);
       });
       it('should allow update (string) when under maxLength', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const externalId = 'a'.repeat(5);
 
         const { query, params } = sqlHelper.getUpdateQueryAndParams({
@@ -1276,7 +1276,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([externalId, itemId]);
       });
       it('should throw error on update (string) when above maxLength', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const externalId = 'a'.repeat(6);
 
         ((): void => {
@@ -1294,7 +1294,7 @@ describe('sqlHelper', () => {
         }).should.throw(QueryError, `Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
       it('should allow update (string[]) when under maxLength', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const externalIds = ['a'.repeat(10), 'b'.repeat(10)];
 
         const { query, params } = sqlHelper.getUpdateQueryAndParams({
@@ -1313,7 +1313,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([externalIds, itemId]);
       });
       it('should throw error on update (string[]) when above maxLength', () => {
-        const itemId = faker.number.int();
+        const itemId = faker.string.uuid();
         const externalIds = ['a'.repeat(11), 'b'.repeat(10)];
 
         ((): void => {

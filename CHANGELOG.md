@@ -1,5 +1,10 @@
 # Change Log
 
+## 12.1.0 - 2023-01-05
+
+- Added support for optional maxLength constraint when inserting/updating string fields. #89 Thanks @tyler-neal!
+- Update npms
+
 ## 12.0.2 - 2023-11-28
 
 - Update npms
