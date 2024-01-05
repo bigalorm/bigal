@@ -13,4 +13,10 @@ export interface ColumnTypeOptions extends ColumnBaseOptions {
    * Array of possible enumerated values
    */
   enum?: string[];
+  /**
+   * If set, enforces a maximum length check on the column
+   *
+   * Applies to types: string | string[]
+   */
+  maxLength?: number;
 }

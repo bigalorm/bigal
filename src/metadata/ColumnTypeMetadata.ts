@@ -14,6 +14,12 @@ export interface ColumnTypeMetadataOptions extends ColumnBaseMetadataOptions {
    * Array of possible enumerated values
    */
   enum?: string[];
+  /**
+   * If set, enforces a maximum length check on the column
+   *
+   * Applies to types: string | string[]
+   */
+  maxLength?: number;
 }
 
 export class ColumnTypeMetadata extends ColumnBaseMetadata {
@@ -32,6 +38,13 @@ export class ColumnTypeMetadata extends ColumnBaseMetadata {
    */
   public enum?: string[];
 
+  /**
+   * If set, enforces a maximum length check on the column
+   *
+   * Applies to types: string | string[]
+   */
+  public maxLength?: number;
+
   public constructor(options: ColumnTypeMetadataOptions) {
     super({
       target: options.target,
@@ -49,5 +62,6 @@ export class ColumnTypeMetadata extends ColumnBaseMetadata {
     this.type = options.type;
     this.defaultsTo = options.defaultsTo;
     this.enum = options.enum;
+    this.maxLength = options.maxLength;
   }
 }

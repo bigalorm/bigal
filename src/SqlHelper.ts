@@ -214,6 +214,20 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
           }
         } else {
           includePropertyName = true;
+
+          // Check and enforce max length for applicable types
+          const { maxLength, type } = column as ColumnTypeMetadata;
+
+          if (maxLength && ['string', 'string[]'].includes(type)) {
+            const entityValues = entity[column.propertyName as string & keyof CreateUpdateParams<T>];
+            const normalizedValues = (Array.isArray(entityValues) ? entityValues : [entityValues]) as string[];
+
+            for (const normalizedValue of normalizedValues) {
+              if (normalizedValue.length > maxLength) {
+                throw new QueryError(`Create statement for "${model.name}" contains a value that exceeds maxLength on field: ${column.propertyName}`, model);
+              }
+            }
+          }
         }
       }
 
@@ -434,6 +448,20 @@ export function getUpdateQueryAndParams<T extends Entity>({
       } else {
         const isJsonArray = (column as ColumnTypeMetadata).type === 'json' && _.isArray(value);
         const relatedModelName = (column as ColumnModelMetadata).model;
+
+        // Check and enforce max length for applicable types
+        const { maxLength, type } = column as ColumnTypeMetadata;
+
+        if (maxLength && ['string', 'string[]'].includes(type)) {
+          const normalizedValues = (Array.isArray(value) ? value : [value]) as string[];
+
+          for (const normalizedValue of normalizedValues) {
+            if (normalizedValue.length > maxLength) {
+              throw new QueryError(`Update statement for "${model.name}" contains a value that exceeds maxLength on field: ${column.propertyName}`, model);
+            }
+          }
+        }
+
         if (relatedModelName && _.isObject(value)) {
           const relatedModelRepository = repositoriesByModelNameLowered[relatedModelName.toLowerCase()];
 
