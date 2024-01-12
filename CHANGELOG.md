@@ -1,5 +1,10 @@
 # Change Log
 
+## 12.1.1 - 2024-01-12
+
+- Handle `null` and `undefined` for columns with maxLength. #90 Thanks @tyler-neal!
+- Update npms
+
 ## 12.1.0 - 2024-01-05
 
 - Added support for optional maxLength constraint when inserting/updating string fields. #89 Thanks @tyler-neal!
