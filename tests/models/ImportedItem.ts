@@ -19,7 +19,7 @@ export class ImportedItem extends Entity {
     required: false,
     name: 'external_id_no_max_length',
   })
-  public externalIdNoMaxLength?: string;
+  public externalIdNoMaxLength?: string | null;
 
   @column({
     type: 'string',
@@ -27,7 +27,7 @@ export class ImportedItem extends Entity {
     name: 'external_id_string',
     maxLength: 5,
   })
-  public externalIdString?: string;
+  public externalIdString?: string | null;
 
   @column({
     type: 'string[]',
@@ -35,7 +35,7 @@ export class ImportedItem extends Entity {
     name: 'external_id_string_array',
     maxLength: 10,
   })
-  public externalIdStringArray?: string[];
+  public externalIdStringArray?: string[] | null;
 
   @column({
     type: 'integer',

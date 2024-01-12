@@ -223,7 +223,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
             const normalizedValues = (Array.isArray(entityValues) ? entityValues : [entityValues]) as string[];
 
             for (const normalizedValue of normalizedValues) {
-              if (normalizedValue.length > maxLength) {
+              if (normalizedValue?.length > maxLength) {
                 throw new QueryError(`Create statement for "${model.name}" contains a value that exceeds maxLength on field: ${column.propertyName}`, model);
               }
             }
@@ -456,7 +456,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
           const normalizedValues = (Array.isArray(value) ? value : [value]) as string[];
 
           for (const normalizedValue of normalizedValues) {
-            if (normalizedValue.length > maxLength) {
+            if (normalizedValue?.length > maxLength) {
               throw new QueryError(`Update statement for "${model.name}" contains a value that exceeds maxLength on field: ${column.propertyName}`, model);
             }
           }
