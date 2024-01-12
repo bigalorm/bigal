@@ -847,6 +847,46 @@ describe('sqlHelper', () => {
       });
     });
     describe('maxLength', () => {
+      it('should allow insert when maxLength set and providing null value', () => {
+        const itemId = faker.string.uuid();
+        const itemName = faker.string.uuid();
+
+        const { query, params } = sqlHelper.getInsertQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          values: [
+            {
+              id: itemId,
+              name: itemName,
+              externalIdString: null,
+            },
+          ],
+          returnRecords: false,
+        });
+
+        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","external_id_string") VALUES ($1,$2,NULL)`);
+        params.should.deep.equal([itemId, itemName]);
+      });
+      it('should allow insert when maxLength set and providing undefined value', () => {
+        const itemId = faker.string.uuid();
+        const itemName = faker.string.uuid();
+
+        const { query, params } = sqlHelper.getInsertQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          values: [
+            {
+              id: itemId,
+              name: itemName,
+              externalIdString: undefined,
+            },
+          ],
+          returnRecords: false,
+        });
+
+        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name") VALUES ($1,$2)`);
+        params.should.deep.equal([itemId, itemName]);
+      });
       it('should allow insert when maxLength set but column not required AND value not set', () => {
         const itemId = faker.string.uuid();
         const itemName = faker.string.uuid();
@@ -1199,6 +1239,46 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name, storeId, productId]);
     });
     describe('maxLength', () => {
+      it('should allow update when maxLength set and providing null', () => {
+        const itemId = faker.string.uuid();
+        const itemName = faker.string.uuid();
+
+        const { query, params } = sqlHelper.getUpdateQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          where: {
+            id: itemId,
+          },
+          values: {
+            name: itemName,
+            externalIdString: null,
+          },
+          returnRecords: false,
+        });
+
+        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "name"=$1,"external_id_string"=NULL WHERE "id"=$2`);
+        params.should.deep.equal([itemName, itemId]);
+      });
+      it('should allow update when maxLength set and providing undefined', () => {
+        const itemId = faker.string.uuid();
+        const itemName = faker.string.uuid();
+
+        const { query, params } = sqlHelper.getUpdateQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
+          where: {
+            id: itemId,
+          },
+          values: {
+            name: itemName,
+            externalIdString: undefined,
+          },
+          returnRecords: false,
+        });
+
+        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "name"=$1,"external_id_string"=NULL WHERE "id"=$2`);
+        params.should.deep.equal([itemName, itemId]);
+      });
       it('should allow update when maxLength set but column not required AND value not set', () => {
         const itemId = faker.string.uuid();
         const itemName = faker.string.uuid();
