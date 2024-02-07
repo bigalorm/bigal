@@ -1,5 +1,9 @@
 # Change Log
 
+## 12.1.2 - 2024-02-07
+
+- Update npms
+
 ## 12.1.1 - 2024-01-12
 
 - Handle `null` and `undefined` for columns with maxLength. #90 Thanks @tyler-neal!
