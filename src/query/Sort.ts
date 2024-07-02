@@ -1,5 +1,5 @@
-import type { Entity } from '../Entity';
-import type { ExcludeFunctions, OmitEntityCollections, OmitFunctions } from '../types';
+import type { Entity } from '../Entity.js';
+import type { ExcludeFunctions, OmitEntityCollections, OmitFunctions } from '../types/index.js';
 
 export type SortString<T extends Entity> =
   | `${string & keyof OmitFunctions<OmitEntityCollections<T>>} ASC`

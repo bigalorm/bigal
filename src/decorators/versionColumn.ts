@@ -1,10 +1,10 @@
 import _ from 'lodash';
 
-import type { ColumnModifierMetadata } from '../metadata';
-import { ColumnTypeMetadata, getMetadataStorage } from '../metadata';
-import type { ClassLike } from '../types';
+import type { ColumnModifierMetadata } from '../metadata/index.js';
+import { ColumnTypeMetadata, getMetadataStorage } from '../metadata/index.js';
+import type { ClassLike } from '../types/index.js';
 
-import type { ColumnTypeOptions } from './ColumnTypeOptions';
+import type { ColumnTypeOptions } from './ColumnTypeOptions.js';
 
 type ReturnFunctionType = (object: ClassLike, propertyName: string) => void;
 
@@ -16,13 +16,11 @@ export function versionColumn(dbColumnNameOrOptions?: ColumnTypeOptions | string
     if (typeof dbColumnNameOrOptions === 'string') {
       dbColumnName = dbColumnNameOrOptions;
     } else {
-      // eslint-disable-next-line no-param-reassign
       options = dbColumnNameOrOptions;
     }
 
     if (dbColumnNameOrOptions) {
       if (!options) {
-        // eslint-disable-next-line no-param-reassign
         options = {} as ColumnTypeOptions;
       }
 

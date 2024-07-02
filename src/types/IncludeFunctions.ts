@@ -1,6 +1,5 @@
 /**
  * Returns the key name if the property type is a function
  */
-// NOTE: eslint does not like using `Function`.
-// eslint-disable-next-line @typescript-eslint/ban-types
+// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 export type IncludeFunctions<T, K extends PropertyKey> = T extends Function ? K : never;

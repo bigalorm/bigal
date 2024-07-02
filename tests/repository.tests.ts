@@ -1,17 +1,17 @@
 import assert from 'assert';
 
 import { faker } from '@faker-js/faker';
-import chai from 'chai';
-import * as _ from 'lodash';
+import * as chai from 'chai';
+import _ from 'lodash';
 import type { QueryResult as PostgresQueryResult, QueryResultRow } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { CreateUpdateParams, QueryResult, Repository } from '../src';
-import { initialize } from '../src';
+import type { CreateUpdateParams, QueryResult, Repository } from '../src/index.js';
+import { initialize } from '../src/index.js';
 
-import { Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store } from './models';
-import * as generator from './utils/generator';
+import { Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store } from './models/index.js';
+import * as generator from './utils/generator.js';
 
 function getQueryResult<T extends QueryResultRow>(rows: T[] = []): PostgresQueryResult<T> {
   return {
@@ -25,17 +25,17 @@ function getQueryResult<T extends QueryResultRow>(rows: T[] = []): PostgresQuery
 
 describe('Repository', () => {
   let should: Chai.Should;
-  const mockedPool: Pool = mock(Pool);
-  /* eslint-disable @typescript-eslint/naming-convention */
+  let mockedPool: Pool;
+
   let ProductRepository: Repository<Product>;
   let ProductCategoryRepository: Repository<ProductCategory>;
   let SimpleWithStringCollectionRepository: Repository<SimpleWithStringCollection>;
   let StoreRepository: Repository<Store>;
   let ProductWithCreateUpdateDateTrackingRepository: Repository<ProductWithCreateUpdateDateTracking>;
-  /* eslint-enable @typescript-eslint/naming-convention */
 
   before(() => {
     should = chai.should();
+    mockedPool = mock(Pool);
 
     const repositoriesByModelName = initialize({
       models: [Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store],
@@ -55,6 +55,7 @@ describe('Repository', () => {
 
   describe('#create()', () => {
     let store: QueryResult<Store>;
+
     beforeEach(() => {
       store = generator.store();
     });
@@ -78,6 +79,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal(['beforeCreate - foo', []]);
     });
+
     it('should return single object result if single value is specified', async () => {
       const product = generator.product({
         store: store.id,
@@ -99,6 +101,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
+
     it('should return single object result if single value is specified - Promise.all', async () => {
       const product = generator.product({
         store: store.id,
@@ -122,6 +125,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
+
     it('should return void if single value is specified and returnRecords=false', async () => {
       const product = generator.product({
         store: store.id,
@@ -129,6 +133,7 @@ describe('Repository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
+      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const result = await ProductRepository.create(
         {
           name: product.name,
@@ -147,6 +152,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
+
     it('should support ignoring on conflict', async () => {
       const product = generator.product({
         store: store.id,
@@ -178,6 +184,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
+
     it('should support ignoring on conflict with returnRecords=false', async () => {
       const product = generator.product({
         store: store.id,
@@ -206,6 +213,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
+
     it('should support ignoring on conflict with specified returnSelect', async () => {
       const product = generator.product({
         store: store.id,
@@ -238,6 +246,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
+
     it('should support merge on conflict', async () => {
       const product = generator.product({
         store: store.id,
@@ -270,6 +279,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
+
     it('should support merging on conflict with returnRecords=false', async () => {
       const product = generator.product({
         store: store.id,
@@ -301,6 +311,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
+
     it('should support merging on conflict with specified returnSelect', async () => {
       const product = generator.product({
         store: store.id,
@@ -334,6 +345,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
+
     it('should return empty array results if empty value array is specified', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([]));
 
@@ -343,6 +355,7 @@ describe('Repository', () => {
       should.exist(result);
       result.should.deep.equal([]);
     });
+
     it('should return object array results if multiple values are specified', async () => {
       const products = [
         generator.product({
@@ -374,6 +387,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([products[0]!.name, products[1]!.name, [], [], products[0]!.store, products[1]!.store]);
     });
+
     it('should return void if multiple values are specified and returnRecords=false', async () => {
       const products = [
         generator.product({
@@ -386,6 +400,7 @@ describe('Repository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
+      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const result = await ProductRepository.create(
         products.map((product) => {
           return {
@@ -406,6 +421,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([products[0]!.name, products[1]!.name, [], [], products[0]!.store, products[1]!.store]);
     });
+
     it('should allow populated value parameters', async () => {
       const product = generator.product({
         store: store.id,
@@ -427,6 +443,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], store.id]);
     });
+
     it('should allow populated (QueryResult) value parameters', async () => {
       const product = generator.product({
         store: store.id,
@@ -452,6 +469,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], store.id]);
     });
+
     it('should allow partial Entity (omitting some required fields) as a value parameter', async () => {
       const category = generator.category();
       const product: Pick<Product, 'id' | 'name'> = generator.product({
@@ -475,6 +493,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.id, category.id]);
     });
+
     it(`should allow populated (Pick<T, 'id'>) value parameters`, async () => {
       const product = generator.product({
         store: store.id,
@@ -500,6 +519,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], store.id]);
     });
+
     it('should insert with string array value parameter', async () => {
       const item = generator.simpleWithStringCollection();
 
@@ -521,6 +541,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([item.name, item.otherIds]);
     });
+
     it('should ignore one-to-many collection values', async () => {
       const product: Product = generator.product({
         store: store.id,
@@ -543,6 +564,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([store.name]);
     });
+
     it('should ignore many-to-many collection values', async () => {
       const category = generator.category();
       const product: Product = generator.product({
@@ -568,8 +590,10 @@ describe('Repository', () => {
       params.should.deep.equal([product.name, [], product.store]);
     });
   });
+
   describe('#update()', () => {
     let store: QueryResult<Store>;
+
     beforeEach(() => {
       store = generator.store();
     });
@@ -600,6 +624,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal(['beforeUpdate - foo', id]);
     });
+
     it('should return array of updated objects if second parameter is not defined', async () => {
       const product: Product = generator.product({
         store: store.id,
@@ -625,6 +650,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, product.store, product.id]);
     });
+
     it('should return array of updated objects if second parameter is not defined - Promise.all', async () => {
       const product: Product = generator.product({
         store: store.id,
@@ -652,6 +678,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, product.store, product.id]);
     });
+
     it('should return void if returnRecords=false', async () => {
       const product: Product = generator.product({
         store: store.id,
@@ -659,6 +686,7 @@ describe('Repository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
+      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const result = await ProductRepository.update(
         {
           id: product.id,
@@ -680,6 +708,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, product.store, product.id]);
     });
+
     it('should allow populated (QueryResult) value parameters', async () => {
       const product = generator.product({
         store: store.id,
@@ -709,6 +738,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, store.id, product.id]);
     });
+
     it(`should allow populated (Pick<T, 'id'>) value parameters`, async () => {
       const product = generator.product({
         store: store.id,
@@ -738,6 +768,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, store.id, product.id]);
     });
+
     it('should allow partial Entity (omitting some required fields) as a value parameter', async () => {
       const category = generator.category();
       const product: Pick<Product, 'id' | 'name'> = generator.product({
@@ -766,8 +797,10 @@ describe('Repository', () => {
       params.should.deep.equal([product.id, category.id, productCategory.id]);
     });
   });
+
   describe('#destroy()', () => {
     let store: QueryResult<Store>;
+
     beforeEach(() => {
       store = generator.store();
     });
@@ -784,6 +817,7 @@ describe('Repository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
+      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const result = await ProductRepository.destroy();
       should.not.exist(result);
 
@@ -792,6 +826,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should delete all records if empty constraint and return all data if returnRecords=true', async () => {
       const products = [
         generator.product({
@@ -813,6 +848,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should delete all records if empty constraint and return specific columns if returnSelect is specified', async () => {
       const products = [
         generator.product({
@@ -834,6 +870,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should delete all records if empty constraint and return id column if returnSelect is empty', async () => {
       const products = [
         generator.product({
@@ -855,6 +892,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should support call constraints as a parameter', async () => {
       const products = [
         generator.product({
@@ -867,6 +905,7 @@ describe('Repository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
+      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const result = await ProductRepository.destroy({
         id: _.map(products, 'id'),
         store,
@@ -878,6 +917,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([_.map(products, 'id'), store.id]);
     });
+
     it('should support call constraints as a parameter if returnRecords=true', async () => {
       const products = [
         generator.product({
@@ -905,6 +945,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([_.map(products, 'id'), store.id]);
     });
+
     it('should support call with chained where constraints', async () => {
       const products = [
         generator.product({
@@ -916,6 +957,7 @@ describe('Repository', () => {
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const result = await ProductRepository.destroy().where({
         store: store.id,
       });
@@ -926,6 +968,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([store.id]);
     });
+
     it('should support call with chained where constraints if returnRecords=true', async () => {
       const products = [
         generator.product({
@@ -948,6 +991,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([store.id]);
     });
+
     it('should support call with chained where constraints - Promise.all', async () => {
       const products = [
         generator.product({
@@ -971,6 +1015,7 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([store.id]);
     });
+
     it('should support call with chained where constraints if returnRecords=true - Promise.all', async () => {
       const products = [
         generator.product({

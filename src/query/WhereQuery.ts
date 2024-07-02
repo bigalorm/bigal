@@ -1,5 +1,5 @@
-import type { Entity, NotEntityBrand } from '../Entity';
-import type { ExcludeEntityCollections, ExcludeFunctions } from '../types';
+import type { Entity, NotEntityBrand } from '../Entity.js';
+import type { ExcludeEntityCollections, ExcludeFunctions } from '../types/index.js';
 
 type ExcludeUndefined<T> = Exclude<T, undefined>;
 export type LiteralValues<TValue> = (TValue | null)[] | TValue | null;

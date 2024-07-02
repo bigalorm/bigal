@@ -1,6 +1,6 @@
-import { updateDateColumn } from '../../src';
+import { updateDateColumn } from '../../src/index.js';
 
-import { SimpleWithCreatedAt } from './SimpleWithCreatedAt';
+import { SimpleWithCreatedAt } from './SimpleWithCreatedAt.js';
 
 export class SimpleWithCreatedAtAndUpdatedAt extends SimpleWithCreatedAt {
   @updateDateColumn()

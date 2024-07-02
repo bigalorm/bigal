@@ -1,7 +1,7 @@
-import { column, primaryColumn, table, Entity } from '../../src';
+import { column, primaryColumn, table, Entity } from '../../src/index.js';
 
-import { Classroom } from './Classroom';
-import { StudentClassroom } from './StudentClassroom';
+import { Classroom } from './Classroom.js';
+import { StudentClassroom } from './StudentClassroom.js';
 
 @table({
   name: 'student',

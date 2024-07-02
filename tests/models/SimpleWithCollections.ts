@@ -1,9 +1,9 @@
-import { column, table } from '../../src';
+import { column, table } from '../../src/index.js';
 
-import { Category } from './Category';
-import { ModelBase } from './ModelBase';
-import { Product } from './Product';
-import { ProductCategory } from './ProductCategory';
+import { Category } from './Category.js';
+import { ModelBase } from './ModelBase.js';
+import { Product } from './Product.js';
+import { ProductCategory } from './ProductCategory.js';
 
 @table({
   name: 'simple',

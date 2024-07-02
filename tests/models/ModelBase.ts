@@ -1,5 +1,5 @@
-import { Entity } from '../../src';
-import { primaryColumn } from '../../src/decorators';
+import { Entity } from '../../src/index.js';
+import { primaryColumn } from '../../src/decorators/index.js';
 
 export abstract class ModelBase extends Entity {
   @primaryColumn({ type: 'integer' })

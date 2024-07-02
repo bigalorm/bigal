@@ -1,9 +1,7 @@
-import { Entity, column, primaryColumn, table } from '../../src';
+import { Entity, column, primaryColumn, table } from '../../src/index.js';
 
-// eslint-disable-next-line import/no-cycle
-import { Category } from './Category';
-// eslint-disable-next-line import/no-cycle
-import { Product } from './Product';
+import { Category } from './Category.js';
+import { Product } from './Product.js';
 
 @table({
   name: 'product__category',

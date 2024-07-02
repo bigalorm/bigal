@@ -1,6 +1,6 @@
-import { column, primaryColumn, table, Entity } from '../../src';
+import { column, primaryColumn, table, Entity } from '../../src/index.js';
 
-import { ParkingLot } from './ParkingLot';
+import { ParkingLot } from './ParkingLot.js';
 
 @table({
   name: 'parking_space',

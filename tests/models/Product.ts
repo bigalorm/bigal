@@ -1,12 +1,10 @@
-import type { CreateUpdateParams } from '../../src';
-import { column, table } from '../../src/decorators';
+import type { CreateUpdateParams } from '../../src/index.js';
+import { column, table } from '../../src/decorators/index.js';
 
-// eslint-disable-next-line import/no-cycle
-import { Category } from './Category';
-import { ModelBase } from './ModelBase';
-// eslint-disable-next-line import/no-cycle
-import { ProductCategory } from './ProductCategory';
-import type { Store } from './Store';
+import { Category } from './Category.js';
+import { ModelBase } from './ModelBase.js';
+import { ProductCategory } from './ProductCategory.js';
+import type { Store } from './Store.js';
 
 @table({
   name: 'products',

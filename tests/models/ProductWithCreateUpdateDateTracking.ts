@@ -1,6 +1,6 @@
-import type { CreateUpdateParams } from '../../src';
+import type { CreateUpdateParams } from '../../src/index.js';
 
-import { Product } from './Product';
+import { Product } from './Product.js';
 
 export class ProductWithCreateUpdateDateTracking extends Product {
   public static override async beforeCreate(values: CreateUpdateParams<ProductWithCreateUpdateDateTracking>): Promise<CreateUpdateParams<ProductWithCreateUpdateDateTracking>> {
@@ -8,7 +8,7 @@ export class ProductWithCreateUpdateDateTracking extends Product {
 
     return {
       ...values,
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+
       name: `beforeCreate - ${values.name}`,
     };
   }
@@ -16,7 +16,7 @@ export class ProductWithCreateUpdateDateTracking extends Product {
   public static override beforeUpdate(values: CreateUpdateParams<ProductWithCreateUpdateDateTracking>): CreateUpdateParams<ProductWithCreateUpdateDateTracking> {
     return {
       ...values,
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+
       name: `beforeUpdate - ${values.name}`,
     };
   }

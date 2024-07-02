@@ -1,7 +1,7 @@
 import _ from 'lodash';
 
-import type { Entity } from './Entity';
-import type { IRepository } from './IRepository';
+import type { Entity } from './Entity.js';
+import type { IRepository } from './IRepository.js';
 import type {
   CreateUpdateOptions, //
   DestroyResult,
@@ -9,12 +9,12 @@ import type {
   ReturnSelect,
   WhereQuery,
   DeleteOptions,
-} from './query';
-import type { CreateOptions } from './query/CreateOptions';
-import type { OnConflictOptions } from './query/OnConflictOptions';
-import { ReadonlyRepository } from './ReadonlyRepository';
-import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper';
-import type { CreateUpdateParams, QueryResult, OmitEntityCollections, OmitFunctions } from './types';
+} from './query/index.js';
+import type { CreateOptions } from './query/CreateOptions.js';
+import type { OnConflictOptions } from './query/OnConflictOptions.js';
+import { ReadonlyRepository } from './ReadonlyRepository.js';
+import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper.js';
+import type { CreateUpdateParams, QueryResult, OmitEntityCollections, OmitFunctions } from './types/index.js';
 
 export class Repository<T extends Entity> extends ReadonlyRepository<T> implements IRepository<T> {
   /**
@@ -77,8 +77,10 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
     let returnRecords = true;
     let returnSelect: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[] | undefined;
     if (options) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition,@typescript-eslint/no-unnecessary-boolean-literal-compare
       if ((options as DoNotReturnRecords).returnRecords === false) {
         returnRecords = false;
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       } else if ((options as ReturnSelect<T>).returnSelect) {
         returnSelect = (options as ReturnSelect<T>).returnSelect;
       }
@@ -149,15 +151,16 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
     }
 
     if (this._type.beforeUpdate) {
-      // eslint-disable-next-line no-param-reassign
       values = await this._type.beforeUpdate(values);
     }
 
     let returnRecords = true;
     let returnSelect: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[] | undefined;
     if (options) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition,@typescript-eslint/no-unnecessary-boolean-literal-compare
       if ((options as DoNotReturnRecords).returnRecords === false) {
         returnRecords = false;
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       } else if ((options as ReturnSelect<T>).returnSelect) {
         returnSelect = (options as ReturnSelect<T>).returnSelect;
       }
@@ -224,7 +227,6 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
        * @param {object} value - Object representing the where query
        */
       where(value: WhereQuery<T>): DestroyResult<T, QueryResult<T>[] | void> {
-        // eslint-disable-next-line no-param-reassign
         where = value;
 
         return this;
@@ -256,7 +258,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
-            typedException.stack += stack;
+            typedException.stack = `${typedException.stack}\n\n${stack}`;
           } else {
             typedException.stack = stack;
           }

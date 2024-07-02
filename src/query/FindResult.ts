@@ -1,10 +1,10 @@
-import type { Entity } from '../Entity';
-import type { PickByValueType, GetValueType, Populated } from '../types';
+import type { Entity } from '../Entity.js';
+import type { PickByValueType, GetValueType, Populated } from '../types/index.js';
 
-import type { PaginateOptions } from './PaginateOptions';
-import type { PopulateArgs } from './PopulateArgs';
-import type { Sort } from './Sort';
-import type { WhereQuery } from './WhereQuery';
+import type { PaginateOptions } from './PaginateOptions.js';
+import type { PopulateArgs } from './PopulateArgs.js';
+import type { Sort } from './Sort.js';
+import type { WhereQuery } from './WhereQuery.js';
 
 export interface FindResult<T extends Entity, TReturn> extends PromiseLike<TReturn[]> {
   where(args: WhereQuery<T>): FindResult<T, TReturn>;

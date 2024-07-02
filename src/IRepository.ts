@@ -1,5 +1,5 @@
-import type { Entity } from './Entity';
-import type { IReadonlyRepository } from './IReadonlyRepository';
+import type { Entity } from './Entity.js';
+import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type {
   CreateUpdateOptions, //
   DeleteOptions,
@@ -7,10 +7,10 @@ import type {
   DoNotReturnRecords,
   ReturnSelect,
   WhereQuery,
-} from './query';
-import type { CreateOptions } from './query/CreateOptions';
-import type { OnConflictOptions } from './query/OnConflictOptions';
-import type { CreateUpdateParams, QueryResult } from './types';
+} from './query/index.js';
+import type { CreateOptions } from './query/CreateOptions.js';
+import type { OnConflictOptions } from './query/OnConflictOptions.js';
+import type { CreateUpdateParams, QueryResult } from './types/index.js';
 
 export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
   /**
@@ -52,7 +52,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {object|object[]|void} Return value from the db
    */
-  create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options?: CreateOptions<T>): Promise<QueryResult<T> | QueryResult<T>[] | void>;
+  create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options?: CreateOptions<T>): Promise<QueryResult<T>[]> | Promise<QueryResult<T>> | Promise<void>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -84,7 +84,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} Return values from the db or `true` if returnRecords=false
    */
-  update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: CreateUpdateOptions<T>): Promise<QueryResult<T>[] | void>;
+  update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: CreateUpdateOptions<T>): Promise<QueryResult<T>[]> | Promise<void>;
 
   /**
    * Destroys object(s) matching the where query
@@ -111,5 +111,5 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} `void` or records affected if returnRecords=true
    */
-  destroy<TOptions extends DeleteOptions<T> = DeleteOptions<T>>(where: WhereQuery<T>, options?: TOptions): DestroyResult<T, TOptions extends DeleteOptions<T> ? void : QueryResult<T>[]>;
+  destroy<TOptions extends DeleteOptions<T> = DeleteOptions<T>>(where: WhereQuery<T>, options?: TOptions): TOptions extends DeleteOptions<T> ? Promise<void> : DestroyResult<T, QueryResult<T>[]>;
 }

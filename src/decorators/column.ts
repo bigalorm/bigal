@@ -1,16 +1,16 @@
-import * as _ from 'lodash';
+import _ from 'lodash';
 
 import {
   getMetadataStorage, //
   ColumnCollectionMetadata,
   ColumnModelMetadata,
   ColumnTypeMetadata,
-} from '../metadata';
-import type { ClassLike } from '../types';
+} from '../metadata/index.js';
+import type { ClassLike } from '../types/index.js';
 
-import type { ColumnCollectionOptions } from './ColumnCollectionOptions';
-import type { ColumnModelOptions } from './ColumnModelOptions';
-import type { ColumnTypeOptions } from './ColumnTypeOptions';
+import type { ColumnCollectionOptions } from './ColumnCollectionOptions.js';
+import type { ColumnModelOptions } from './ColumnModelOptions.js';
+import type { ColumnTypeOptions } from './ColumnTypeOptions.js';
 
 type ColumnOptions = ColumnCollectionOptions | ColumnModelOptions | ColumnTypeOptions;
 type ReturnFunctionType = (object: ClassLike, propertyName: string) => void;
@@ -20,7 +20,6 @@ export function column(dbColumnName: string, options?: ColumnOptions): ReturnFun
 export function column(dbColumnNameOrOptions?: ColumnOptions | string, options?: ColumnOptions): ReturnFunctionType {
   return function columnDecorator(object: ClassLike, propertyName: string): void {
     if (!dbColumnNameOrOptions) {
-      // eslint-disable-next-line no-param-reassign
       dbColumnNameOrOptions = _.snakeCase(propertyName);
     }
 
@@ -28,12 +27,10 @@ export function column(dbColumnNameOrOptions?: ColumnOptions | string, options?:
     if (typeof dbColumnNameOrOptions === 'string') {
       dbColumnName = dbColumnNameOrOptions;
     } else {
-      // eslint-disable-next-line no-param-reassign
       options = dbColumnNameOrOptions;
     }
 
     if (!options) {
-      // eslint-disable-next-line no-param-reassign
       options = {} as ColumnTypeOptions;
     }
 

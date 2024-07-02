@@ -1,11 +1,11 @@
 import _ from 'lodash';
 
-import type { ColumnModifierMetadata } from '../metadata';
-import { ColumnModelMetadata, ColumnTypeMetadata, getMetadataStorage } from '../metadata';
-import type { ClassLike } from '../types';
+import type { ColumnModifierMetadata } from '../metadata/index.js';
+import { ColumnModelMetadata, ColumnTypeMetadata, getMetadataStorage } from '../metadata/index.js';
+import type { ClassLike } from '../types/index.js';
 
-import type { ColumnModelOptions } from './ColumnModelOptions';
-import type { ColumnTypeOptions } from './ColumnTypeOptions';
+import type { ColumnModelOptions } from './ColumnModelOptions.js';
+import type { ColumnTypeOptions } from './ColumnTypeOptions.js';
 
 type ColumnOptions = ColumnModelOptions | ColumnTypeOptions;
 
@@ -19,13 +19,11 @@ export function primaryColumn(dbColumnNameOrOptions?: ColumnOptions | string, op
     if (typeof dbColumnNameOrOptions === 'string') {
       dbColumnName = dbColumnNameOrOptions;
     } else {
-      // eslint-disable-next-line no-param-reassign
       options = dbColumnNameOrOptions;
     }
 
     if (dbColumnNameOrOptions) {
       if (!options) {
-        // eslint-disable-next-line no-param-reassign
         options = {} as ColumnTypeOptions;
       }
 

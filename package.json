@@ -35,7 +35,7 @@
   "dependencies": {
     "lodash": "^4.17.21",
     "pg": "^8.12.0",
-    "postgres-pool": "^8.1.6"
+    "postgres-pool": "^9.0.0-beta2"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.4.1",

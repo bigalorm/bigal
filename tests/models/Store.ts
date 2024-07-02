@@ -1,8 +1,7 @@
-import { column, table } from '../../src';
+import { column, table } from '../../src/index.js';
 
-import { ModelBase } from './ModelBase';
-// eslint-disable-next-line import/no-cycle
-import { Product } from './Product';
+import { ModelBase } from './ModelBase.js';
+import { Product } from './Product.js';
 
 @table({
   name: 'stores',

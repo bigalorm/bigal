@@ -1,6 +1,6 @@
-import { column, table } from '../../src/decorators';
+import { column, table } from '../../src/decorators/index.js';
 
-import { ModelBase } from './ModelBase';
+import { ModelBase } from './ModelBase.js';
 
 @table({
   name: 'kitchen_sink',

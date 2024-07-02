@@ -1,14 +1,14 @@
 import _ from 'lodash';
 import type { Pool } from 'postgres-pool';
 
-import type { Entity, EntityFieldValue, EntityStatic } from './Entity';
-import type { IReadonlyRepository } from './IReadonlyRepository';
-import type { IRepository } from './IRepository';
-import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata';
-import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, WhereQuery, SortObject, SortObjectValue } from './query';
-import type { CountArgs } from './query/CountArgs';
-import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper';
-import type { GetValueType, PickByValueType, QueryResult, PickAsType, OmitEntityCollections, OmitFunctions, PickFunctions, Populated } from './types';
+import type { Entity, EntityFieldValue, EntityStatic } from './Entity.js';
+import type { IReadonlyRepository } from './IReadonlyRepository.js';
+import type { IRepository } from './IRepository.js';
+import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata/index.js';
+import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, WhereQuery, SortObject, SortObjectValue } from './query/index.js';
+import type { CountArgs } from './query/CountArgs.js';
+import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
+import type { GetValueType, PickByValueType, QueryResult, PickAsType, OmitEntityCollections, OmitFunctions, PickFunctions, Populated } from './types/index.js';
 
 export interface IRepositoryOptions<T extends Entity> {
   modelMetadata: ModelMetadata<T>;
@@ -181,6 +181,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(_propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>> {
         return this as FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
       },
@@ -387,6 +388,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(_propertyName: TProperty): FindResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>> {
         return this as unknown as FindResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
       },
@@ -484,7 +486,6 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * @param {object} value - Object representing the where query
        */
       where(value: WhereQuery<T>): CountResult<T> | number {
-        // eslint-disable-next-line no-param-reassign
         where = value;
 
         return this;
@@ -538,7 +539,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             // @ts-expect-error - string cannot be used to index type T
             instance[name] = value;
           }
-        } catch (ex) {
+        } catch {
           // Ignore and leave value as original
         }
       }
@@ -556,7 +557,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
               instance[name] = valueAsInt;
             }
           }
-        } catch (ex) {
+        } catch {
           // Ignore and leave value as original
         }
       }
@@ -573,6 +574,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     return rows.map((row: Partial<QueryResult<T>>) => this._buildInstance(row));
   }
 
+  // eslint-disable-next-line class-methods-use-this
   protected _convertSortsToOrderBy(sorts: SortObject<T> | string): OrderBy<T>[] {
     const result: OrderBy<T>[] = [];
     if (sorts) {
@@ -598,6 +600,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         for (const [propertyName, orderValue] of Object.entries(sorts)) {
           let descending = false;
           const order = orderValue as SortObjectValue;
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           if (order && (order === -1 || /desc/i.test(`${order}`))) {
             descending = true;
           }
@@ -694,7 +697,6 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     const propertyName = populate.propertyName as string & keyof QueryResult<T>;
     const populateIds = new Set<EntityFieldValue>();
     for (const entity of entities) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-member-access
       const populateId = entity[propertyName] as EntityFieldValue;
       if (populateId) {
         populateIds.add(populateId);
@@ -779,6 +781,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const throughRepository = this._repositoriesByModelNameLowered[column.through.toLowerCase()] as IReadonlyRepository<any>;
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!throughRepository) {
       throw new Error(`Unable to find repository for multi-map collection: ${column.through}. From ${column.target}#${populate.propertyName}`);
     }
@@ -831,7 +834,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       limit: populate.limit,
       pool: populate.pool,
     } as FindArgs<Entity>);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const populateResultsById = _.keyBy(populateResults, populateModelPrimaryKeyPropertyName) as Record<PrimaryId, Entity>;
 
     for (const entity of entities) {

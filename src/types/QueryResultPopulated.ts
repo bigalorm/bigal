@@ -1,7 +1,7 @@
-import type { Entity } from '../Entity';
+import type { Entity } from '../Entity.js';
 
-import type { GetValueType } from './GetValueType';
-import type { QueryResult } from './QueryResult';
+import type { GetValueType } from './GetValueType.js';
+import type { QueryResult } from './QueryResult.js';
 
 /**
  * Allows a QueryResult type with specific populated properties

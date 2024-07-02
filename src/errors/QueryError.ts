@@ -1,6 +1,6 @@
-import type { Entity } from '../Entity';
-import type { ModelMetadata } from '../metadata';
-import type { WhereQuery } from '../query';
+import type { Entity } from '../Entity.js';
+import type { ModelMetadata } from '../metadata/index.js';
+import type { WhereQuery } from '../query/index.js';
 
 export class QueryError<T extends Entity> extends Error {
   public model: ModelMetadata<T>;
@@ -10,6 +10,7 @@ export class QueryError<T extends Entity> extends Error {
   public constructor(message: string, model: ModelMetadata<T>, where?: WhereQuery<T>) {
     super(message);
 
+    this.name = 'QueryError';
     this.model = model;
     this.where = where;
 

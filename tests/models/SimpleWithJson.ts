@@ -1,6 +1,6 @@
-import { column, table } from '../../src';
+import { column, table } from '../../src/index.js';
 
-import { ModelBase } from './ModelBase';
+import { ModelBase } from './ModelBase.js';
 
 @table({
   name: 'simple',

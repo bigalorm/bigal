@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 
-import type { NotEntity, QueryResult } from '../../src';
-import type { IJsonLikeEntity, ProductCategory, SimpleWithRelationAndJson, TeacherClassroom } from '../models';
+import type { NotEntity, QueryResult } from '../../src/index.js';
+import type { IJsonLikeEntity, ProductCategory, SimpleWithRelationAndJson, TeacherClassroom } from '../models/index.js';
 import {
   Category,
   Classroom,
@@ -19,7 +19,7 @@ import {
   SimpleWithUnion,
   Store,
   Teacher,
-} from '../models';
+} from '../models/index.js';
 
 export function store(args?: Partial<QueryResult<Store>>): QueryResult<Store> {
   const item = new Store();

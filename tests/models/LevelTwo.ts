@@ -1,6 +1,6 @@
-import { column, primaryColumn, table, Entity } from '../../src';
+import { column, primaryColumn, table, Entity } from '../../src/index.js';
 
-import type { LevelThree } from './LevelThree';
+import type { LevelThree } from './LevelThree.js';
 
 @table({
   name: 'level_two',
