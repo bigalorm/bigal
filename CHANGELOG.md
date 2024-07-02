@@ -1,5 +1,10 @@
 # Change Log
 
+## 13.0.0 - 2024-07-02
+
+- Publish as CJS and ESM
+- Update npms
+
 ## 12.1.5 - 2024-05-13
 
 - Update npms
