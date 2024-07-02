@@ -1,5 +1,9 @@
 # Change Log
 
+## 13.0.1 - 2024-07-02
+
+- Update postgres-pool npm
+
 ## 13.0.0 - 2024-07-02
 
 - Publish as CJS and ESM
