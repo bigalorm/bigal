@@ -5,6 +5,10 @@
 - Publish as CJS and ESM
 - Update npms
 
+### BREAKING CHANGES
+
+- Consolidated exports for /errors, /query, and /types to root
+
 ## 12.1.5 - 2024-05-13
 
 - Update npms

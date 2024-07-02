@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "13.0.0-beta2",
+  "version": "13.0.0-beta3",
   "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -15,6 +15,26 @@
       "require": {
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
+      }
+    },
+    "./decorators": {
+      "import": {
+        "types": "./dist/decorators/index.d.ts",
+        "default": "./dist/decorators/index.mjs"
+      },
+      "require": {
+        "types": "./dist/decorators/index.d.cts",
+        "default": "./dist/decorators/index.cjs"
+      }
+    },
+    "./metadata": {
+      "import": {
+        "types": "./dist/metadata/index.d.ts",
+        "default": "./dist/metadata/index.mjs"
+      },
+      "require": {
+        "types": "./dist/metadata/index.d.cts",
+        "default": "./dist/metadata/index.cjs"
       }
     }
   },
