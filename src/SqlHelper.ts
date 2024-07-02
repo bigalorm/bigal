@@ -451,7 +451,8 @@ export function getUpdateQueryAndParams<T extends Entity>({
           const normalizedValues = (Array.isArray(value) ? value : [value]) as string[];
 
           for (const normalizedValue of normalizedValues) {
-            if (normalizedValue.length > maxLength) {
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            if (normalizedValue?.length > maxLength) {
               throw new QueryError(`Update statement for "${model.name}" contains a value that exceeds maxLength on field: ${column.propertyName}`, model);
             }
           }
@@ -1256,7 +1257,8 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
       // NOTE: This is doing a case-insensitive pattern match
       params.push(value);
 
-      const columnType = (column as ColumnTypeMetadata).type.toLowerCase();
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      const columnType = (column as ColumnTypeMetadata).type?.toLowerCase();
       if (columnType === 'array' || columnType === 'string[]') {
         return `${isNegated ? 'NOT ' : ''}EXISTS(SELECT 1 FROM (SELECT unnest("${column.name}") AS "unnested_${column.name}") __unnested WHERE "unnested_${column.name}" ILIKE $${params.length})`;
       }

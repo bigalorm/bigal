@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "13.0.0-beta1",
+  "version": "13.0.0-beta2",
   "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -33,6 +33,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@types/pg": "^8.11.6",
     "lodash": "^4.17.21",
     "pg": "^8.12.0",
     "postgres-pool": "^9.0.0-beta2"
@@ -43,7 +44,6 @@
     "@types/lodash": "^4.17.6",
     "@types/mocha": "10.0.7",
     "@types/node": ">=20",
-    "@types/pg": "^8.11.6",
     "chai": "^5.1.1",
     "eslint": "^9.6.0",
     "eslint-config-decent": "^1.2.2",
