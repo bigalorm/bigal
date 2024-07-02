@@ -215,7 +215,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
           const { maxLength, type } = column as ColumnTypeMetadata;
 
           if (maxLength && ['string', 'string[]'].includes(type)) {
-            const entityValues = entity[column.propertyName as string & keyof CreateUpdateParams<T>];
+            const entityValues = entity[column.propertyName as string & keyof CreateUpdateParams<T>] ?? '';
             const normalizedValues = (Array.isArray(entityValues) ? entityValues : [entityValues]) as string[];
 
             for (const normalizedValue of normalizedValues) {
