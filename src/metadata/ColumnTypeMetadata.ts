@@ -1,5 +1,5 @@
-import type { ColumnBaseMetadataOptions } from './ColumnBaseMetadata';
-import { ColumnBaseMetadata } from './ColumnBaseMetadata';
+import type { ColumnBaseMetadataOptions } from './ColumnBaseMetadata.js';
+import { ColumnBaseMetadata } from './ColumnBaseMetadata.js';
 
 export interface ColumnTypeMetadataOptions extends ColumnBaseMetadataOptions {
   /**

@@ -1,4 +1,4 @@
-import type { CreateUpdateParams } from './types';
+import type { CreateUpdateParams } from './types/index.js';
 
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 export type EntityFieldValue = boolean[] | Date | number[] | Record<string, unknown> | string[] | boolean | number | string | unknown | null;

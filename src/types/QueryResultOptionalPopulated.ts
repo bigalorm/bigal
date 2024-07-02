@@ -1,7 +1,7 @@
-import type { Entity } from '../Entity';
+import type { Entity } from '../Entity.js';
 
-import type { EntityPrimitiveOrId } from './EntityPrimitiveOrId';
-import type { QueryResult } from './QueryResult';
+import type { EntityPrimitiveOrId } from './EntityPrimitiveOrId.js';
+import type { QueryResult } from './QueryResult.js';
 
 /**
  * Allows a QueryResult type with specific properties optionally populated. If the property is populated, only the id property is needed

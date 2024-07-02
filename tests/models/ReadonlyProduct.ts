@@ -1,6 +1,6 @@
-import { table } from '../../src';
+import { table } from '../../src/index.js';
 
-import { Product } from './Product';
+import { Product } from './Product.js';
 
 @table({
   name: 'readonly_products',

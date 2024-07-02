@@ -1,7 +1,7 @@
-import type { Entity } from '../Entity';
+import type { Entity } from '../Entity.js';
 
-import type { PickFunctions } from './PickFunctions';
-import type { QueryResult } from './QueryResult';
+import type { PickFunctions } from './PickFunctions.js';
+import type { QueryResult } from './QueryResult.js';
 
 /**
  * Removes primitives from specified properties and make non-optional. Allow singular Entity properties to be null.

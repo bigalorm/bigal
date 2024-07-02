@@ -1,22 +1,24 @@
 import _ from 'lodash';
 import type { Pool } from 'postgres-pool';
 
-import type { Entity, EntityStatic } from './Entity';
-import type { IReadonlyRepository } from './IReadonlyRepository';
-import type { IRepository } from './IRepository';
-import type { ColumnMetadata, ColumnModifierMetadata } from './metadata';
-import { ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata, getMetadataStorage } from './metadata';
-import { ReadonlyRepository } from './ReadonlyRepository';
-import { Repository } from './Repository';
+import type { Entity, EntityStatic } from './Entity.js';
+import type { IReadonlyRepository } from './IReadonlyRepository.js';
+import type { IRepository } from './IRepository.js';
+import type { ColumnMetadata, ColumnModifierMetadata } from './metadata/index.js';
+import { ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata, getMetadataStorage } from './metadata/index.js';
+import { ReadonlyRepository } from './ReadonlyRepository.js';
+import { Repository } from './Repository.js';
 
-export * from './decorators';
-export * from './Entity';
-export * from './IReadonlyRepository';
-export * from './IRepository';
-export * from './metadata';
-export * from './ReadonlyRepository';
-export * from './Repository';
-export * from './types';
+export * from './decorators/index.js';
+export * from './errors/index.js';
+export * from './metadata/index.js';
+export * from './query/index.js';
+export * from './types/index.js';
+export * from './Entity.js';
+export * from './IReadonlyRepository.js';
+export * from './IRepository.js';
+export * from './ReadonlyRepository.js';
+export * from './Repository.js';
 
 export interface IConnection {
   pool: Pool;
@@ -38,7 +40,7 @@ function getInheritanceTree(model: ModelClass): ModelClass[] {
   const tree = [model];
 
   function getRecursivePrototypesOf(parentEntity: ModelClass): void {
-    const proto = Object.getPrototypeOf(parentEntity) as ModelClass;
+    const proto = Object.getPrototypeOf(parentEntity) as ModelClass | undefined;
     if (proto && proto.name && proto.name !== 'Function') {
       tree.unshift(proto);
       getRecursivePrototypesOf(proto);
@@ -109,7 +111,7 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
   for (const model of models) {
     let modelMetadata: ModelMetadata<Entity> | undefined;
     let inheritedColumnsByPropertyName: ColumnsByPropertyName = {};
-    const inheritedColumnModifiersByPropertyName: ColumnModifiersByPropertyName = {};
+    const inheritedColumnModifiersByPropertyName = new Map<string, ColumnModifierMetadata[]>();
     for (const inheritedClass of inheritanceTreesByModelName[model.name] ?? []) {
       modelMetadata = modelMetadataByModelName[inheritedClass.name] ?? modelMetadata;
       const columnsByPropertyName = columnsByPropertyNameForModel[inheritedClass.name] ?? {};
@@ -121,12 +123,13 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
 
       // Remove any previously defined column modifiers for this property since a new @column was found
       for (const [propertyName] of Object.entries(columnsByPropertyName)) {
-        delete inheritedColumnModifiersByPropertyName[propertyName];
+        inheritedColumnModifiersByPropertyName.delete(propertyName);
       }
 
       const columnModifiersByPropertyName = columnModifiersByPropertyNameForModel[inheritedClass.name] ?? {};
       for (const [propertyName, columnModifiers] of Object.entries(columnModifiersByPropertyName)) {
-        inheritedColumnModifiersByPropertyName[propertyName] = [...(inheritedColumnModifiersByPropertyName[propertyName] ?? []), ...(columnModifiers ?? [])];
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        inheritedColumnModifiersByPropertyName.set(propertyName, [...(inheritedColumnModifiersByPropertyName.get(propertyName) ?? []), ...(columnModifiers ?? [])]);
       }
     }
 
@@ -140,7 +143,7 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
       type: model,
     });
     columnsByPropertyNameForModel[model.name] = inheritedColumnsByPropertyName;
-    columnModifiersByPropertyNameForModel[model.name] = inheritedColumnModifiersByPropertyName;
+    columnModifiersByPropertyNameForModel[model.name] = Object.fromEntries(inheritedColumnModifiersByPropertyName);
   }
 
   // Process all column modifiers to augment any @column definitions
@@ -216,6 +219,7 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
         throw new Error(`Unable to find connection (${model.connection}) for entity: ${model.name}`);
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       modelPool = modelConnection.pool || pool;
       modelReadonlyPool = modelConnection.readonlyPool ?? modelPool;
     }

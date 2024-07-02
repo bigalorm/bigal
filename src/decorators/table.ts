@@ -1,9 +1,9 @@
 import _ from 'lodash';
 
-import type { Entity, EntityStatic } from '../Entity';
-import { ModelMetadata, getMetadataStorage } from '../metadata';
+import type { Entity, EntityStatic } from '../Entity.js';
+import { ModelMetadata, getMetadataStorage } from '../metadata/index.js';
 
-import type { TableOptions } from './TableOptions';
+import type { TableOptions } from './TableOptions.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ReturnFunctionType = (object: any) => void;
@@ -18,17 +18,14 @@ export function table<T extends Entity>(dbNameOrTableOptions?: TableOptions | st
     if (typeof dbNameOrTableOptions === 'string') {
       dbTableName = dbNameOrTableOptions;
     } else {
-      // eslint-disable-next-line no-param-reassign
       options = dbNameOrTableOptions;
     }
 
     if (!options) {
-      // eslint-disable-next-line no-param-reassign
       options = {} as TableOptions;
     }
 
     if (!options.name) {
-      // eslint-disable-next-line no-param-reassign
       options.name = dbTableName ?? _.snakeCase(className);
     }
 

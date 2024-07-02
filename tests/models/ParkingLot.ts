@@ -1,4 +1,4 @@
-import { column, primaryColumn, table, Entity } from '../../src';
+import { column, primaryColumn, table, Entity } from '../../src/index.js';
 
 @table({
   name: 'parking_lot',

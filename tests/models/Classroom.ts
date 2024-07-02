@@ -1,9 +1,9 @@
-import { column, primaryColumn, table, Entity } from '../../src';
+import { column, primaryColumn, table, Entity } from '../../src/index.js';
 
-import type { Student } from './Student';
-import { StudentClassroom } from './StudentClassroom';
-import type { Teacher } from './Teacher';
-import { TeacherClassroom } from './TeacherClassroom';
+import type { Student } from './Student.js';
+import { StudentClassroom } from './StudentClassroom.js';
+import type { Teacher } from './Teacher.js';
+import { TeacherClassroom } from './TeacherClassroom.js';
 
 @table({
   name: 'classroom',

@@ -1,9 +1,9 @@
-import type { Entity } from '../Entity';
-import type { GetValueType, PickByValueType, PickAsType, Populated } from '../types';
+import type { Entity } from '../Entity.js';
+import type { GetValueType, PickByValueType, PickAsType, Populated } from '../types/index.js';
 
-import type { PopulateArgs } from './PopulateArgs';
-import type { Sort } from './Sort';
-import type { WhereQuery } from './WhereQuery';
+import type { PopulateArgs } from './PopulateArgs.js';
+import type { Sort } from './Sort.js';
+import type { WhereQuery } from './WhereQuery.js';
 
 export interface FindOneResult<T extends Entity, TReturn> extends PromiseLike<TReturn | null> {
   where(args: WhereQuery<T>): FindOneResult<T, TReturn>;

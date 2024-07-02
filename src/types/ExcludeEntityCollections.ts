@@ -1,4 +1,4 @@
-import type { Entity, NotEntityBrand } from '../Entity';
+import type { Entity, NotEntityBrand } from '../Entity.js';
 
 /**
  * Removes all entity collection properties. To be used as a re-map key function

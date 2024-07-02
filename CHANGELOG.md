@@ -1,5 +1,15 @@
 # Change Log
 
+## 13.0.0 - 2024-07-02
+
+- Publish as CJS and ESM
+- Upgrade eslint to flat config
+- Update npms and dependencies
+
+### BREAKING CHANGES
+
+- Consolidated exports for /decorators, /errors, /metadata, /query, and /types to root
+
 ## 12.1.5 - 2024-05-13
 
 - Update npms

@@ -1,9 +1,7 @@
-import { Entity, column, primaryColumn, table } from '../../src';
+import { Entity, column, primaryColumn, table } from '../../src/index.js';
 
-// eslint-disable-next-line import/no-cycle
-import { Classroom } from './Classroom';
-// eslint-disable-next-line import/no-cycle
-import { Student } from './Student';
+import { Classroom } from './Classroom.js';
+import { Student } from './Student.js';
 
 @table({
   name: 'student__classroom',

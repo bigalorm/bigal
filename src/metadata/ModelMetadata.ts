@@ -1,10 +1,10 @@
-import * as _ from 'lodash';
+import _ from 'lodash';
 
-import type { Entity, EntityStatic } from '../Entity';
+import type { Entity, EntityStatic } from '../Entity.js';
 
-import type { ColumnCollectionMetadata } from './ColumnCollectionMetadata';
-import type { ColumnModelMetadata } from './ColumnModelMetadata';
-import type { ColumnTypeMetadata } from './ColumnTypeMetadata';
+import type { ColumnCollectionMetadata } from './ColumnCollectionMetadata.js';
+import type { ColumnModelMetadata } from './ColumnModelMetadata.js';
+import type { ColumnTypeMetadata } from './ColumnTypeMetadata.js';
 
 type Column = ColumnCollectionMetadata | ColumnModelMetadata | ColumnTypeMetadata;
 type ColumnByStringId = Record<string, Column>;

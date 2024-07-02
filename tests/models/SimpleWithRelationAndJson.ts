@@ -1,7 +1,7 @@
-import { NotEntity, column, table } from '../../src';
+import { NotEntity, column, table } from '../../src/index.js';
 
-import { ModelBase } from './ModelBase';
-import { Store } from './Store';
+import { ModelBase } from './ModelBase.js';
+import { Store } from './Store.js';
 
 export interface IJsonLikeEntity {
   id: string;

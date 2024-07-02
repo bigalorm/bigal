@@ -1,17 +1,17 @@
 import assert from 'assert';
 
 import { faker } from '@faker-js/faker';
-import chai from 'chai';
+import * as chai from 'chai';
 import _ from 'lodash';
 import type { QueryResult as PgQueryResult, QueryResultRow } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { Repository, ReadonlyRepository, QueryResult, QueryResultPopulated } from '../src';
-import { initialize } from '../src';
-import type { WhereQuery } from '../src/query';
+import type { Repository, ReadonlyRepository, QueryResult, QueryResultPopulated } from '../src/index.js';
+import { initialize } from '../src/index.js';
+import type { WhereQuery } from '../src/query/index.js';
 
-import type { ParkingLot } from './models';
+import type { ParkingLot } from './models/index.js';
 import {
   Category,
   Classroom,
@@ -32,8 +32,8 @@ import {
   Store,
   Teacher,
   TeacherClassroom,
-} from './models';
-import * as generator from './utils/generator';
+} from './models/index.js';
+import * as generator from './utils/generator.js';
 
 function getQueryResult<T extends QueryResultRow>(rows: T[]): PgQueryResult<T> {
   return {
@@ -47,8 +47,8 @@ function getQueryResult<T extends QueryResultRow>(rows: T[]): PgQueryResult<T> {
 
 describe('ReadonlyRepository', () => {
   let should: Chai.Should;
-  const mockedPool: Pool = mock(Pool);
-  /* eslint-disable @typescript-eslint/naming-convention */
+  let mockedPool: Pool;
+
   let LevelOneRepository: Repository<LevelOne>;
   let LevelTwoRepository: Repository<LevelTwo>;
   let LevelThreeRepository: Repository<LevelThree>;
@@ -63,10 +63,10 @@ describe('ReadonlyRepository', () => {
   let SimpleWithStringCollectionRepository: Repository<SimpleWithStringCollection>;
   let SimpleWithUnionRepository: Repository<SimpleWithUnion>;
   let TeacherRepository: Repository<Teacher>;
-  /* eslint-enable @typescript-eslint/naming-convention */
 
   before(() => {
     should = chai.should();
+    mockedPool = mock(Pool);
 
     const repositoriesByModelName = initialize({
       models: [
@@ -116,6 +116,7 @@ describe('ReadonlyRepository', () => {
   describe('#findOne()', () => {
     let store: QueryResult<Store>;
     let product: QueryResult<Product>;
+
     beforeEach(() => {
       store = generator.store();
       product = generator.product({
@@ -134,6 +135,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should support call with constraints as a parameter', async () => {
       const productResult = _.pick(product, 'id', 'name');
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([productResult]));
@@ -153,6 +155,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([product.id]);
     });
+
     it('should support call with sort as a parameter', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
@@ -168,6 +171,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should support call with where constraint as a parameter', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
@@ -182,6 +186,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([product.id]);
     });
+
     it('should support call with where constraint as a parameter and querying id by entity value', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
@@ -196,6 +201,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([product.id]);
     });
+
     it('should support call with where constraint as a parameter and querying property by entity value', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
@@ -210,6 +216,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([store.id]);
     });
+
     it('should support call with explicit pool override', async () => {
       const poolOverride = mock(Pool);
 
@@ -229,6 +236,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([product.id]);
     });
+
     it('should support call with chained where constraints', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
@@ -243,6 +251,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([product.id]);
     });
+
     it('should support call with chained where constraints - Promise.all', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
@@ -259,6 +268,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([product.id]);
     });
+
     it('should support call with chained sort', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
@@ -271,6 +281,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     describe('Parse number columns', () => {
       it('should parse integer columns from integer query value', async () => {
         const id = faker.number.int();
@@ -302,6 +313,7 @@ describe('ReadonlyRepository', () => {
         assert(params);
         params.should.deep.equal([]);
       });
+
       it('should parse integer columns from float strings query value', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
@@ -331,6 +343,7 @@ describe('ReadonlyRepository', () => {
         assert(params);
         params.should.deep.equal([]);
       });
+
       it('should parse integer columns that return as number', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
@@ -360,6 +373,7 @@ describe('ReadonlyRepository', () => {
         assert(params);
         params.should.deep.equal([]);
       });
+
       it('should ignore large integer columns values', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
@@ -389,6 +403,7 @@ describe('ReadonlyRepository', () => {
         assert(params);
         params.should.deep.equal([]);
       });
+
       it('should parse float columns return as float strings', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
@@ -418,6 +433,7 @@ describe('ReadonlyRepository', () => {
         assert(params);
         params.should.deep.equal([]);
       });
+
       it('should parse float columns return as number', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
@@ -447,6 +463,7 @@ describe('ReadonlyRepository', () => {
         assert(params);
         params.should.deep.equal([]);
       });
+
       it('should ignore large float columns', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
@@ -477,6 +494,7 @@ describe('ReadonlyRepository', () => {
         params.should.deep.equal([]);
       });
     });
+
     it('should support populating a single relation', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
 
@@ -497,6 +515,7 @@ describe('ReadonlyRepository', () => {
       assert(storeQueryParams);
       storeQueryParams.should.deep.equal([store.id]);
     });
+
     it('should support populating a single relation with implicit inherited pool override', async () => {
       const poolOverride = mock(Pool);
 
@@ -523,6 +542,7 @@ describe('ReadonlyRepository', () => {
       assert(storeQueryParams);
       storeQueryParams.should.deep.equal([store.id]);
     });
+
     it('should support populating a single relation with explicit pool override', async () => {
       const storePool = mock(Pool);
 
@@ -549,6 +569,7 @@ describe('ReadonlyRepository', () => {
       assert(storeQueryParams);
       storeQueryParams.should.deep.equal([store.id]);
     });
+
     it('should support populating a single relation when column is missing from partial select', async () => {
       const productResult = _.pick(product, 'id', 'name', 'store');
       const storeResult = _.pick(store, 'id', 'name');
@@ -575,6 +596,7 @@ describe('ReadonlyRepository', () => {
       assert(storeQueryParams);
       storeQueryParams.should.deep.equal([store.id]);
     });
+
     it('should support populating a single relation as QueryResult with partial select', async () => {
       const levelThreeItem = generator.levelThree();
       const levelTwoItem = generator.levelTwo({ levelThree: levelThreeItem.id });
@@ -601,6 +623,7 @@ describe('ReadonlyRepository', () => {
       // Verify string functions are available - aka, that the type is not LevelThree | string.
       result.levelTwo.levelThree.toUpperCase().should.equal(levelThreeItem.id.toUpperCase());
     });
+
     it('should support populating a single relation with partial select and order', async () => {
       const storeResult = _.pick(store, 'id', 'name');
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
@@ -625,6 +648,7 @@ describe('ReadonlyRepository', () => {
       assert(storeQueryParams);
       storeQueryParams.should.deep.equal([store.id]);
     });
+
     it('should support populating collection', async () => {
       const product1 = generator.product({
         store: store.id,
@@ -661,6 +685,7 @@ describe('ReadonlyRepository', () => {
       assert(productQueryParams);
       productQueryParams.should.deep.equal([store.id]);
     });
+
     it('should support populating collection with implicit inherited pool override', async () => {
       const poolOverride = mock(Pool);
 
@@ -694,6 +719,7 @@ describe('ReadonlyRepository', () => {
       assert(productQueryParams);
       productQueryParams.should.deep.equal([store.id]);
     });
+
     it('should support populating collection with explicit pool override', async () => {
       const productPool = mock(Pool);
 
@@ -726,6 +752,7 @@ describe('ReadonlyRepository', () => {
       assert(productQueryParams);
       productQueryParams.should.deep.equal([store.id]);
     });
+
     it('should support populating collection with partial select and order', async () => {
       const product1 = generator.product({
         store: store.id,
@@ -759,6 +786,7 @@ describe('ReadonlyRepository', () => {
       assert(productQueryParams);
       productQueryParams.should.deep.equal([store.id]);
     });
+
     it('should support populating multi-multi collection', async () => {
       const category1 = generator.category();
       const category2 = generator.category();
@@ -788,6 +816,7 @@ describe('ReadonlyRepository', () => {
       assert(categoryQueryParams);
       categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
     });
+
     it('should support populating multi-multi collection with implicit inherited pool override', async () => {
       const poolOverride = mock(Pool);
       const category1 = generator.category();
@@ -822,6 +851,7 @@ describe('ReadonlyRepository', () => {
       assert(categoryQueryParams);
       categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
     });
+
     it('should support populating multi-multi collection with explicit pool override', async () => {
       const categoryPool = mock(Pool);
 
@@ -858,6 +888,7 @@ describe('ReadonlyRepository', () => {
       assert(categoryQueryParams);
       categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
     });
+
     it('should support populating multi-multi collection with partial select and order', async () => {
       const category1 = generator.category();
       const category2 = generator.category();
@@ -897,6 +928,7 @@ describe('ReadonlyRepository', () => {
       assert(categoryQueryParams);
       categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
     });
+
     it('should support populating self reference collection', async () => {
       const source1 = generator.simpleWithSelfReference();
       const translation1 = generator.simpleWithSelfReference({
@@ -937,6 +969,7 @@ describe('ReadonlyRepository', () => {
       assert(translationsQueryParams);
       translationsQueryParams.should.deep.equal([source1.id]);
     });
+
     it('should support populating collection and not explicitly selecting relation column', async () => {
       const source1 = generator.simpleWithSelfReference();
       const translation1 = generator.simpleWithSelfReference({
@@ -981,6 +1014,7 @@ describe('ReadonlyRepository', () => {
       assert(translationsQueryParams);
       translationsQueryParams.should.deep.equal([source1.id]);
     });
+
     it('should support complex query with multiple chained modifiers', async () => {
       const category1 = generator.category();
       const category2 = generator.category();
@@ -1040,6 +1074,7 @@ describe('ReadonlyRepository', () => {
       assert(categoryQueryParams);
       categoryQueryParams.should.deep.equal([[category1.id, category2.id], 'category%']);
     });
+
     it('should have instance functions be equal across multiple queries', async () => {
       const result = {
         id: faker.number.int(),
@@ -1058,6 +1093,7 @@ describe('ReadonlyRepository', () => {
       assert(result2);
       result2.instanceFunction().should.equal(`${result.name} bar!`);
     });
+
     it('should not create an object/assign instance functions to null results', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve({
         command: 'select',
@@ -1073,6 +1109,7 @@ describe('ReadonlyRepository', () => {
 
       should.not.exist(result);
     });
+
     it('should allow querying required string array', async () => {
       const anotherSimple = generator.simpleWithStringId();
       const otherSimple = generator.simpleWithStringId({
@@ -1100,6 +1137,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([simple.id, otherSimple.id, anotherSimple.id]);
     });
+
     it('should support an object with an enum/union field', async () => {
       const simple = generator.simpleWithUnion();
 
@@ -1115,6 +1153,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([['Bar', 'Foo']]);
     });
+
     it('should support an object with negated enum/union field', async () => {
       const simple = generator.simpleWithUnion();
 
@@ -1132,6 +1171,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([['Bar', 'Foo']]);
     });
+
     it('should support an object with an optional enum/union field', async () => {
       const simple = generator.simpleWithOptionalEnum();
 
@@ -1157,6 +1197,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([simple.name, status]);
     });
+
     it('should support an object with an optional enum/union array', async () => {
       const simple = generator.simpleWithOptionalEnum();
 
@@ -1177,6 +1218,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([simple.name, 'Bar', 'Foo']);
     });
+
     it('should support an object with an optional negated enum/union field', async () => {
       const simple = generator.simpleWithOptionalEnum();
 
@@ -1204,6 +1246,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([simple.name, status]);
     });
+
     it('should support an object with an optional negated enum/union array', async () => {
       const simple = generator.simpleWithOptionalEnum();
 
@@ -1226,6 +1269,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([simple.name, 'Bar', 'Foo']);
     });
+
     it('should support an object with a json field', async () => {
       const simple = generator.simpleWithJson();
 
@@ -1241,6 +1285,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should support an object with a json field (with id property)', async () => {
       const simple = generator.simpleWithRelationAndJson({
         store: store.id,
@@ -1266,6 +1311,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([simple.name, simple.id, 42]);
     });
+
     it('should support an object with a json field (with id property) and populate statement', async () => {
       const simple = generator.simpleWithRelationAndJson({
         store: store.id,
@@ -1292,6 +1338,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should support retaining original field - UNSAFE_withOriginalFieldType()', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([
@@ -1316,6 +1363,7 @@ describe('ReadonlyRepository', () => {
       assert(productResult.store.name);
       productResult.store.name.should.equal(store.name);
     });
+
     it('should support manually setting a field - UNSAFE_withFieldValue()', async () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([
@@ -1336,8 +1384,10 @@ describe('ReadonlyRepository', () => {
       productResult.store.name.should.equal(store.name);
     });
   });
+
   describe('#find()', () => {
     let store: QueryResult<Store>;
+
     beforeEach(() => {
       store = generator.store();
     });
@@ -1362,6 +1412,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should support call with constraints as a parameter', async () => {
       const products = [
         generator.product({
@@ -1391,6 +1442,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([_.map(products, 'id'), store.id]);
     });
+
     it('should support call with where constraint as a parameter', async () => {
       const products = [
         generator.product({
@@ -1414,6 +1466,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([_.map(products, 'id'), store.id]);
     });
+
     it('should support call with explicit pool override', async () => {
       const poolOverride = mock(Pool);
       const products = [
@@ -1438,6 +1491,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should support call with chained where constraints', async () => {
       const products = [
         generator.product({
@@ -1460,6 +1514,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([store.id]);
     });
+
     it('should support call with chained where constraints - array ILIKE array of values', async () => {
       const products = [
         generator.product({
@@ -1498,6 +1553,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal(['product', 'Foo Bar', 'Foo', 'BAR']);
     });
+
     it('should support call with chained where constraints - NOT ILIKE array of values', async () => {
       const products = [
         generator.product({
@@ -1526,6 +1582,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal(['Foo', 'BAR']);
     });
+
     it('should support call with chained where constraints - Promise.all', async () => {
       const products = [
         generator.product({
@@ -1550,6 +1607,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([store.id]);
     });
+
     it('should support call with chained sort', async () => {
       const products = [
         generator.product({
@@ -1570,6 +1628,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should support call with chained limit', async () => {
       const products = [
         generator.product({
@@ -1590,6 +1649,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should support call with chained skip', async () => {
       const products = [
         generator.product({
@@ -1610,6 +1670,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should support call with chained paginate', async () => {
       const products = [
         generator.product({
@@ -1633,6 +1694,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should allow multiple where constraints in an or clause', async () => {
       const products = [
         generator.product({
@@ -1681,6 +1743,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([store.id, 'foo', location]);
     });
+
     it('should support complex query with multiple chained modifiers', async () => {
       const products = [
         generator.product({
@@ -1710,6 +1773,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([store.id]);
     });
+
     it('should have instance functions be equal across multiple queries', async () => {
       const result = {
         id: faker.number.int(),
@@ -1726,6 +1790,7 @@ describe('ReadonlyRepository', () => {
       result1[0]!.instanceFunction().should.equal(`${result.name} bar!`);
       result2[0]!.instanceFunction().should.equal(`${result.name} bar!`);
     });
+
     it('should allow types when used in promise.all with other queries', async () => {
       const three1 = generator.levelThree({
         foo: `three1: ${faker.string.uuid()}`,
@@ -1791,6 +1856,7 @@ describe('ReadonlyRepository', () => {
       assert(levelThreeQueryParams);
       levelThreeQueryParams.should.deep.equal([[three1.foo, three2.foo]]);
     });
+
     it('should support retaining original field - UNSAFE_withOriginalFieldType()', async () => {
       const product = generator.product({
         store: store.id,
@@ -1815,6 +1881,7 @@ describe('ReadonlyRepository', () => {
       assert(productResult.store.name);
       productResult.store.name.should.equal(store.name);
     });
+
     describe('populate', () => {
       let store1: QueryResult<Store>;
       let store2: QueryResult<Store>;
@@ -1924,6 +1991,7 @@ describe('ReadonlyRepository', () => {
         assert(storeQueryParams);
         storeQueryParams.should.deep.equal([store1.id]);
       });
+
       it('should support populating a single relation - different', async () => {
         when(mockedPool.query(anyString(), anything())).thenResolve(
           getQueryResult([product1, product2]),
@@ -1956,6 +2024,7 @@ describe('ReadonlyRepository', () => {
         assert(storeQueryParams);
         storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
       });
+
       it('should support populating a single relation with implicit inherited pool override', async () => {
         const poolOverride = mock(Pool);
 
@@ -1987,6 +2056,7 @@ describe('ReadonlyRepository', () => {
         assert(storeQueryParams);
         storeQueryParams.should.deep.equal([store1.id]);
       });
+
       it('should support populating a single relation with explicit pool override', async () => {
         const storePool = mock(Pool);
 
@@ -2019,6 +2089,7 @@ describe('ReadonlyRepository', () => {
         assert(storeQueryParams);
         storeQueryParams.should.deep.equal([store1.id]);
       });
+
       it('should support populating a single relation as QueryResult with partial select', async () => {
         const levelOneResult = _.pick(levelOneItem, 'id', 'one', 'levelTwo');
         const levelTwoResult = _.pick(levelTwoItem, 'id', 'two', 'levelThree');
@@ -2041,6 +2112,7 @@ describe('ReadonlyRepository', () => {
         results[0]!.levelTwo.levelThree.should.equal(levelThreeItem.id);
         results[0]!.levelTwo.levelThree.toUpperCase().should.equal(levelThreeItem.id.toUpperCase());
       });
+
       it('should support populating a single relation with partial select and sort', async () => {
         const store1Result = _.pick(store1, 'id');
         const store2Result = _.pick(store2, 'id');
@@ -2072,6 +2144,7 @@ describe('ReadonlyRepository', () => {
         assert(storeQueryParams);
         storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
       });
+
       it('should support populating a single relation when column is missing from partial select', async () => {
         const product1Result = _.pick(product1, 'id', 'name', 'store');
         const product2Result = _.pick(product2, 'id', 'name', 'store');
@@ -2106,6 +2179,7 @@ describe('ReadonlyRepository', () => {
         assert(storeQueryParams);
         storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
       });
+
       it('should support populating one-to-many collection', async () => {
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store1, store2]), getQueryResult([product1, product3, product2]));
 
@@ -2133,6 +2207,7 @@ describe('ReadonlyRepository', () => {
         assert(storeQueryParams);
         storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
       });
+
       it('should support populating one-to-many collection with implicit inherited pool override', async () => {
         const poolOverride = mock(Pool);
 
@@ -2166,6 +2241,7 @@ describe('ReadonlyRepository', () => {
         assert(storeQueryParams);
         storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
       });
+
       it('should support populating one-to-many collection with explicit pool override', async () => {
         const productPool = mock(Pool);
 
@@ -2199,6 +2275,7 @@ describe('ReadonlyRepository', () => {
         assert(storeQueryParams);
         storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
       });
+
       it('should support populating one-to-many collection with partial select and sort', async () => {
         const product1Result = _.pick(product1, 'id', 'name', 'sku', 'store');
         const product2Result = _.pick(product2, 'id', 'name', 'sku', 'store');
@@ -2233,6 +2310,7 @@ describe('ReadonlyRepository', () => {
         assert(storeQueryParams);
         storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
       });
+
       it('should support populating multi-multi collection', async () => {
         when(mockedPool.query(anyString(), anything()))
           .thenResolve(getQueryResult([product1, product3, product2]))
@@ -2271,6 +2349,7 @@ describe('ReadonlyRepository', () => {
         assert(categoryQueryParams);
         categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
       });
+
       it('should support populating multi-multi collection with implicit inherited pool override', async () => {
         const poolOverride = mock(Pool);
         when(poolOverride.query(anyString(), anything()))
@@ -2314,6 +2393,7 @@ describe('ReadonlyRepository', () => {
         assert(categoryQueryParams);
         categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
       });
+
       it('should support populating multi-multi collection with explicit pool override', async () => {
         const productPool = mock(Pool);
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product3, product2]));
@@ -2357,6 +2437,7 @@ describe('ReadonlyRepository', () => {
         assert(categoryQueryParams);
         categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
       });
+
       it('should support populating multi-multi collection with partial select and sort', async () => {
         const category1Result = _.pick(category1, 'id');
         const category2Result = _.pick(category2, 'id');
@@ -2401,6 +2482,7 @@ describe('ReadonlyRepository', () => {
         assert(categoryQueryParams);
         categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
       });
+
       it('should support populating multiple properties', async () => {
         when(mockedPool.query(anyString(), anything()))
           .thenResolve(getQueryResult([product1, product3, product2]))
@@ -2456,6 +2538,7 @@ describe('ReadonlyRepository', () => {
 
         results[0]!.store.id.should.equal(store1.id);
       });
+
       it('should support populating multiple properties with partial select and sort', async () => {
         const parkingSpaceResult = _.pick(parkingSpace, 'id', 'name');
         const classroomResult = _.pick(classroom, 'id', 'name');
@@ -2527,6 +2610,7 @@ describe('ReadonlyRepository', () => {
         assert(categoryQueryParams);
         categoryQueryParams.should.deep.equal([classroom.id, 'classroom%']);
       });
+
       it('should support populating self reference', async () => {
         const source1Result = _.pick(source1, 'id', 'name');
         const source2Result = _.pick(source2, 'id', 'name');
@@ -2563,6 +2647,7 @@ describe('ReadonlyRepository', () => {
         assert(translationsQueryParams);
         translationsQueryParams.should.deep.equal([[source1.id, source2.id]]);
       });
+
       it('should throw when attempting to populate collection and not not explicitly specifying relation column', async () => {
         const source1Result = _.pick(source1, 'id', 'name');
         const source2Result = _.pick(source2, 'id', 'name');
@@ -2592,8 +2677,10 @@ describe('ReadonlyRepository', () => {
       });
     });
   });
+
   describe('#count()', () => {
     let store: QueryResult<Store>;
+
     beforeEach(() => {
       store = generator.store();
     });
@@ -2625,6 +2712,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should support call with explicit pool override', async () => {
       const products = [
         generator.product({
@@ -2657,6 +2745,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([]);
     });
+
     it('should support call constraints as a parameter', async () => {
       const products = [
         generator.product({
@@ -2687,6 +2776,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([_.map(products, 'id'), store.id]);
     });
+
     it('should support call with chained where constraints', async () => {
       const products = [
         generator.product({
@@ -2716,6 +2806,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([store.id]);
     });
+
     it('should support call with explicit pool override and chained where constraints', async () => {
       const products = [
         generator.product({
@@ -2750,6 +2841,7 @@ describe('ReadonlyRepository', () => {
       assert(params);
       params.should.deep.equal([store.id]);
     });
+
     it('should support call with chained where constraints - Promise.all', async () => {
       const products = [
         generator.product({

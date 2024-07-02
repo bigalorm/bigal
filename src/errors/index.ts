@@ -1,1 +1,1 @@
-export * from './QueryError';
+export * from './QueryError.js';

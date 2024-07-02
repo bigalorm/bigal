@@ -1,4 +1,4 @@
-import type { Entity } from '../Entity';
+import type { Entity } from '../Entity.js';
 
 export type EntityPrimitiveOrId<T> = T extends []
   ? T extends (infer U)[]

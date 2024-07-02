@@ -1,6 +1,6 @@
-import type { Entity } from '../Entity';
+import type { Entity } from '../Entity.js';
 
-import { MetadataStorage } from './MetadataStorage';
+import { MetadataStorage } from './MetadataStorage.js';
 
 interface GlobalWithBigAlMetadataArgsStorage<T extends Entity> {
   bigAlMetadataArgsStorage: MetadataStorage<T>;
@@ -9,6 +9,7 @@ interface GlobalWithBigAlMetadataArgsStorage<T extends Entity> {
 declare const global: GlobalWithBigAlMetadataArgsStorage<Entity>;
 
 export function getMetadataStorage<T extends Entity>(): MetadataStorage<T> {
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   if (!global.bigAlMetadataArgsStorage) {
     global.bigAlMetadataArgsStorage = new MetadataStorage();
   }
@@ -16,10 +17,10 @@ export function getMetadataStorage<T extends Entity>(): MetadataStorage<T> {
   return global.bigAlMetadataArgsStorage as MetadataStorage<T>;
 }
 
-export * from './ColumnBaseMetadata';
-export * from './ColumnCollectionMetadata';
-export * from './ColumnMetadata';
-export * from './ColumnModelMetadata';
-export * from './ColumnModifierMetadata';
-export * from './ColumnTypeMetadata';
-export * from './ModelMetadata';
+export * from './ColumnBaseMetadata.js';
+export * from './ColumnCollectionMetadata.js';
+export * from './ColumnMetadata.js';
+export * from './ColumnModelMetadata.js';
+export * from './ColumnModifierMetadata.js';
+export * from './ColumnTypeMetadata.js';
+export * from './ModelMetadata.js';

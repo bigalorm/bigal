@@ -1,7 +1,7 @@
-import type { CreateUpdateParams } from '../../src';
-import { table } from '../../src';
+import type { CreateUpdateParams } from '../../src/index.js';
+import { table } from '../../src/index.js';
 
-import { Product } from './Product';
+import { Product } from './Product.js';
 
 @table({
   name: 'products',

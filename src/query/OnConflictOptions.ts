@@ -1,7 +1,7 @@
-import type { Entity } from '../Entity';
-import type { OmitEntityCollections, OmitFunctions } from '../types';
+import type { Entity } from '../Entity.js';
+import type { OmitEntityCollections, OmitFunctions } from '../types/index.js';
 
-import type { WhereQuery } from './WhereQuery';
+import type { WhereQuery } from './WhereQuery.js';
 
 type OnConflictTargets<T extends Entity, K extends string & keyof OmitFunctions<OmitEntityCollections<T>> = string & keyof OmitFunctions<OmitEntityCollections<T>>> =
   | K[]

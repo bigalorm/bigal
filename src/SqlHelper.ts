@@ -1,25 +1,23 @@
-import * as _ from 'lodash';
+import _ from 'lodash';
 
-import type { Entity, EntityFieldValue } from './Entity';
-import { QueryError } from './errors';
-import type { IReadonlyRepository } from './IReadonlyRepository';
-import type { IRepository } from './IRepository';
+import type { Entity, EntityFieldValue } from './Entity.js';
+import { QueryError } from './errors/index.js';
+import type { IReadonlyRepository } from './IReadonlyRepository.js';
+import type { IRepository } from './IRepository.js';
 import type {
   ColumnCollectionMetadata, //
   ColumnModelMetadata,
   ColumnTypeMetadata,
   ModelMetadata,
-} from './metadata';
-import type { Comparer, OrderBy, WhereClauseValue, WhereQuery } from './query';
-import type { OnConflictOptions } from './query/OnConflictOptions';
-import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types';
+} from './metadata/index.js';
+import type { Comparer, OrderBy, WhereClauseValue, WhereQuery } from './query/index.js';
+import type { OnConflictOptions } from './query/OnConflictOptions.js';
+import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types/index.js';
 
 interface QueryAndParams {
   query: string;
   params: readonly unknown[];
 }
-
-/* eslint-disable @typescript-eslint/no-use-before-define */
 
 /**
  * Gets the select syntax for the specified model and filters
@@ -80,7 +78,6 @@ export function getSelectQueryAndParams<T extends Entity>({
 
   if (limit) {
     if (_.isString(limit)) {
-      // eslint-disable-next-line no-param-reassign
       limit = Number(limit);
     }
 
@@ -93,7 +90,6 @@ export function getSelectQueryAndParams<T extends Entity>({
 
   if (skip) {
     if (_.isString(skip)) {
-      // eslint-disable-next-line no-param-reassign
       skip = Number(skip);
     }
 
@@ -219,11 +215,11 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
           const { maxLength, type } = column as ColumnTypeMetadata;
 
           if (maxLength && ['string', 'string[]'].includes(type)) {
-            const entityValues = entity[column.propertyName as string & keyof CreateUpdateParams<T>];
+            const entityValues = entity[column.propertyName as string & keyof CreateUpdateParams<T>] ?? '';
             const normalizedValues = (Array.isArray(entityValues) ? entityValues : [entityValues]) as string[];
 
             for (const normalizedValue of normalizedValues) {
-              if (normalizedValue?.length > maxLength) {
+              if (normalizedValue.length > maxLength) {
                 throw new QueryError(`Create statement for "${model.name}" contains a value that exceeds maxLength on field: ${column.propertyName}`, model);
               }
             }
@@ -426,7 +422,6 @@ export function getUpdateQueryAndParams<T extends Entity>({
 }): QueryAndParams {
   for (const column of model.updateDateColumns) {
     if (_.isUndefined(values[column.propertyName as string & keyof CreateUpdateParams<T>])) {
-      // eslint-disable-next-line no-param-reassign, @typescript-eslint/ban-ts-comment
       // @ts-expect-error - Date is not assignable to T[string & keyof T]
       values[column.propertyName as string & keyof CreateUpdateParams<T>] = new Date();
     }
@@ -456,6 +451,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
           const normalizedValues = (Array.isArray(value) ? value : [value]) as string[];
 
           for (const normalizedValue of normalizedValues) {
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             if (normalizedValue?.length > maxLength) {
               throw new QueryError(`Update statement for "${model.name}" contains a value that exceeds maxLength on field: ${column.propertyName}`, model);
             }
@@ -610,7 +606,6 @@ export function getColumnsToSelect<T extends Entity, K extends string & keyof Om
       selectColumns.add(primaryKeyColumn.propertyName);
     }
   } else {
-    // eslint-disable-next-line no-param-reassign
     selectColumns = new Set();
     for (const column of model.columns) {
       if (!(column as ColumnCollectionMetadata).collection) {
@@ -893,6 +888,7 @@ function buildWhere<T extends Entity>({
 
       if (propertyName) {
         const column = model.columnsByPropertyName[propertyName] as ColumnModelMetadata;
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (column && _.isObject(value)) {
           if (column.primary) {
             const primaryKeyValue = (value as unknown as Partial<T>)[column.propertyName as string & keyof T];
@@ -944,6 +940,7 @@ function buildWhere<T extends Entity>({
           const arrayColumn = columnTypeFromPropertyName ?? columnTypeFromComparer;
 
           if (arrayColumn) {
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             const arrayColumnType = arrayColumn.type ? arrayColumn.type.toLowerCase() : '';
             if (arrayColumnType === 'array' || arrayColumnType === 'string[]' || arrayColumnType === 'integer[]' || arrayColumnType === 'float[]' || arrayColumnType === 'boolean[]') {
               return `"${arrayColumn.name}"${isNegated ? '<>' : '='}'{}'`;
@@ -1004,6 +1001,7 @@ function buildWhere<T extends Entity>({
           const columnType = columnTypeFromPropertyName ?? columnTypeFromComparer;
 
           if (columnType) {
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             let columnTypeLowered = columnType.type ? columnType.type.toLowerCase() : '';
             if (columnTypeLowered === 'array' || columnTypeLowered === 'string[]' || columnTypeLowered === 'integer[]' || columnTypeLowered === 'float[]' || columnTypeLowered === 'boolean[]') {
               for (const val of valueWithoutNull) {
@@ -1030,10 +1028,12 @@ function buildWhere<T extends Entity>({
                   }
 
                   const relatedModelPrimaryKey = relatedModelRepository.model.primaryKeyColumn as ColumnTypeMetadata;
+                  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                   if (!relatedModelPrimaryKey) {
                     throw new QueryError(`Unable to find primary key column for ${columnAsModelType.model} specified in where clause for ${model.name}.${columnAsModelType.propertyName}`, model);
                   }
 
+                  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
                   columnTypeLowered = relatedModelPrimaryKey.type ? relatedModelPrimaryKey.type.toLowerCase() : '';
                 }
               }
@@ -1090,7 +1090,6 @@ function buildWhere<T extends Entity>({
           if (isComparer(key)) {
             subQueryComparer = key;
           } else {
-            // eslint-disable-next-line no-param-reassign
             propertyName = key;
           }
 
@@ -1241,11 +1240,9 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
       return '';
     }
 
-    // eslint-disable-next-line no-param-reassign
     value = value[0] as string | null;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const column = model.columnsByPropertyName[propertyName];
   if (!column) {
     throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
@@ -1260,6 +1257,7 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
       // NOTE: This is doing a case-insensitive pattern match
       params.push(value);
 
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       const columnType = (column as ColumnTypeMetadata).type?.toLowerCase();
       if (columnType === 'array' || columnType === 'string[]') {
         return `${isNegated ? 'NOT ' : ''}EXISTS(SELECT 1 FROM (SELECT unnest("${column.name}") AS "unnested_${column.name}") __unnested WHERE "unnested_${column.name}" ILIKE $${params.length})`;
@@ -1286,36 +1284,37 @@ function buildComparisonOperatorStatement<T extends Entity>({ model, propertyNam
 
   params.push(value);
 
-  const columnType = (column as ColumnTypeMetadata).type;
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+  const columnType = (column as ColumnTypeMetadata).type ?? 'unknown';
   const supportsLessThanGreaterThan = columnType !== 'array' && columnType !== 'json';
 
   switch (comparer) {
     case '<':
       if (!supportsLessThanGreaterThan) {
-        throw new QueryError(`< operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`, model);
+        throw new QueryError(`< operator is not supported for ${columnType} type. ${propertyName || ''} on ${model.name}`, model);
       }
 
       return `"${column.name}"${isNegated ? '>=' : '<'}$${params.length}`;
     case '<=':
       if (!supportsLessThanGreaterThan) {
-        throw new QueryError(`<= operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`, model);
+        throw new QueryError(`<= operator is not supported for ${columnType} type. ${propertyName || ''} on ${model.name}`, model);
       }
 
       return `"${column.name}"${isNegated ? '>' : '<='}$${params.length}`;
     case '>':
       if (!supportsLessThanGreaterThan) {
-        throw new QueryError(`> operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`, model);
+        throw new QueryError(`> operator is not supported for ${columnType} type. ${propertyName || ''} on ${model.name}`, model);
       }
 
       return `"${column.name}"${isNegated ? '<=' : '>'}$${params.length}`;
     case '>=':
       if (!supportsLessThanGreaterThan) {
-        throw new QueryError(`>= operator is not supported for ${columnType || 'unknown'} type. ${propertyName || ''} on ${model.name}`, model);
+        throw new QueryError(`>= operator is not supported for ${columnType} type. ${propertyName || ''} on ${model.name}`, model);
       }
 
       return `"${column.name}"${isNegated ? '<' : '>='}$${params.length}`;
     default:
-      if (columnType && (columnType === 'array' || columnType.endsWith('[]'))) {
+      if (columnType === 'array' || columnType.endsWith('[]')) {
         return `$${params.length}${isNegated ? '<>ALL(' : '=ANY('}"${column.name}")`;
       }
 
@@ -1348,4 +1347,3 @@ function isComparer(value: string): boolean {
       return false;
   }
 }
-/* eslint-enable @typescript-eslint/no-use-before-define */

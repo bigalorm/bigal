@@ -1,4 +1,4 @@
-import type { ExcludeEntityCollections } from './ExcludeEntityCollections';
+import type { ExcludeEntityCollections } from './ExcludeEntityCollections.js';
 
 /**
  * Removes all entity collection properties

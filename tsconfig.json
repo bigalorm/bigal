@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "CommonJS",
+    "module": "ES2022",
     "lib": ["ESNext"],
     "moduleResolution": "node",
+    "allowJs": false,
 
     "useDefineForClassFields": false,
 
@@ -34,7 +35,8 @@
     }
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",

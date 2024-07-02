@@ -1,10 +1,8 @@
-import { column, table } from '../../src';
+import { column, table } from '../../src/index.js';
 
-import { ModelBase } from './ModelBase';
-// eslint-disable-next-line import/no-cycle
-import { Product } from './Product';
-// eslint-disable-next-line import/no-cycle
-import { ProductCategory } from './ProductCategory';
+import { ModelBase } from './ModelBase.js';
+import { Product } from './Product.js';
+import { ProductCategory } from './ProductCategory.js';
 
 @table({
   name: 'categories',
