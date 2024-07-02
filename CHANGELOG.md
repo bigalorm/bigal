@@ -7,7 +7,7 @@
 
 ### BREAKING CHANGES
 
-- Consolidated exports for /errors, /query, and /types to root
+- Consolidated exports for /decorators, /errors, /metadata, /query, and /types to root
 
 ## 12.1.5 - 2024-05-13
 
