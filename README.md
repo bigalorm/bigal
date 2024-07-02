@@ -29,8 +29,7 @@ npm install pg postgres-pool bigal
 Model definitions need to extend `Entity`.
 
 ```ts
-import { Entity } from 'bigal';
-import { column, primaryColumn, table } from 'bigal/decorators';
+import { column, primaryColumn, table, Entity } from 'bigal';
 import { Store } from './Store';
 import { Category } from './Category';
 import { ProductCategory } from './ProductCategory';
