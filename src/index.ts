@@ -10,13 +10,15 @@ import { ReadonlyRepository } from './ReadonlyRepository.js';
 import { Repository } from './Repository.js';
 
 export * from './decorators/index.js';
+export * from './errors/index.js';
+export * from './metadata/index.js';
+export * from './query/index.js';
+export * from './types/index.js';
 export * from './Entity.js';
 export * from './IReadonlyRepository.js';
 export * from './IRepository.js';
-export * from './metadata/index.js';
 export * from './ReadonlyRepository.js';
 export * from './Repository.js';
-export * from './types/index.js';
 
 export interface IConnection {
   pool: Pool;
