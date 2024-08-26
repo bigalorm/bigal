@@ -1,5 +1,9 @@
 # Change Log
 
+## 13.0.2 - 2024-08-26
+
+- Update npms
+
 ## 13.0.1 - 2024-07-02
 
 - Update postgres-pool npm

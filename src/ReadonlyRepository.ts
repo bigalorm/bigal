@@ -5,10 +5,10 @@ import type { Entity, EntityFieldValue, EntityStatic } from './Entity.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
 import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata/index.js';
-import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, WhereQuery, SortObject, SortObjectValue } from './query/index.js';
 import type { CountArgs } from './query/CountArgs.js';
+import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, SortObject, SortObjectValue, WhereQuery } from './query/index.js';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
-import type { GetValueType, PickByValueType, QueryResult, PickAsType, OmitEntityCollections, OmitFunctions, PickFunctions, Populated } from './types/index.js';
+import type { GetValueType, OmitEntityCollections, OmitFunctions, PickAsType, PickByValueType, PickFunctions, Populated, QueryResult } from './types/index.js';
 
 export interface IRepositoryOptions<T extends Entity> {
   modelMetadata: ModelMetadata<T>;
@@ -574,7 +574,6 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     return rows.map((row: Partial<QueryResult<T>>) => this._buildInstance(row));
   }
 
-  // eslint-disable-next-line class-methods-use-this
   protected _convertSortsToOrderBy(sorts: SortObject<T> | string): OrderBy<T>[] {
     const result: OrderBy<T>[] = [];
     if (sorts) {

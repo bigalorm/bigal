@@ -133,7 +133,6 @@ describe('Repository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
-      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const result = await ProductRepository.create(
         {
           name: product.name,
@@ -400,7 +399,6 @@ describe('Repository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
-      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const result = await ProductRepository.create(
         products.map((product) => {
           return {
@@ -686,7 +684,6 @@ describe('Repository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
 
-      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const result = await ProductRepository.update(
         {
           id: product.id,
@@ -817,7 +814,6 @@ describe('Repository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
-      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const result = await ProductRepository.destroy();
       should.not.exist(result);
 
@@ -905,7 +901,6 @@ describe('Repository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
-      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
       const result = await ProductRepository.destroy({
         id: _.map(products, 'id'),
         store,
@@ -957,7 +952,7 @@ describe('Repository', () => {
       ];
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
-      // eslint-disable-next-line @typescript-eslint/no-confusing-void-expression
+
       const result = await ProductRepository.destroy().where({
         store: store.id,
       });

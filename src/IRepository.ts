@@ -1,14 +1,7 @@
 import type { Entity } from './Entity.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
-import type {
-  CreateUpdateOptions, //
-  DeleteOptions,
-  DestroyResult,
-  DoNotReturnRecords,
-  ReturnSelect,
-  WhereQuery,
-} from './query/index.js';
 import type { CreateOptions } from './query/CreateOptions.js';
+import type { CreateUpdateOptions, DeleteOptions, DestroyResult, DoNotReturnRecords, ReturnSelect, WhereQuery } from './query/index.js';
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
 import type { CreateUpdateParams, QueryResult } from './types/index.js';
 

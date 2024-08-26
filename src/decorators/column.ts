@@ -1,11 +1,6 @@
 import _ from 'lodash';
 
-import {
-  getMetadataStorage, //
-  ColumnCollectionMetadata,
-  ColumnModelMetadata,
-  ColumnTypeMetadata,
-} from '../metadata/index.js';
+import { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, getMetadataStorage } from '../metadata/index.js';
 import type { ClassLike } from '../types/index.js';
 
 import type { ColumnCollectionOptions } from './ColumnCollectionOptions.js';

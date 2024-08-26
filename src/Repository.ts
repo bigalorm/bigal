@@ -2,19 +2,12 @@ import _ from 'lodash';
 
 import type { Entity } from './Entity.js';
 import type { IRepository } from './IRepository.js';
-import type {
-  CreateUpdateOptions, //
-  DestroyResult,
-  DoNotReturnRecords,
-  ReturnSelect,
-  WhereQuery,
-  DeleteOptions,
-} from './query/index.js';
 import type { CreateOptions } from './query/CreateOptions.js';
+import type { CreateUpdateOptions, DeleteOptions, DestroyResult, DoNotReturnRecords, ReturnSelect, WhereQuery } from './query/index.js';
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
 import { ReadonlyRepository } from './ReadonlyRepository.js';
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper.js';
-import type { CreateUpdateParams, QueryResult, OmitEntityCollections, OmitFunctions } from './types/index.js';
+import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions, QueryResult } from './types/index.js';
 
 export class Repository<T extends Entity> extends ReadonlyRepository<T> implements IRepository<T> {
   /**

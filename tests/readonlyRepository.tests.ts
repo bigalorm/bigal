@@ -7,7 +7,7 @@ import type { QueryResult as PgQueryResult, QueryResultRow } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { Repository, ReadonlyRepository, QueryResult, QueryResultPopulated } from '../src/index.js';
+import type { QueryResult, QueryResultPopulated, ReadonlyRepository, Repository } from '../src/index.js';
 import { initialize } from '../src/index.js';
 import type { WhereQuery } from '../src/query/index.js';
 

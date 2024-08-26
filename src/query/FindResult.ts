@@ -1,5 +1,5 @@
 import type { Entity } from '../Entity.js';
-import type { PickByValueType, GetValueType, Populated } from '../types/index.js';
+import type { GetValueType, PickByValueType, Populated } from '../types/index.js';
 
 import type { PaginateOptions } from './PaginateOptions.js';
 import type { PopulateArgs } from './PopulateArgs.js';

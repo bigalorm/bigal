@@ -1,7 +1,7 @@
 import type { Entity } from './Entity.js';
 import type { ModelMetadata } from './metadata/index.js';
-import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, WhereQuery } from './query/index.js';
 import type { CountArgs } from './query/CountArgs.js';
+import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, WhereQuery } from './query/index.js';
 import type { QueryResult } from './types/index.js';
 
 export interface IReadonlyRepository<T extends Entity> {

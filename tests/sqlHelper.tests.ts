@@ -5,9 +5,9 @@ import * as chai from 'chai';
 import { Pool } from 'postgres-pool';
 import { mock } from 'ts-mockito';
 
-import { initialize } from '../src/index.js';
-import type { IReadonlyRepository, IRepository, Entity, ModelMetadata } from '../src/index.js';
 import { QueryError } from '../src/errors/index.js';
+import { initialize } from '../src/index.js';
+import type { Entity, IReadonlyRepository, IRepository, ModelMetadata } from '../src/index.js';
 import * as sqlHelper from '../src/SqlHelper.js';
 
 import {

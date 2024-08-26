@@ -5,7 +5,7 @@ import type { Entity, EntityStatic } from './Entity.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
 import type { ColumnMetadata, ColumnModifierMetadata } from './metadata/index.js';
-import { ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata, getMetadataStorage } from './metadata/index.js';
+import { ColumnModelMetadata, ColumnTypeMetadata, getMetadataStorage, ModelMetadata } from './metadata/index.js';
 import { ReadonlyRepository } from './ReadonlyRepository.js';
 import { Repository } from './Repository.js';
 

@@ -1,5 +1,5 @@
-import type { CreateUpdateParams } from '../../src/index.js';
 import { column, table } from '../../src/decorators/index.js';
+import type { CreateUpdateParams } from '../../src/index.js';
 
 import { Category } from './Category.js';
 import { ModelBase } from './ModelBase.js';

@@ -1,4 +1,4 @@
-import { Entity, column, primaryColumn, table } from '../../src/index.js';
+import { column, Entity, primaryColumn, table } from '../../src/index.js';
 
 import { Category } from './Category.js';
 import { Product } from './Product.js';

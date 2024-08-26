@@ -1,7 +1,7 @@
 import _ from 'lodash';
 
 import type { Entity, EntityStatic } from '../Entity.js';
-import { ModelMetadata, getMetadataStorage } from '../metadata/index.js';
+import { getMetadataStorage, ModelMetadata } from '../metadata/index.js';
 
 import type { TableOptions } from './TableOptions.js';
 

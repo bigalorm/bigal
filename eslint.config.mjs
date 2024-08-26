@@ -1,15 +1,9 @@
-import { defaultConfig } from 'eslint-config-decent';
-import tsEslint from 'typescript-eslint';
+import { config } from 'eslint-config-decent';
 
-export default tsEslint.config(
-  ...defaultConfig(),
-  {
-    files: ['**/*.mjs'],
-    rules: {
-      '@typescript-eslint/no-unsafe-call': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-    },
-  },
+export default [
+  ...config({
+    tsconfigRootDir: import.meta.dirname,
+  }),
   {
     files: ['**/*.ts'],
     rules: {
@@ -22,4 +16,4 @@ export default tsEslint.config(
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
-);
+];
