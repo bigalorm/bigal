@@ -52,9 +52,7 @@ interface RepositoriesByModelName {
   Store: IRepository<Entity>;
 }
 
-type LowerCaseKeys<T, K extends string & keyof T = string & keyof T> = {
-  [P in Lowercase<K>]: T[K];
-};
+type LowerCaseKeys<T, K extends string & keyof T = string & keyof T> = Record<Lowercase<K>, T[K]>;
 
 describe('sqlHelper', () => {
   let should: Chai.Should;

@@ -15,13 +15,9 @@ export type WhereClauseValue<TValue> = TValue extends NotEntityBrand | undefined
         | Pick<Extract<ExcludeUndefined<TValue>, Entity>, 'id'> // Allow a single object with the id property
         | null;
 
-export type StringConstraint<TValue extends string> = {
-  [P in 'contains' | 'endsWith' | 'like' | 'startsWith']?: LiteralValues<ExcludeUndefined<TValue>>;
-};
+export type StringConstraint<TValue extends string> = Partial<Record<'contains' | 'endsWith' | 'like' | 'startsWith', LiteralValues<ExcludeUndefined<TValue>>>>;
 
-export type NumberOrDateConstraint<TValue extends Date | number> = {
-  [P in '<' | '<=' | '>' | '>=']?: LiteralValues<ExcludeUndefined<TValue>>;
-};
+export type NumberOrDateConstraint<TValue extends Date | number> = Partial<Record<'<' | '<=' | '>' | '>=', LiteralValues<ExcludeUndefined<TValue>>>>;
 
 export type NegatableConstraint<TValue> =
   | TValue
