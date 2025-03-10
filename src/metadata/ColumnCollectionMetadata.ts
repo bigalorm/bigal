@@ -27,6 +27,7 @@ export class ColumnCollectionMetadata extends ColumnBaseMetadata {
 
   /**
    * Type of the items in the collection
+   * @returns Name of collection
    */
   public get collection(): string {
     if (this._collectionString) {
@@ -49,6 +50,7 @@ export class ColumnCollectionMetadata extends ColumnBaseMetadata {
 
   /**
    * Name of the junction table for multi-multi associations
+   * @returns Name of junction table
    */
   public get through(): string | undefined {
     if (this._throughString) {

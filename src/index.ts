@@ -138,6 +138,7 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
     }
 
     modelMetadataByModelName[model.name] = new ModelMetadata({
+      // eslint-disable-next-line @typescript-eslint/no-misused-spread
       ...modelMetadata,
       name: model.name,
       type: model,

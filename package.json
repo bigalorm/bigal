@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "13.0.6",
+  "version": "13.0.7",
   "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -33,32 +33,32 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@types/pg": "^8.11.10",
+    "@types/pg": "^8.11.11",
     "lodash": "^4.17.21",
-    "pg": "^8.13.1",
-    "postgres-pool": "^9.0.6"
+    "pg": "^8.13.3",
+    "postgres-pool": "^10.0.0"
   },
   "devDependencies": {
-    "@faker-js/faker": "^9.3.0",
-    "@types/chai": "^5.0.1",
-    "@types/lodash": "^4.17.14",
+    "@faker-js/faker": "^9.6.0",
+    "@types/chai": "^5.2.0",
+    "@types/lodash": "^4.17.16",
     "@types/mocha": "10.0.10",
     "@types/node": ">=22",
-    "chai": "^5.1.2",
-    "eslint": "^9.17.0",
-    "eslint-config-decent": "^2.3.1",
+    "chai": "^5.2.0",
+    "eslint": "^9.22.0",
+    "eslint-config-decent": "^2.6.1",
     "husky": "^9.1.7",
-    "lint-staged": "^15.3.0",
-    "markdownlint-cli": "^0.43.0",
-    "mocha": "^11.0.1",
+    "lint-staged": "^15.4.3",
+    "markdownlint-cli": "^0.44.0",
+    "mocha": "^11.1.0",
     "npm-run-all": "^4.1.5",
     "pinst": "^3.0.0",
-    "prettier": "^3.4.2",
+    "prettier": "^3.5.3",
     "strict-event-emitter-types": "^2.0.0",
     "ts-mockito": "^2.6.1",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.2",
-    "unbuild": "^3.2.0"
+    "typescript": "^5.8.2",
+    "unbuild": "^3.5.0"
   },
   "scripts": {
     "build": "unbuild",

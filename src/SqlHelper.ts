@@ -153,7 +153,7 @@ export function getCountQueryAndParams<T extends Entity>({
  * @param {object} args.model - Model schema
  * @param {object|object[]} args.values - Values to insert. Insert multiple records by passing an array of values.
  * @param {object} [args.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
- * @param {boolean} [args.returnRecords=true] - Determines if inserted records should be returned
+ * @param {boolean} [args.returnRecords] - Determines if inserted records should be returned
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: object[]}}
  */
@@ -401,7 +401,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
  * @param {object} args.model - Model schema
  * @param {object} [args.where] - Object representing the where query
  * @param {object} args.values - Values to set.
- * @param {boolean} [args.returnRecords=true] - Determines if inserted records should be returned
+ * @param {boolean} [args.returnRecords] - Determines if inserted records should be returned
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: object[]}}
  */
@@ -537,7 +537,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
  * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by global id
  * @param {object} args.model - Model schema
  * @param {object} [args.where] - Object representing the where query
- * @param {boolean} [args.returnRecords=true] - Determines if inserted records should be returned
+ * @param {boolean} [args.returnRecords] - Determines if inserted records should be returned
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: object[]}}
  */
@@ -588,6 +588,7 @@ export function getDeleteQueryAndParams<T extends Entity>({
  * @returns {string} SQL columns
  * @private
  */
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export function getColumnsToSelect<T extends Entity, K extends string & keyof OmitFunctions<OmitEntityCollections<T>> = string & keyof OmitFunctions<OmitEntityCollections<T>>>({
   model,
   select,
@@ -727,7 +728,7 @@ export function buildOrderStatement<T extends Entity>({ model, sorts }: { model:
  * @param {object} args.model - Model schema
  * @param {string} [args.propertyName] - Name of property to query by
  * @param {string} [args.comparer] - Comparison operator
- * @param {boolean} [args.isNegated=false] - If it is negated comparison
+ * @param {boolean} [args.isNegated] - If it is negated comparison
  * @param {object|string|number|boolean} [args.value] - Value to compare. Can also represent a complex where query
  * @param {object[]} args.params - Objects to pass as parameters for the query
  * @returns {string} - Query text

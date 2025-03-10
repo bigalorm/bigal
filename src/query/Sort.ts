@@ -6,7 +6,7 @@ export type SortString<T extends Entity> =
   | `${string & keyof OmitFunctions<OmitEntityCollections<T>>} asc`
   | `${string & keyof OmitFunctions<OmitEntityCollections<T>>} DESC`
   | `${string & keyof OmitFunctions<OmitEntityCollections<T>>} desc`
-  | `${string & keyof OmitFunctions<OmitEntityCollections<T>>}`;
+  | (string & keyof OmitFunctions<OmitEntityCollections<T>>);
 
 type ValidateMultipleSorts<
   T extends Entity,

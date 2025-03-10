@@ -71,6 +71,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
    * @param {string[]} [args.select] - Array of model property names to return from the query.
    * @param {object} [args.where] - Object representing the where query
    * @param {string|object} [args.sort] - Property name(s) to sort by
+   * @returns Database record or null
    */
   public findOne<K extends string & keyof T, TReturn = QueryResult<Pick<T, K | keyof PickFunctions<T> | 'id'>>>(args: FindOneArgs<T, K> | WhereQuery<T> = {}): FindOneResult<T, TReturn> {
     const { stack } = new Error(`${this.model.name}.findOne()`);
@@ -129,6 +130,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       /**
        * Filters the query
        * @param {object} value - Object representing the where query
+       * @returns Query instance
        */
       where(value: WhereQuery<T>): FindOneResult<T, TReturn> {
         where = value;
@@ -144,6 +146,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * @param {string|object} [options.sort] - Property name(s) to sort by
        * @param {string|number} [options.skip] - Number of records to skip
        * @param {string|number} [options.limit] - Number of results to return
+       * @returns Query instance
        */
       populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T, TPopulateType extends GetValueType<T[TProperty], Entity>, TPopulateSelectKeys extends keyof TPopulateType>(
         propertyName: TProperty,
@@ -173,6 +176,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       /**
        * Sorts the query
        * @param {string|object} [value]
+       * @returns Query instance
        */
       sort(value?: Sort<T>): FindOneResult<T, TReturn> {
         if (value) {
@@ -256,6 +260,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
    * @param {string|object} [args.sort] - Property name(s) to sort by
    * @param {string|number} [args.skip] - Number of records to skip
    * @param {string|number} [args.limit] - Number of results to return
+   * @returns Database records
    */
   public find<K extends string & keyof T, TReturn = QueryResult<Pick<T, K | keyof PickFunctions<T> | 'id'>>>(args: FindArgs<T, K> | WhereQuery<T> = {}): FindResult<T, TReturn> {
     const { stack } = new Error(`${this.model.name}.find()`);
@@ -317,6 +322,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       /**
        * Filters the query
        * @param {object} value - Object representing the where query
+       * @returns Query instance
        */
       where(value: WhereQuery<T>): FindResult<T, TReturn> {
         where = value;
@@ -332,6 +338,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * @param {string|object} [options.sort] - Property name(s) to sort by
        * @param {string|number} [options.skip] - Number of records to skip
        * @param {string|number} [options.limit] - Number of results to return
+       * @returns Query instance
        */
       populate<
         TProperty extends string & keyof PickByValueType<T, Entity> & keyof T,
@@ -362,6 +369,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       /**
        * Sorts the query
        * @param {string|string[]|object} [value]
+       * @returns Query instance
        */
       sort(value?: Sort<T>): FindResult<T, TReturn> {
         if (value) {
@@ -373,6 +381,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       /**
        * Limits results returned by the query
        * @param {number} value
+       * @returns Query instance
        */
       limit(value: number): FindResult<T, TReturn> {
         limit = value;
@@ -382,6 +391,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       /**
        * Skips records returned by the query
        * @param {number} value
+       * @returns Query instance
        */
       skip(value: number): FindResult<T, TReturn> {
         skip = value;
@@ -394,8 +404,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       },
       /**
        * Pages records returned by the query
-       * @param {number} [page=1] - Page to return - Starts at 1
-       * @param {number} [limit=10] - Number of records to return
+       * @param {number} [page] - Page to return - Starts at 1
+       * @param {number} [limit] - Number of records to return
+       * @returns Query instance
        */
       paginate({ page = 1, limit: paginateLimit = 10 }: PaginateOptions): FindResult<T, TReturn> {
         const safePage = Math.max(page, 1);
@@ -484,6 +495,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       /**
        * Filters the query
        * @param {object} value - Object representing the where query
+       * @returns Count result
        */
       where(value: WhereQuery<T>): CountResult<T> | number {
         where = value;
@@ -759,7 +771,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       for (const entity of entities) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-assignment
         const id = entity[primaryKeyPropertyName] as any;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment,@typescript-eslint/prefer-nullish-coalescing
         entity[populate.propertyName as string & keyof QueryResult<T>] = populateResultsByEntityId[id] || [];
       }
     }

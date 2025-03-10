@@ -15,6 +15,7 @@ export class ColumnModelMetadata extends ColumnBaseMetadata {
 
   /**
    * Name of the model represented by this column id
+   * @returns Name of model
    */
   public get model(): string {
     if (this._modelString) {

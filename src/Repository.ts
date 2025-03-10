@@ -44,7 +44,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * Creates an object using the specified values
    * @param {object|object[]} values - Values to insert as a new object. If an array is specified, multiple rows will be inserted
    * @param {object} [options]
-   * @param {boolean} [options.returnRecords=true] - Determines if inserted records should be returned
+   * @param {boolean} [options.returnRecords] - Determines if inserted records should be returned
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {object|object[]|void} Return value from the db
@@ -130,7 +130,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {object} where - Object representing the where query
    * @param {object} values - Values to update
    * @param {object} [options]
-   * @param {boolean} [options.returnRecords=true] - Determines if inserted records should be returned
+   * @param {boolean} [options.returnRecords] - Determines if inserted records should be returned
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} Return values from the db or `true` if returnRecords=false
    */
@@ -198,7 +198,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * Destroys object(s) matching the where query
    * @param {object} where - Object representing the where query
    * @param {object} [options]
-   * @param {boolean} [options.returnRecords=false] - Determines if inserted records should be returned
+   * @param {boolean} [options.returnRecords] - Determines if inserted records should be returned
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} `void` or records affected if returnRecords=true
    */
@@ -218,6 +218,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
       /**
        * Filters the query
        * @param {object} value - Object representing the where query
+       * @returns Query instance
        */
       where(value: WhereQuery<T>): DestroyResult<T, QueryResult<T>[] | void> {
         where = value;
