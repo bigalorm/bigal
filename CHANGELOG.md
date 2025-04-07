@@ -1,3 +1,5 @@
+## [13.0.8](https://github.com/bigalorm/bigal/compare/v13.0.7...v13.0.8) (2025-04-07)
+
 # 13.0.7 - 2024-03-10
 
 - Update npms
