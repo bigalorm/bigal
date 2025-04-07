@@ -23,13 +23,8 @@ export function primaryColumn(dbColumnNameOrOptions?: ColumnOptions | string, op
     }
 
     if (dbColumnNameOrOptions) {
-      if (!options) {
-        options = {} as ColumnTypeOptions;
-      }
-
-      if (!dbColumnName) {
-        dbColumnName = options.name ?? _.snakeCase(propertyName);
-      }
+      options ??= {} as ColumnTypeOptions;
+      dbColumnName ??= options.name ?? _.snakeCase(propertyName);
 
       const { type } = options as ColumnTypeOptions;
       const { model } = options as ColumnModelOptions;

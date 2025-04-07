@@ -14,9 +14,7 @@ export function column(options?: ColumnOptions): ReturnFunctionType;
 export function column(dbColumnName: string, options?: ColumnOptions): ReturnFunctionType;
 export function column(dbColumnNameOrOptions?: ColumnOptions | string, options?: ColumnOptions): ReturnFunctionType {
   return function columnDecorator(object: ClassLike, propertyName: string): void {
-    if (!dbColumnNameOrOptions) {
-      dbColumnNameOrOptions = _.snakeCase(propertyName);
-    }
+    dbColumnNameOrOptions ??= _.snakeCase(propertyName);
 
     let dbColumnName: string | undefined;
     if (typeof dbColumnNameOrOptions === 'string') {
@@ -25,13 +23,8 @@ export function column(dbColumnNameOrOptions?: ColumnOptions | string, options?:
       options = dbColumnNameOrOptions;
     }
 
-    if (!options) {
-      options = {} as ColumnTypeOptions;
-    }
-
-    if (!dbColumnName) {
-      dbColumnName = options.name ?? _.snakeCase(propertyName);
-    }
+    options ??= {} as ColumnTypeOptions;
+    dbColumnName ??= options.name ?? _.snakeCase(propertyName);
 
     const metadataStorage = getMetadataStorage();
 

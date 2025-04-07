@@ -21,13 +21,8 @@ export function table<T extends Entity>(dbNameOrTableOptions?: TableOptions | st
       options = dbNameOrTableOptions;
     }
 
-    if (!options) {
-      options = {} as TableOptions;
-    }
-
-    if (!options.name) {
-      options.name = dbTableName ?? _.snakeCase(className);
-    }
+    options ??= {} as TableOptions;
+    options.name ??= dbTableName ?? _.snakeCase(className);
 
     const metadataStorage = getMetadataStorage<T>();
     const modelMetadata = new ModelMetadata({

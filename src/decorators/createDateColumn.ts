@@ -21,13 +21,8 @@ export function createDateColumn(dbColumnNameOrOptions?: ColumnTypeOptions | str
     }
 
     if (dbColumnNameOrOptions) {
-      if (!options) {
-        options = {} as ColumnTypeOptions;
-      }
-
-      if (!dbColumnName) {
-        dbColumnName = options.name ?? _.snakeCase(propertyName);
-      }
+      options ??= {} as ColumnTypeOptions;
+      dbColumnName ??= options.name ?? _.snakeCase(propertyName);
 
       metadataStorage.columns.push(
         new ColumnTypeMetadata({

@@ -20,13 +20,8 @@ export function versionColumn(dbColumnNameOrOptions?: ColumnTypeOptions | string
     }
 
     if (dbColumnNameOrOptions) {
-      if (!options) {
-        options = {} as ColumnTypeOptions;
-      }
-
-      if (!dbColumnName) {
-        dbColumnName = options.name ?? _.snakeCase(propertyName);
-      }
+      options ??= {} as ColumnTypeOptions;
+      dbColumnName ??= options.name ?? _.snakeCase(propertyName);
 
       const metadataStorage = getMetadataStorage();
       metadataStorage.columns.push(
