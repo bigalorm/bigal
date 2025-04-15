@@ -16,7 +16,7 @@
       rangeStrategy: 'replace',
     },
     {
-      matchPackageNames: ['@types/node', '@types/asn1'],
+      matchPackageNames: ['@types/node'],
       rangeStrategy: 'replace',
     },
   ],
