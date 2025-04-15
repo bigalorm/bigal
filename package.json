@@ -33,13 +33,13 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@types/pg": "8.11.11",
+    "@types/pg": "8.11.13",
     "lodash": "4.17.21",
     "pg": "8.14.1",
-    "postgres-pool": "10.1.0"
+    "postgres-pool": "10.1.1"
   },
   "devDependencies": {
-    "@faker-js/faker": "9.6.0",
+    "@faker-js/faker": "9.7.0",
     "@semantic-release/changelog": "6.0.3",
     "@semantic-release/commit-analyzer": "13.0.1",
     "@semantic-release/git": "10.0.1",
@@ -52,9 +52,9 @@
     "@types/node": ">=22",
     "chai": "5.2.0",
     "eslint": "9.24.0",
-    "eslint-config-decent": "2.6.4",
+    "eslint-config-decent": "2.6.6",
     "husky": "9.1.7",
-    "lint-staged": "15.5.0",
+    "lint-staged": "15.5.1",
     "markdownlint-cli": "0.44.0",
     "mocha": "11.1.0",
     "npm-run-all2": "7.0.2",
