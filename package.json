@@ -51,7 +51,7 @@
     "@types/mocha": "10.0.10",
     "@types/node": ">=22",
     "chai": "5.2.0",
-    "eslint": "9.24.0",
+    "eslint": "9.25.0",
     "eslint-config-decent": "2.6.6",
     "husky": "9.1.7",
     "lint-staged": "15.5.1",
