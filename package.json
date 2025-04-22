@@ -35,8 +35,8 @@
   "dependencies": {
     "@types/pg": "8.11.13",
     "lodash": "4.17.21",
-    "pg": "8.14.1",
-    "postgres-pool": "10.1.1"
+    "pg": "8.15.1",
+    "postgres-pool": "10.1.2"
   },
   "devDependencies": {
     "@faker-js/faker": "9.7.0",
@@ -52,7 +52,7 @@
     "@types/node": ">=22",
     "chai": "5.2.0",
     "eslint": "9.25.1",
-    "eslint-config-decent": "2.6.6",
+    "eslint-config-decent": "2.6.7",
     "husky": "9.1.7",
     "lint-staged": "15.5.1",
     "markdownlint-cli": "0.44.0",
