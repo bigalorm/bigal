@@ -1,3 +1,9 @@
+## [13.0.10](https://github.com/bigalorm/bigal/compare/v13.0.9...v13.0.10) (2025-04-22)
+
+### Bug Fixes
+
+- **deps:** update all dependencies ([#99](https://github.com/bigalorm/bigal/issues/99)) ([4c26341](https://github.com/bigalorm/bigal/commit/4c2634180240b37fbd717604458778aaff111fe0))
+
 ## [13.0.9](https://github.com/bigalorm/bigal/compare/v13.0.8...v13.0.9) (2025-04-15)
 
 ### Bug Fixes
