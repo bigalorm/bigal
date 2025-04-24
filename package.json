@@ -33,7 +33,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@types/pg": "8.11.13",
+    "@types/pg": "8.11.14",
     "lodash": "4.17.21",
     "pg": "8.15.5",
     "postgres-pool": "10.1.3"
