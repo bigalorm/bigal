@@ -25,6 +25,7 @@ export * from './SimpleWithStringCollection.js';
 export * from './SimpleWithStringId.js';
 export * from './SimpleWithUnion.js';
 export * from './SimpleWithUpdatedAt.js';
+export * from './SimpleWithUUID.js';
 export * from './SimpleWithVersion.js';
 export * from './Store.js';
 export * from './Student.js';
