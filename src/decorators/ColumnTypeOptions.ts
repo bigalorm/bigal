@@ -4,7 +4,7 @@ export interface ColumnTypeOptions extends ColumnBaseOptions {
   /**
    * Type of the column
    */
-  type: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]';
+  type: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]' | 'uuid' | 'uuid[]';
   /**
    * Default database value
    */

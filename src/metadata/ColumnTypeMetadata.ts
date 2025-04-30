@@ -5,7 +5,7 @@ export interface ColumnTypeMetadataOptions extends ColumnBaseMetadataOptions {
   /**
    * Type of sql column
    */
-  type: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]';
+  type: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]' | 'uuid' | 'uuid[]';
   /**
    * Default database value
    */
@@ -26,7 +26,7 @@ export class ColumnTypeMetadata extends ColumnBaseMetadata {
   /**
    * Type of the column
    */
-  public type: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]';
+  public type: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]' | 'uuid' | 'uuid[]';
 
   /**
    * Default database value
