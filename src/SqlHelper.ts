@@ -1055,6 +1055,10 @@ function buildWhere<T extends Entity>({
                 case 'boolean[]':
                   castType = '::BOOLEAN[]';
                   break;
+                case 'uuid':
+                case 'uuid[]':
+                  castType = '::UUID[]';
+                  break;
                 default:
                   castType = '::TEXT[]';
                   break;

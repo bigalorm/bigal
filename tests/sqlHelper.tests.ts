@@ -27,6 +27,7 @@ import {
   SimpleWithJson,
   SimpleWithStringId,
   SimpleWithUpdatedAt,
+  SimpleWithUUID,
   SimpleWithVersion,
   Store,
 } from './models/index.js';
@@ -48,6 +49,7 @@ interface RepositoriesByModelName {
   SimpleWithJson: IRepository<Entity>;
   SimpleWithStringId: IRepository<Entity>;
   SimpleWithUpdatedAt: IRepository<Entity>;
+  SimpleWithUUID: IRepository<Entity>;
   SimpleWithVersion: IRepository<Entity>;
   Store: IRepository<Entity>;
 }
@@ -81,6 +83,7 @@ describe('sqlHelper', () => {
         SimpleWithJson,
         SimpleWithStringId,
         SimpleWithUpdatedAt,
+        SimpleWithUUID,
         SimpleWithVersion,
         Store,
       ],
@@ -2240,6 +2243,36 @@ describe('sqlHelper', () => {
       assert(whereStatement);
       whereStatement.should.equal('WHERE "name"=ANY($1::TEXT[])');
       params.should.deep.equal([name]);
+    });
+
+    it('should treat uuid type with array values as an =ANY() statement', () => {
+      const id = [faker.string.uuid(), faker.string.uuid()];
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.simplewithuuid.model as ModelMetadata<SimpleWithUUID>,
+        where: {
+          id,
+        },
+      });
+
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "id"=ANY($1::UUID[])');
+      params.should.deep.equal([id]);
+    });
+
+    it('should treat uuid type with string values as an = statement', () => {
+      const id = faker.string.uuid();
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.simplewithuuid.model as ModelMetadata<SimpleWithUUID>,
+        where: {
+          id,
+        },
+      });
+
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "id"=$1');
+      params.should.deep.equal([id]);
     });
 
     it('should treat integer type with array values as an =ANY() statement', () => {
