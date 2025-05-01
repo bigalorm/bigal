@@ -1,3 +1,14 @@
+# [13.1.0](https://github.com/bigalorm/bigal/compare/v13.0.11...v13.1.0) (2025-05-01)
+
+### Bug Fixes
+
+- **deps:** update all dependencies ([#103](https://github.com/bigalorm/bigal/issues/103)) ([5439258](https://github.com/bigalorm/bigal/commit/5439258e0ece2f650a0fa301d625e16edec7a070))
+- **deps:** update dependency @types/pg to v8.11.14 ([#102](https://github.com/bigalorm/bigal/issues/102)) ([8ee31bf](https://github.com/bigalorm/bigal/commit/8ee31bfd5b74eb040e809505506e8113db067a6d))
+
+### Features
+
+- Add UUID data type ([#104](https://github.com/bigalorm/bigal/issues/104)) ([d1469d3](https://github.com/bigalorm/bigal/commit/d1469d385a8ddd43a0c2bfa67b0c6e39e1ba7641))
+
 ## [13.0.11](https://github.com/bigalorm/bigal/compare/v13.0.10...v13.0.11) (2025-04-23)
 
 ### Bug Fixes
