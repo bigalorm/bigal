@@ -1,3 +1,5 @@
+## [13.1.1](https://github.com/bigalorm/bigal/compare/v13.1.0...v13.1.1) (2025-05-05)
+
 # [13.1.0](https://github.com/bigalorm/bigal/compare/v13.0.11...v13.1.0) (2025-05-01)
 
 ### Bug Fixes
