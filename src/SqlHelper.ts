@@ -55,7 +55,7 @@ export function getSelectQueryAndParams<T extends Entity>({
     select,
   });
 
-  query += ` FROM "${model.tableName}"`;
+  query += ` FROM ${model.qualifiedTableName}`;
 
   const { whereStatement, params } = buildWhereStatement({
     repositoriesByModelNameLowered,
@@ -128,7 +128,7 @@ export function getCountQueryAndParams<T extends Entity>({
   model: ModelMetadata<T>;
   where?: WhereQuery<T>;
 }): QueryAndParams {
-  let query = `SELECT count(*) AS "count" FROM "${model.tableName}"`;
+  let query = `SELECT count(*) AS "count" FROM ${model.qualifiedTableName}`;
 
   const { whereStatement, params } = buildWhereStatement({
     repositoriesByModelNameLowered,
@@ -256,7 +256,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
 
   const valueCollections: string[][] = entitiesToInsert.map(() => []);
   const params = [];
-  let query = `INSERT INTO "${model.tableName}" (`;
+  let query = `INSERT INTO ${model.qualifiedTableName} (`;
   for (const [columnIndex, column] of columnsToInsert.entries()) {
     if (columnIndex > 0) {
       query += ',';
@@ -428,7 +428,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
   }
 
   const params = [];
-  let query = `UPDATE "${model.tableName}" SET `;
+  let query = `UPDATE ${model.qualifiedTableName} SET `;
   let isFirstProperty = true;
   for (const [propertyName, value] of Object.entries(values)) {
     const column = model.columnsByPropertyName[propertyName];
@@ -554,7 +554,7 @@ export function getDeleteQueryAndParams<T extends Entity>({
   returnRecords?: boolean;
   returnSelect?: readonly (string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
 }): QueryAndParams {
-  let query = `DELETE FROM "${model.tableName}"`;
+  let query = `DELETE FROM ${model.qualifiedTableName}`;
 
   const { whereStatement, params } = buildWhereStatement({
     repositoriesByModelNameLowered,

@@ -5,6 +5,11 @@ export interface TableOptions {
   name?: string;
 
   /**
+   * Schema table belongs to in the database
+   */
+  schema?: string;
+
+  /**
    * Connection name to use for queries
    */
   connection?: string;
