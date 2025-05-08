@@ -27,6 +27,7 @@ export function table<T extends Entity>(dbNameOrTableOptions?: TableOptions | st
     const metadataStorage = getMetadataStorage<T>();
     const modelMetadata = new ModelMetadata({
       name: className,
+      schema: options.schema,
       type: classObject,
       tableName: options.name,
       readonly: options.readonly ?? false,

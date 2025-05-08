@@ -20,6 +20,7 @@ export * from './SimpleWithCreatedAtAndUpdatedAt.js';
 export * from './SimpleWithJson.js';
 export * from './SimpleWithOptionalEnum.js';
 export * from './SimpleWithRelationAndJson.js';
+export * from './SimpleWithSchema.js';
 export * from './SimpleWithSelfReference.js';
 export * from './SimpleWithStringCollection.js';
 export * from './SimpleWithStringId.js';

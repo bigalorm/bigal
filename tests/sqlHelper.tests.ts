@@ -25,6 +25,7 @@ import {
   SimpleWithCreatedAt,
   SimpleWithCreatedAtAndUpdatedAt,
   SimpleWithJson,
+  SimpleWithSchema,
   SimpleWithStringId,
   SimpleWithUpdatedAt,
   SimpleWithUUID,
@@ -47,6 +48,7 @@ interface RepositoriesByModelName {
   SimpleWithCreatedAt: IRepository<Entity>;
   SimpleWithCreatedAtAndUpdatedAt: IRepository<Entity>;
   SimpleWithJson: IRepository<Entity>;
+  SimpleWithSchema: IRepository<Entity>;
   SimpleWithStringId: IRepository<Entity>;
   SimpleWithUpdatedAt: IRepository<Entity>;
   SimpleWithUUID: IRepository<Entity>;
@@ -81,6 +83,7 @@ describe('sqlHelper', () => {
         SimpleWithCreatedAt,
         SimpleWithCreatedAtAndUpdatedAt,
         SimpleWithJson,
+        SimpleWithSchema,
         SimpleWithStringId,
         SimpleWithUpdatedAt,
         SimpleWithUUID,
@@ -145,6 +148,21 @@ describe('sqlHelper', () => {
         });
 
         query.should.equal(`SELECT "name","id" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`);
+        params.should.deep.equal([]);
+      });
+
+      it('should include schema if specified for model', () => {
+        const { query, params } = sqlHelper.getSelectQueryAndParams<SimpleWithSchema>({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithschema.model as ModelMetadata<SimpleWithSchema>,
+          select: ['name'],
+          where: {},
+          sorts: [],
+          limit: 1,
+          skip: 0,
+        });
+
+        query.should.equal(`SELECT "name","id" FROM "${repositoriesByModelNameLowered.simplewithschema.model.schema}"."${repositoriesByModelNameLowered.simplewithschema.model.tableName}" LIMIT 1`);
         params.should.deep.equal([]);
       });
     });
@@ -256,6 +274,16 @@ describe('sqlHelper', () => {
 
       query.should.equal(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "store_id"=$1`);
       params.should.deep.equal([store.id]);
+    });
+
+    it('should include schema if specified for model', () => {
+      const { query, params } = sqlHelper.getCountQueryAndParams({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.simplewithschema.model as ModelMetadata<SimpleWithSchema>,
+      });
+
+      query.should.equal(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered.simplewithschema.model.schema}"."${repositoriesByModelNameLowered.simplewithschema.model.tableName}"`);
+      params.should.deep.equal([]);
     });
   });
 
@@ -447,6 +475,21 @@ describe('sqlHelper', () => {
         `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"`,
       );
       params.should.deep.equal([name, [], store.id]);
+    });
+
+    it('should include schema if specified for model', () => {
+      const name = faker.string.uuid();
+      const { query } = sqlHelper.getInsertQueryAndParams({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.simplewithschema.model as ModelMetadata<SimpleWithSchema>,
+        values: {
+          name,
+        },
+      });
+
+      query.should.equal(
+        `INSERT INTO "${repositoriesByModelNameLowered.simplewithschema.model.schema}"."${repositoriesByModelNameLowered.simplewithschema.model.tableName}" ("name") VALUES ($1) RETURNING "id","name"`,
+      );
     });
 
     it('should cast value to jsonb if type=json and value is an array', () => {
@@ -1185,6 +1228,22 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name, store.id]);
     });
 
+    it('should include schema if specified for model', () => {
+      const name = faker.string.uuid();
+      const { query } = sqlHelper.getUpdateQueryAndParams({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.simplewithschema.model as ModelMetadata<SimpleWithSchema>,
+        where: {},
+        values: {
+          name,
+        },
+      });
+
+      query.should.equal(
+        `UPDATE "${repositoriesByModelNameLowered.simplewithschema.model.schema}"."${repositoriesByModelNameLowered.simplewithschema.model.tableName}" SET "name"=$1 RETURNING "id","name"`,
+      );
+    });
+
     it('should cast value to jsonb if type=json and value is an array', () => {
       // Please see https://github.com/brianc/node-postgres/issues/442 for details of why this is needed
       const name = faker.string.uuid();
@@ -1512,6 +1571,15 @@ describe('sqlHelper', () => {
         `DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" WHERE "store_id"=$1 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
       params.should.deep.equal([store.id]);
+    });
+
+    it('should include schema if specified for model', () => {
+      const { query } = sqlHelper.getDeleteQueryAndParams({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.simplewithschema.model as ModelMetadata<SimpleWithSchema>,
+      });
+
+      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.simplewithschema.model.schema}"."${repositoriesByModelNameLowered.simplewithschema.model.tableName}" RETURNING "id","name"`);
     });
 
     it('should return records if returnRecords=true', () => {

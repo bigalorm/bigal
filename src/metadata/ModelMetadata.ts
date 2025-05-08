@@ -13,6 +13,7 @@ export interface ModelMetadataOptions<T extends Entity> {
   name: string;
   type: EntityStatic<T>;
   connection?: string;
+  schema?: string;
   tableName?: string;
   readonly?: boolean;
 }
@@ -75,11 +76,17 @@ export class ModelMetadata<T extends Entity> {
     return this._versionDateColumns;
   }
 
+  public get qualifiedTableName(): string {
+    return `${this.schema ? `"${this.schema}".` : ''}"${this.tableName}"`;
+  }
+
   public name: string;
 
   public type: EntityStatic<T>;
 
   public connection?: string;
+
+  public schema?: string;
 
   public tableName: string;
 
@@ -93,12 +100,14 @@ export class ModelMetadata<T extends Entity> {
     name, //
     type,
     connection,
+    schema,
     tableName,
     readonly = false,
   }: ModelMetadataOptions<T>) {
     this.name = name;
     this.type = type;
     this.connection = connection;
+    this.schema = schema;
     this.tableName = tableName ?? _.snakeCase(name);
     this.readonly = readonly;
   }
