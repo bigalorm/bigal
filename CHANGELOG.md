@@ -1,3 +1,9 @@
+# [13.2.0](https://github.com/bigalorm/bigal/compare/v13.1.1...v13.2.0) (2025-05-08)
+
+### Features
+
+- add support for schemas ([#111](https://github.com/bigalorm/bigal/issues/111)) ([96af423](https://github.com/bigalorm/bigal/commit/96af423c5933fbc1e5b1860b7b1bac327a4b0357))
+
 ## [13.1.1](https://github.com/bigalorm/bigal/compare/v13.1.0...v13.1.1) (2025-05-05)
 
 # [13.1.0](https://github.com/bigalorm/bigal/compare/v13.0.11...v13.1.0) (2025-05-01)
