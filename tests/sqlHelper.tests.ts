@@ -151,7 +151,7 @@ describe('sqlHelper', () => {
         params.should.deep.equal([]);
       });
 
-      it('should schema if model specifies a schema', () => {
+      it('should include schema if specified for model', () => {
         const { query, params } = sqlHelper.getSelectQueryAndParams<SimpleWithSchema>({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.simplewithschema.model as ModelMetadata<SimpleWithSchema>,
