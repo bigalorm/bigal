@@ -33,7 +33,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "@types/pg": "8.11.14",
+    "@types/pg": "8.15.1",
     "lodash": "4.17.21",
     "pg": "8.15.6",
     "postgres-pool": "10.1.4"
@@ -46,15 +46,15 @@
     "@semantic-release/github": "11.0.2",
     "@semantic-release/npm": "12.0.1",
     "@semantic-release/release-notes-generator": "14.0.3",
-    "@types/chai": "5.2.1",
+    "@types/chai": "5.2.2",
     "@types/lodash": "4.17.16",
     "@types/mocha": "10.0.10",
     "@types/node": ">=22",
     "chai": "5.2.0",
     "eslint": "9.26.0",
-    "eslint-config-decent": "2.7.1",
+    "eslint-config-decent": "2.8.0",
     "husky": "9.1.7",
-    "lint-staged": "15.5.1",
+    "lint-staged": "16.0.0",
     "markdownlint-cli": "0.44.0",
     "mocha": "11.2.2",
     "npm-run-all2": "8.0.1",
