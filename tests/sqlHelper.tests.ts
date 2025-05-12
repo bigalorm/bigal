@@ -2,6 +2,7 @@ import assert from 'node:assert';
 
 import { faker } from '@faker-js/faker';
 import * as chai from 'chai';
+import 'chai/register-should.js';
 import { Pool } from 'postgres-pool';
 import { mock } from 'ts-mockito';
 
