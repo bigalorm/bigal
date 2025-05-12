@@ -30,7 +30,7 @@
   },
   "homepage": "https://github.com/bigalorm/bigal#readme",
   "engines": {
-    "node": ">=18"
+    "node": ">=20.11.0"
   },
   "dependencies": {
     "@types/pg": "8.15.1",
