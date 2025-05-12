@@ -1,3 +1,14 @@
+# [14.0.0](https://github.com/bigalorm/bigal/compare/v13.2.1...v14.0.0) (2025-05-12)
+
+- feat!: Remove Node.js v18 support ([#113](https://github.com/bigalorm/bigal/issues/113)) ([577e4c3](https://github.com/bigalorm/bigal/commit/577e4c321b7543866ec1c595ac2e812f3b6728d4))
+
+### BREAKING CHANGES
+
+- Drop support for Node.js v18. Minimum required version is now Node.js v20.
+
+* Updated engines field in package.json
+* Updated CI configuration to test on supported versions only
+
 ## [13.2.1](https://github.com/bigalorm/bigal/compare/v13.2.0...v13.2.1) (2025-05-12)
 
 # [13.2.0](https://github.com/bigalorm/bigal/compare/v13.1.1...v13.2.0) (2025-05-08)
