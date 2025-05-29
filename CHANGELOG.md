@@ -1,3 +1,10 @@
+## [14.0.1](https://github.com/bigalorm/bigal/compare/v14.0.0...v14.0.1) (2025-05-29)
+
+### Bug Fixes
+
+- **deps:** update dependency @types/pg to v8.15.2 ([#116](https://github.com/bigalorm/bigal/issues/116)) ([9b41deb](https://github.com/bigalorm/bigal/commit/9b41debca9f24b1e5dfc31ded00cd260de2c1dd4))
+- **deps:** update dependency postgres-pool to v10.1.6 ([#125](https://github.com/bigalorm/bigal/issues/125)) ([cf538b9](https://github.com/bigalorm/bigal/commit/cf538b9644876351d3978b3a4dae2cfde8a6bd1f))
+
 # [14.0.0](https://github.com/bigalorm/bigal/compare/v13.2.1...v14.0.0) (2025-05-12)
 
 - feat!: Remove Node.js v18 support ([#113](https://github.com/bigalorm/bigal/issues/113)) ([577e4c3](https://github.com/bigalorm/bigal/commit/577e4c321b7543866ec1c595ac2e812f3b6728d4))
