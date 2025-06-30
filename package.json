@@ -35,8 +35,8 @@
   "dependencies": {
     "@types/pg": "8.15.4",
     "lodash": "4.17.21",
-    "pg": "8.16.2",
-    "postgres-pool": "10.1.9"
+    "pg": "8.16.3",
+    "postgres-pool": "10.1.12"
   },
   "devDependencies": {
     "@faker-js/faker": "9.8.0",
@@ -51,16 +51,16 @@
     "@types/mocha": "10.0.10",
     "@types/node": ">=20",
     "chai": "5.2.0",
-    "eslint": "9.29.0",
-    "eslint-config-decent": "2.8.24",
+    "eslint": "9.30.0",
+    "eslint-config-decent": "2.8.31",
     "husky": "9.1.7",
     "lint-staged": "16.1.2",
     "markdownlint-cli": "0.45.0",
     "mocha": "11.7.1",
     "npm-run-all2": "8.0.4",
     "pinst": "3.0.0",
-    "prettier": "3.6.1",
-    "semantic-release": "24.2.5",
+    "prettier": "3.6.2",
+    "semantic-release": "24.2.6",
     "strict-event-emitter-types": "2.0.0",
     "ts-mockito": "2.6.1",
     "ts-node": "10.9.2",
