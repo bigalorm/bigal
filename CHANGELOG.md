@@ -1,3 +1,5 @@
+## [14.0.14](https://github.com/bigalorm/bigal/compare/v14.0.13...v14.0.14) (2025-07-21)
+
 ## [14.0.13](https://github.com/bigalorm/bigal/compare/v14.0.12...v14.0.13) (2025-07-21)
 
 ### Bug Fixes
