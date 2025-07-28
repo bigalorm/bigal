@@ -21,7 +21,7 @@
     },
     {
       matchDepTypes: ['devDependencies'],
-      schedule: ['schedule:nonOfficeHours'],
+      schedule: ['* 0-4,22-23 * * 1-5', '* * * * 0,6'],
       groupName: 'dev dependencies',
     },
     {
