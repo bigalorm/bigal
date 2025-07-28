@@ -36,7 +36,7 @@
     "@types/pg": "8.15.4",
     "lodash": "4.17.21",
     "pg": "8.16.3",
-    "postgres-pool": "10.1.18"
+    "postgres-pool": "10.1.19"
   },
   "devDependencies": {
     "@faker-js/faker": "9.9.0",
@@ -51,8 +51,8 @@
     "@types/mocha": "10.0.10",
     "@types/node": ">=20",
     "chai": "5.2.1",
-    "eslint": "9.31.0",
-    "eslint-config-decent": "2.8.48",
+    "eslint": "9.32.0",
+    "eslint-config-decent": "2.8.54",
     "husky": "9.1.7",
     "lint-staged": "16.1.2",
     "markdownlint-cli": "0.45.0",
@@ -65,7 +65,7 @@
     "ts-mockito": "2.6.1",
     "ts-node": "10.9.2",
     "typescript": "5.8.3",
-    "unbuild": "3.5.0"
+    "unbuild": "3.6.0"
   },
   "scripts": {
     "build": "unbuild",
