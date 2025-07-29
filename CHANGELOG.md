@@ -1,3 +1,9 @@
+## [14.0.16](https://github.com/bigalorm/bigal/compare/v14.0.15...v14.0.16) (2025-07-29)
+
+### Bug Fixes
+
+- **deps:** update dependency @types/pg to v8.15.5 ([#151](https://github.com/bigalorm/bigal/issues/151)) ([6f22543](https://github.com/bigalorm/bigal/commit/6f22543983f243b766113293c96675a02828a18e))
+
 ## [14.0.15](https://github.com/bigalorm/bigal/compare/v14.0.14...v14.0.15) (2025-07-28)
 
 ## [14.0.14](https://github.com/bigalorm/bigal/compare/v14.0.13...v14.0.14) (2025-07-21)
