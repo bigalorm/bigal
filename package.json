@@ -64,7 +64,7 @@
     "strict-event-emitter-types": "2.0.0",
     "ts-mockito": "2.6.1",
     "ts-node": "10.9.2",
-    "typescript": "5.8.3",
+    "typescript": "5.9.2",
     "unbuild": "3.6.0"
   },
   "scripts": {
