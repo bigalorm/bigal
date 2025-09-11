@@ -2172,6 +2172,25 @@ describe('sqlHelper', () => {
       params.should.deep.equal([now]);
     });
 
+    it('should handle date range', () => {
+      const now = new Date();
+      const future = faker.date.future();
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
+        where: {
+          createdAt: {
+            '>=': now,
+            '<': future,
+          },
+        },
+      });
+
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "created_at">=$1 AND "created_at"<$2');
+      params.should.deep.equal([now, future]);
+    });
+
     it('should handle or', () => {
       const name = faker.string.uuid();
       const store = faker.number.int();

@@ -278,6 +278,23 @@ const items = await PersonRepository.find().where({
 });
 ```
 
+#### Example of a date range (AND statement)
+
+```ts
+const items = await PersonRepository.find().where({
+  createdAt: {
+    '>=': startDate,
+    '<': endDate,
+  },
+});
+```
+
+Equivalent to:
+
+```postgresql
+select id,first_name as firstName,last_name as lastName,created_at as createdAt from person where created_at >= $1 AND created_at < $2
+```
+
 #### Fetch multiple objects and perform a db sort before returning result
 
 ```ts
