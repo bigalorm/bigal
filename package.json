@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "14.0.41",
+  "version": "14.0.45",
   "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
@@ -36,14 +36,14 @@
     "@types/pg": "8.15.5",
     "lodash": "4.17.21",
     "pg": "8.16.3",
-    "postgres-pool": "10.1.25"
+    "postgres-pool": "10.1.27"
   },
   "devDependencies": {
     "@faker-js/faker": "10.0.0",
     "@semantic-release/changelog": "6.0.3",
     "@semantic-release/commit-analyzer": "13.0.1",
     "@semantic-release/git": "10.0.1",
-    "@semantic-release/github": "11.0.5",
+    "@semantic-release/github": "11.0.6",
     "@semantic-release/npm": "12.0.2",
     "@semantic-release/release-notes-generator": "14.1.0",
     "@types/chai": "5.2.2",
@@ -60,7 +60,7 @@
     "npm-run-all2": "8.0.4",
     "pinst": "3.0.0",
     "prettier": "3.6.2",
-    "semantic-release": "24.2.7",
+    "semantic-release": "24.2.8",
     "strict-event-emitter-types": "2.0.0",
     "ts-mockito": "2.6.1",
     "ts-node": "10.9.2",
