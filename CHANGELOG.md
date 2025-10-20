@@ -1,3 +1,9 @@
+## [14.0.68](https://github.com/bigalorm/bigal/compare/v14.0.67...v14.0.68) (2025-10-20)
+
+### Bug Fixes
+
+- **deps:** update dependency postgres-pool to v10.1.32 ([#203](https://github.com/bigalorm/bigal/issues/203)) ([860a14d](https://github.com/bigalorm/bigal/commit/860a14d8c7928728928c2f974a53a3f99fe4dc09))
+
 ## [14.0.67](https://github.com/bigalorm/bigal/compare/v14.0.66...v14.0.67) (2025-10-18)
 
 ## [14.0.66](https://github.com/bigalorm/bigal/compare/v14.0.65...v14.0.66) (2025-10-15)
