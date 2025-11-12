@@ -50,7 +50,7 @@
     "@types/lodash": "4.17.20",
     "@types/mocha": "10.0.10",
     "@types/node": ">=20",
-    "chai": "6.2.0",
+    "chai": "6.2.1",
     "eslint": "9.39.1",
     "eslint-config-decent": "2.8.64",
     "husky": "9.1.7",
