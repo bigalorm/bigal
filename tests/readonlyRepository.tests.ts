@@ -2148,6 +2148,29 @@ describe('ReadonlyRepository', () => {
         results[0]!.levelTwo.levelThree.toUpperCase().should.equal(levelThreeItem.id.toUpperCase());
       });
 
+      it('should support populating a single relation as QueryResult with partial select from chained select', async () => {
+        const levelOneResult = _.pick(levelOneItem, 'id', 'one', 'levelTwo');
+        const levelTwoResult = _.pick(levelTwoItem, 'id', 'two', 'levelThree');
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([levelOneResult]), getQueryResult([levelTwoResult]));
+
+        const results = await LevelOneRepository.find()
+          .select(['one', 'levelTwo'])
+          .populate('levelTwo', {
+            select: ['two', 'levelThree'],
+          });
+        verify(mockedPool.query(anyString(), anything())).twice();
+        results.should.deep.equal([
+          {
+            ...levelOneResult,
+            levelTwo: levelTwoResult,
+          },
+        ]);
+
+        results[0]!.levelTwo.levelThree.should.equal(levelThreeItem.id);
+        results[0]!.levelTwo.levelThree.toUpperCase().should.equal(levelThreeItem.id.toUpperCase());
+      });
+
       it('should support populating a single relation with partial select and sort', async () => {
         const store1Result = _.pick(store1, 'id');
         const store2Result = _.pick(store2, 'id');
