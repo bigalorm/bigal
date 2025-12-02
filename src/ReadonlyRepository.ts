@@ -128,6 +128,16 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
     return {
       /**
+       * Columns to select from the entity
+       * @param {string[]} keys - Columns to select from the entity
+       * @returns Query instance
+       */
+      select<TKeys extends string & keyof T>(keys: TKeys[]): FindOneResult<T, Pick<T, TKeys>> {
+        select = new Set(keys);
+        // TypeScript cast for chaining - this is safe as per FindResult generic contract
+        return this as unknown as FindOneResult<T, Pick<T, TKeys>>;
+      },
+      /**
        * Filters the query
        * @param {object} value - Object representing the where query
        * @returns Query instance
@@ -319,6 +329,16 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     const modelInstance = this;
 
     return {
+      /**
+       * Columns to select from the entity
+       * @param {string[]} keys - Columns to select from the entity
+       * @returns Query instance
+       */
+      select<TKeys extends string & keyof T>(keys: TKeys[]): FindResult<T, Pick<T, TKeys>> {
+        select = new Set(keys);
+        // TypeScript cast for chaining - this is safe as per FindResult generic contract
+        return this as unknown as FindResult<T, Pick<T, TKeys>>;
+      },
       /**
        * Filters the query
        * @param {object} value - Object representing the where query
