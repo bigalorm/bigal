@@ -283,6 +283,19 @@ describe('ReadonlyRepository', () => {
       params.should.deep.equal([]);
     });
 
+    it('should support call with chained select', async () => {
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      const result = await ProductRepository.findOne().select(['name', 'sku']);
+      assert(result);
+      result.should.deep.equal(product);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "name","sku","id" FROM "products" LIMIT 1');
+      assert(params);
+      params.should.deep.equal([]);
+    });
+
     describe('Parse number columns', () => {
       it('should parse integer columns from integer query value', async () => {
         const id = faker.number.int();
@@ -1883,6 +1896,27 @@ describe('ReadonlyRepository', () => {
       productResult.store.name.should.equal(store.name);
     });
 
+    it('should support call with chained select', async () => {
+      const products = [
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
+      ];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      const result = await ProductRepository.find().select(['name', 'sku']);
+      assert(result);
+      result.should.deep.equal(products);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "name","sku","id" FROM "products"');
+      assert(params);
+      params.should.deep.equal([]);
+    });
+
     describe('populate', () => {
       let store1: QueryResult<Store>;
       let store2: QueryResult<Store>;
@@ -2102,6 +2136,29 @@ describe('ReadonlyRepository', () => {
         }).populate('levelTwo', {
           select: ['two', 'levelThree'],
         });
+        verify(mockedPool.query(anyString(), anything())).twice();
+        results.should.deep.equal([
+          {
+            ...levelOneResult,
+            levelTwo: levelTwoResult,
+          },
+        ]);
+
+        results[0]!.levelTwo.levelThree.should.equal(levelThreeItem.id);
+        results[0]!.levelTwo.levelThree.toUpperCase().should.equal(levelThreeItem.id.toUpperCase());
+      });
+
+      it('should support populating a single relation as QueryResult with partial select from chained select', async () => {
+        const levelOneResult = _.pick(levelOneItem, 'id', 'one', 'levelTwo');
+        const levelTwoResult = _.pick(levelTwoItem, 'id', 'two', 'levelThree');
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([levelOneResult]), getQueryResult([levelTwoResult]));
+
+        const results = await LevelOneRepository.find()
+          .select(['one', 'levelTwo'])
+          .populate('levelTwo', {
+            select: ['two', 'levelThree'],
+          });
         verify(mockedPool.query(anyString(), anything())).twice();
         results.should.deep.equal([
           {
