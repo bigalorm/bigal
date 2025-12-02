@@ -1,3 +1,9 @@
+# [14.1.0](https://github.com/bigalorm/bigal/compare/v14.0.87...v14.1.0) (2025-12-02)
+
+### Features
+
+- Add select as a return on FindResult and FindOneResult ([#223](https://github.com/bigalorm/bigal/issues/223)) ([7fa0e60](https://github.com/bigalorm/bigal/commit/7fa0e6047a53bbb901677246e3b31acdd41be636))
+
 ## [14.0.87](https://github.com/bigalorm/bigal/compare/v14.0.86...v14.0.87) (2025-11-30)
 
 ## [14.0.86](https://github.com/bigalorm/bigal/compare/v14.0.85...v14.0.86) (2025-11-29)
