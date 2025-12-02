@@ -7,6 +7,7 @@ import type { Sort } from './Sort.js';
 import type { WhereQuery } from './WhereQuery.js';
 
 export interface FindResult<T extends Entity, TReturn> extends PromiseLike<TReturn[]> {
+  select<TKeys extends string & keyof T>(keys: TKeys[]): FindResult<T, Pick<T, TKeys>>;
   where(args: WhereQuery<T>): FindResult<T, TReturn>;
   populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T, TPopulateType extends GetValueType<T[TProperty], Entity>, TPopulateSelectKeys extends string & keyof TPopulateType>(
     propertyName: TProperty,
