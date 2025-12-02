@@ -283,6 +283,19 @@ describe('ReadonlyRepository', () => {
       params.should.deep.equal([]);
     });
 
+    it('should support call with chained select', async () => {
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+      const result = await ProductRepository.findOne().select(['name', 'sku']);
+      assert(result);
+      result.should.deep.equal(product);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "name","sku","id" FROM "products" LIMIT 1');
+      assert(params);
+      params.should.deep.equal([]);
+    });
+
     describe('Parse number columns', () => {
       it('should parse integer columns from integer query value', async () => {
         const id = faker.number.int();
@@ -1881,6 +1894,27 @@ describe('ReadonlyRepository', () => {
       productResult.store.id.should.equal(store.id);
       assert(productResult.store.name);
       productResult.store.name.should.equal(store.name);
+    });
+
+    it('should support call with chained select', async () => {
+      const products = [
+        generator.product({
+          store: store.id,
+        }),
+        generator.product({
+          store: store.id,
+        }),
+      ];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      const result = await ProductRepository.find().select(['name', 'sku']);
+      assert(result);
+      result.should.deep.equal(products);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "name","sku","id" FROM "products"');
+      assert(params);
+      params.should.deep.equal([]);
     });
 
     describe('populate', () => {
