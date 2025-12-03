@@ -59,7 +59,7 @@
     "mocha": "11.7.5",
     "npm-run-all2": "8.0.4",
     "pinst": "3.0.0",
-    "prettier": "3.7.3",
+    "prettier": "3.7.4",
     "semantic-release": "24.2.9",
     "strict-event-emitter-types": "2.0.0",
     "ts-mockito": "2.6.1",
