@@ -58,12 +58,12 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
       return [];
     }
 
-    if (this._type.beforeCreate) {
+    const beforeCreate = this._type.beforeCreate;
+    if (beforeCreate) {
       if (Array.isArray(values)) {
-        // @ts-expect-error - Promise.void will not be hit, but is needed
-        values = await Promise.all(values.map((value) => (this._type.beforeCreate ? this._type.beforeCreate(value) : Promise.resolve())));
+        values = await Promise.all(values.map((value) => beforeCreate(value)));
       } else {
-        values = await this._type.beforeCreate(values);
+        values = await beforeCreate(values);
       }
     }
 
