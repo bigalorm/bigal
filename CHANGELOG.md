@@ -1,3 +1,9 @@
+## [14.1.2](https://github.com/bigalorm/bigal/compare/v14.1.1...v14.1.2) (2025-12-03)
+
+### Bug Fixes
+
+- Use async callback to satisfy await-thenable lint rule ([31daa0a](https://github.com/bigalorm/bigal/commit/31daa0a7c596e71999d222acb12e05ec5a412a55))
+
 ## [14.1.1](https://github.com/bigalorm/bigal/compare/v14.1.0...v14.1.1) (2025-12-03)
 
 # [14.1.0](https://github.com/bigalorm/bigal/compare/v14.0.87...v14.1.0) (2025-12-02)
