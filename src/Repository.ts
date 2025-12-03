@@ -61,7 +61,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
     const beforeCreate = this._type.beforeCreate;
     if (beforeCreate) {
       if (Array.isArray(values)) {
-        values = await Promise.all(values.map((value) => beforeCreate(value)));
+        values = await Promise.all(values.map(async (value) => beforeCreate(value)));
       } else {
         values = await beforeCreate(values);
       }
