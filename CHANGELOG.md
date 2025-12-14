@@ -1,3 +1,5 @@
+## [14.1.14](https://github.com/bigalorm/bigal/compare/v14.1.13...v14.1.14) (2025-12-14)
+
 ## [14.1.13](https://github.com/bigalorm/bigal/compare/v14.1.12...v14.1.13) (2025-12-14)
 
 ## [14.1.12](https://github.com/bigalorm/bigal/compare/v14.1.11...v14.1.12) (2025-12-13)
