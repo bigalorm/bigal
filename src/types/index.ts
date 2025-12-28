@@ -1,4 +1,5 @@
 export * from './ClassLike.js';
+export * from './PoolLike.js';
 export * from './CreateUpdateParams.js';
 export * from './EntityPrimitiveOrId.js';
 export * from './ExcludeEntityCollections.js';

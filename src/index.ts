@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import type { Pool } from 'postgres-pool';
 
 import type { Entity, EntityStatic } from './Entity.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
@@ -8,6 +7,7 @@ import type { ColumnMetadata, ColumnModifierMetadata } from './metadata/index.js
 import { ColumnModelMetadata, ColumnTypeMetadata, getMetadataStorage, ModelMetadata } from './metadata/index.js';
 import { ReadonlyRepository } from './ReadonlyRepository.js';
 import { Repository } from './Repository.js';
+import type { PoolLike } from './types/index.js';
 
 export * from './decorators/index.js';
 export * from './errors/index.js';
@@ -21,8 +21,8 @@ export * from './ReadonlyRepository.js';
 export * from './Repository.js';
 
 export interface IConnection {
-  pool: Pool;
-  readonlyPool?: Pool;
+  pool: PoolLike;
+  readonlyPool?: PoolLike;
 }
 
 export interface InitializeOptions extends IConnection {

@@ -1,5 +1,4 @@
 import _ from 'lodash';
-import type { Pool } from 'postgres-pool';
 
 import type { Entity, EntityFieldValue, EntityStatic } from './Entity.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
@@ -8,14 +7,14 @@ import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata,
 import type { CountArgs } from './query/CountArgs.js';
 import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, SortObject, SortObjectValue, WhereQuery } from './query/index.js';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
-import type { GetValueType, OmitEntityCollections, OmitFunctions, PickAsType, PickByValueType, PickFunctions, Populated, QueryResult } from './types/index.js';
+import type { GetValueType, OmitEntityCollections, OmitFunctions, PickAsType, PickByValueType, PickFunctions, PoolLike, Populated, QueryResult } from './types/index.js';
 
 export interface IRepositoryOptions<T extends Entity> {
   modelMetadata: ModelMetadata<T>;
   type: EntityStatic<T>;
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
-  pool: Pool;
-  readonlyPool?: Pool;
+  pool: PoolLike;
+  readonlyPool?: PoolLike;
 }
 
 interface Populate {
@@ -25,7 +24,7 @@ interface Populate {
   sort?: SortObject<Entity> | string;
   skip?: number;
   limit?: number;
-  pool?: Pool;
+  pool?: PoolLike;
 }
 
 type PrimaryId = number | string;
@@ -35,9 +34,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
   protected _type: EntityStatic<T>;
 
-  protected _pool: Pool;
+  protected _pool: PoolLike;
 
-  protected _readonlyPool: Pool;
+  protected _readonlyPool: PoolLike;
 
   protected _repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
 
@@ -79,7 +78,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     let select: Set<string> | undefined;
     let where: WhereQuery<T> = {};
     let sort: SortObject<T> | string | null = null;
-    let poolOverride: Pool | undefined;
+    let poolOverride: PoolLike | undefined;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
     for (const [name, value] of Object.entries(args)) {
       let isWhereCriteria = false;
@@ -98,7 +97,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           sort = value as SortObject<T> | string;
           break;
         case 'pool':
-          poolOverride = value as Pool;
+          poolOverride = value as PoolLike;
           break;
         default:
           select = undefined;
@@ -280,7 +279,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     let sort: SortObject<T> | string | null = null;
     let skip: number | null = null;
     let limit: number | null = null;
-    let poolOverride: Pool | undefined;
+    let poolOverride: PoolLike | undefined;
     // Args can be a FindArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
     for (const [name, value] of Object.entries(args)) {
       let isWhereCriteria = false;
@@ -305,7 +304,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           limit = value as number;
           break;
         case 'pool':
-          poolOverride = value as Pool;
+          poolOverride = value as PoolLike;
           break;
         default:
           select = undefined;
@@ -428,7 +427,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * @param {number} [limit] - Number of records to return
        * @returns Query instance
        */
-      paginate({ page = 1, limit: paginateLimit = 10 }: PaginateOptions): FindResult<T, TReturn> {
+      paginate({ page, limit: paginateLimit }: PaginateOptions): FindResult<T, TReturn> {
         const safePage = Math.max(page, 1);
         return this.skip(safePage * paginateLimit - paginateLimit).limit(paginateLimit);
       },
@@ -485,7 +484,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     const { stack } = new Error(`${this.model.name}.count()`);
 
     let where: WhereQuery<T> = {};
-    let poolOverride: Pool | undefined;
+    let poolOverride: PoolLike | undefined;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
     for (const [name, value] of Object.entries(args)) {
       let isWhereCriteria = false;
@@ -495,7 +494,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           where = value as WhereQuery<T>;
           break;
         case 'pool':
-          poolOverride = value as Pool;
+          poolOverride = value as PoolLike;
           break;
         default:
           where = args as WhereQuery<T>;

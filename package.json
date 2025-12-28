@@ -33,10 +33,7 @@
     "node": ">=20.11.0"
   },
   "dependencies": {
-    "@types/pg": "8.16.0",
-    "lodash": "4.17.21",
-    "pg": "8.16.3",
-    "postgres-pool": "10.1.33"
+    "lodash": "4.17.21"
   },
   "devDependencies": {
     "@faker-js/faker": "10.1.0",
@@ -62,6 +59,7 @@
     "prettier": "3.7.4",
     "semantic-release": "25.0.2",
     "strict-event-emitter-types": "2.0.0",
+    "postgres-pool": "10.1.33",
     "ts-mockito": "2.6.1",
     "ts-node": "10.9.2",
     "typescript": "5.9.3",

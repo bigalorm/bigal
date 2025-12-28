@@ -19,8 +19,78 @@ This ORM does not:
 ## Install
 
 ```sh
-npm install pg postgres-pool bigal
+npm install bigal
 ```
+
+You'll also need a PostgreSQL driver. Choose one of the following:
+
+```sh
+# Option 1: postgres-pool (recommended)
+npm install postgres-pool
+
+# Option 2: node-postgres
+npm install pg
+
+# Option 3: Neon serverless
+npm install @neondatabase/serverless
+```
+
+## Using Alternative PostgreSQL Drivers
+
+BigAl is compatible with any PostgreSQL driver that implements the standard `pool.query()` method, including:
+
+- [postgres-pool](https://www.npmjs.com/package/postgres-pool) (default)
+- [pg](https://www.npmjs.com/package/pg) (node-postgres)
+- [@neondatabase/serverless](https://www.npmjs.com/package/@neondatabase/serverless)
+
+### Using with Neon Serverless
+
+```ts
+import { Pool } from '@neondatabase/serverless';
+import { initialize, Repository } from 'bigal';
+import { Product, Store } from './models';
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+const repositoriesByName = initialize({
+  models: [Product, Store],
+  pool,
+});
+```
+
+### Using with node-postgres (pg)
+
+```ts
+import { Pool } from 'pg';
+import { initialize, Repository } from 'bigal';
+import { Product, Store } from './models';
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+const repositoriesByName = initialize({
+  models: [Product, Store],
+  pool,
+});
+```
+
+### Type Requirements
+
+Any pool implementation must satisfy the `PoolLike` interface:
+
+```ts
+import type { PoolLike, PoolQueryResult } from 'bigal';
+
+interface PoolQueryResult<TRow extends Record<string, unknown>> {
+  rows: TRow[];
+  rowCount: number | null;
+}
+
+interface PoolLike {
+  query<TRow extends Record<string, unknown> = Record<string, unknown>>(text: string, values?: readonly unknown[]): Promise<PoolQueryResult<TRow>>;
+}
+```
+
+All standard PostgreSQL drivers (pg, postgres-pool, @neondatabase/serverless) satisfy this interface.
 
 ## Configuring
 

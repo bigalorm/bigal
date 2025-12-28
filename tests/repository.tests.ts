@@ -4,21 +4,20 @@ import { faker } from '@faker-js/faker';
 import * as chai from 'chai';
 import 'chai/register-should.js';
 import _ from 'lodash';
-import type { QueryResult as PostgresQueryResult, QueryResultRow } from 'pg';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
-import type { CreateUpdateParams, QueryResult, Repository } from '../src/index.js';
+import type { CreateUpdateParams, PoolQueryResult, QueryResult, QueryResultRow, Repository } from '../src/index.js';
 import { initialize } from '../src/index.js';
 
 import { Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store } from './models/index.js';
 import * as generator from './utils/generator.js';
 
-function getQueryResult<T extends QueryResultRow>(rows: T[] = []): PostgresQueryResult<T> {
+function getQueryResult<T extends QueryResultRow>(rows: T[] = []): PoolQueryResult<T> & { command: string; oid: number; fields: never[] } {
   return {
     command: 'select',
-    rowCount: 1,
-    oid: 1,
+    rowCount: rows.length,
+    oid: 0,
     fields: [],
     rows,
   };
