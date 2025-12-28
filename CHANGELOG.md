@@ -1,3 +1,18 @@
+# [15.0.0](https://github.com/bigalorm/bigal/compare/v14.1.26...v15.0.0) (2025-12-28)
+
+- feat!: support pluggable PostgreSQL drivers ([7638343](https://github.com/bigalorm/bigal/commit/76383432acc8ee1bdf48a8c60a8e5fa10176bd69))
+
+### BREAKING CHANGES
+
+- pg and postgres-pool are no longer bundled dependencies.
+  Users must now install their preferred PostgreSQL driver separately.
+
+* Add PoolLike interface for driver-agnostic pool support
+* Support pg, postgres-pool, @neondatabase/serverless, or any compatible driver
+* Remove pg and @types/pg from dependencies
+* Move postgres-pool to devDependencies
+* Update README with driver installation options
+
 ## [14.1.26](https://github.com/bigalorm/bigal/compare/v14.1.25...v14.1.26) (2025-12-25)
 
 ## [14.1.25](https://github.com/bigalorm/bigal/compare/v14.1.24...v14.1.25) (2025-12-25)
