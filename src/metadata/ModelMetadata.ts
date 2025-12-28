@@ -1,6 +1,5 @@
-import _ from 'lodash';
-
 import type { Entity, EntityStatic } from '../Entity.js';
+import { snakeCase } from '../utils/index.js';
 
 import type { ColumnCollectionMetadata } from './ColumnCollectionMetadata.js';
 import type { ColumnModelMetadata } from './ColumnModelMetadata.js';
@@ -108,7 +107,7 @@ export class ModelMetadata<T extends Entity> {
     this.type = type;
     this.connection = connection;
     this.schema = schema;
-    this.tableName = tableName ?? _.snakeCase(name);
+    this.tableName = tableName ?? snakeCase(name);
     this.readonly = readonly;
   }
 }

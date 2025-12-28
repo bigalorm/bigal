@@ -1,5 +1,3 @@
-import _ from 'lodash';
-
 import type { Entity } from './Entity.js';
 import type { IRepository } from './IRepository.js';
 import type { CreateOptions } from './query/CreateOptions.js';
@@ -54,7 +52,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
       throw new Error(`${this.model.name} is readonly.`);
     }
 
-    if (_.isArray(values) && !values.length) {
+    if (Array.isArray(values) && !values.length) {
       return [];
     }
 
@@ -90,11 +88,11 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
 
     const results = await this._pool.query<Partial<QueryResult<T>>>(query, params);
     if (returnRecords) {
-      if (_.isArray(values)) {
+      if (Array.isArray(values)) {
         return this._buildInstances(results.rows);
       }
 
-      const firstResult = _.first(results.rows);
+      const firstResult = results.rows[0];
       if (firstResult) {
         return this._buildInstance(firstResult);
       }
@@ -139,7 +137,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
       throw new Error(`${this.model.name} is readonly.`);
     }
 
-    if (_.isString(where)) {
+    if (typeof where === 'string') {
       throw new Error('The query cannot be a string, it must be an object');
     }
 
@@ -229,7 +227,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
         resolve: (result: QueryResult<T>[] | void) => PromiseLike<TResult> | TResult,
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
       ): Promise<TErrorResult | TResult> {
-        if (_.isString(where)) {
+        if (typeof where === 'string') {
           return reject(new Error('The query cannot be a string, it must be an object'));
         }
 

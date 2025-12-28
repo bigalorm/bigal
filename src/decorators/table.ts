@@ -1,7 +1,6 @@
-import _ from 'lodash';
-
 import type { Entity, EntityStatic } from '../Entity.js';
 import { getMetadataStorage, ModelMetadata } from '../metadata/index.js';
+import { snakeCase } from '../utils/index.js';
 
 import type { TableOptions } from './TableOptions.js';
 
@@ -22,7 +21,7 @@ export function table<T extends Entity>(dbNameOrTableOptions?: TableOptions | st
     }
 
     options ??= {} as TableOptions;
-    options.name ??= dbTableName ?? _.snakeCase(className);
+    options.name ??= dbTableName ?? snakeCase(className);
 
     const metadataStorage = getMetadataStorage<T>();
     const modelMetadata = new ModelMetadata({

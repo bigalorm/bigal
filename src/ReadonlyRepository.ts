@@ -1,5 +1,3 @@
-import _ from 'lodash';
-
 import type { Entity, EntityFieldValue, EntityStatic } from './Entity.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
@@ -8,6 +6,7 @@ import type { CountArgs } from './query/CountArgs.js';
 import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, SortObject, SortObjectValue, WhereQuery } from './query/index.js';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
 import type { GetValueType, OmitEntityCollections, OmitFunctions, PickAsType, PickByValueType, PickFunctions, PoolLike, Populated, QueryResult } from './types/index.js';
+import { groupBy, keyBy } from './utils/index.js';
 
 export interface IRepositoryOptions<T extends Entity> {
   modelMetadata: ModelMetadata<T>;
@@ -214,7 +213,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
       ): Promise<TErrorResult | TResult> {
         try {
-          if (_.isString(where)) {
+          if (typeof where === 'string') {
             return await reject(new Error('The query cannot be a string, it must be an object'));
           }
 
@@ -230,7 +229,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
           const pool = poolOverride ?? modelInstance._readonlyPool;
           const results = await pool.query<Partial<QueryResult<T>>>(query, params);
-          const firstResult = _.first(results.rows);
+          const firstResult = results.rows[0];
           if (firstResult) {
             const result = modelInstance._buildInstance(firstResult);
 
@@ -436,7 +435,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
       ): Promise<TErrorResult | TResult> {
         try {
-          if (_.isString(where)) {
+          if (typeof where === 'string') {
             return await reject(new Error('The query cannot be a string, it must be an object'));
           }
 
@@ -535,7 +534,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           const pool = poolOverride ?? modelInstance._readonlyPool;
           const result = await pool.query<{ count: string }>(query, params);
 
-          const firstResult = _.first(result.rows);
+          const firstResult = result.rows[0];
           const originalValue = firstResult ? firstResult.count : 0;
           return await resolve(Number(originalValue));
         } catch (ex) {
@@ -553,20 +552,16 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
   }
 
   protected _buildInstance(row: Partial<QueryResult<T>>): QueryResult<T> {
-    if (_.isNil(row)) {
-      return row;
-    }
-
     const instance = new this._type();
     Object.assign(instance, row);
 
     // NOTE: Number fields may be strings coming from the db. In those cases, try to convert the value to Number
     for (const name of this._floatProperties) {
       const originalValue = row[name as keyof QueryResult<T>] as number | string | null | undefined;
-      if (!_.isNil(originalValue) && typeof originalValue === 'string') {
+      if (originalValue != null && typeof originalValue === 'string') {
         try {
           const value = Number(originalValue);
-          if (_.isFinite(value) && value.toString() === originalValue) {
+          if (Number.isFinite(value) && value.toString() === originalValue) {
             // @ts-expect-error - string cannot be used to index type T
             instance[name] = value;
           }
@@ -578,11 +573,11 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
     for (const name of this._intProperties) {
       const originalValue = row[name as keyof QueryResult<T>] as number | string | null | undefined;
-      if (!_.isNil(originalValue) && typeof originalValue === 'string') {
+      if (originalValue != null && typeof originalValue === 'string') {
         try {
           const value = Number(originalValue);
-          if (_.isFinite(value) && value.toString() === originalValue) {
-            const valueAsInt = _.toInteger(value);
+          if (Number.isFinite(value) && value.toString() === originalValue) {
+            const valueAsInt = Math.trunc(value);
             if (Number.isSafeInteger(valueAsInt)) {
               // @ts-expect-error - string cannot be used to index type T
               instance[name] = valueAsInt;
@@ -598,10 +593,6 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
   }
 
   protected _buildInstances(rows: Partial<QueryResult<T>>[]): QueryResult<T>[] {
-    if (_.isNil(rows)) {
-      return [];
-    }
-
     return rows.map((row: Partial<QueryResult<T>>) => this._buildInstance(row));
   }
 
@@ -617,7 +608,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             descending: /desc/i.test(parts.join('')),
           });
         }
-      } else if (_.isString(sorts)) {
+      } else if (typeof sorts === 'string') {
         for (const sort of sorts.split(',')) {
           const parts = sort.trim().split(' ');
           const propertyName = parts.shift() as string & keyof OmitFunctions<OmitEntityCollections<T>>;
@@ -626,7 +617,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             descending: /desc/i.test(parts.join('')),
           });
         }
-      } else if (_.isObject(sorts)) {
+      } else if (typeof sorts === 'object') {
         for (const [propertyName, orderValue] of Object.entries(sorts)) {
           let descending = false;
           const order = orderValue as SortObjectValue;
@@ -677,7 +668,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         const entityIds = new Set<EntityFieldValue>();
         for (const entity of entities) {
           const id = entity[primaryKeyColumn.propertyName as keyof QueryResult<T>] as EntityFieldValue;
-          if (_.isNil(id)) {
+          if (id == null) {
             throw new Error(`Primary key (${primaryKeyColumn.propertyName}) has no value for entity ${column.target}.`);
           }
 
@@ -745,7 +736,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       pool: populate.pool,
     } as FindArgs<Entity>);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const populateResultsById = _.keyBy(populateResults, populateRepository.model.primaryKeyColumn.propertyName) as Record<number | string, any>;
+    const populateResultsById = keyBy(populateResults, populateRepository.model.primaryKeyColumn.propertyName) as Record<number | string, any>;
 
     for (const entity of entities) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-member-access
@@ -786,7 +777,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const populateResultsByEntityId = _.groupBy(populateResults, column.via) as Record<PrimaryId, any>;
+      const populateResultsByEntityId = groupBy(populateResults, column.via) as Record<PrimaryId, any>;
       for (const entity of entities) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-assignment
         const id = entity[primaryKeyPropertyName] as any;
@@ -849,12 +840,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       populateIdsByEntityId[entityId] = entityPopulateIds;
     }
 
-    const populateWhere = _.merge(
-      {
-        [populateModelPrimaryKeyPropertyName]: Array.from(populateIds),
-      },
-      populate.where,
-    );
+    const populateWhere = {
+      [populateModelPrimaryKeyPropertyName]: Array.from(populateIds),
+      ...populate.where,
+    };
 
     const populateResults = await populateRepository.find({
       select: populate.select,
@@ -865,7 +854,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       pool: populate.pool,
     } as FindArgs<Entity>);
 
-    const populateResultsById = _.keyBy(populateResults, populateModelPrimaryKeyPropertyName) as Record<PrimaryId, Entity>;
+    const populateResultsById = keyBy(populateResults, populateModelPrimaryKeyPropertyName as string) as Record<PrimaryId, Entity>;
 
     for (const entity of entities) {
       const populatedItems = [];

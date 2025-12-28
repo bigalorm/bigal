@@ -1,8 +1,7 @@
-import _ from 'lodash';
-
 import type { ColumnModifierMetadata } from '../metadata/index.js';
 import { ColumnModelMetadata, ColumnTypeMetadata, getMetadataStorage } from '../metadata/index.js';
 import type { ClassLike } from '../types/index.js';
+import { snakeCase } from '../utils/index.js';
 
 import type { ColumnModelOptions } from './ColumnModelOptions.js';
 import type { ColumnTypeOptions } from './ColumnTypeOptions.js';
@@ -24,7 +23,7 @@ export function primaryColumn(dbColumnNameOrOptions?: ColumnOptions | string, op
 
     if (dbColumnNameOrOptions) {
       options ??= {} as ColumnTypeOptions;
-      dbColumnName ??= options.name ?? _.snakeCase(propertyName);
+      dbColumnName ??= options.name ?? snakeCase(propertyName);
 
       const { type } = options as ColumnTypeOptions;
       const { model } = options as ColumnModelOptions;
@@ -58,7 +57,7 @@ export function primaryColumn(dbColumnNameOrOptions?: ColumnOptions | string, op
       const metadataStorage = getMetadataStorage();
       metadataStorage.columnModifiers.push({
         target: object.constructor.name,
-        name: dbColumnName ?? _.snakeCase(propertyName),
+        name: dbColumnName ?? snakeCase(propertyName),
         propertyName,
         primary: true,
         required: options ? options.required : undefined,

@@ -3,7 +3,6 @@ import assert from 'node:assert';
 import { faker } from '@faker-js/faker';
 import * as chai from 'chai';
 import 'chai/register-should.js';
-import _ from 'lodash';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
@@ -12,6 +11,7 @@ import { initialize } from '../src/index.js';
 
 import { Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store } from './models/index.js';
 import * as generator from './utils/generator.js';
+import { pick } from './utils/pick.js';
 
 function getQueryResult<T extends QueryResultRow>(rows: T[] = []): PoolQueryResult<T> & { command: string; oid: number; fields: never[] } {
   return {
@@ -218,7 +218,7 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      const returnValue = _.pick(product, ['id', 'name']);
+      const returnValue = pick(product, ['id', 'name']);
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([returnValue]));
 
@@ -316,7 +316,7 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      const returnValue = _.pick(product, ['id', 'name']);
+      const returnValue = pick(product, ['id', 'name']);
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([returnValue]));
 
@@ -902,7 +902,7 @@ describe('Repository', () => {
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
       const result = await ProductRepository.destroy({
-        id: _.map(products, 'id'),
+        id: products.map((item) => item.id),
         store,
       });
       should.not.exist(result);
@@ -910,7 +910,7 @@ describe('Repository', () => {
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('DELETE FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
       assert(params);
-      params.should.deep.equal([_.map(products, 'id'), store.id]);
+      params.should.deep.equal([products.map((item) => item.id), store.id]);
     });
 
     it('should support call constraints as a parameter if returnRecords=true', async () => {
@@ -927,7 +927,7 @@ describe('Repository', () => {
 
       const result = await ProductRepository.destroy(
         {
-          id: _.map(products, 'id'),
+          id: products.map((item) => item.id),
           store,
         },
         { returnRecords: true },
@@ -938,7 +938,7 @@ describe('Repository', () => {
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('DELETE FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([_.map(products, 'id'), store.id]);
+      params.should.deep.equal([products.map((item) => item.id), store.id]);
     });
 
     it('should support call with chained where constraints', async () => {

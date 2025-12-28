@@ -1,7 +1,6 @@
-import _ from 'lodash';
-
 import { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, getMetadataStorage } from '../metadata/index.js';
 import type { ClassLike } from '../types/index.js';
+import { snakeCase } from '../utils/index.js';
 
 import type { ColumnCollectionOptions } from './ColumnCollectionOptions.js';
 import type { ColumnModelOptions } from './ColumnModelOptions.js';
@@ -14,7 +13,7 @@ export function column(options?: ColumnOptions): ReturnFunctionType;
 export function column(dbColumnName: string, options?: ColumnOptions): ReturnFunctionType;
 export function column(dbColumnNameOrOptions?: ColumnOptions | string, options?: ColumnOptions): ReturnFunctionType {
   return function columnDecorator(object: ClassLike, propertyName: string): void {
-    dbColumnNameOrOptions ??= _.snakeCase(propertyName);
+    dbColumnNameOrOptions ??= snakeCase(propertyName);
 
     let dbColumnName: string | undefined;
     if (typeof dbColumnNameOrOptions === 'string') {
@@ -24,7 +23,7 @@ export function column(dbColumnNameOrOptions?: ColumnOptions | string, options?:
     }
 
     options ??= {} as ColumnTypeOptions;
-    dbColumnName ??= options.name ?? _.snakeCase(propertyName);
+    dbColumnName ??= options.name ?? snakeCase(propertyName);
 
     const metadataStorage = getMetadataStorage();
 

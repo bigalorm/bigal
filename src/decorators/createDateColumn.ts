@@ -1,8 +1,7 @@
-import _ from 'lodash';
-
 import type { ColumnModifierMetadata } from '../metadata/index.js';
 import { ColumnTypeMetadata, getMetadataStorage } from '../metadata/index.js';
 import type { ClassLike } from '../types/index.js';
+import { snakeCase } from '../utils/index.js';
 
 import type { ColumnTypeOptions } from './ColumnTypeOptions.js';
 
@@ -22,7 +21,7 @@ export function createDateColumn(dbColumnNameOrOptions?: ColumnTypeOptions | str
 
     if (dbColumnNameOrOptions) {
       options ??= {} as ColumnTypeOptions;
-      dbColumnName ??= options.name ?? _.snakeCase(propertyName);
+      dbColumnName ??= options.name ?? snakeCase(propertyName);
 
       metadataStorage.columns.push(
         new ColumnTypeMetadata({
@@ -37,7 +36,7 @@ export function createDateColumn(dbColumnNameOrOptions?: ColumnTypeOptions | str
     } else {
       metadataStorage.columnModifiers.push({
         target: object.constructor.name,
-        name: dbColumnName ?? _.snakeCase(propertyName),
+        name: dbColumnName ?? snakeCase(propertyName),
         propertyName,
         createDate: true,
         required: options ? options.required : undefined,

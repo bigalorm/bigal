@@ -1,5 +1,3 @@
-import _ from 'lodash';
-
 import type { Entity, EntityFieldValue } from './Entity.js';
 import { QueryError } from './errors/index.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
@@ -77,11 +75,11 @@ export function getSelectQueryAndParams<T extends Entity>({
   }
 
   if (limit) {
-    if (_.isString(limit)) {
+    if (typeof limit === 'string') {
       limit = Number(limit);
     }
 
-    if (!_.isFinite(limit)) {
+    if (!Number.isFinite(limit)) {
       throw new QueryError('Limit should be a number', model, where);
     }
 
@@ -89,11 +87,11 @@ export function getSelectQueryAndParams<T extends Entity>({
   }
 
   if (skip) {
-    if (_.isString(skip)) {
+    if (typeof skip === 'string') {
       skip = Number(skip);
     }
 
-    if (!_.isFinite(skip)) {
+    if (!Number.isFinite(skip)) {
       throw new QueryError('Skip should be a number', model, where);
     }
 
@@ -172,7 +170,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
   returnSelect?: readonly K[];
   onConflict?: OnConflictOptions<T, K>['onConflict'];
 }): QueryAndParams {
-  const entitiesToInsert = _.isArray(values) ? values : [values];
+  const entitiesToInsert = Array.isArray(values) ? values : [values];
   const conflictTargetColumns = [];
   const columnsToInsert = [];
   const columnsToMerge = [];
@@ -183,9 +181,9 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
     if (!collectionColumn.collection) {
       const { defaultsTo } = column as ColumnTypeMetadata;
       let defaultValue;
-      if (_.isFunction(defaultsTo)) {
+      if (typeof defaultsTo === 'function') {
         defaultValue = defaultsTo();
-      } else if (!_.isUndefined(defaultsTo)) {
+      } else if (defaultsTo !== undefined) {
         defaultValue = defaultsTo;
       } else if (column.createDate) {
         defaultValue = new Date();
@@ -195,16 +193,16 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
         defaultValue = 1;
       }
 
-      const hasDefaultValue = !_.isUndefined(defaultValue);
+      const hasDefaultValue = defaultValue !== undefined;
       let includePropertyName = false;
       for (const entity of entitiesToInsert) {
         // If there is a default value for the property and if it is not defined, use the default
-        if (hasDefaultValue && _.isUndefined(entity[column.propertyName as string & keyof CreateUpdateParams<T>])) {
+        if (hasDefaultValue && entity[column.propertyName as string & keyof CreateUpdateParams<T>] === undefined) {
           // @ts-expect-error - string is not assignable to T[string & keyof T] | undefined
           entity[column.propertyName as string & keyof CreateUpdateParams<T>] = defaultValue;
         }
 
-        if (_.isUndefined(entity[column.propertyName as string & keyof CreateUpdateParams<T>])) {
+        if (entity[column.propertyName as string & keyof CreateUpdateParams<T>] === undefined) {
           if (column.required) {
             throw new QueryError(`Create statement for "${model.name}" is missing value for required field: ${column.propertyName}`, model);
           }
@@ -267,12 +265,12 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
     for (const [entityIndex, entity] of entitiesToInsert.entries()) {
       let value;
       const entityValue = entity[column.propertyName as string & keyof CreateUpdateParams<T>] as EntityFieldValue;
-      if (_.isNil(entityValue)) {
+      if (entityValue == null) {
         value = 'NULL';
       } else {
-        const isJsonArray = (column as ColumnTypeMetadata).type === 'json' && _.isArray(entityValue);
+        const isJsonArray = (column as ColumnTypeMetadata).type === 'json' && Array.isArray(entityValue);
         const relatedModelName = (column as ColumnModelMetadata).model;
-        if (relatedModelName && _.isObject(entityValue)) {
+        if (relatedModelName && typeof entityValue === 'object') {
           const relatedModelRepository = repositoriesByModelNameLowered[relatedModelName.toLowerCase()];
 
           if (!relatedModelRepository) {
@@ -285,7 +283,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
           }
 
           const primaryKeyValue = (entityValue as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T> & keyof T] as EntityFieldValue;
-          if (_.isNil(primaryKeyValue)) {
+          if (primaryKeyValue == null) {
             throw new QueryError(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`, model);
           }
 
@@ -409,7 +407,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
   repositoriesByModelNameLowered,
   model,
   where,
-  values = {},
+  values,
   returnRecords = true,
   returnSelect,
 }: {
@@ -421,7 +419,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
   returnSelect?: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
 }): QueryAndParams {
   for (const column of model.updateDateColumns) {
-    if (_.isUndefined(values[column.propertyName as string & keyof CreateUpdateParams<T>])) {
+    if (values[column.propertyName as string & keyof CreateUpdateParams<T>] === undefined) {
       // @ts-expect-error - Date is not assignable to T[string & keyof T]
       values[column.propertyName as string & keyof CreateUpdateParams<T>] = new Date();
     }
@@ -438,10 +436,10 @@ export function getUpdateQueryAndParams<T extends Entity>({
       }
 
       query += `"${column.name}"=`;
-      if (_.isNil(value)) {
+      if (value == null) {
         query += 'NULL';
       } else {
-        const isJsonArray = (column as ColumnTypeMetadata).type === 'json' && _.isArray(value);
+        const isJsonArray = (column as ColumnTypeMetadata).type === 'json' && Array.isArray(value);
         const relatedModelName = (column as ColumnModelMetadata).model;
 
         // Check and enforce max length for applicable types
@@ -458,7 +456,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
           }
         }
 
-        if (relatedModelName && _.isObject(value)) {
+        if (relatedModelName && typeof value === 'object') {
           const relatedModelRepository = repositoriesByModelNameLowered[relatedModelName.toLowerCase()];
 
           if (!relatedModelRepository) {
@@ -471,7 +469,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
           }
 
           const primaryKeyValue = (value as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T> & keyof T] as EntityFieldValue;
-          if (_.isNil(primaryKeyValue)) {
+          if (primaryKeyValue == null) {
             throw new QueryError(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`, model);
           }
 
@@ -495,7 +493,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
   }
 
   for (const column of model.versionColumns) {
-    if (!_.isUndefined(values[column.propertyName as string & keyof CreateUpdateParams<T>])) {
+    if (values[column.propertyName as string & keyof CreateUpdateParams<T>] !== undefined) {
       if (!isFirstProperty) {
         query += ',';
       }
@@ -661,7 +659,7 @@ export function buildWhereStatement<T extends Entity>({
   params: unknown[];
 } {
   let whereStatement;
-  if (_.isObject(where) && Object.keys(where).length) {
+  if (where && Object.keys(where).length) {
     whereStatement = buildWhere({
       repositoriesByModelNameLowered,
       model,
@@ -694,7 +692,7 @@ export function buildWhereStatement<T extends Entity>({
  * @private
  */
 export function buildOrderStatement<T extends Entity>({ model, sorts }: { model: ModelMetadata<T>; sorts: readonly OrderBy<T>[] }): string {
-  if (_.isNil(sorts) || !_.some(sorts)) {
+  if (!sorts.length) {
     return '';
   }
 
@@ -741,7 +739,7 @@ function buildWhere<T extends Entity>({
   comparer,
   isNegated = false,
   value,
-  params = [],
+  params,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
@@ -772,9 +770,9 @@ function buildWhere<T extends Entity>({
         params,
       });
     case 'contains':
-      if (_.isArray(value)) {
+      if (Array.isArray(value)) {
         const values = (value as string[]).map((val) => {
-          if (!_.isString(val)) {
+          if (typeof val !== 'string') {
             throw new QueryError(`Expected all array values to be strings for "contains" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
           }
 
@@ -792,7 +790,7 @@ function buildWhere<T extends Entity>({
         });
       }
 
-      if (_.isString(value)) {
+      if (typeof value === 'string') {
         return buildWhere({
           repositoriesByModelNameLowered,
           model,
@@ -806,9 +804,9 @@ function buildWhere<T extends Entity>({
 
       throw new QueryError(`Expected value to be a string for "contains" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
     case 'startsWith':
-      if (_.isArray(value)) {
+      if (Array.isArray(value)) {
         const values = (value as string[]).map((val) => {
-          if (!_.isString(val)) {
+          if (typeof val !== 'string') {
             throw new QueryError(`Expected all array values to be strings for "startsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
           }
 
@@ -826,7 +824,7 @@ function buildWhere<T extends Entity>({
         });
       }
 
-      if (_.isString(value)) {
+      if (typeof value === 'string') {
         return buildWhere({
           repositoriesByModelNameLowered,
           model,
@@ -840,9 +838,9 @@ function buildWhere<T extends Entity>({
 
       throw new QueryError(`Expected value to be a string for "startsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
     case 'endsWith':
-      if (_.isArray(value)) {
+      if (Array.isArray(value)) {
         const values = (value as string[]).map((val) => {
-          if (!_.isString(val)) {
+          if (typeof val !== 'string') {
             throw new QueryError(`Expected all array values to be strings for "endsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
           }
 
@@ -860,7 +858,7 @@ function buildWhere<T extends Entity>({
         });
       }
 
-      if (_.isString(value)) {
+      if (typeof value === 'string') {
         return buildWhere({
           repositoriesByModelNameLowered,
           model,
@@ -883,17 +881,17 @@ function buildWhere<T extends Entity>({
         params,
       });
     default: {
-      if (_.isUndefined(value)) {
+      if (value === undefined) {
         throw new QueryError(`Attempting to query with an undefined value. ${propertyName ?? ''} on ${model.name}`, model);
       }
 
       if (propertyName) {
         const column = model.columnsByPropertyName[propertyName] as ColumnModelMetadata;
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (column && _.isObject(value)) {
+        if (column && typeof value === 'object' && value !== null) {
           if (column.primary) {
             const primaryKeyValue = (value as unknown as Partial<T>)[column.propertyName as string & keyof T];
-            if (!_.isNil(primaryKeyValue)) {
+            if (primaryKeyValue != null) {
               // Treat `value` as a hydrated object
               return buildWhere({
                 repositoriesByModelNameLowered,
@@ -918,7 +916,7 @@ function buildWhere<T extends Entity>({
             }
 
             const primaryKeyValue = (value as unknown as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T];
-            if (!_.isNil(primaryKeyValue)) {
+            if (primaryKeyValue != null) {
               // Treat `value` as a hydrated object
               return buildWhere({
                 repositoriesByModelNameLowered,
@@ -934,7 +932,7 @@ function buildWhere<T extends Entity>({
         }
       }
 
-      if (_.isArray(value)) {
+      if (Array.isArray(value)) {
         if (!value.length) {
           const columnTypeFromPropertyName = propertyName ? (model.columnsByPropertyName[propertyName] as ColumnTypeMetadata) : null;
           const columnTypeFromComparer = comparer ? (model.columnsByPropertyName[comparer] as ColumnTypeMetadata) : null;
@@ -958,7 +956,7 @@ function buildWhere<T extends Entity>({
         const orConstraints = [];
         const valueWithoutNull = [];
         for (const item of value) {
-          if (_.isNull(item)) {
+          if (item === null) {
             orConstraints.push(
               buildWhere({
                 repositoriesByModelNameLowered,
@@ -1087,7 +1085,7 @@ function buildWhere<T extends Entity>({
         return '';
       }
 
-      if (_.isObject(value) && !_.isDate(value)) {
+      if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
         const andValues: string[] = [];
         for (const [key, where] of Object.entries(value)) {
           // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
@@ -1132,7 +1130,7 @@ function buildOrOperatorStatement<T extends Entity>({
   model,
   isNegated,
   value,
-  params = [],
+  params,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
@@ -1185,7 +1183,7 @@ interface LikeOperatorStatementParams<T extends Entity> extends Omit<ComparisonO
 }
 
 function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isNegated, value, params }: LikeOperatorStatementParams<T>): string {
-  if (_.isArray(value)) {
+  if (Array.isArray(value)) {
     if (!value.length) {
       if (isNegated) {
         return '1=1';
@@ -1197,17 +1195,7 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
     if (value.length > 1) {
       const orConstraints: string[] = [];
       for (const item of value as readonly string[]) {
-        if (_.isNull(item)) {
-          orConstraints.push(
-            buildLikeOperatorStatement({
-              model,
-              propertyName,
-              isNegated,
-              value: null,
-              params,
-            }),
-          );
-        } else if (item === '') {
+        if (item === '') {
           orConstraints.push(
             buildLikeOperatorStatement({
               model,
@@ -1253,11 +1241,11 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
     throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
   }
 
-  if (_.isNull(value)) {
+  if (value === null) {
     return `"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
   }
 
-  if (_.isString(value)) {
+  if (typeof value === 'string') {
     if (value) {
       // NOTE: This is doing a case-insensitive pattern match
       params.push(value);
@@ -1277,13 +1265,13 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
   throw new QueryError(`Expected value to be a string for "like" constraint. Property (${propertyName}) in model (${model.name}).`, model);
 }
 
-function buildComparisonOperatorStatement<T extends Entity>({ model, propertyName, comparer, isNegated, value, params = [] }: ComparisonOperatorStatementParams<T>): string {
+function buildComparisonOperatorStatement<T extends Entity>({ model, propertyName, comparer, isNegated, value, params }: ComparisonOperatorStatementParams<T>): string {
   const column = model.columnsByPropertyName[propertyName];
   if (!column) {
     throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
   }
 
-  if (_.isNull(value)) {
+  if (value === null) {
     return `"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
   }
 

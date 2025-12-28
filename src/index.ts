@@ -1,5 +1,3 @@
-import _ from 'lodash';
-
 import type { Entity, EntityStatic } from './Entity.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
@@ -154,7 +152,14 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
       const column = columnsByPropertyName[propertyName];
       if (column) {
         for (const columnModifier of columnModifiers) {
-          Object.assign(column, _.omit(columnModifier, ['target', 'name', 'propertyName', 'type', 'model']));
+          // Omit target, name, propertyName, type, and model from columnModifier
+          const { target, name, propertyName: propName, type, model, ...rest } = columnModifier;
+          void target;
+          void name;
+          void propName;
+          void type;
+          void model;
+          Object.assign(column, rest);
         }
       } else {
         let columnDetails: ColumnModifierMetadata = {

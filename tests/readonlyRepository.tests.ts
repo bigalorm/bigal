@@ -3,7 +3,6 @@ import assert from 'node:assert';
 import { faker } from '@faker-js/faker';
 import * as chai from 'chai';
 import 'chai/register-should.js';
-import _ from 'lodash';
 import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
@@ -34,6 +33,7 @@ import {
   TeacherClassroom,
 } from './models/index.js';
 import * as generator from './utils/generator.js';
+import { pick } from './utils/pick.js';
 
 function getQueryResult<T extends QueryResultRow>(rows: T[]): PoolQueryResult<T> & { command: string; oid: number; fields: never[] } {
   return {
@@ -137,7 +137,7 @@ describe('ReadonlyRepository', () => {
     });
 
     it('should support call with constraints as a parameter', async () => {
-      const productResult = _.pick(product, 'id', 'name');
+      const productResult = pick(product, 'id', 'name');
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([productResult]));
 
       const result = await ProductRepository.findOne({
@@ -584,8 +584,8 @@ describe('ReadonlyRepository', () => {
     });
 
     it('should support populating a single relation when column is missing from partial select', async () => {
-      const productResult = _.pick(product, 'id', 'name', 'store');
-      const storeResult = _.pick(store, 'id', 'name');
+      const productResult = pick(product, 'id', 'name', 'store');
+      const storeResult = pick(store, 'id', 'name');
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([productResult]), getQueryResult([storeResult]));
 
       const result = await ProductRepository.findOne({
@@ -615,8 +615,8 @@ describe('ReadonlyRepository', () => {
       const levelTwoItem = generator.levelTwo({ levelThree: levelThreeItem.id });
       const levelOneItem = generator.levelOne({ levelTwo: levelTwoItem.id });
 
-      const levelOneResult = _.pick(levelOneItem, 'id', 'one', 'levelTwo');
-      const levelTwoResult = _.pick(levelTwoItem, 'id', 'two', 'levelThree');
+      const levelOneResult = pick(levelOneItem, 'id', 'one', 'levelTwo');
+      const levelTwoResult = pick(levelTwoItem, 'id', 'two', 'levelThree');
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([levelOneResult]), getQueryResult([levelTwoResult]));
 
@@ -638,7 +638,7 @@ describe('ReadonlyRepository', () => {
     });
 
     it('should support populating a single relation with partial select and order', async () => {
-      const storeResult = _.pick(store, 'id', 'name');
+      const storeResult = pick(store, 'id', 'name');
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
 
       const result = await ProductRepository.findOne().populate('store', {
@@ -774,8 +774,8 @@ describe('ReadonlyRepository', () => {
         store: store.id,
       });
 
-      const product1Result = _.pick(product1, 'id', 'name');
-      const product2Result = _.pick(product2, 'id', 'name');
+      const product1Result = pick(product1, 'id', 'name');
+      const product2Result = pick(product2, 'id', 'name');
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1Result, product2Result]));
 
@@ -908,8 +908,8 @@ describe('ReadonlyRepository', () => {
       const productCategory1Map = generator.productCategory(product, category1);
       const productCategory2Map = generator.productCategory(product, category2);
 
-      const category1Result = _.pick(category1, 'id', 'name');
-      const category2Result = _.pick(category2, 'id', 'name');
+      const category1Result = pick(category1, 'id', 'name');
+      const category2Result = pick(category2, 'id', 'name');
 
       when(mockedPool.query(anyString(), anything())).thenResolve(
         getQueryResult([product]),
@@ -953,7 +953,7 @@ describe('ReadonlyRepository', () => {
         source: source1.id,
       });
 
-      const source1Result = _.pick(source1, 'id', 'name');
+      const source1Result = pick(source1, 'id', 'name');
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([source1Result]), getQueryResult([translation1, translation2]));
 
@@ -994,9 +994,9 @@ describe('ReadonlyRepository', () => {
         source: source1.id,
       });
 
-      const source1Result = _.pick(source1, 'id', 'name');
-      const translation1Result = _.pick(translation1, 'id', 'name');
-      const translation2Result = _.pick(translation2, 'id', 'name');
+      const source1Result = pick(source1, 'id', 'name');
+      const translation1Result = pick(translation1, 'id', 'name');
+      const translation2Result = pick(translation2, 'id', 'name');
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([source1Result]), getQueryResult([translation1Result, translation2Result]));
 
@@ -1330,7 +1330,7 @@ describe('ReadonlyRepository', () => {
         store: store.id,
       });
 
-      const storeResult = _.pick(store, 'id', 'name');
+      const storeResult = pick(store, 'id', 'name');
 
       when(mockedPool.query(anyString(), anything()))
         .thenResolve(getQueryResult([simple]))
@@ -1440,7 +1440,7 @@ describe('ReadonlyRepository', () => {
       const result = await ProductRepository.find({
         select: ['name'],
         where: {
-          id: _.map(products, 'id'),
+          id: products.map((item) => item.id),
           store,
         },
         sort: 'name asc',
@@ -1453,7 +1453,7 @@ describe('ReadonlyRepository', () => {
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "name","id" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2 ORDER BY "name" LIMIT 24 OFFSET 5');
       assert(params);
-      params.should.deep.equal([_.map(products, 'id'), store.id]);
+      params.should.deep.equal([products.map((item) => item.id), store.id]);
     });
 
     it('should support call with where constraint as a parameter', async () => {
@@ -1468,7 +1468,7 @@ describe('ReadonlyRepository', () => {
 
       when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
       const result = await ProductRepository.find({
-        id: _.map(products, 'id'),
+        id: products.map((item) => item.id),
         store,
       });
       assert(result);
@@ -1477,7 +1477,7 @@ describe('ReadonlyRepository', () => {
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
       assert(params);
-      params.should.deep.equal([_.map(products, 'id'), store.id]);
+      params.should.deep.equal([products.map((item) => item.id), store.id]);
     });
 
     it('should support call with explicit pool override', async () => {
@@ -2125,8 +2125,8 @@ describe('ReadonlyRepository', () => {
       });
 
       it('should support populating a single relation as QueryResult with partial select', async () => {
-        const levelOneResult = _.pick(levelOneItem, 'id', 'one', 'levelTwo');
-        const levelTwoResult = _.pick(levelTwoItem, 'id', 'two', 'levelThree');
+        const levelOneResult = pick(levelOneItem, 'id', 'one', 'levelTwo');
+        const levelTwoResult = pick(levelTwoItem, 'id', 'two', 'levelThree');
 
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([levelOneResult]), getQueryResult([levelTwoResult]));
 
@@ -2148,8 +2148,8 @@ describe('ReadonlyRepository', () => {
       });
 
       it('should support populating a single relation as QueryResult with partial select from chained select', async () => {
-        const levelOneResult = _.pick(levelOneItem, 'id', 'one', 'levelTwo');
-        const levelTwoResult = _.pick(levelTwoItem, 'id', 'two', 'levelThree');
+        const levelOneResult = pick(levelOneItem, 'id', 'one', 'levelTwo');
+        const levelTwoResult = pick(levelTwoItem, 'id', 'two', 'levelThree');
 
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([levelOneResult]), getQueryResult([levelTwoResult]));
 
@@ -2171,8 +2171,8 @@ describe('ReadonlyRepository', () => {
       });
 
       it('should support populating a single relation with partial select and sort', async () => {
-        const store1Result = _.pick(store1, 'id');
-        const store2Result = _.pick(store2, 'id');
+        const store1Result = pick(store1, 'id');
+        const store2Result = pick(store2, 'id');
 
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product2]), getQueryResult([store1Result, store2Result]));
 
@@ -2203,10 +2203,10 @@ describe('ReadonlyRepository', () => {
       });
 
       it('should support populating a single relation when column is missing from partial select', async () => {
-        const product1Result = _.pick(product1, 'id', 'name', 'store');
-        const product2Result = _.pick(product2, 'id', 'name', 'store');
-        const store1Result = _.pick(store1, 'id');
-        const store2Result = _.pick(store2, 'id');
+        const product1Result = pick(product1, 'id', 'name', 'store');
+        const product2Result = pick(product2, 'id', 'name', 'store');
+        const store1Result = pick(store1, 'id');
+        const store2Result = pick(store2, 'id');
 
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1Result, product2Result]), getQueryResult([store1Result, store2Result]));
 
@@ -2334,9 +2334,9 @@ describe('ReadonlyRepository', () => {
       });
 
       it('should support populating one-to-many collection with partial select and sort', async () => {
-        const product1Result = _.pick(product1, 'id', 'name', 'sku', 'store');
-        const product2Result = _.pick(product2, 'id', 'name', 'sku', 'store');
-        const product3Result = _.pick(product3, 'id', 'name', 'sku', 'store');
+        const product1Result = pick(product1, 'id', 'name', 'sku', 'store');
+        const product2Result = pick(product2, 'id', 'name', 'sku', 'store');
+        const product3Result = pick(product3, 'id', 'name', 'sku', 'store');
 
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store1, store2]), getQueryResult([product1Result, product3Result, product2Result]));
 
@@ -2496,8 +2496,8 @@ describe('ReadonlyRepository', () => {
       });
 
       it('should support populating multi-multi collection with partial select and sort', async () => {
-        const category1Result = _.pick(category1, 'id');
-        const category2Result = _.pick(category2, 'id');
+        const category1Result = pick(category1, 'id');
+        const category2Result = pick(category2, 'id');
 
         when(mockedPool.query(anyString(), anything()))
           .thenResolve(getQueryResult([product1, product3, product2]))
@@ -2597,8 +2597,8 @@ describe('ReadonlyRepository', () => {
       });
 
       it('should support populating multiple properties with partial select and sort', async () => {
-        const parkingSpaceResult = _.pick(parkingSpace, 'id', 'name');
-        const classroomResult = _.pick(classroom, 'id', 'name');
+        const parkingSpaceResult = pick(parkingSpace, 'id', 'name');
+        const classroomResult = pick(classroom, 'id', 'name');
 
         when(mockedPool.query(anyString(), anything()))
           .thenResolve(getQueryResult([teacher1, teacher2]))
@@ -2669,8 +2669,8 @@ describe('ReadonlyRepository', () => {
       });
 
       it('should support populating self reference', async () => {
-        const source1Result = _.pick(source1, 'id', 'name');
-        const source2Result = _.pick(source2, 'id', 'name');
+        const source1Result = pick(source1, 'id', 'name');
+        const source2Result = pick(source2, 'id', 'name');
 
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([source1Result, source2Result]), getQueryResult([translation1, translation2]));
 
@@ -2706,10 +2706,10 @@ describe('ReadonlyRepository', () => {
       });
 
       it('should throw when attempting to populate collection and not not explicitly specifying relation column', async () => {
-        const source1Result = _.pick(source1, 'id', 'name');
-        const source2Result = _.pick(source2, 'id', 'name');
-        const translation1Result = _.pick(translation1, 'id', 'name', 'source');
-        const translation2Result = _.pick(translation2, 'id', 'name', 'source');
+        const source1Result = pick(source1, 'id', 'name');
+        const source2Result = pick(source2, 'id', 'name');
+        const translation1Result = pick(translation1, 'id', 'name', 'source');
+        const translation2Result = pick(translation2, 'id', 'name', 'source');
 
         when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([source1Result, source2Result]), getQueryResult([translation1Result, translation2Result]));
 
@@ -2822,7 +2822,7 @@ describe('ReadonlyRepository', () => {
       );
 
       const result = await ProductRepository.count({
-        id: _.map(products, 'id'),
+        id: products.map((item) => item.id),
         store,
       });
       assert(result);
@@ -2831,7 +2831,7 @@ describe('ReadonlyRepository', () => {
       const [query, params] = capture(mockedPool.query).first();
       query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
       assert(params);
-      params.should.deep.equal([_.map(products, 'id'), store.id]);
+      params.should.deep.equal([products.map((item) => item.id), store.id]);
     });
 
     it('should support call with chained where constraints', async () => {
