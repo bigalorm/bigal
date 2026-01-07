@@ -881,6 +881,18 @@ function buildWhere<T extends Entity>({
         params,
       });
     default: {
+      // Handle 'and' with array value (explicit and: [...] in where clause)
+      // When value is not an array, this is the internal call from buildWhereStatement and should continue to default processing
+      if (comparer === 'and' && Array.isArray(value)) {
+        return buildAndOperatorStatement({
+          repositoriesByModelNameLowered,
+          model,
+          isNegated,
+          value: value as WhereQuery<T>[],
+          params,
+        });
+      }
+
       if (value === undefined) {
         throw new QueryError(`Attempting to query with an undefined value. ${propertyName ?? ''} on ${model.name}`, model);
       }
@@ -1163,6 +1175,49 @@ function buildOrOperatorStatement<T extends Entity>({
 
   if (orClauses.length) {
     return `(${orClauses.join(' OR ')})`;
+  }
+
+  return '';
+}
+
+function buildAndOperatorStatement<T extends Entity>({
+  repositoriesByModelNameLowered,
+  model,
+  isNegated,
+  value,
+  params,
+}: {
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  model: ModelMetadata<T>;
+  isNegated: boolean;
+  value: readonly WhereQuery<T>[];
+  params: unknown[];
+}): string {
+  const andClauses = [];
+  for (const constraint of value) {
+    const andClause = buildWhere({
+      repositoriesByModelNameLowered,
+      model,
+      isNegated,
+      value: constraint,
+      params,
+    });
+
+    if (andClause) {
+      andClauses.push(`(${andClause})`);
+    }
+  }
+
+  if (andClauses.length === 1) {
+    return andClauses[0] ?? '';
+  }
+
+  if (isNegated) {
+    return andClauses.join(' OR ');
+  }
+
+  if (andClauses.length) {
+    return `(${andClauses.join(' AND ')})`;
   }
 
   return '';

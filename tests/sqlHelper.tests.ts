@@ -2318,6 +2318,134 @@ describe('sqlHelper', () => {
       params.should.deep.equal([id, name, name, store, sku]);
     });
 
+    it('should handle and', () => {
+      const name = faker.string.uuid();
+      const sku = faker.string.uuid();
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          and: [
+            {
+              name,
+            },
+            {
+              sku,
+            },
+          ],
+        },
+      });
+
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE (("name"=$1) AND ("sku"=$2))');
+      params.should.deep.equal([name, sku]);
+    });
+
+    it('should throw for empty and', () => {
+      ((): void => {
+        sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: {
+            and: [],
+          },
+        });
+      }).should.throw(QueryError, `WHERE statement is unexpectedly empty.`);
+    });
+
+    it('should handle and with nested or', () => {
+      const name1 = faker.string.uuid();
+      const name2 = faker.string.uuid();
+      const sku1 = faker.string.uuid();
+      const sku2 = faker.string.uuid();
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          and: [
+            {
+              or: [{ name: name1 }, { name: name2 }],
+            },
+            {
+              or: [{ sku: sku1 }, { sku: sku2 }],
+            },
+          ],
+        },
+      });
+
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE (((("name"=$1) OR ("name"=$2))) AND ((("sku"=$3) OR ("sku"=$4))))');
+      params.should.deep.equal([name1, name2, sku1, sku2]);
+    });
+
+    it('should handle or with nested and', () => {
+      const name1 = faker.string.uuid();
+      const sku1 = faker.string.uuid();
+      const name2 = faker.string.uuid();
+      const sku2 = faker.string.uuid();
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          or: [
+            {
+              and: [{ name: name1 }, { sku: sku1 }],
+            },
+            {
+              and: [{ name: name2 }, { sku: sku2 }],
+            },
+          ],
+        },
+      });
+
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE (((("name"=$1) AND ("sku"=$2))) OR ((("name"=$3) AND ("sku"=$4))))');
+
+      params.should.deep.equal([name1, sku1, name2, sku2]);
+    });
+
+    it('should handle and mixed with regular conditions', () => {
+      const id = faker.number.int();
+      const name = faker.string.uuid();
+      const sku = faker.string.uuid();
+      const location = faker.string.uuid();
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          id,
+          and: [
+            {
+              name,
+            },
+            {
+              sku,
+            },
+          ],
+          location,
+        },
+      });
+
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE "id"=$1 AND (("name"=$2) AND ("sku"=$3)) AND "location"=$4');
+      params.should.deep.equal([id, name, sku, location]);
+    });
+
+    it('should handle single item and array', () => {
+      const name = faker.string.uuid();
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          and: [{ name }],
+        },
+      });
+
+      assert(whereStatement);
+      whereStatement.should.equal('WHERE ("name"=$1)');
+      params.should.deep.equal([name]);
+    });
+
     it('should treat string type with array values as an =ANY() statement', () => {
       const name = [faker.string.uuid(), faker.string.uuid()];
       const { whereStatement, params } = sqlHelper.buildWhereStatement({

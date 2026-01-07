@@ -2,3 +2,19 @@ filters:
   allowlist:
     allow:
       - "/CHANGELOG\\.md$/"
+
+rules:
+  filters:
+    - comments
+  rules:
+    terminology:
+      exclude:
+        - URL
+        - website
+        - markdown
+        - Bug Fixes
+        - eslint
+        - typescript
+        - json
+        - node.js
+        - id
