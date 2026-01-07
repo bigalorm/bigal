@@ -4,7 +4,7 @@
 [![node version](https://img.shields.io/node/v/bigal.svg?style=flat)](https://nodejs.org)
 [![Known Vulnerabilities](https://snyk.io/test/npm/bigal/badge.svg)](https://snyk.io/test/npm/bigal)
 
-A fast, lightweight ORM for PostgreSQL and node.js, written in Typescript.
+A fast, lightweight ORM for PostgreSQL and Node.js, written in TypeScript.
 
 This ORM does not:
 
@@ -749,7 +749,7 @@ export class Store extends Entity {
 
 #### Non-entity object arrays
 
-If you have a json property, with an `id` field, on an entity model, TypeScript will probably think it is a BigAl
+If you have a JSON property, with an `id` field, on an entity model, TypeScript will probably think it is a BigAl
 entity due to how the type system works. In that case, you'll want to wrap the type with `NotEntity<>`. For example:
 
 ```ts
