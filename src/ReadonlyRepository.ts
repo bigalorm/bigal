@@ -205,11 +205,12 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
-      leftJoin(propertyName: string, alias?: string): FindOneResult<T, TReturn> {
+      leftJoin(propertyName: string, alias?: string, on?: WhereQuery<Entity>): FindOneResult<T, TReturn> {
         joins.push({
           propertyName,
           alias: alias ?? propertyName,
           type: 'left',
+          on,
         });
 
         return this;
@@ -428,11 +429,12 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
-      leftJoin(propertyName: string, alias?: string): FindResult<T, TReturn> {
+      leftJoin(propertyName: string, alias?: string, on?: WhereQuery<Entity>): FindResult<T, TReturn> {
         joins.push({
           propertyName,
           alias: alias ?? propertyName,
           type: 'left',
+          on,
         });
 
         return this;

@@ -2991,6 +2991,7 @@ describe('sqlHelper', () => {
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         joins: [],
+        params: [],
       });
 
       result.should.equal('');
@@ -3007,6 +3008,7 @@ describe('sqlHelper', () => {
             type: 'inner',
           },
         ],
+        params: [],
       });
 
       result.should.equal(' INNER JOIN "stores" AS "store" ON "products"."store_id" = "store"."id"');
@@ -3023,6 +3025,7 @@ describe('sqlHelper', () => {
             type: 'left',
           },
         ],
+        params: [],
       });
 
       result.should.equal(' LEFT JOIN "stores" AS "store" ON "products"."store_id" = "store"."id"');
@@ -3039,9 +3042,32 @@ describe('sqlHelper', () => {
             type: 'inner',
           },
         ],
+        params: [],
       });
 
       result.should.equal(' INNER JOIN "stores" AS "primaryStore" ON "products"."store_id" = "primaryStore"."id"');
+    });
+
+    it('should include additional ON constraints for LEFT JOIN', () => {
+      const params: unknown[] = [];
+      const result = sqlHelper.buildJoinClauses({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'store',
+            type: 'left',
+            on: {
+              name: 'Acme',
+            },
+          },
+        ],
+        params,
+      });
+
+      result.should.equal(' LEFT JOIN "stores" AS "store" ON "products"."store_id" = "store"."id" AND "store"."name"=$1');
+      params.should.deep.equal(['Acme']);
     });
 
     it('should throw QueryError for non-existent property', () => {
@@ -3058,6 +3084,7 @@ describe('sqlHelper', () => {
               type: 'inner',
             },
           ],
+          params: [],
         });
       } catch (ex) {
         thrownError = ex as Error;
@@ -3081,6 +3108,7 @@ describe('sqlHelper', () => {
               type: 'inner',
             },
           ],
+          params: [],
         });
       } catch (ex) {
         thrownError = ex as Error;

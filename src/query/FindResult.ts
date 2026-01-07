@@ -14,7 +14,7 @@ export interface FindResult<T extends Entity, TReturn> extends PromiseLike<TRetu
     options?: PopulateArgs<TPopulateType, TPopulateSelectKeys>,
   ): FindResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>>;
   join(propertyName: ModelRelationshipKeys<T>, alias?: string): FindResult<T, TReturn>;
-  leftJoin(propertyName: ModelRelationshipKeys<T>, alias?: string): FindResult<T, TReturn>;
+  leftJoin<TProperty extends ModelRelationshipKeys<T>>(propertyName: TProperty, alias?: string, on?: WhereQuery<Extract<T[TProperty], Entity>>): FindResult<T, TReturn>;
   sort(value?: Sort<T>): FindResult<T, TReturn>;
   limit(value: number): FindResult<T, TReturn>;
   skip(value: number): FindResult<T, TReturn>;

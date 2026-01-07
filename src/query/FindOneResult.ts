@@ -13,7 +13,7 @@ export interface FindOneResult<T extends Entity, TReturn> extends PromiseLike<TR
     options?: PopulateArgs<TPopulateType, TPopulateSelectKeys>,
   ): FindOneResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>>;
   join(propertyName: ModelRelationshipKeys<T>, alias?: string): FindOneResult<T, TReturn>;
-  leftJoin(propertyName: ModelRelationshipKeys<T>, alias?: string): FindOneResult<T, TReturn>;
+  leftJoin<TProperty extends ModelRelationshipKeys<T>>(propertyName: TProperty, alias?: string, on?: WhereQuery<Extract<T[TProperty], Entity>>): FindOneResult<T, TReturn>;
   sort(value?: Sort<T>): FindOneResult<T, TReturn>;
   UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
   UNSAFE_withFieldValue<TProperty extends string & keyof T, TValue extends T[TProperty]>(

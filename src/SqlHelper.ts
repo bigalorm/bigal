@@ -58,18 +58,22 @@ export function getSelectQueryAndParams<T extends Entity>({
 
   query += ` FROM ${model.qualifiedTableName}`;
 
+  const params: unknown[] = [];
+
   if (joins?.length) {
     query += buildJoinClauses({
       repositoriesByModelNameLowered,
       model,
       joins,
+      params,
     });
   }
 
-  const { whereStatement, params } = buildWhereStatement({
+  const { whereStatement } = buildWhereStatement({
     repositoriesByModelNameLowered,
     model,
     where,
+    params,
   });
 
   if (whereStatement) {
@@ -651,32 +655,32 @@ export function getColumnsToSelect<T extends Entity, K extends string & keyof Om
  * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by model name
  * @param {object} args.model - Source model schema
  * @param {JoinDefinition[]} args.joins - Array of join definitions
+ * @param {unknown[]} args.params - Array to collect query parameters
  * @returns {string} SQL join clauses
  */
 export function buildJoinClauses<T extends Entity>({
   repositoriesByModelNameLowered,
   model,
   joins,
+  params,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   joins: readonly JoinDefinition[];
+  params: unknown[];
 }): string {
   let joinSql = '';
 
   for (const join of joins) {
-    // Look up the column metadata for the join property
     const column = model.columnsByPropertyName[join.propertyName] as ColumnModelMetadata | undefined;
     if (!column) {
       throw new QueryError(`Unable to find property "${join.propertyName}" on model "${model.name}" for join`, model);
     }
 
-    // Ensure it's a model reference column (foreign key)
     if (!('model' in column) || !column.model) {
       throw new QueryError(`Property "${join.propertyName}" on model "${model.name}" is not a relationship and cannot be joined`, model);
     }
 
-    // Look up the related model repository
     const relatedRepository = repositoriesByModelNameLowered[column.model.toLowerCase()];
     if (!relatedRepository) {
       throw new QueryError(`Unable to find model "${column.model}" for join on "${join.propertyName}"`, model);
@@ -688,19 +692,28 @@ export function buildJoinClauses<T extends Entity>({
       throw new QueryError(`Unable to find primary key for model "${column.model}" when building join`, model);
     }
 
-    // Build the JOIN clause
     const joinType = join.type === 'left' ? 'LEFT JOIN' : 'INNER JOIN';
     const alias = join.alias || join.propertyName;
 
     joinSql += ` ${joinType} ${relatedModel.qualifiedTableName}`;
 
-    // Add alias if it differs from the table name
     if (alias !== relatedModel.tableName) {
       joinSql += ` AS "${alias}"`;
     }
 
-    // ON clause: source.foreign_key = joined.primary_key
     joinSql += ` ON ${model.qualifiedTableName}."${column.name}" = "${alias}"."${relatedPrimaryKey.name}"`;
+
+    if (join.on) {
+      for (const [propertyName, value] of Object.entries(join.on)) {
+        const onColumn = relatedModel.columnsByPropertyName[propertyName] as ColumnTypeMetadata | undefined;
+        if (!onColumn) {
+          throw new QueryError(`Unable to find property "${propertyName}" on model "${relatedModel.name}" for ON constraint`, relatedModel);
+        }
+
+        params.push(value);
+        joinSql += ` AND "${alias}"."${onColumn.name}"=$${params.length}`;
+      }
+    }
   }
 
   return joinSql;
