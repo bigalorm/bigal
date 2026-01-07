@@ -365,6 +365,34 @@ Equivalent to:
 select id,first_name as firstName,last_name as lastName,created_at as createdAt from person where created_at >= $1 AND created_at < $2
 ```
 
+#### Using `or` for OR conditions across different columns
+
+```ts
+const items = await PersonRepository.find().where({
+  or: [{ firstName: 'Walter' }, { lastName: 'White' }],
+});
+```
+
+Equivalent to:
+
+```postgresql
+select * from person where (first_name = $1) OR (last_name = $2)
+```
+
+#### Using `and` to combine multiple OR groups
+
+```ts
+const items = await PersonRepository.find().where({
+  and: [{ or: [{ firstName: 'Walter' }, { lastName: 'White' }] }, { or: [{ firstName: 'Jesse' }, { lastName: 'Pinkman' }] }],
+});
+```
+
+Equivalent to:
+
+```postgresql
+select * from person where ((first_name = $1) OR (last_name = $2)) AND ((first_name = $3) OR (last_name = $4))
+```
+
 #### Fetch multiple objects and perform a db sort before returning result
 
 ```ts

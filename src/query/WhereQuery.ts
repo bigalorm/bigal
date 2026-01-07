@@ -43,5 +43,6 @@ export type WhereQuery<T extends Entity> = {
           | NegatableConstraint<LiteralValues<ExcludeUndefined<T[K]>>> // Allow Single object and arrays of type
           | WhereQueryStatement<ExcludeUndefined<T[K]>>; // Allow nested where query statements
 } & {
+  and?: WhereQuery<T>[];
   or?: WhereQuery<T>[];
 };
