@@ -2984,4 +2984,110 @@ describe('sqlHelper', () => {
       result.should.equal('ORDER BY "int_column" DESC,"name"');
     });
   });
+
+  describe('#buildJoinClauses()', () => {
+    it('should return empty string when no joins provided', () => {
+      const result = sqlHelper.buildJoinClauses({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        joins: [],
+      });
+
+      result.should.equal('');
+    });
+
+    it('should generate INNER JOIN clause for model relationship', () => {
+      const result = sqlHelper.buildJoinClauses({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'store',
+            type: 'inner',
+          },
+        ],
+      });
+
+      result.should.equal(' INNER JOIN "stores" AS "store" ON "products"."store_id" = "store"."id"');
+    });
+
+    it('should generate LEFT JOIN clause for model relationship', () => {
+      const result = sqlHelper.buildJoinClauses({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'store',
+            type: 'left',
+          },
+        ],
+      });
+
+      result.should.equal(' LEFT JOIN "stores" AS "store" ON "products"."store_id" = "store"."id"');
+    });
+
+    it('should use custom alias in join clause', () => {
+      const result = sqlHelper.buildJoinClauses({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'primaryStore',
+            type: 'inner',
+          },
+        ],
+      });
+
+      result.should.equal(' INNER JOIN "stores" AS "primaryStore" ON "products"."store_id" = "primaryStore"."id"');
+    });
+
+    it('should throw QueryError for non-existent property', () => {
+      let thrownError: Error | null = null;
+
+      try {
+        sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          joins: [
+            {
+              propertyName: 'nonExistent',
+              alias: 'nonExistent',
+              type: 'inner',
+            },
+          ],
+        });
+      } catch (ex) {
+        thrownError = ex as Error;
+      }
+
+      should.exist(thrownError);
+      thrownError!.message.should.contain('Unable to find property "nonExistent"');
+    });
+
+    it('should throw QueryError for non-relationship property', () => {
+      let thrownError: Error | null = null;
+
+      try {
+        sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          joins: [
+            {
+              propertyName: 'name',
+              alias: 'name',
+              type: 'inner',
+            },
+          ],
+        });
+      } catch (ex) {
+        thrownError = ex as Error;
+      }
+
+      should.exist(thrownError);
+      thrownError!.message.should.contain('is not a relationship and cannot be joined');
+    });
+  });
 });

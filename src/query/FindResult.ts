@@ -1,5 +1,5 @@
 import type { Entity } from '../Entity.js';
-import type { GetValueType, PickByValueType, Populated } from '../types/index.js';
+import type { GetValueType, ModelRelationshipKeys, PickByValueType, Populated } from '../types/index.js';
 
 import type { PaginateOptions } from './PaginateOptions.js';
 import type { PopulateArgs } from './PopulateArgs.js';
@@ -13,6 +13,8 @@ export interface FindResult<T extends Entity, TReturn> extends PromiseLike<TRetu
     propertyName: TProperty,
     options?: PopulateArgs<TPopulateType, TPopulateSelectKeys>,
   ): FindResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>>;
+  join(propertyName: ModelRelationshipKeys<T>, alias?: string): FindResult<T, TReturn>;
+  leftJoin(propertyName: ModelRelationshipKeys<T>, alias?: string): FindResult<T, TReturn>;
   sort(value?: Sort<T>): FindResult<T, TReturn>;
   limit(value: number): FindResult<T, TReturn>;
   skip(value: number): FindResult<T, TReturn>;

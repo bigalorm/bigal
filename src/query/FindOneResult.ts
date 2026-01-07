@@ -1,5 +1,5 @@
 import type { Entity } from '../Entity.js';
-import type { GetValueType, PickAsType, PickByValueType, Populated } from '../types/index.js';
+import type { GetValueType, ModelRelationshipKeys, PickAsType, PickByValueType, Populated } from '../types/index.js';
 
 import type { PopulateArgs } from './PopulateArgs.js';
 import type { Sort } from './Sort.js';
@@ -12,6 +12,8 @@ export interface FindOneResult<T extends Entity, TReturn> extends PromiseLike<TR
     propertyName: TProperty,
     options?: PopulateArgs<TPopulateType, TPopulateSelectKeys>,
   ): FindOneResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>>;
+  join(propertyName: ModelRelationshipKeys<T>, alias?: string): FindOneResult<T, TReturn>;
+  leftJoin(propertyName: ModelRelationshipKeys<T>, alias?: string): FindOneResult<T, TReturn>;
   sort(value?: Sort<T>): FindOneResult<T, TReturn>;
   UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
   UNSAFE_withFieldValue<TProperty extends string & keyof T, TValue extends T[TProperty]>(

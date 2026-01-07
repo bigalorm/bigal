@@ -8,7 +8,7 @@ import type {
   ColumnTypeMetadata,
   ModelMetadata,
 } from './metadata/index.js';
-import type { Comparer, OrderBy, WhereClauseValue, WhereQuery } from './query/index.js';
+import type { Comparer, JoinDefinition, OrderBy, WhereClauseValue, WhereQuery } from './query/index.js';
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
 import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types/index.js';
 
@@ -27,6 +27,7 @@ interface QueryAndParams {
  * @param {string[]|object[]} [args.sorts] - Property name(s) to sort by
  * @param {number} [args.skip] - Number of records to skip
  * @param {number} [args.limit] - Number of results to return
+ * @param {JoinDefinition[]} [args.joins] - Array of join definitions
  * @returns {{query: string, params: object[]}}
  */
 export function getSelectQueryAndParams<T extends Entity>({
@@ -37,6 +38,7 @@ export function getSelectQueryAndParams<T extends Entity>({
   sorts,
   skip,
   limit,
+  joins,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
@@ -45,6 +47,7 @@ export function getSelectQueryAndParams<T extends Entity>({
   sorts: readonly OrderBy<T>[];
   skip: number;
   limit: number;
+  joins?: readonly JoinDefinition[];
 }): QueryAndParams {
   let query = 'SELECT ';
 
@@ -54,6 +57,14 @@ export function getSelectQueryAndParams<T extends Entity>({
   });
 
   query += ` FROM ${model.qualifiedTableName}`;
+
+  if (joins?.length) {
+    query += buildJoinClauses({
+      repositoriesByModelNameLowered,
+      model,
+      joins,
+    });
+  }
 
   const { whereStatement, params } = buildWhereStatement({
     repositoriesByModelNameLowered,
@@ -632,6 +643,67 @@ export function getColumnsToSelect<T extends Entity, K extends string & keyof Om
   }
 
   return query;
+}
+
+/**
+ * Builds SQL JOIN clauses for the specified join definitions
+ * @param {object} args - Arguments
+ * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by model name
+ * @param {object} args.model - Source model schema
+ * @param {JoinDefinition[]} args.joins - Array of join definitions
+ * @returns {string} SQL join clauses
+ */
+export function buildJoinClauses<T extends Entity>({
+  repositoriesByModelNameLowered,
+  model,
+  joins,
+}: {
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  model: ModelMetadata<T>;
+  joins: readonly JoinDefinition[];
+}): string {
+  let joinSql = '';
+
+  for (const join of joins) {
+    // Look up the column metadata for the join property
+    const column = model.columnsByPropertyName[join.propertyName] as ColumnModelMetadata | undefined;
+    if (!column) {
+      throw new QueryError(`Unable to find property "${join.propertyName}" on model "${model.name}" for join`, model);
+    }
+
+    // Ensure it's a model reference column (foreign key)
+    if (!('model' in column) || !column.model) {
+      throw new QueryError(`Property "${join.propertyName}" on model "${model.name}" is not a relationship and cannot be joined`, model);
+    }
+
+    // Look up the related model repository
+    const relatedRepository = repositoriesByModelNameLowered[column.model.toLowerCase()];
+    if (!relatedRepository) {
+      throw new QueryError(`Unable to find model "${column.model}" for join on "${join.propertyName}"`, model);
+    }
+
+    const relatedModel = relatedRepository.model;
+    const relatedPrimaryKey = relatedModel.primaryKeyColumn;
+    if (!relatedPrimaryKey) {
+      throw new QueryError(`Unable to find primary key for model "${column.model}" when building join`, model);
+    }
+
+    // Build the JOIN clause
+    const joinType = join.type === 'left' ? 'LEFT JOIN' : 'INNER JOIN';
+    const alias = join.alias || join.propertyName;
+
+    joinSql += ` ${joinType} ${relatedModel.qualifiedTableName}`;
+
+    // Add alias if it differs from the table name
+    if (alias !== relatedModel.tableName) {
+      joinSql += ` AS "${alias}"`;
+    }
+
+    // ON clause: source.foreign_key = joined.primary_key
+    joinSql += ` ON ${model.qualifiedTableName}."${column.name}" = "${alias}"."${relatedPrimaryKey.name}"`;
+  }
+
+  return joinSql;
 }
 
 /**
