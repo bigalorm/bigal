@@ -1,3 +1,9 @@
+# [15.1.0](https://github.com/bigalorm/bigal/compare/v15.0.1...v15.1.0) (2026-01-07)
+
+### Features
+
+- Add `and` property to WhereQuery for combining OR groups ([#262](https://github.com/bigalorm/bigal/issues/262)) ([903eeb8](https://github.com/bigalorm/bigal/commit/903eeb826e3dedd7574aa940527ca07b264a40b2))
+
 ## [15.0.1](https://github.com/bigalorm/bigal/compare/v15.0.0...v15.0.1) (2026-01-07)
 
 # [15.0.0](https://github.com/bigalorm/bigal/compare/v14.1.26...v15.0.0) (2025-12-28)
