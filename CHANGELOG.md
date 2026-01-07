@@ -1,3 +1,5 @@
+## [15.0.1](https://github.com/bigalorm/bigal/compare/v15.0.0...v15.0.1) (2026-01-07)
+
 # [15.0.0](https://github.com/bigalorm/bigal/compare/v14.1.26...v15.0.0) (2025-12-28)
 
 - feat!: support pluggable PostgreSQL drivers ([7638343](https://github.com/bigalorm/bigal/commit/76383432acc8ee1bdf48a8c60a8e5fa10176bd69))
