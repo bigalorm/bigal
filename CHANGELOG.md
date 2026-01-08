@@ -1,3 +1,9 @@
+# [15.3.0](https://github.com/bigalorm/bigal/compare/v15.2.0...v15.3.0) (2026-01-08)
+
+### Features
+
+- Add SQL subquery support for WHERE clauses ([#265](https://github.com/bigalorm/bigal/issues/265)) ([2af8d7f](https://github.com/bigalorm/bigal/commit/2af8d7f4ad53642907f3e8d1539bd6f07e1ccecc))
+
 # [15.2.0](https://github.com/bigalorm/bigal/compare/v15.1.0...v15.2.0) (2026-01-08)
 
 ### Features
