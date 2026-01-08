@@ -337,35 +337,97 @@ BigAl provides four string matching operators. All use case-insensitive matching
 | `endsWith`   | Matches strings ending with the value         | `%value`    |
 
 ```ts
-// contains: finds "widget" anywhere in name (case-insensitive)
 const items = await ProductRepository.find().where({
   name: { contains: 'widget' },
 });
 // SQL: SELECT ... FROM product WHERE name ILIKE '%widget%'
 
-// startsWith: finds names beginning with "Pro"
 const items = await ProductRepository.find().where({
   name: { startsWith: 'Pro' },
 });
 // SQL: SELECT ... FROM product WHERE name ILIKE 'Pro%'
 
-// endsWith: finds names ending with "ter"
 const items = await ProductRepository.find().where({
   name: { endsWith: 'ter' },
 });
 // SQL: SELECT ... FROM product WHERE name ILIKE '%ter'
 
-// like: raw pattern with explicit wildcards
 const items = await ProductRepository.find().where({
   name: { like: 'Pro%Widget%' },
 });
 // SQL: SELECT ... FROM product WHERE name ILIKE 'Pro%Widget%'
 
-// Array values create OR conditions
+// Arrays create OR conditions
 const items = await PersonRepository.find().where({
   firstName: { like: ['walter', 'Jess%'] },
 });
 // SQL: SELECT ... FROM person WHERE (first_name ILIKE 'walter' OR first_name ILIKE 'Jess%')
+```
+
+#### Comparison operators
+
+For number and date fields, use comparison operators:
+
+| Operator | Description              |
+| -------- | ------------------------ |
+| `<`      | Less than                |
+| `<=`     | Less than or equal to    |
+| `>`      | Greater than             |
+| `>=`     | Greater than or equal to |
+
+```ts
+const items = await ProductRepository.find().where({
+  price: { '>=': 100 },
+});
+// SQL: SELECT ... FROM product WHERE price >= $1
+
+// Multiple operators on same field create AND
+const items = await ProductRepository.find().where({
+  createdAt: { '>=': startDate, '<': endDate },
+});
+// SQL: SELECT ... FROM product WHERE created_at >= $1 AND created_at < $2
+```
+
+#### Array values (OR conditions)
+
+When you pass an array of values, BigAl creates an OR condition:
+
+```ts
+const items = await PersonRepository.find().where({
+  age: [22, 23, 24],
+});
+// SQL: SELECT ... FROM person WHERE age IN ($1, $2, $3)
+
+const items = await ProductRepository.find().where({
+  name: { startsWith: ['Pro', 'Pre'] },
+});
+// SQL: SELECT ... FROM product WHERE (name ILIKE 'Pro%' OR name ILIKE 'Pre%')
+```
+
+#### Negation operator (`!`)
+
+Use `!` to negate any condition:
+
+```ts
+const items = await ProductRepository.find().where({
+  status: { '!': 'discontinued' },
+});
+// SQL: SELECT ... FROM product WHERE status <> $1
+
+const items = await ProductRepository.find().where({
+  status: { '!': ['discontinued', 'archived'] },
+});
+// SQL: SELECT ... FROM product WHERE status NOT IN ($1, $2)
+
+const items = await ProductRepository.find().where({
+  name: { '!': { startsWith: 'Test' } },
+});
+// SQL: SELECT ... FROM product WHERE name NOT ILIKE 'Test%'
+
+const items = await ProductRepository.find().where({
+  deletedAt: { '!': null },
+});
+// SQL: SELECT ... FROM product WHERE deleted_at IS NOT NULL
 ```
 
 #### Example of an AND statement
@@ -425,22 +487,28 @@ Equivalent to:
 select * from person where ((first_name = $1) OR (last_name = $2)) AND ((first_name = $3) OR (last_name = $4))
 ```
 
-#### Fetch multiple objects and perform a db sort before returning result
+#### Sorting results
+
+Use `.sort()` to order results. Two syntax options are available:
+
+**String syntax** - Use `asc` or `desc` (comma-separated for multiple columns):
 
 ```ts
-const items = await PersonRepository.find()
-  .where({
-    firstName: {
-      like: 'walter',
-    },
-    lastName: {
-      like: 'white',
-    },
-  })
-  .sort({
-    age: 1,
-    occupation: -1,
-  });
+const items = await PersonRepository.find().where({ lastName: 'Smith' }).sort('age asc');
+// SQL: SELECT ... FROM person WHERE last_name = $1 ORDER BY age ASC
+
+const items = await PersonRepository.find().where({ lastName: 'Smith' }).sort('age asc, createdAt desc');
+// SQL: SELECT ... FROM person WHERE last_name = $1 ORDER BY age ASC, created_at DESC
+```
+
+**Object syntax** - Use `1` for ascending, `-1` for descending:
+
+```ts
+const items = await PersonRepository.find().where({ lastName: 'Smith' }).sort({ age: 1 });
+// SQL: SELECT ... FROM person WHERE last_name = $1 ORDER BY age ASC
+
+const items = await PersonRepository.find().where({ lastName: 'Smith' }).sort({ age: 1, createdAt: -1 });
+// SQL: SELECT ... FROM person WHERE last_name = $1 ORDER BY age ASC, created_at DESC
 ```
 
 #### Limit number results returned
