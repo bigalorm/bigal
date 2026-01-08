@@ -8,7 +8,7 @@ import { mock } from 'ts-mockito';
 
 import { QueryError } from '../src/errors/index.js';
 import { initialize } from '../src/index.js';
-import type { Entity, IReadonlyRepository, IRepository, ModelMetadata } from '../src/index.js';
+import type { Entity, IReadonlyRepository, IRepository, ModelMetadata, WhereQuery } from '../src/index.js';
 import * as sqlHelper from '../src/SqlHelper.js';
 
 import {
@@ -3060,7 +3060,7 @@ describe('sqlHelper', () => {
             type: 'left',
             on: {
               name: 'Acme',
-            },
+            } as WhereQuery<Store>,
           },
         ],
         params,
@@ -3116,6 +3116,200 @@ describe('sqlHelper', () => {
 
       should.exist(thrownError);
       thrownError!.message.should.contain('is not a relationship and cannot be joined');
+    });
+  });
+
+  describe('dot-notation in where clauses with joins', () => {
+    it('should handle dot-notation for simple equality on joined table', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          'store.name': 'Acme',
+        } as WhereQuery<Product>,
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'store',
+            type: 'inner',
+          },
+        ],
+      });
+
+      whereStatement!.should.equal('WHERE "store"."name"=$1');
+      params.should.deep.equal(['Acme']);
+    });
+
+    it('should handle dot-notation with like operator on joined table', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          'store.name': { like: '%mart%' },
+        } as WhereQuery<Product>,
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'store',
+            type: 'left',
+          },
+        ],
+      });
+
+      whereStatement!.should.equal('WHERE "store"."name" ILIKE $1');
+      params.should.deep.equal(['%mart%']);
+    });
+
+    it('should handle dot-notation with custom join alias', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          'primaryStore.name': 'Acme',
+        } as WhereQuery<Product>,
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'primaryStore',
+            type: 'inner',
+          },
+        ],
+      });
+
+      whereStatement!.should.equal('WHERE "primaryStore"."name"=$1');
+      params.should.deep.equal(['Acme']);
+    });
+
+    it('should handle multiple dot-notation properties', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          name: 'Widget',
+          'store.name': 'Acme',
+        } as WhereQuery<Product>,
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'store',
+            type: 'inner',
+          },
+        ],
+      });
+
+      whereStatement!.should.equal('WHERE "name"=$1 AND "store"."name"=$2');
+      params.should.deep.equal(['Widget', 'Acme']);
+    });
+
+    it('should handle dot-notation with comparison operators', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          'store.id': { '>': 5 },
+        } as WhereQuery<Product>,
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'store',
+            type: 'inner',
+          },
+        ],
+      });
+
+      whereStatement!.should.equal('WHERE "store"."id">$1');
+      params.should.deep.equal([5]);
+    });
+
+    it('should handle dot-notation with null value', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          'store.name': null,
+        } as WhereQuery<Product>,
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'store',
+            type: 'left',
+          },
+        ],
+      });
+
+      whereStatement!.should.equal('WHERE "store"."name" IS NULL');
+      params.should.deep.equal([]);
+    });
+
+    it('should throw error when using dot-notation without corresponding join', () => {
+      let thrownError: Error | null = null;
+
+      try {
+        sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: {
+            'store.name': 'Acme',
+          } as WhereQuery<Product>,
+        });
+      } catch (ex) {
+        thrownError = ex as Error;
+      }
+
+      should.exist(thrownError);
+      thrownError!.message.should.contain('Cannot use dot notation "store.name" without a join');
+    });
+
+    it('should throw error when join alias does not match', () => {
+      let thrownError: Error | null = null;
+
+      try {
+        sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: {
+            'nonExistentAlias.name': 'Acme',
+          } as WhereQuery<Product>,
+          joins: [
+            {
+              propertyName: 'store',
+              alias: 'store',
+              type: 'inner',
+            },
+          ],
+        });
+      } catch (ex) {
+        thrownError = ex as Error;
+      }
+
+      should.exist(thrownError);
+      thrownError!.message.should.contain('Cannot find join for "nonExistentAlias"');
+    });
+
+    it('should throw error when property does not exist on joined model', () => {
+      let thrownError: Error | null = null;
+
+      try {
+        sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: {
+            'store.nonExistentProperty': 'Acme',
+          } as WhereQuery<Product>,
+          joins: [
+            {
+              propertyName: 'store',
+              alias: 'store',
+              type: 'inner',
+            },
+          ],
+        });
+      } catch (ex) {
+        thrownError = ex as Error;
+      }
+
+      should.exist(thrownError);
+      thrownError!.message.should.contain('Unable to find property "nonExistentProperty" on model');
     });
   });
 });

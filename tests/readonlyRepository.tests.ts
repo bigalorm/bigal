@@ -1916,6 +1916,109 @@ describe('ReadonlyRepository', () => {
       params.should.deep.equal([]);
     });
 
+    describe('join', () => {
+      it('should support inner join with nested where clause', async () => {
+        const products = [
+          generator.product({
+            store: store.id,
+          }),
+        ];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        const result = await ProductRepository.find()
+          .join('store')
+          .where({
+            store: {
+              name: {
+                like: 'Acme',
+              },
+            },
+          });
+        assert(result);
+        result.should.deep.equal(products);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal(
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id" = "store"."id" WHERE "store"."name" ILIKE $1',
+        );
+        assert(params);
+        params.should.deep.equal(['Acme']);
+      });
+
+      it('should support left join with nested where clause', async () => {
+        const products = [
+          generator.product({
+            store: store.id,
+          }),
+        ];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        const result = await ProductRepository.find()
+          .leftJoin('store')
+          .where({
+            store: { name: { like: '%mart%' } },
+          });
+        assert(result);
+        result.should.deep.equal(products);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal(
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LEFT JOIN "stores" AS "store" ON "products"."store_id" = "store"."id" WHERE "store"."name" ILIKE $1',
+        );
+        assert(params);
+        params.should.deep.equal(['%mart%']);
+      });
+
+      it('should support join with alias and nested where clause', async () => {
+        const products = [
+          generator.product({
+            store: store.id,
+          }),
+        ];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        const result = await ProductRepository.find()
+          .join('store', 'primaryStore')
+          .where({
+            primaryStore: { name: 'Acme' },
+          });
+        assert(result);
+        result.should.deep.equal(products);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal(
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "primaryStore" ON "products"."store_id" = "primaryStore"."id" WHERE "primaryStore"."name"=$1',
+        );
+        assert(params);
+        params.should.deep.equal(['Acme']);
+      });
+
+      it('should support join with mixed nested and regular where constraints', async () => {
+        const products = [
+          generator.product({
+            store: store.id,
+          }),
+        ];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        const result = await ProductRepository.find()
+          .join('store')
+          .where({
+            name: 'Widget',
+            store: { name: 'Acme' },
+          });
+        assert(result);
+        result.should.deep.equal(products);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal(
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id" = "store"."id" WHERE "name"=$1 AND "store"."name"=$2',
+        );
+        assert(params);
+        params.should.deep.equal(['Widget', 'Acme']);
+      });
+    });
+
     describe('populate', () => {
       let store1: QueryResult<Store>;
       let store2: QueryResult<Store>;
