@@ -7,7 +7,7 @@ import { Pool } from 'postgres-pool';
 import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
 
 import type { PoolQueryResult, QueryResult, QueryResultPopulated, QueryResultRow, ReadonlyRepository, Repository } from '../src/index.js';
-import { initialize } from '../src/index.js';
+import { initialize, subquery } from '../src/index.js';
 import type { WhereQuery } from '../src/query/index.js';
 
 import type { ParkingLot } from './models/index.js';
@@ -2056,6 +2056,166 @@ describe('ReadonlyRepository', () => {
         );
         assert(params);
         params.should.deep.equal([]);
+      });
+    });
+
+    describe('subquery', () => {
+      it('should support WHERE IN with subquery', async () => {
+        const products = [
+          generator.product({
+            store: store.id,
+          }),
+        ];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const activeStores = subquery(StoreRepository).select(['id']).where({ name: 'Acme' });
+        const result = await ProductRepository.find().where({
+          store: { in: activeStores },
+        });
+
+        assert(result);
+        result.should.deep.equal(products);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id" IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
+        assert(params);
+        params.should.deep.equal(['Acme']);
+      });
+
+      it('should support WHERE NOT IN with subquery using negation', async () => {
+        const products = [
+          generator.product({
+            store: store.id,
+          }),
+        ];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const inactiveStores = subquery(StoreRepository).select(['id']).where({ name: 'Inactive' });
+        const result = await ProductRepository.find().where({
+          store: { '!': { in: inactiveStores } },
+        });
+
+        assert(result);
+        result.should.deep.equal(products);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id" NOT IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
+        assert(params);
+        params.should.deep.equal(['Inactive']);
+      });
+
+      it('should support WHERE EXISTS with subquery', async () => {
+        const stores = [generator.store()];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+        const hasProducts = subquery(ProductRepository).where({ name: 'Widget' });
+        const result = await StoreRepository.find().where({
+          exists: hasProducts,
+        });
+
+        assert(result);
+        result.should.deep.equal(stores);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal('SELECT "id","name" FROM "stores" WHERE EXISTS (SELECT 1 FROM "products" WHERE "name"=$1)');
+        assert(params);
+        params.should.deep.equal(['Widget']);
+      });
+
+      it('should support WHERE NOT EXISTS with subquery using negation', async () => {
+        const stores = [generator.store()];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+        const hasDiscontinued = subquery(ProductRepository).where({ name: 'Discontinued' });
+        const result = await StoreRepository.find().where({
+          '!': { exists: hasDiscontinued },
+        });
+
+        assert(result);
+        result.should.deep.equal(stores);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal('SELECT "id","name" FROM "stores" WHERE NOT EXISTS (SELECT 1 FROM "products" WHERE "name"=$1)');
+        assert(params);
+        params.should.deep.equal(['Discontinued']);
+      });
+
+      it('should support scalar subquery with comparison operator', async () => {
+        const stores = [generator.store()];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+        const productCount = subquery(ProductRepository).where({ name: 'Widget' }).count();
+        const result = await StoreRepository.find().where({
+          id: { '>': productCount },
+        });
+
+        assert(result);
+        result.should.deep.equal(stores);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal('SELECT "id","name" FROM "stores" WHERE "id">(SELECT COUNT(*) FROM "products" WHERE "name"=$1)');
+        assert(params);
+        params.should.deep.equal(['Widget']);
+      });
+
+      it('should support subquery with sort and limit', async () => {
+        const products = [
+          generator.product({
+            store: store.id,
+          }),
+        ];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const topStores = subquery(StoreRepository)
+          .select(['id'])
+          .where({ name: { like: 'A%' } })
+          .sort('name')
+          .limit(10);
+        const result = await ProductRepository.find().where({
+          store: { in: topStores },
+        });
+
+        assert(result);
+        result.should.deep.equal(products);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal(
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id" IN (SELECT "id" FROM "stores" WHERE "name" ILIKE $1 ORDER BY "name" LIMIT 10)',
+        );
+        assert(params);
+        params.should.deep.equal(['A%']);
+      });
+
+      it('should support combining subquery with other where conditions', async () => {
+        const products = [
+          generator.product({
+            store: store.id,
+          }),
+        ];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const premiumStores = subquery(StoreRepository).select(['id']).where({ name: 'Premium' });
+        const result = await ProductRepository.find().where({
+          name: 'Widget',
+          store: { in: premiumStores },
+        });
+
+        assert(result);
+        result.should.deep.equal(products);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal(
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "name"=$1 AND "store_id" IN (SELECT "id" FROM "stores" WHERE "name"=$2)',
+        );
+        assert(params);
+        params.should.deep.equal(['Widget', 'Premium']);
       });
     });
 

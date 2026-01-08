@@ -7,7 +7,7 @@ import { Pool } from 'postgres-pool';
 import { mock } from 'ts-mockito';
 
 import { QueryError } from '../src/errors/index.js';
-import { initialize } from '../src/index.js';
+import { initialize, subquery } from '../src/index.js';
 import type { Entity, IReadonlyRepository, IRepository, ModelMetadata, WhereQuery } from '../src/index.js';
 import * as sqlHelper from '../src/SqlHelper.js';
 
@@ -3384,6 +3384,226 @@ describe('sqlHelper', () => {
 
       should.exist(thrownError);
       thrownError!.message.should.contain('Unable to find property "nonExistentProperty" on model');
+    });
+  });
+
+  describe('subqueries', () => {
+    describe('WHERE IN with subquery', () => {
+      it('should generate IN subquery', () => {
+        const storeSubquery = subquery(repositoriesByModelNameLowered.store as IRepository<Store>)
+          .select(['id'])
+          .where({ name: 'Acme' });
+
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: {
+            store: { in: storeSubquery },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "store_id" IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
+        params.should.deep.equal(['Acme']);
+      });
+
+      it('should generate NOT IN subquery with negation', () => {
+        const storeSubquery = subquery(repositoriesByModelNameLowered.store as IRepository<Store>)
+          .select(['id'])
+          .where({ name: 'Inactive' });
+
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: {
+            store: { '!': { in: storeSubquery } },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "store_id" NOT IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
+        params.should.deep.equal(['Inactive']);
+      });
+
+      it('should generate IN subquery without select (defaults to 1)', () => {
+        const storeSubquery = subquery(repositoriesByModelNameLowered.store as IRepository<Store>).where({ name: 'Test' });
+
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: {
+            store: { in: storeSubquery },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "store_id" IN (SELECT 1 FROM "stores" WHERE "name"=$1)');
+        params.should.deep.equal(['Test']);
+      });
+    });
+
+    describe('WHERE EXISTS with subquery', () => {
+      it('should generate EXISTS subquery', () => {
+        const productSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>).where({ name: 'Widget' });
+
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          where: {
+            exists: productSubquery,
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE EXISTS (SELECT 1 FROM "products" WHERE "name"=$1)');
+        params.should.deep.equal(['Widget']);
+      });
+
+      it('should generate NOT EXISTS subquery with negation', () => {
+        const productSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>).where({ name: 'Discontinued' });
+
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          where: {
+            '!': { exists: productSubquery },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE NOT EXISTS (SELECT 1 FROM "products" WHERE "name"=$1)');
+        params.should.deep.equal(['Discontinued']);
+      });
+    });
+
+    describe('scalar subqueries with aggregates', () => {
+      it('should generate scalar subquery with AVG', () => {
+        const avgSubquery = subquery(repositoriesByModelNameLowered.kitchensink as IRepository<KitchenSink>)
+          .where({ name: 'test' })
+          .avg('intColumn');
+
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
+          where: {
+            intColumn: { '>': avgSubquery },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "int_column">(SELECT AVG("int_column") FROM "kitchen_sink" WHERE "name"=$1)');
+        params.should.deep.equal(['test']);
+      });
+
+      it('should generate scalar subquery with COUNT', () => {
+        const countSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .where({ name: 'Popular' })
+          .count();
+
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
+          where: {
+            intColumn: { '>=': countSubquery },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "int_column">=(SELECT COUNT(*) FROM "products" WHERE "name"=$1)');
+        params.should.deep.equal(['Popular']);
+      });
+
+      it('should generate scalar subquery with SUM', () => {
+        const sumSubquery = subquery(repositoriesByModelNameLowered.kitchensink as IRepository<KitchenSink>).sum('intColumn');
+
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
+          where: {
+            intColumn: { '<': sumSubquery },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "int_column"<(SELECT SUM("int_column") FROM "kitchen_sink")');
+        params.should.deep.equal([]);
+      });
+
+      it('should generate scalar subquery with MAX', () => {
+        const maxSubquery = subquery(repositoriesByModelNameLowered.kitchensink as IRepository<KitchenSink>).max('intColumn');
+
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
+          where: {
+            intColumn: { '<=': maxSubquery },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "int_column"<=(SELECT MAX("int_column") FROM "kitchen_sink")');
+        params.should.deep.equal([]);
+      });
+
+      it('should generate scalar subquery with MIN', () => {
+        const minSubquery = subquery(repositoriesByModelNameLowered.kitchensink as IRepository<KitchenSink>).min('intColumn');
+
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
+          where: {
+            intColumn: { '>': minSubquery },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "int_column">(SELECT MIN("int_column") FROM "kitchen_sink")');
+        params.should.deep.equal([]);
+      });
+    });
+
+    describe('subquery with sort and limit', () => {
+      it('should generate subquery with ORDER BY and LIMIT', () => {
+        const storeSubquery = subquery(repositoriesByModelNameLowered.store as IRepository<Store>)
+          .select(['id'])
+          .where({ name: { like: 'A%' } })
+          .sort('name asc')
+          .limit(10);
+
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: {
+            store: { in: storeSubquery },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "store_id" IN (SELECT "id" FROM "stores" WHERE "name" ILIKE $1 ORDER BY "name" LIMIT 10)');
+        params.should.deep.equal(['A%']);
+      });
+    });
+
+    describe('combining subqueries with other conditions', () => {
+      it('should combine subquery with regular where conditions', () => {
+        const storeSubquery = subquery(repositoriesByModelNameLowered.store as IRepository<Store>)
+          .select(['id'])
+          .where({ name: 'Premium' });
+
+        const productName = 'Widget';
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: {
+            name: productName,
+            store: { in: storeSubquery },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "name"=$1 AND "store_id" IN (SELECT "id" FROM "stores" WHERE "name"=$2)');
+        params.should.deep.equal([productName, 'Premium']);
+      });
     });
   });
 });

@@ -1,6 +1,8 @@
 import type { Entity, NotEntityBrand } from '../Entity.js';
 import type { ExcludeEntityCollections, ExcludeFunctions } from '../types/index.js';
 
+import type { ScalarSubquery, SubqueryBuilderLike } from './Subquery.js';
+
 type ExcludeUndefined<T> = Exclude<T, undefined>;
 export type LiteralValues<TValue> = (TValue | null)[] | TValue | null;
 
@@ -19,6 +21,14 @@ export type StringConstraint<TValue extends string> = Partial<Record<'contains' 
 
 export type NumberOrDateConstraint<TValue extends Date | number> = Partial<Record<'<' | '<=' | '>' | '>=', LiteralValues<ExcludeUndefined<TValue>>>>;
 
+export interface SubqueryInConstraint {
+  in: SubqueryBuilderLike;
+}
+
+export type ScalarSubqueryConstraint<TValue> = Partial<Record<'<' | '<=' | '>' | '>=', ScalarSubquery<TValue | undefined> | ScalarSubquery<TValue>>>;
+
+export type NumberOrDateConstraintWithSubquery<TValue extends Date | number> = NumberOrDateConstraint<TValue> | ScalarSubqueryConstraint<TValue>;
+
 export type NegatableConstraint<TValue> =
   | TValue
   | {
@@ -26,12 +36,12 @@ export type NegatableConstraint<TValue> =
     };
 
 export type WhereQueryStatement<TValue> = [TValue] extends [string] // Avoid distributive conditional type check for union types
-  ? NegatableConstraint<StringConstraint<TValue> | WhereClauseValue<TValue>>
+  ? NegatableConstraint<StringConstraint<TValue> | SubqueryInConstraint | WhereClauseValue<TValue>>
   : TValue extends string // Handle string types not covered by the previous check. Eg string | null
-    ? NegatableConstraint<StringConstraint<TValue> | WhereClauseValue<TValue>>
+    ? NegatableConstraint<StringConstraint<TValue> | SubqueryInConstraint | WhereClauseValue<TValue>>
     : TValue extends Date | number
-      ? NegatableConstraint<NumberOrDateConstraint<TValue> | WhereClauseValue<TValue>>
-      : NegatableConstraint<WhereClauseValue<TValue>>;
+      ? NegatableConstraint<NumberOrDateConstraintWithSubquery<TValue> | SubqueryInConstraint | WhereClauseValue<TValue>>
+      : NegatableConstraint<SubqueryInConstraint | WhereClauseValue<TValue>>;
 
 export type WhereQuery<T extends Entity> = {
   // Exclude entity collections and functions. Make the rest of the properties optional
@@ -45,4 +55,6 @@ export type WhereQuery<T extends Entity> = {
 } & {
   and?: WhereQuery<T>[];
   or?: WhereQuery<T>[];
+  exists?: SubqueryBuilderLike;
+  '!'?: Pick<WhereQuery<T>, 'exists'>;
 };
