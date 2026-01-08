@@ -477,7 +477,14 @@ select * from person where (first_name = $1) OR (last_name = $2)
 
 ```ts
 const items = await PersonRepository.find().where({
-  and: [{ or: [{ firstName: 'Walter' }, { lastName: 'White' }] }, { or: [{ firstName: 'Jesse' }, { lastName: 'Pinkman' }] }],
+  and: [
+    {
+      or: [{ firstName: 'Walter' }, { lastName: 'White' }],
+    },
+    {
+      or: [{ firstName: 'Jesse' }, { lastName: 'Pinkman' }],
+    },
+  ],
 });
 ```
 
