@@ -3,7 +3,21 @@ import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
 import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata/index.js';
 import type { CountArgs } from './query/CountArgs.js';
-import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, OrderBy, PaginateOptions, PopulateArgs, Sort, SortObject, SortObjectValue, WhereQuery } from './query/index.js';
+import type {
+  CountResult,
+  FindArgs,
+  FindOneArgs,
+  FindOneResult,
+  FindResult,
+  JoinDefinition,
+  OrderBy,
+  PaginateOptions,
+  PopulateArgs,
+  Sort,
+  SortObject,
+  SortObjectValue,
+  WhereQuery,
+} from './query/index.js';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
 import type { GetValueType, OmitEntityCollections, OmitFunctions, PickAsType, PickByValueType, PickFunctions, PoolLike, Populated, QueryResult } from './types/index.js';
 import { groupBy, keyBy } from './utils/index.js';
@@ -120,6 +134,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
     const manuallySetFields: ManuallySetField[] = [];
     const sorts: OrderBy<T>[] = sort ? this._convertSortsToOrderBy(sort) : [];
+    const joins: JoinDefinition[] = [];
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
@@ -181,6 +196,25 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this as FindOneResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>>;
       },
+      join(propertyName: string, alias?: string): FindOneResult<T, TReturn> {
+        joins.push({
+          propertyName,
+          alias: alias ?? propertyName,
+          type: 'inner',
+        });
+
+        return this;
+      },
+      leftJoin(propertyName: string, alias?: string, on?: WhereQuery<Entity>): FindOneResult<T, TReturn> {
+        joins.push({
+          propertyName,
+          alias: alias ?? propertyName,
+          type: 'left',
+          on,
+        });
+
+        return this;
+      },
       /**
        * Sorts the query
        * @param {string|object} [value]
@@ -225,6 +259,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             sorts,
             limit: 1,
             skip: 0,
+            joins,
           });
 
           const pool = poolOverride ?? modelInstance._readonlyPool;
@@ -322,6 +357,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
     const populates: Populate[] = [];
     const sorts = sort ? this._convertSortsToOrderBy(sort) : [];
+    const joins: JoinDefinition[] = [];
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
@@ -383,6 +419,25 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         });
 
         return this as unknown as FindResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>>;
+      },
+      join(propertyName: string, alias?: string): FindResult<T, TReturn> {
+        joins.push({
+          propertyName,
+          alias: alias ?? propertyName,
+          type: 'inner',
+        });
+
+        return this;
+      },
+      leftJoin(propertyName: string, alias?: string, on?: WhereQuery<Entity>): FindResult<T, TReturn> {
+        joins.push({
+          propertyName,
+          alias: alias ?? propertyName,
+          type: 'left',
+          on,
+        });
+
+        return this;
       },
       /**
        * Sorts the query
@@ -447,6 +502,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             sorts,
             skip: skip ?? 0,
             limit: limit ?? 0,
+            joins,
           });
 
           const pool = poolOverride ?? modelInstance._readonlyPool;

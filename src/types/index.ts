@@ -7,6 +7,7 @@ export * from './ExcludeFunctions.js';
 export * from './GetValueType.js';
 export * from './IncludeFunctions.js';
 export * from './IsValueOfType.js';
+export * from './ModelRelationshipKeys.js';
 export * from './OmitEntityCollections.js';
 export * from './OmitFunctions.js';
 export * from './PickAsType.js';

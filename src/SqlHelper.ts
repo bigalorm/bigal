@@ -2,13 +2,8 @@ import type { Entity, EntityFieldValue } from './Entity.js';
 import { QueryError } from './errors/index.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
-import type {
-  ColumnCollectionMetadata, //
-  ColumnModelMetadata,
-  ColumnTypeMetadata,
-  ModelMetadata,
-} from './metadata/index.js';
-import type { Comparer, OrderBy, WhereClauseValue, WhereQuery } from './query/index.js';
+import type { ColumnBaseMetadata, ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata/index.js';
+import type { Comparer, JoinDefinition, OrderBy, WhereClauseValue, WhereQuery } from './query/index.js';
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
 import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types/index.js';
 
@@ -27,6 +22,7 @@ interface QueryAndParams {
  * @param {string[]|object[]} [args.sorts] - Property name(s) to sort by
  * @param {number} [args.skip] - Number of records to skip
  * @param {number} [args.limit] - Number of results to return
+ * @param {JoinDefinition[]} [args.joins] - Array of join definitions
  * @returns {{query: string, params: object[]}}
  */
 export function getSelectQueryAndParams<T extends Entity>({
@@ -37,6 +33,7 @@ export function getSelectQueryAndParams<T extends Entity>({
   sorts,
   skip,
   limit,
+  joins,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
@@ -45,6 +42,7 @@ export function getSelectQueryAndParams<T extends Entity>({
   sorts: readonly OrderBy<T>[];
   skip: number;
   limit: number;
+  joins?: readonly JoinDefinition[];
 }): QueryAndParams {
   let query = 'SELECT ';
 
@@ -55,10 +53,23 @@ export function getSelectQueryAndParams<T extends Entity>({
 
   query += ` FROM ${model.qualifiedTableName}`;
 
-  const { whereStatement, params } = buildWhereStatement({
+  const params: unknown[] = [];
+
+  if (joins?.length) {
+    query += buildJoinClauses({
+      repositoriesByModelNameLowered,
+      model,
+      joins,
+      params,
+    });
+  }
+
+  const { whereStatement } = buildWhereStatement({
     repositoriesByModelNameLowered,
     model,
     where,
+    params,
+    joins,
   });
 
   if (whereStatement) {
@@ -66,8 +77,10 @@ export function getSelectQueryAndParams<T extends Entity>({
   }
 
   const orderStatement = buildOrderStatement({
+    repositoriesByModelNameLowered,
     model,
     sorts,
+    joins,
   });
 
   if (orderStatement) {
@@ -635,12 +648,83 @@ export function getColumnsToSelect<T extends Entity, K extends string & keyof Om
 }
 
 /**
+ * Builds SQL JOIN clauses for the specified join definitions
+ * @param {object} args - Arguments
+ * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by model name
+ * @param {object} args.model - Source model schema
+ * @param {JoinDefinition[]} args.joins - Array of join definitions
+ * @param {unknown[]} args.params - Array to collect query parameters
+ * @returns {string} SQL join clauses
+ */
+export function buildJoinClauses<T extends Entity>({
+  repositoriesByModelNameLowered,
+  model,
+  joins,
+  params,
+}: {
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  model: ModelMetadata<T>;
+  joins: readonly JoinDefinition[];
+  params: unknown[];
+}): string {
+  let joinSql = '';
+
+  for (const join of joins) {
+    const column = model.columnsByPropertyName[join.propertyName] as ColumnModelMetadata | undefined;
+    if (!column) {
+      throw new QueryError(`Unable to find property "${join.propertyName}" on model "${model.name}" for join`, model);
+    }
+
+    if (!('model' in column) || !column.model) {
+      throw new QueryError(`Property "${join.propertyName}" on model "${model.name}" is not a relationship and cannot be joined`, model);
+    }
+
+    const relatedRepository = repositoriesByModelNameLowered[column.model.toLowerCase()];
+    if (!relatedRepository) {
+      throw new QueryError(`Unable to find model "${column.model}" for join on "${join.propertyName}"`, model);
+    }
+
+    const relatedModel = relatedRepository.model;
+    const relatedPrimaryKey = relatedModel.primaryKeyColumn;
+    if (!relatedPrimaryKey) {
+      throw new QueryError(`Unable to find primary key for model "${column.model}" when building join`, model);
+    }
+
+    const joinType = join.type === 'left' ? 'LEFT JOIN' : 'INNER JOIN';
+    const alias = join.alias || join.propertyName;
+
+    joinSql += ` ${joinType} ${relatedModel.qualifiedTableName}`;
+
+    if (alias !== relatedModel.tableName) {
+      joinSql += ` AS "${alias}"`;
+    }
+
+    joinSql += ` ON ${model.qualifiedTableName}."${column.name}" = "${alias}"."${relatedPrimaryKey.name}"`;
+
+    if (join.on) {
+      for (const [propertyName, value] of Object.entries(join.on)) {
+        const onColumn = relatedModel.columnsByPropertyName[propertyName] as ColumnTypeMetadata | undefined;
+        if (!onColumn) {
+          throw new QueryError(`Unable to find property "${propertyName}" on model "${relatedModel.name}" for ON constraint`, relatedModel);
+        }
+
+        params.push(value);
+        joinSql += ` AND "${alias}"."${onColumn.name}"=$${params.length}`;
+      }
+    }
+  }
+
+  return joinSql;
+}
+
+/**
  * Builds the SQL where statement based on the where expression
  * @param {object} args - Arguments
  * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by global id
  * @param {object} args.model - Model schema
  * @param {object} [args.where]
  * @param {(number|string|object|null)[]} [args.params] - Objects to pass as parameters for the query
+ * @param {JoinDefinition[]} [args.joins] - Array of join definitions for dot-notation support
  * @returns {object} {{whereStatement?: string, params: Array}}
  * @private
  */
@@ -649,11 +733,13 @@ export function buildWhereStatement<T extends Entity>({
   model,
   where,
   params = [],
+  joins,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   where?: WhereQuery<T>;
   params?: unknown[];
+  joins?: readonly JoinDefinition[];
 }): {
   whereStatement?: string;
   params: unknown[];
@@ -666,6 +752,7 @@ export function buildWhereStatement<T extends Entity>({
       comparer: 'and',
       value: where,
       params,
+      joins,
     });
 
     if (!whereStatement) {
@@ -683,15 +770,17 @@ export function buildWhereStatement<T extends Entity>({
   };
 }
 
-/**
- * Builds the SQL order by statement based on the array of sortable expressions
- * @param {object} args - Arguments
- * @param {object} args.model - Model schema
- * @param {string[]|object[]} args.sorts - Property name(s) to sort by
- * @returns {string} SQL order by statement
- * @private
- */
-export function buildOrderStatement<T extends Entity>({ model, sorts }: { model: ModelMetadata<T>; sorts: readonly OrderBy<T>[] }): string {
+export function buildOrderStatement<T extends Entity>({
+  repositoriesByModelNameLowered,
+  model,
+  sorts,
+  joins,
+}: {
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  model: ModelMetadata<T>;
+  sorts: readonly OrderBy<T>[];
+  joins?: readonly JoinDefinition[];
+}): string {
   if (!sorts.length) {
     return '';
   }
@@ -704,12 +793,24 @@ export function buildOrderStatement<T extends Entity>({ model, sorts }: { model:
     }
 
     const { propertyName, descending } = orderProperty;
-    const column = model.columnsByPropertyName[propertyName];
-    if (!column) {
-      throw new QueryError(`Property (${propertyName}) not found in model (${model.name}).`, model);
-    }
 
-    orderStatement += `"${column.name}"`;
+    const resolvedProperty = resolvePropertyPath({
+      propertyPath: propertyName,
+      model,
+      joins,
+      repositoriesByModelNameLowered,
+    });
+
+    if (resolvedProperty) {
+      orderStatement += `"${resolvedProperty.tableAlias}"."${resolvedProperty.column.name}"`;
+    } else {
+      const column = model.columnsByPropertyName[propertyName];
+      if (!column) {
+        throw new QueryError(`Property (${propertyName}) not found in model (${model.name}).`, model);
+      }
+
+      orderStatement += `"${column.name}"`;
+    }
 
     if (descending) {
       orderStatement += ' DESC';
@@ -729,6 +830,7 @@ export function buildOrderStatement<T extends Entity>({ model, sorts }: { model:
  * @param {boolean} [args.isNegated] - If it is negated comparison
  * @param {object|string|number|boolean} [args.value] - Value to compare. Can also represent a complex where query
  * @param {object[]} args.params - Objects to pass as parameters for the query
+ * @param {JoinDefinition[]} [args.joins] - Array of join definitions for dot-notation support
  * @returns {string} - Query text
  * @private
  */
@@ -740,6 +842,7 @@ function buildWhere<T extends Entity>({
   isNegated = false,
   value,
   params,
+  joins,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
@@ -749,6 +852,7 @@ function buildWhere<T extends Entity>({
   isNegated?: boolean;
   value?: WhereClauseValue<string> | WhereClauseValue<T> | WhereQuery<T> | string | readonly WhereQuery<T>[];
   params: unknown[];
+  joins?: readonly JoinDefinition[];
 }): string {
   switch (comparer ?? propertyName) {
     case '!':
@@ -760,6 +864,7 @@ function buildWhere<T extends Entity>({
         isNegated: true,
         value,
         params,
+        joins,
       });
     case 'or':
       return buildOrOperatorStatement({
@@ -768,6 +873,7 @@ function buildWhere<T extends Entity>({
         isNegated,
         value: value as WhereQuery<T>[],
         params,
+        joins,
       });
     case 'contains':
       if (Array.isArray(value)) {
@@ -787,6 +893,7 @@ function buildWhere<T extends Entity>({
           isNegated,
           value: values,
           params,
+          joins,
         });
       }
 
@@ -799,6 +906,7 @@ function buildWhere<T extends Entity>({
           isNegated,
           value: `%${value}%`,
           params,
+          joins,
         });
       }
 
@@ -821,6 +929,7 @@ function buildWhere<T extends Entity>({
           isNegated,
           value: values,
           params,
+          joins,
         });
       }
 
@@ -833,6 +942,7 @@ function buildWhere<T extends Entity>({
           isNegated,
           value: `${value}%`,
           params,
+          joins,
         });
       }
 
@@ -855,6 +965,7 @@ function buildWhere<T extends Entity>({
           isNegated,
           value: values,
           params,
+          joins,
         });
       }
 
@@ -867,18 +978,21 @@ function buildWhere<T extends Entity>({
           isNegated,
           value: `%${value}`,
           params,
+          joins,
         });
       }
 
       throw new QueryError(`Expected value to be a string for "endsWith" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
     case 'like':
       return buildLikeOperatorStatement({
+        repositoriesByModelNameLowered,
         model,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         propertyName: propertyName!,
         isNegated,
         value: value as LikeOperatorStatementParams<T>['value'],
         params,
+        joins,
       });
     default: {
       // Handle 'and' with array value (explicit and: [...] in where clause)
@@ -890,6 +1004,7 @@ function buildWhere<T extends Entity>({
           isNegated,
           value: value as WhereQuery<T>[],
           params,
+          joins,
         });
       }
 
@@ -913,6 +1028,7 @@ function buildWhere<T extends Entity>({
                 isNegated,
                 value: primaryKeyValue as WhereClauseValue<T>,
                 params,
+                joins,
               });
             }
           } else if (column.model) {
@@ -938,6 +1054,7 @@ function buildWhere<T extends Entity>({
                 isNegated,
                 value: primaryKeyValue as WhereClauseValue<T>,
                 params,
+                joins,
               });
             }
           }
@@ -977,6 +1094,7 @@ function buildWhere<T extends Entity>({
                 isNegated,
                 value: null,
                 params,
+                joins,
               }),
             );
           } else if (item === '') {
@@ -988,6 +1106,7 @@ function buildWhere<T extends Entity>({
                 isNegated,
                 value: '',
                 params,
+                joins,
               }),
             );
           } else {
@@ -1004,6 +1123,7 @@ function buildWhere<T extends Entity>({
               isNegated,
               value: valueWithoutNull[0] as WhereClauseValue<T>,
               params,
+              joins,
             }),
           );
         } else if (valueWithoutNull.length) {
@@ -1024,6 +1144,7 @@ function buildWhere<T extends Entity>({
                     isNegated,
                     value: val as WhereClauseValue<T>,
                     params,
+                    joins,
                   }),
                 );
               }
@@ -1100,6 +1221,31 @@ function buildWhere<T extends Entity>({
       if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
         const andValues: string[] = [];
         for (const [key, where] of Object.entries(value)) {
+          if (typeof where === 'object' && where !== null && !Array.isArray(where) && !(where instanceof Date)) {
+            const resolvedJoin = resolveJoinAlias({
+              aliasOrPropertyName: key,
+              model,
+              joins,
+              repositoriesByModelNameLowered,
+            });
+
+            if (resolvedJoin) {
+              const nestedClause = buildNestedJoinWhere({
+                repositoriesByModelNameLowered,
+                joinedModel: resolvedJoin.joinedModel,
+                tableAlias: resolvedJoin.tableAlias,
+                nestedWhere: where as Record<string, unknown>,
+                params,
+              });
+
+              if (nestedClause) {
+                andValues.push(nestedClause);
+              }
+
+              continue;
+            }
+          }
+
           // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
           let subQueryComparer: Comparer | string | undefined;
           if (isComparer(key)) {
@@ -1117,6 +1263,7 @@ function buildWhere<T extends Entity>({
               isNegated,
               value: where as WhereClauseValue<T>,
               params,
+              joins,
             }),
           );
         }
@@ -1125,6 +1272,7 @@ function buildWhere<T extends Entity>({
       }
 
       return buildComparisonOperatorStatement({
+        repositoriesByModelNameLowered,
         model,
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         propertyName: propertyName!,
@@ -1132,6 +1280,7 @@ function buildWhere<T extends Entity>({
         isNegated,
         value: value as WhereClauseValue<T>,
         params,
+        joins,
       });
     }
   }
@@ -1143,12 +1292,14 @@ function buildOrOperatorStatement<T extends Entity>({
   isNegated,
   value,
   params,
+  joins,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   isNegated: boolean;
   value: readonly WhereQuery<T>[];
   params: unknown[];
+  joins?: readonly JoinDefinition[];
 }): string {
   const orClauses = [];
   for (const constraint of value) {
@@ -1158,6 +1309,7 @@ function buildOrOperatorStatement<T extends Entity>({
       isNegated,
       value: constraint,
       params,
+      joins,
     });
 
     if (orClause) {
@@ -1186,12 +1338,14 @@ function buildAndOperatorStatement<T extends Entity>({
   isNegated,
   value,
   params,
+  joins,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   isNegated: boolean;
   value: readonly WhereQuery<T>[];
   params: unknown[];
+  joins?: readonly JoinDefinition[];
 }): string {
   const andClauses = [];
   for (const constraint of value) {
@@ -1201,6 +1355,7 @@ function buildAndOperatorStatement<T extends Entity>({
       isNegated,
       value: constraint,
       params,
+      joins,
     });
 
     if (andClause) {
@@ -1224,6 +1379,7 @@ function buildAndOperatorStatement<T extends Entity>({
 }
 
 interface ComparisonOperatorStatementParams<T extends Entity> {
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   propertyName: string;
   // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
@@ -1231,13 +1387,195 @@ interface ComparisonOperatorStatementParams<T extends Entity> {
   isNegated: boolean;
   value?: WhereClauseValue<T> | string | readonly string[];
   params: unknown[];
+  joins?: readonly JoinDefinition[];
 }
 
 interface LikeOperatorStatementParams<T extends Entity> extends Omit<ComparisonOperatorStatementParams<T>, 'value'> {
   value: string | readonly string[] | null;
 }
 
-function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isNegated, value, params }: LikeOperatorStatementParams<T>): string {
+interface ResolvedProperty {
+  column: ColumnBaseMetadata;
+  tableAlias: string;
+}
+
+function resolvePropertyPath<T extends Entity>({
+  propertyPath,
+  model,
+  joins,
+  repositoriesByModelNameLowered,
+}: {
+  propertyPath: string;
+  model: ModelMetadata<T>;
+  joins?: readonly JoinDefinition[];
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+}): ResolvedProperty | null {
+  if (!propertyPath.includes('.')) {
+    return null;
+  }
+
+  const dotIndex = propertyPath.indexOf('.');
+  const aliasOrRelationship = propertyPath.slice(0, dotIndex);
+  const nestedPropertyName = propertyPath.slice(dotIndex + 1);
+
+  if (!joins?.length) {
+    throw new QueryError(`Cannot use dot notation "${propertyPath}" without a join. Did you forget to call .join('${aliasOrRelationship}')?`, model);
+  }
+
+  const matchingJoin = joins.find((j) => j.alias === aliasOrRelationship || j.propertyName === aliasOrRelationship);
+  if (!matchingJoin) {
+    throw new QueryError(`Cannot find join for "${aliasOrRelationship}" in property path "${propertyPath}". Available joins: ${joins.map((j) => j.alias).join(', ')}`, model);
+  }
+
+  const relationshipColumn = model.columnsByPropertyName[matchingJoin.propertyName] as ColumnModelMetadata | undefined;
+  if (!relationshipColumn?.model) {
+    throw new QueryError(`Property "${matchingJoin.propertyName}" is not a relationship on model "${model.name}"`, model);
+  }
+
+  const relatedRepository = repositoriesByModelNameLowered[relationshipColumn.model.toLowerCase()];
+  if (!relatedRepository) {
+    throw new QueryError(`Unable to find model "${relationshipColumn.model}" for join on "${matchingJoin.propertyName}"`, model);
+  }
+
+  const relatedModel = relatedRepository.model;
+  const column = relatedModel.columnsByPropertyName[nestedPropertyName];
+  if (!column) {
+    throw new QueryError(`Unable to find property "${nestedPropertyName}" on model "${relatedModel.name}" for path "${propertyPath}"`, relatedModel);
+  }
+
+  return {
+    column,
+    tableAlias: matchingJoin.alias,
+  };
+}
+
+interface ResolvedJoin {
+  joinedModel: ModelMetadata<Entity>;
+  tableAlias: string;
+}
+
+function resolveJoinAlias<T extends Entity>({
+  aliasOrPropertyName,
+  model,
+  joins,
+  repositoriesByModelNameLowered,
+}: {
+  aliasOrPropertyName: string;
+  model: ModelMetadata<T>;
+  joins?: readonly JoinDefinition[];
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+}): ResolvedJoin | null {
+  if (!joins?.length) {
+    return null;
+  }
+
+  const matchingJoin = joins.find((j) => j.alias === aliasOrPropertyName || j.propertyName === aliasOrPropertyName);
+  if (!matchingJoin) {
+    return null;
+  }
+
+  const relationshipColumn = model.columnsByPropertyName[matchingJoin.propertyName] as ColumnModelMetadata | undefined;
+  if (!relationshipColumn?.model) {
+    return null;
+  }
+
+  const relatedRepository = repositoriesByModelNameLowered[relationshipColumn.model.toLowerCase()];
+  if (!relatedRepository) {
+    return null;
+  }
+
+  return {
+    joinedModel: relatedRepository.model,
+    tableAlias: matchingJoin.alias,
+  };
+}
+
+function buildNestedJoinWhere({
+  repositoriesByModelNameLowered,
+  joinedModel,
+  tableAlias,
+  nestedWhere,
+  params,
+}: {
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  joinedModel: ModelMetadata<Entity>;
+  tableAlias: string;
+  nestedWhere: Record<string, unknown>;
+  params: unknown[];
+}): string {
+  const andClauses: string[] = [];
+
+  for (const [key, whereValue] of Object.entries(nestedWhere)) {
+    if (key === 'and' || key === 'or') {
+      const subClauses = (whereValue as Record<string, unknown>[]).map((subWhere) =>
+        buildNestedJoinWhere({
+          repositoriesByModelNameLowered,
+          joinedModel,
+          tableAlias,
+          nestedWhere: subWhere,
+          params,
+        }),
+      );
+
+      if (key === 'or') {
+        andClauses.push(`(${subClauses.join(' OR ')})`);
+      } else {
+        andClauses.push(subClauses.join(' AND '));
+      }
+
+      continue;
+    }
+
+    const column = joinedModel.columnsByPropertyName[key];
+    if (!column) {
+      throw new QueryError(`Unable to find property "${key}" on joined model "${joinedModel.name}"`, joinedModel);
+    }
+
+    if (whereValue === null) {
+      andClauses.push(`"${tableAlias}"."${column.name}" IS NULL`);
+    } else if (typeof whereValue === 'object' && !Array.isArray(whereValue)) {
+      for (const [op, opValue] of Object.entries(whereValue as Record<string, unknown>)) {
+        if (op === '!') {
+          if (opValue === null) {
+            andClauses.push(`"${tableAlias}"."${column.name}" IS NOT NULL`);
+          } else {
+            params.push(opValue);
+            andClauses.push(`"${tableAlias}"."${column.name}"<>$${params.length}`);
+          }
+        } else if (op === 'like' || op === 'contains' || op === 'startsWith' || op === 'endsWith') {
+          let likeValue = opValue as string;
+          if (op === 'contains') {
+            likeValue = `%${likeValue}%`;
+          } else if (op === 'startsWith') {
+            likeValue = `${likeValue}%`;
+          } else if (op === 'endsWith') {
+            likeValue = `%${likeValue}`;
+          }
+
+          params.push(likeValue);
+          andClauses.push(`"${tableAlias}"."${column.name}" ILIKE $${params.length}`);
+        } else if (op === '>' || op === '>=' || op === '<' || op === '<=') {
+          params.push(opValue);
+          andClauses.push(`"${tableAlias}"."${column.name}"${op}$${params.length}`);
+        }
+      }
+    } else if (Array.isArray(whereValue)) {
+      if (whereValue.length === 0) {
+        andClauses.push('1<>1');
+      } else {
+        params.push(whereValue);
+        andClauses.push(`"${tableAlias}"."${column.name}"=ANY($${params.length})`);
+      }
+    } else {
+      params.push(whereValue);
+      andClauses.push(`"${tableAlias}"."${column.name}"=$${params.length}`);
+    }
+  }
+
+  return andClauses.join(' AND ');
+}
+
+function buildLikeOperatorStatement<T extends Entity>({ repositoriesByModelNameLowered, model, propertyName, isNegated, value, params, joins }: LikeOperatorStatementParams<T>): string {
   if (Array.isArray(value)) {
     if (!value.length) {
       if (isNegated) {
@@ -1250,27 +1588,17 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
     if (value.length > 1) {
       const orConstraints: string[] = [];
       for (const item of value as readonly string[]) {
-        if (item === '') {
-          orConstraints.push(
-            buildLikeOperatorStatement({
-              model,
-              propertyName,
-              isNegated,
-              value: '',
-              params,
-            }),
-          );
-        } else {
-          orConstraints.push(
-            buildLikeOperatorStatement({
-              model,
-              propertyName,
-              isNegated,
-              value: item,
-              params,
-            }),
-          );
-        }
+        orConstraints.push(
+          buildLikeOperatorStatement({
+            repositoriesByModelNameLowered,
+            model,
+            propertyName,
+            isNegated,
+            value: item,
+            params,
+            joins,
+          }),
+        );
       }
 
       if (orConstraints.length === 1) {
@@ -1291,13 +1619,31 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
     value = value[0] as string | null;
   }
 
-  const column = model.columnsByPropertyName[propertyName];
-  if (!column) {
-    throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
+  const resolved = resolvePropertyPath({
+    propertyPath: propertyName,
+    model,
+    joins,
+    repositoriesByModelNameLowered,
+  });
+
+  let column: ColumnBaseMetadata;
+  let tablePrefix: string;
+
+  if (resolved) {
+    column = resolved.column;
+    tablePrefix = `"${resolved.tableAlias}".`;
+  } else {
+    const localColumn = model.columnsByPropertyName[propertyName];
+    if (!localColumn) {
+      throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
+    }
+
+    column = localColumn;
+    tablePrefix = '';
   }
 
   if (value === null) {
-    return `"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
+    return `${tablePrefix}"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
   }
 
   if (typeof value === 'string') {
@@ -1308,26 +1654,53 @@ function buildLikeOperatorStatement<T extends Entity>({ model, propertyName, isN
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       const columnType = (column as ColumnTypeMetadata).type?.toLowerCase();
       if (columnType === 'array' || columnType === 'string[]') {
-        return `${isNegated ? 'NOT ' : ''}EXISTS(SELECT 1 FROM (SELECT unnest("${column.name}") AS "unnested_${column.name}") __unnested WHERE "unnested_${column.name}" ILIKE $${params.length})`;
+        return `${isNegated ? 'NOT ' : ''}EXISTS(SELECT 1 FROM (SELECT unnest(${tablePrefix}"${column.name}") AS "unnested_${column.name}") __unnested WHERE "unnested_${column.name}" ILIKE $${params.length})`;
       }
 
-      return `"${column.name}"${isNegated ? ' NOT' : ''} ILIKE $${params.length}`;
+      return `${tablePrefix}"${column.name}"${isNegated ? ' NOT' : ''} ILIKE $${params.length}`;
     }
 
-    return `"${column.name}" ${isNegated ? '!=' : '='} ''`;
+    return `${tablePrefix}"${column.name}" ${isNegated ? '!=' : '='} ''`;
   }
 
   throw new QueryError(`Expected value to be a string for "like" constraint. Property (${propertyName}) in model (${model.name}).`, model);
 }
 
-function buildComparisonOperatorStatement<T extends Entity>({ model, propertyName, comparer, isNegated, value, params }: ComparisonOperatorStatementParams<T>): string {
-  const column = model.columnsByPropertyName[propertyName];
-  if (!column) {
-    throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
+function buildComparisonOperatorStatement<T extends Entity>({
+  repositoriesByModelNameLowered,
+  model,
+  propertyName,
+  comparer,
+  isNegated,
+  value,
+  params,
+  joins,
+}: ComparisonOperatorStatementParams<T>): string {
+  const resolved = resolvePropertyPath({
+    propertyPath: propertyName,
+    model,
+    joins,
+    repositoriesByModelNameLowered,
+  });
+
+  let column: ColumnBaseMetadata;
+  let tablePrefix: string;
+
+  if (resolved) {
+    column = resolved.column;
+    tablePrefix = `"${resolved.tableAlias}".`;
+  } else {
+    const localColumn = model.columnsByPropertyName[propertyName];
+    if (!localColumn) {
+      throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
+    }
+
+    column = localColumn;
+    tablePrefix = '';
   }
 
   if (value === null) {
-    return `"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
+    return `${tablePrefix}"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
   }
 
   params.push(value);
@@ -1342,31 +1715,31 @@ function buildComparisonOperatorStatement<T extends Entity>({ model, propertyNam
         throw new QueryError(`< operator is not supported for ${columnType} type. ${propertyName || ''} on ${model.name}`, model);
       }
 
-      return `"${column.name}"${isNegated ? '>=' : '<'}$${params.length}`;
+      return `${tablePrefix}"${column.name}"${isNegated ? '>=' : '<'}$${params.length}`;
     case '<=':
       if (!supportsLessThanGreaterThan) {
         throw new QueryError(`<= operator is not supported for ${columnType} type. ${propertyName || ''} on ${model.name}`, model);
       }
 
-      return `"${column.name}"${isNegated ? '>' : '<='}$${params.length}`;
+      return `${tablePrefix}"${column.name}"${isNegated ? '>' : '<='}$${params.length}`;
     case '>':
       if (!supportsLessThanGreaterThan) {
         throw new QueryError(`> operator is not supported for ${columnType} type. ${propertyName || ''} on ${model.name}`, model);
       }
 
-      return `"${column.name}"${isNegated ? '<=' : '>'}$${params.length}`;
+      return `${tablePrefix}"${column.name}"${isNegated ? '<=' : '>'}$${params.length}`;
     case '>=':
       if (!supportsLessThanGreaterThan) {
         throw new QueryError(`>= operator is not supported for ${columnType} type. ${propertyName || ''} on ${model.name}`, model);
       }
 
-      return `"${column.name}"${isNegated ? '<' : '>='}$${params.length}`;
+      return `${tablePrefix}"${column.name}"${isNegated ? '<' : '>='}$${params.length}`;
     default:
       if (columnType === 'array' || columnType.endsWith('[]')) {
-        return `$${params.length}${isNegated ? '<>ALL(' : '=ANY('}"${column.name}")`;
+        return `$${params.length}${isNegated ? '<>ALL(' : '=ANY('}${tablePrefix}"${column.name}")`;
       }
 
-      return `"${column.name}"${isNegated ? '<>' : '='}$${params.length}`;
+      return `${tablePrefix}"${column.name}"${isNegated ? '<>' : '='}$${params.length}`;
   }
 }
 
