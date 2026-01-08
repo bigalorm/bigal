@@ -8,7 +8,9 @@ import type {
   FindArgs,
   FindOneArgs,
   FindOneResult,
+  FindQueryWithCount,
   FindResult,
+  FindWithCountResult,
   JoinDefinition,
   OrderBy,
   PaginateOptions,
@@ -358,6 +360,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     const populates: Populate[] = [];
     const sorts = sort ? this._convertSortsToOrderBy(sort) : [];
     const joins: JoinDefinition[] = [];
+    let includeCount = false;
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
@@ -485,6 +488,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         const safePage = Math.max(page, 1);
         return this.skip(safePage * paginateLimit - paginateLimit).limit(paginateLimit);
       },
+      withCount(): FindQueryWithCount<T, TReturn> {
+        includeCount = true;
+        return this as unknown as FindQueryWithCount<T, TReturn>;
+      },
       async then<TResult = TReturn[], TErrorResult = void>(
         resolve: (result: TReturn[]) => PromiseLike<TResult> | TResult,
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
@@ -503,14 +510,36 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             skip: skip ?? 0,
             limit: limit ?? 0,
             joins,
+            includeCount,
           });
 
           const pool = poolOverride ?? modelInstance._readonlyPool;
-          const results = await pool.query<Partial<QueryResult<T>>>(query, params);
-          const entities = modelInstance._buildInstances(results.rows);
+          const results = await pool.query<Partial<QueryResult<T>> & { __total_count__?: string }>(query, params);
+
+          let totalCount = 0;
+          if (includeCount && results.rows.length > 0 && results.rows[0]?.__total_count__ !== undefined) {
+            totalCount = Number(results.rows[0].__total_count__);
+          }
+
+          const rows = includeCount
+            ? results.rows.map((row) => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { __total_count__, ...rest } = row;
+                return rest as Partial<QueryResult<T>>;
+              })
+            : results.rows;
+
+          const entities = modelInstance._buildInstances(rows);
 
           if (populates.length) {
             await modelInstance.populateFields(entities, populates);
+          }
+
+          if (includeCount) {
+            return await (resolve as unknown as (result: FindWithCountResult<TReturn>) => PromiseLike<TResult> | TResult)({
+              results: entities as unknown as TReturn[],
+              totalCount,
+            });
           }
 
           return await resolve(entities as unknown as TReturn[]);

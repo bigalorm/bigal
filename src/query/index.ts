@@ -12,6 +12,7 @@ export * from './FindArgs.js';
 export * from './FindOneArgs.js';
 export * from './FindOneResult.js';
 export * from './FindResult.js';
+export * from './FindWithCountResult.js';
 export * from './PaginateOptions.js';
 export * from './PopulateArgs.js';
 export * from './ReturnSelect.js';

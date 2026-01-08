@@ -24,6 +24,7 @@ interface QueryAndParams {
  * @param {number} [args.skip] - Number of records to skip
  * @param {number} [args.limit] - Number of results to return
  * @param {JoinDefinition[]} [args.joins] - Array of join definitions
+ * @param {boolean} [args.includeCount] - If true, includes COUNT(*) OVER() for total count
  * @returns {{query: string, params: object[]}}
  */
 export function getSelectQueryAndParams<T extends Entity>({
@@ -35,6 +36,7 @@ export function getSelectQueryAndParams<T extends Entity>({
   skip,
   limit,
   joins,
+  includeCount,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
@@ -44,6 +46,7 @@ export function getSelectQueryAndParams<T extends Entity>({
   skip: number;
   limit: number;
   joins?: readonly JoinDefinition[];
+  includeCount?: boolean;
 }): QueryAndParams {
   let query = 'SELECT ';
 
@@ -51,6 +54,10 @@ export function getSelectQueryAndParams<T extends Entity>({
     model,
     select,
   });
+
+  if (includeCount) {
+    query += ',count(*) OVER() AS "__total_count__"';
+  }
 
   query += ` FROM ${model.qualifiedTableName}`;
 
@@ -700,7 +707,7 @@ export function buildJoinClauses<T extends Entity>({
       joinSql += ` AS "${alias}"`;
     }
 
-    joinSql += ` ON ${model.qualifiedTableName}."${column.name}" = "${alias}"."${relatedPrimaryKey.name}"`;
+    joinSql += ` ON ${model.qualifiedTableName}."${column.name}"="${alias}"."${relatedPrimaryKey.name}"`;
 
     if (join.on) {
       for (const [propertyName, value] of Object.entries(join.on)) {

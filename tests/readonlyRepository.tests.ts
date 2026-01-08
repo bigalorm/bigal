@@ -1939,7 +1939,7 @@ describe('ReadonlyRepository', () => {
 
         const [query, params] = capture(mockedPool.query).first();
         query.should.equal(
-          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id" = "store"."id" WHERE "store"."name" ILIKE $1',
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name" ILIKE $1',
         );
         assert(params);
         params.should.deep.equal(['Acme']);
@@ -1963,7 +1963,7 @@ describe('ReadonlyRepository', () => {
 
         const [query, params] = capture(mockedPool.query).first();
         query.should.equal(
-          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LEFT JOIN "stores" AS "store" ON "products"."store_id" = "store"."id" WHERE "store"."name" ILIKE $1',
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LEFT JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name" ILIKE $1',
         );
         assert(params);
         params.should.deep.equal(['%mart%']);
@@ -1987,7 +1987,7 @@ describe('ReadonlyRepository', () => {
 
         const [query, params] = capture(mockedPool.query).first();
         query.should.equal(
-          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "primaryStore" ON "products"."store_id" = "primaryStore"."id" WHERE "primaryStore"."name"=$1',
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "primaryStore" ON "products"."store_id"="primaryStore"."id" WHERE "primaryStore"."name"=$1',
         );
         assert(params);
         params.should.deep.equal(['Acme']);
@@ -2012,7 +2012,7 @@ describe('ReadonlyRepository', () => {
 
         const [query, params] = capture(mockedPool.query).first();
         query.should.equal(
-          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id" = "store"."id" WHERE "name"=$1 AND "store"."name"=$2',
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "name"=$1 AND "store"."name"=$2',
         );
         assert(params);
         params.should.deep.equal(['Widget', 'Acme']);
@@ -2032,7 +2032,7 @@ describe('ReadonlyRepository', () => {
 
         const [query, params] = capture(mockedPool.query).first();
         query.should.equal(
-          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id" = "store"."id" ORDER BY "store"."name"',
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" ORDER BY "store"."name"',
         );
         assert(params);
         params.should.deep.equal([]);
@@ -2052,7 +2052,7 @@ describe('ReadonlyRepository', () => {
 
         const [query, params] = capture(mockedPool.query).first();
         query.should.equal(
-          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "primaryStore" ON "products"."store_id" = "primaryStore"."id" ORDER BY "primaryStore"."name" DESC',
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "primaryStore" ON "products"."store_id"="primaryStore"."id" ORDER BY "primaryStore"."name" DESC',
         );
         assert(params);
         params.should.deep.equal([]);
@@ -3035,6 +3035,138 @@ describe('ReadonlyRepository', () => {
           }
         }
       });
+    });
+  });
+
+  describe('#find().withCount()', () => {
+    let store: QueryResult<Store>;
+
+    beforeEach(() => {
+      store = generator.store();
+    });
+
+    it('should return results and totalCount', async () => {
+      const products = [
+        { ...generator.product({ store: store.id }), __total_count__: '42' },
+        { ...generator.product({ store: store.id }), __total_count__: '42' },
+      ];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+      const result = await ProductRepository.find().withCount();
+
+      result.should.have.property('results');
+      result.should.have.property('totalCount');
+      result.results.should.have.length(2);
+      result.totalCount.should.equal(42);
+      result.results[0]!.should.not.have.property('__total_count__');
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products"');
+      assert(params);
+      params.should.deep.equal([]);
+    });
+
+    it('should work with where clause and pagination', async () => {
+      const products = [{ ...generator.product({ store: store.id }), __total_count__: '100' }];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+      const result = await ProductRepository.find().where({ store: store.id }).skip(10).limit(20).withCount();
+
+      result.results.should.have.length(1);
+      result.totalCount.should.equal(100);
+
+      const [query, params] = capture(mockedPool.query).first();
+      query.should.equal(
+        'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" WHERE "store_id"=$1 LIMIT 20 OFFSET 10',
+      );
+      assert(params);
+      params.should.deep.equal([store.id]);
+    });
+
+    it('should work with joins', async () => {
+      const products = [{ ...generator.product({ store: store.id }), __total_count__: '5' }];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+      const result = await ProductRepository.find()
+        .join('store')
+        .where({
+          store: {
+            name: 'Test',
+          },
+        })
+        .withCount();
+
+      result.results.should.have.length(1);
+      result.totalCount.should.equal(5);
+
+      const [query] = capture(mockedPool.query).first();
+      query.should.equal(
+        'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name"=$1',
+      );
+    });
+
+    it('should return 0 totalCount when no results', async () => {
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([]));
+
+      const result = await ProductRepository.find().where({ store: store.id }).withCount();
+
+      result.results.should.have.length(0);
+      result.totalCount.should.equal(0);
+    });
+
+    it('should support chaining withCount before other methods', async () => {
+      const products = [{ ...generator.product({ store: store.id }), __total_count__: '50' }];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+      const result = await ProductRepository.find().withCount().where({ store: store.id }).sort('name').limit(10);
+
+      result.totalCount.should.equal(50);
+
+      const [query] = capture(mockedPool.query).first();
+      query.should.equal(
+        'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" WHERE "store_id"=$1 ORDER BY "name" LIMIT 10',
+      );
+    });
+
+    it('should work with select', async () => {
+      const products = [{ id: 1, name: 'Test', __total_count__: '25' }];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+      const result = await ProductRepository.find().select(['name']).withCount();
+
+      result.totalCount.should.equal(25);
+
+      const [query] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "name","id",count(*) OVER() AS "__total_count__" FROM "products"');
+    });
+
+    it('should work with populate', async () => {
+      const product = { ...generator.product({ store: store.id }), __total_count__: '10' };
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
+
+      const result = await ProductRepository.find().populate('store').withCount();
+
+      result.totalCount.should.equal(10);
+      result.results[0]!.store.should.deep.equal(store);
+    });
+
+    it('should work with paginate helper', async () => {
+      const products = [{ ...generator.product({ store: store.id }), __total_count__: '200' }];
+
+      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+      const result = await ProductRepository.find().withCount().paginate({ page: 3, limit: 25 });
+
+      result.totalCount.should.equal(200);
+
+      const [query] = capture(mockedPool.query).first();
+      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" LIMIT 25 OFFSET 50');
     });
   });
 

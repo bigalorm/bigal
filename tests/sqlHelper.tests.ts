@@ -3085,7 +3085,7 @@ describe('sqlHelper', () => {
         params: [],
       });
 
-      result.should.equal(' INNER JOIN "stores" AS "store" ON "products"."store_id" = "store"."id"');
+      result.should.equal(' INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id"');
     });
 
     it('should generate LEFT JOIN clause for model relationship', () => {
@@ -3102,7 +3102,7 @@ describe('sqlHelper', () => {
         params: [],
       });
 
-      result.should.equal(' LEFT JOIN "stores" AS "store" ON "products"."store_id" = "store"."id"');
+      result.should.equal(' LEFT JOIN "stores" AS "store" ON "products"."store_id"="store"."id"');
     });
 
     it('should use custom alias in join clause', () => {
@@ -3119,7 +3119,7 @@ describe('sqlHelper', () => {
         params: [],
       });
 
-      result.should.equal(' INNER JOIN "stores" AS "primaryStore" ON "products"."store_id" = "primaryStore"."id"');
+      result.should.equal(' INNER JOIN "stores" AS "primaryStore" ON "products"."store_id"="primaryStore"."id"');
     });
 
     it('should include additional ON constraints for LEFT JOIN', () => {
@@ -3140,7 +3140,7 @@ describe('sqlHelper', () => {
         params,
       });
 
-      result.should.equal(' LEFT JOIN "stores" AS "store" ON "products"."store_id" = "store"."id" AND "store"."name"=$1');
+      result.should.equal(' LEFT JOIN "stores" AS "store" ON "products"."store_id"="store"."id" AND "store"."name"=$1');
       params.should.deep.equal(['Acme']);
     });
 
