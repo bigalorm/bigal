@@ -2906,6 +2906,7 @@ describe('sqlHelper', () => {
   describe('#buildOrderStatement()', () => {
     it('should return empty if there are no orders defined', () => {
       const result = sqlHelper.buildOrderStatement({
+        repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [],
       });
@@ -2915,6 +2916,7 @@ describe('sqlHelper', () => {
 
     it('should handle single string order with implicit direction', () => {
       const result = sqlHelper.buildOrderStatement({
+        repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
@@ -2928,6 +2930,7 @@ describe('sqlHelper', () => {
 
     it('should handle single string order with implicit direction and explicit columnName', () => {
       const result = sqlHelper.buildOrderStatement({
+        repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
@@ -2941,6 +2944,7 @@ describe('sqlHelper', () => {
 
     it('should handle single string order with explicit desc direction', () => {
       const result = sqlHelper.buildOrderStatement({
+        repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
@@ -2955,6 +2959,7 @@ describe('sqlHelper', () => {
 
     it('should handle single string order with explicit desc direction and explicit columnName', () => {
       const result = sqlHelper.buildOrderStatement({
+        repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
@@ -2969,6 +2974,7 @@ describe('sqlHelper', () => {
 
     it('should handle multiple string order', () => {
       const result = sqlHelper.buildOrderStatement({
+        repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
@@ -2982,6 +2988,74 @@ describe('sqlHelper', () => {
       });
 
       result.should.equal('ORDER BY "int_column" DESC,"name"');
+    });
+
+    it('should handle dot-notation for joined table column', () => {
+      const result = sqlHelper.buildOrderStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        sorts: [
+          {
+            propertyName: 'store.name' as 'name',
+          },
+        ],
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'store',
+            type: 'inner',
+          },
+        ],
+      });
+
+      result.should.equal('ORDER BY "store"."name"');
+    });
+
+    it('should handle dot-notation with custom alias', () => {
+      const result = sqlHelper.buildOrderStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        sorts: [
+          {
+            propertyName: 'primaryStore.name' as 'name',
+            descending: true,
+          },
+        ],
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'primaryStore',
+            type: 'inner',
+          },
+        ],
+      });
+
+      result.should.equal('ORDER BY "primaryStore"."name" DESC');
+    });
+
+    it('should handle mixed regular and dot-notation sorts', () => {
+      const result = sqlHelper.buildOrderStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        sorts: [
+          {
+            propertyName: 'store.name' as 'name',
+          },
+          {
+            propertyName: 'name',
+            descending: true,
+          },
+        ],
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'store',
+            type: 'inner',
+          },
+        ],
+      });
+
+      result.should.equal('ORDER BY "store"."name","name" DESC');
     });
   });
 

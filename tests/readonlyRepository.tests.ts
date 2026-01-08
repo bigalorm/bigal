@@ -2017,6 +2017,46 @@ describe('ReadonlyRepository', () => {
         assert(params);
         params.should.deep.equal(['Widget', 'Acme']);
       });
+
+      it('should support sort with dot notation for joined table', async () => {
+        const products = [
+          generator.product({
+            store: store.id,
+          }),
+        ];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        const result = await ProductRepository.find().join('store').sort('store.name asc');
+        assert(result);
+        result.should.deep.equal(products);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal(
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id" = "store"."id" ORDER BY "store"."name"',
+        );
+        assert(params);
+        params.should.deep.equal([]);
+      });
+
+      it('should support sort with dot notation descending', async () => {
+        const products = [
+          generator.product({
+            store: store.id,
+          }),
+        ];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        const result = await ProductRepository.find().join('store', 'primaryStore').sort('primaryStore.name desc');
+        assert(result);
+        result.should.deep.equal(products);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal(
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "primaryStore" ON "products"."store_id" = "primaryStore"."id" ORDER BY "primaryStore"."name" DESC',
+        );
+        assert(params);
+        params.should.deep.equal([]);
+      });
     });
 
     describe('populate', () => {

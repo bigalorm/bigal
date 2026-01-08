@@ -1,9 +1,9 @@
 import type { Entity } from '../Entity.js';
 import type { GetValueType, ModelRelationshipKeys, PickAsType, PickByValueType, Populated } from '../types/index.js';
 
+import type { JoinedSort } from './JoinedSort.js';
 import type { JoinedWhereQuery, JoinInfo } from './JoinedWhereQuery.js';
 import type { PopulateArgs } from './PopulateArgs.js';
-import type { Sort } from './Sort.js';
 import type { WhereQuery } from './WhereQuery.js';
 
 export interface FindOneResult<T extends Entity, TReturn, TJoins extends JoinInfo = never> extends PromiseLike<TReturn | null> {
@@ -22,7 +22,7 @@ export interface FindOneResult<T extends Entity, TReturn, TJoins extends JoinInf
     alias?: TAlias,
     on?: WhereQuery<GetValueType<T[TProperty], Entity>>,
   ): FindOneResult<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
-  sort(value?: Sort<T>): FindOneResult<T, TReturn, TJoins>;
+  sort(value?: JoinedSort<T, TJoins>): FindOneResult<T, TReturn, TJoins>;
   UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>, TJoins>;
   UNSAFE_withFieldValue<TProperty extends string & keyof T, TValue extends T[TProperty]>(
     propertyName: TProperty,

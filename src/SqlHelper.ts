@@ -77,8 +77,10 @@ export function getSelectQueryAndParams<T extends Entity>({
   }
 
   const orderStatement = buildOrderStatement({
+    repositoriesByModelNameLowered,
     model,
     sorts,
+    joins,
   });
 
   if (orderStatement) {
@@ -768,15 +770,17 @@ export function buildWhereStatement<T extends Entity>({
   };
 }
 
-/**
- * Builds the SQL order by statement based on the array of sortable expressions
- * @param {object} args - Arguments
- * @param {object} args.model - Model schema
- * @param {string[]|object[]} args.sorts - Property name(s) to sort by
- * @returns {string} SQL order by statement
- * @private
- */
-export function buildOrderStatement<T extends Entity>({ model, sorts }: { model: ModelMetadata<T>; sorts: readonly OrderBy<T>[] }): string {
+export function buildOrderStatement<T extends Entity>({
+  repositoriesByModelNameLowered,
+  model,
+  sorts,
+  joins,
+}: {
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  model: ModelMetadata<T>;
+  sorts: readonly OrderBy<T>[];
+  joins?: readonly JoinDefinition[];
+}): string {
   if (!sorts.length) {
     return '';
   }
@@ -789,12 +793,24 @@ export function buildOrderStatement<T extends Entity>({ model, sorts }: { model:
     }
 
     const { propertyName, descending } = orderProperty;
-    const column = model.columnsByPropertyName[propertyName];
-    if (!column) {
-      throw new QueryError(`Property (${propertyName}) not found in model (${model.name}).`, model);
-    }
 
-    orderStatement += `"${column.name}"`;
+    const resolvedProperty = resolvePropertyPath({
+      propertyPath: propertyName,
+      model,
+      joins,
+      repositoriesByModelNameLowered,
+    });
+
+    if (resolvedProperty) {
+      orderStatement += `"${resolvedProperty.tableAlias}"."${resolvedProperty.column.name}"`;
+    } else {
+      const column = model.columnsByPropertyName[propertyName];
+      if (!column) {
+        throw new QueryError(`Property (${propertyName}) not found in model (${model.name}).`, model);
+      }
+
+      orderStatement += `"${column.name}"`;
+    }
 
     if (descending) {
       orderStatement += ' DESC';

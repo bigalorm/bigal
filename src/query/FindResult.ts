@@ -1,10 +1,10 @@
 import type { Entity } from '../Entity.js';
 import type { GetValueType, ModelRelationshipKeys, PickByValueType, Populated } from '../types/index.js';
 
+import type { JoinedSort } from './JoinedSort.js';
 import type { JoinedWhereQuery, JoinInfo } from './JoinedWhereQuery.js';
 import type { PaginateOptions } from './PaginateOptions.js';
 import type { PopulateArgs } from './PopulateArgs.js';
-import type { Sort } from './Sort.js';
 import type { WhereQuery } from './WhereQuery.js';
 
 export interface FindResult<T extends Entity, TReturn, TJoins extends JoinInfo = never> extends PromiseLike<TReturn[]> {
@@ -23,7 +23,7 @@ export interface FindResult<T extends Entity, TReturn, TJoins extends JoinInfo =
     alias?: TAlias,
     on?: WhereQuery<GetValueType<T[TProperty], Entity>>,
   ): FindResult<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
-  sort(value?: Sort<T>): FindResult<T, TReturn, TJoins>;
+  sort(value?: JoinedSort<T, TJoins>): FindResult<T, TReturn, TJoins>;
   limit(value: number): FindResult<T, TReturn, TJoins>;
   skip(value: number): FindResult<T, TReturn, TJoins>;
   paginate(options: PaginateOptions): FindResult<T, TReturn, TJoins>;
