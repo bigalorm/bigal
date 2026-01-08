@@ -325,14 +325,47 @@ const item = await ProductRepository.find({
 });
 ```
 
-#### Example of an OR statement
+#### String matching operators
+
+BigAl provides four string matching operators. All use case-insensitive matching (PostgreSQL `ILIKE`) and accept arrays for OR matching.
+
+| Operator     | Description                                   | SQL Pattern |
+| ------------ | --------------------------------------------- | ----------- |
+| `like`       | Raw ILIKE pattern with your own `%` wildcards | As provided |
+| `contains`   | Substring match anywhere in the string        | `%value%`   |
+| `startsWith` | Matches strings starting with the value       | `value%`    |
+| `endsWith`   | Matches strings ending with the value         | `%value`    |
 
 ```ts
-const items = await PersonRepository.find().where({
-  firstName: {
-    like: ['walter', 'Jess%'],
-  },
+// contains: finds "widget" anywhere in name (case-insensitive)
+const items = await ProductRepository.find().where({
+  name: { contains: 'widget' },
 });
+// SQL: SELECT ... FROM product WHERE name ILIKE '%widget%'
+
+// startsWith: finds names beginning with "Pro"
+const items = await ProductRepository.find().where({
+  name: { startsWith: 'Pro' },
+});
+// SQL: SELECT ... FROM product WHERE name ILIKE 'Pro%'
+
+// endsWith: finds names ending with "ter"
+const items = await ProductRepository.find().where({
+  name: { endsWith: 'ter' },
+});
+// SQL: SELECT ... FROM product WHERE name ILIKE '%ter'
+
+// like: raw pattern with explicit wildcards
+const items = await ProductRepository.find().where({
+  name: { like: 'Pro%Widget%' },
+});
+// SQL: SELECT ... FROM product WHERE name ILIKE 'Pro%Widget%'
+
+// Array values create OR conditions
+const items = await PersonRepository.find().where({
+  firstName: { like: ['walter', 'Jess%'] },
+});
+// SQL: SELECT ... FROM person WHERE (first_name ILIKE 'walter' OR first_name ILIKE 'Jess%')
 ```
 
 #### Example of an AND statement
