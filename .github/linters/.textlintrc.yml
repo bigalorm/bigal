@@ -1,20 +1,19 @@
 filters:
+  comments: true
   allowlist:
     allow:
       - "/CHANGELOG\\.md$/"
 
+# https://github.com/sapegin/textlint-rule-terminology
 rules:
-  filters:
-    - comments
-  rules:
-    terminology:
-      exclude:
-        - URL
-        - website
-        - markdown
-        - Bug Fixes
-        - eslint
-        - typescript
-        - json
-        - node.js
-        - id
+  terminology:
+    exclude:
+      - URL
+      - website
+      - markdown
+      - Bug Fixes
+      - eslint
+      - typescript
+      - json
+      - node.js
+      - id

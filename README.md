@@ -548,6 +548,132 @@ const items = await ProductRepository.find()
 
 ---
 
+#### Subqueries
+
+Use the `subquery()` function to create subqueries for use in WHERE clauses.
+
+##### WHERE IN with subquery
+
+```ts
+import { subquery } from 'bigal';
+
+// Find products from active stores
+const activeStoreIds = subquery(StoreRepository).select(['id']).where({ isActive: true });
+
+const items = await ProductRepository.find().where({
+  store: { in: activeStoreIds },
+});
+```
+
+Equivalent SQL:
+
+```sql
+SELECT * FROM products
+WHERE store_id IN (SELECT id FROM stores WHERE is_active = $1)
+```
+
+##### WHERE NOT IN with subquery
+
+Use the existing `!` negation operator:
+
+```ts
+const discontinuedProductIds = subquery(DiscontinuedProductRepository).select(['productId']);
+
+const items = await ProductRepository.find().where({
+  id: { '!': { in: discontinuedProductIds } },
+});
+```
+
+Equivalent SQL:
+
+```sql
+SELECT * FROM products
+WHERE id NOT IN (SELECT product_id FROM discontinued_products)
+```
+
+##### WHERE EXISTS
+
+```ts
+// Find stores that have at least one product
+const items = await StoreRepository.find().where({
+  exists: subquery(ProductRepository).where({ storeId: 42 }),
+});
+```
+
+Equivalent SQL:
+
+```sql
+SELECT * FROM stores
+WHERE EXISTS (SELECT 1 FROM products WHERE store_id = $1)
+```
+
+##### WHERE NOT EXISTS
+
+```ts
+// Find stores with no products
+const items = await StoreRepository.find().where({
+  '!': {
+    exists: subquery(ProductRepository).where({ storeId: 42 }),
+  },
+});
+```
+
+Equivalent SQL:
+
+```sql
+SELECT * FROM stores
+WHERE NOT EXISTS (SELECT 1 FROM products WHERE store_id = $1)
+```
+
+##### Scalar subquery comparisons
+
+Use aggregate methods (`count()`, `avg()`, `sum()`, `max()`, `min()`) to create scalar subqueries for comparisons:
+
+```ts
+// Find products priced above the average
+const avgPrice = subquery(ProductRepository).where({ category: 'electronics' }).avg('price');
+
+const items = await ProductRepository.find().where({
+  price: { '>': avgPrice },
+});
+```
+
+Equivalent SQL:
+
+```sql
+SELECT * FROM products
+WHERE price > (SELECT AVG(price) FROM products WHERE category = $1)
+```
+
+##### Combining subqueries with other conditions
+
+Subqueries can be combined with regular where conditions and other operators:
+
+```ts
+const premiumStoreIds = subquery(StoreRepository).select(['id']).where({ tier: 'premium' });
+
+const items = await ProductRepository.find().where({
+  store: { in: premiumStoreIds },
+  price: { '>=': 100 },
+  isActive: true,
+});
+```
+
+##### Reusable subqueries
+
+Subqueries are standalone objects that can be reused across multiple queries:
+
+```ts
+const activeStoreIds = subquery(StoreRepository).select(['id']).where({ isActive: true });
+
+// Use in multiple queries
+const products = await ProductRepository.find().where({ store: { in: activeStoreIds } });
+
+const orders = await OrderRepository.find().where({ store: { in: activeStoreIds } });
+```
+
+---
+
 ### `.count()` - Get the number of records matching the where criteria
 
 ```ts

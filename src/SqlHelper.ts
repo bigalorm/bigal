@@ -5,6 +5,7 @@ import type { IRepository } from './IRepository.js';
 import type { ColumnBaseMetadata, ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata/index.js';
 import type { Comparer, JoinDefinition, OrderBy, WhereClauseValue, WhereQuery } from './query/index.js';
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
+import { ScalarSubquery, SubqueryBuilder } from './query/Subquery.js';
 import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types/index.js';
 
 interface QueryAndParams {
@@ -994,6 +995,39 @@ function buildWhere<T extends Entity>({
         params,
         joins,
       });
+    case 'in':
+      if (value instanceof SubqueryBuilder) {
+        if (!propertyName) {
+          throw new QueryError(`Property name is required for 'in' operator with subquery`, model);
+        }
+
+        const column = model.columnsByPropertyName[propertyName];
+        if (!column) {
+          throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
+        }
+
+        const subquerySQL = buildSubquerySQL({
+          subquery: value,
+          params,
+          repositoriesByModelNameLowered,
+        });
+
+        return `"${column.name}"${isNegated ? ' NOT' : ''} IN (${subquerySQL})`;
+      }
+
+      throw new QueryError(`Expected subquery value for 'in' operator. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
+    case 'exists':
+      if (value instanceof SubqueryBuilder) {
+        const subquerySQL = buildSubquerySQL({
+          subquery: value,
+          params,
+          repositoriesByModelNameLowered,
+        });
+
+        return `${isNegated ? 'NOT ' : ''}EXISTS (${subquerySQL})`;
+      }
+
+      throw new QueryError(`Expected subquery value for 'exists' operator in model (${model.name}).`, model);
     default: {
       // Handle 'and' with array value (explicit and: [...] in where clause)
       // When value is not an array, this is the internal call from buildWhereStatement and should continue to default processing
@@ -1219,6 +1253,19 @@ function buildWhere<T extends Entity>({
       }
 
       if (typeof value === 'object' && value !== null && !(value instanceof Date)) {
+        if (value instanceof ScalarSubquery) {
+          return buildComparisonOperatorStatement({
+            repositoriesByModelNameLowered,
+            model,
+            propertyName: propertyName ?? comparer ?? '',
+            comparer,
+            isNegated,
+            value: value as unknown as WhereClauseValue<T>,
+            params,
+            joins,
+          });
+        }
+
         const andValues: string[] = [];
         for (const [key, where] of Object.entries(value)) {
           if (typeof where === 'object' && where !== null && !Array.isArray(where) && !(where instanceof Date)) {
@@ -1703,6 +1750,27 @@ function buildComparisonOperatorStatement<T extends Entity>({
     return `${tablePrefix}"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
   }
 
+  if (value instanceof ScalarSubquery) {
+    const scalarSQL = buildScalarSubquerySQL({
+      scalarSubquery: value,
+      params,
+      repositoriesByModelNameLowered,
+    });
+
+    switch (comparer) {
+      case '<':
+        return `${tablePrefix}"${column.name}"${isNegated ? '>=' : '<'}(${scalarSQL})`;
+      case '<=':
+        return `${tablePrefix}"${column.name}"${isNegated ? '>' : '<='}(${scalarSQL})`;
+      case '>':
+        return `${tablePrefix}"${column.name}"${isNegated ? '<=' : '>'}(${scalarSQL})`;
+      case '>=':
+        return `${tablePrefix}"${column.name}"${isNegated ? '<' : '>='}(${scalarSQL})`;
+      default:
+        return `${tablePrefix}"${column.name}"${isNegated ? '<>' : '='}(${scalarSQL})`;
+    }
+  }
+
   params.push(value);
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -1763,8 +1831,149 @@ function isComparer(value: string): boolean {
     case '<=':
     case '>':
     case '>=':
+    case 'in':
+    case 'exists':
       return true;
     default:
       return false;
   }
+}
+
+export function buildSubquerySQL<T extends Entity>({
+  subquery,
+  params,
+  repositoriesByModelNameLowered,
+}: {
+  subquery: SubqueryBuilder<T>;
+  params: unknown[];
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+}): string {
+  const model = subquery._repository.model;
+
+  let sql = 'SELECT ';
+
+  if (subquery._select?.length) {
+    sql += subquery._select
+      .map((propertyName) => {
+        const column = model.columnsByPropertyName[propertyName];
+        if (!column) {
+          throw new QueryError(`Unable to find column for property: ${propertyName} on ${model.tableName}`, model);
+        }
+
+        return `"${column.name}"`;
+      })
+      .join(',');
+  } else {
+    sql += '1';
+  }
+
+  sql += ` FROM ${model.qualifiedTableName}`;
+
+  if (subquery._where && Object.keys(subquery._where).length) {
+    const { whereStatement } = buildWhereStatement({
+      repositoriesByModelNameLowered,
+      model,
+      where: subquery._where,
+      params,
+    });
+
+    if (whereStatement) {
+      sql += ` ${whereStatement}`;
+    }
+  }
+
+  if (subquery._sort) {
+    const sorts = convertSortToOrderBy(subquery._sort);
+    const orderStatement = buildOrderStatement({
+      repositoriesByModelNameLowered,
+      model,
+      sorts,
+    });
+
+    if (orderStatement) {
+      sql += ` ${orderStatement}`;
+    }
+  }
+
+  if (subquery._limit) {
+    sql += ` LIMIT ${subquery._limit}`;
+  }
+
+  return sql;
+}
+
+export function buildScalarSubquerySQL({
+  scalarSubquery,
+  params,
+  repositoriesByModelNameLowered,
+}: {
+  scalarSubquery: ScalarSubquery<unknown>;
+  params: unknown[];
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+}): string {
+  const subquery = scalarSubquery._subquery;
+  const model = subquery._repository.model;
+
+  let aggregateSQL: string;
+  if (scalarSubquery._aggregate === 'count') {
+    aggregateSQL = 'COUNT(*)';
+  } else {
+    if (!scalarSubquery._aggregateColumn) {
+      throw new QueryError(`Aggregate ${scalarSubquery._aggregate} requires a column`, model);
+    }
+
+    const column = model.columnsByPropertyName[scalarSubquery._aggregateColumn];
+    if (!column) {
+      throw new QueryError(`Unable to find column for property: ${scalarSubquery._aggregateColumn} on ${model.tableName}`, model);
+    }
+
+    const aggregateFn = scalarSubquery._aggregate.toUpperCase();
+    aggregateSQL = `${aggregateFn}("${column.name}")`;
+  }
+
+  let sql = `SELECT ${aggregateSQL} FROM ${model.qualifiedTableName}`;
+
+  if (subquery._where && Object.keys(subquery._where).length) {
+    const { whereStatement } = buildWhereStatement({
+      repositoriesByModelNameLowered,
+      model,
+      where: subquery._where,
+      params,
+    });
+
+    if (whereStatement) {
+      sql += ` ${whereStatement}`;
+    }
+  }
+
+  return sql;
+}
+
+function convertSortToOrderBy<T extends Entity>(sort: Record<string, unknown> | string): OrderBy<T>[] {
+  const result: OrderBy<T>[] = [];
+
+  if (typeof sort === 'string') {
+    for (const sortPart of sort.split(',')) {
+      const parts = sortPart.trim().split(' ');
+      const propertyName = parts.shift() as string & keyof OmitFunctions<OmitEntityCollections<T>>;
+      result.push({
+        propertyName,
+        descending: /desc/i.test(parts.join('')),
+      });
+    }
+  } else if (typeof sort === 'object') {
+    for (const [propertyName, orderValue] of Object.entries(sort)) {
+      let descending = false;
+      if (orderValue && (orderValue === -1 || (typeof orderValue === 'string' && /desc/i.test(orderValue)))) {
+        descending = true;
+      }
+
+      result.push({
+        propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
+        descending,
+      });
+    }
+  }
+
+  return result;
 }

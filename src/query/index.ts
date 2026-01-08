@@ -1,5 +1,6 @@
 export * from './Comparer.js';
 export * from './CountResult.js';
+export * from './Subquery.js';
 export * from './JoinDefinition.js';
 export * from './JoinedSort.js';
 export * from './JoinedWhereQuery.js';
