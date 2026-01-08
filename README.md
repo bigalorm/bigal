@@ -561,6 +561,34 @@ const items = await FooRepository.find()
   .paginate(page, pageSize);
 ```
 
+#### Page results with total count using `withCount`
+
+Use `.withCount()` to get both paginated results and the total count of matching records in a single query. This uses PostgreSQL's `COUNT(*) OVER()` window function for efficient execution.
+
+```ts
+const { results, totalCount } = await ProductRepository.find()
+  .where({
+    store: storeId,
+  })
+  .sort('name')
+  .limit(10)
+  .skip(20)
+  .withCount();
+
+// results: Product[] (10 items from offset 20)
+// totalCount: number (total matching products, ignoring LIMIT/OFFSET)
+```
+
+This is useful for building paginated UIs where you need to display total pages:
+
+```ts
+const page = 3;
+const pageSize = 25;
+const { results, totalCount } = await ProductRepository.find().where({ isActive: true }).paginate({ page, limit: pageSize }).withCount();
+
+const totalPages = Math.ceil(totalCount / pageSize);
+```
+
 #### Join related tables
 
 Use `join()` for INNER JOIN or `leftJoin()` for LEFT JOIN to filter or sort by related table columns in a single query.

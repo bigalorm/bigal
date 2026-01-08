@@ -1,6 +1,7 @@
 import type { Entity } from '../Entity.js';
 import type { GetValueType, ModelRelationshipKeys, PickByValueType, Populated } from '../types/index.js';
 
+import type { FindQueryWithCount } from './FindWithCountResult.js';
 import type { JoinedSort } from './JoinedSort.js';
 import type { JoinedWhereQuery, JoinInfo } from './JoinedWhereQuery.js';
 import type { PaginateOptions } from './PaginateOptions.js';
@@ -27,5 +28,6 @@ export interface FindResult<T extends Entity, TReturn, TJoins extends JoinInfo =
   limit(value: number): FindResult<T, TReturn, TJoins>;
   skip(value: number): FindResult<T, TReturn, TJoins>;
   paginate(options: PaginateOptions): FindResult<T, TReturn, TJoins>;
+  withCount(): FindQueryWithCount<T, TReturn, TJoins>;
   UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(propertyName: TProperty): FindResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>, TJoins>;
 }
