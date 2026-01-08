@@ -9,7 +9,6 @@ A fast, lightweight ORM for PostgreSQL and Node.js, written in TypeScript.
 This ORM does not:
 
 - Create or update db schemas for you
-- Handle associations/joins
 - Do much else than basic queries, inserts, updates, and deletes
 
 ## Compatibility
@@ -460,6 +459,92 @@ const items = await FooRepository.find()
   })
   .paginate(page, pageSize);
 ```
+
+#### Join related tables
+
+Use `join()` for INNER JOIN or `leftJoin()` for LEFT JOIN to filter or sort by related table columns in a single query.
+
+```ts
+// INNER JOIN - only returns products that have a store
+const items = await ProductRepository.find()
+  .join('store')
+  .where({
+    store: {
+      name: 'Acme',
+    },
+  });
+```
+
+```ts
+// LEFT JOIN - returns all products, even those without a store
+const items = await ProductRepository.find()
+  .leftJoin('store')
+  .where({
+    store: {
+      name: 'Acme',
+    },
+  });
+```
+
+#### Join with alias
+
+Use an alias when you need to join the same table multiple times or for clarity.
+
+```ts
+const items = await ProductRepository.find()
+  .join('store', 'primaryStore')
+  .where({
+    primaryStore: {
+      name: 'Acme',
+    },
+  });
+```
+
+#### Join with additional ON constraints
+
+Add extra conditions to the JOIN's ON clause using `leftJoin()`.
+
+```ts
+const items = await ProductRepository.find()
+  .leftJoin('store', 'store', {
+    isDeleted: false,
+  })
+  .where({
+    name: {
+      like: 'Widget%',
+    },
+  });
+```
+
+#### Sort by joined table columns
+
+Use dot notation to sort by columns on joined tables.
+
+```ts
+const items = await ProductRepository.find().join('store').sort('store.name asc');
+```
+
+#### Combine multiple where conditions
+
+Mix regular where conditions with joined table conditions.
+
+```ts
+const items = await ProductRepository.find()
+  .join('store')
+  .where({
+    name: {
+      like: 'Widget%',
+    },
+    store: {
+      name: {
+        like: ['Acme', 'foo'],
+      },
+    },
+  });
+```
+
+> Note: `join()` and `populate()` serve different purposes. Use `join()` when you need to filter or sort by related
+> table columns in SQL. Use `populate()` when you want to fetch the full related object(s) as nested data in results.
 
 ---
 
