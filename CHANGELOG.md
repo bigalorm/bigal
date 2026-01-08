@@ -1,3 +1,9 @@
+# [15.4.0](https://github.com/bigalorm/bigal/compare/v15.3.0...v15.4.0) (2026-01-08)
+
+### Features
+
+- Add withCount() for efficient pagination with total count ([#266](https://github.com/bigalorm/bigal/issues/266)) ([233221e](https://github.com/bigalorm/bigal/commit/233221e7902af8ca3a4b24d1f60f0857bcd7803f))
+
 # [15.3.0](https://github.com/bigalorm/bigal/compare/v15.2.0...v15.3.0) (2026-01-08)
 
 ### Features
