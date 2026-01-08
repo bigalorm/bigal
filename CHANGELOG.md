@@ -1,3 +1,9 @@
+# [15.2.0](https://github.com/bigalorm/bigal/compare/v15.1.0...v15.2.0) (2026-01-08)
+
+### Features
+
+- Add SQL JOIN support for filtering and sorting by related tables ([#263](https://github.com/bigalorm/bigal/issues/263)) ([e5f1a97](https://github.com/bigalorm/bigal/commit/e5f1a97f524d8e784943d179347dc364a62959e1))
+
 # [15.1.0](https://github.com/bigalorm/bigal/compare/v15.0.1...v15.1.0) (2026-01-07)
 
 ### Features
