@@ -183,8 +183,8 @@ export function startup({
   });
 
   let categoryRepository: Repository<Category>;
-  let productRepository: Repository<Category>;
-  let storeRepository: Repository<Category>;
+  let productRepository: Repository<Product>;
+  let storeRepository: Repository<Store>;
   for (const [modelName, repository] = Object.entries(repositoriesByName)) {
     switch (modelName) {
       case 'Category':

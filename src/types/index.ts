@@ -13,6 +13,7 @@ export * from './OmitFunctions.js';
 export * from './PickAsType.js';
 export * from './PickByValueType.js';
 export * from './PickFunctions.js';
+export * from './PlainObject.js';
 export * from './Populated.js';
 export * from './QueryResult.js';
 export * from './QueryResultPopulated.js';

@@ -8,8 +8,10 @@ import type {
   FindArgs,
   FindOneArgs,
   FindOneResult,
+  FindOneResultJSON,
   FindQueryWithCount,
   FindResult,
+  FindResultJSON,
   FindWithCountResult,
   JoinDefinition,
   OrderBy,
@@ -40,6 +42,7 @@ interface Populate {
   skip?: number;
   limit?: number;
   pool?: PoolLike;
+  asPlainObjects?: boolean;
 }
 
 type PrimaryId = number | string;
@@ -137,6 +140,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     const manuallySetFields: ManuallySetField[] = [];
     const sorts: OrderBy<T>[] = sort ? this._convertSortsToOrderBy(sort) : [];
     const joins: JoinDefinition[] = [];
+    let returnAsPlainObjects = false;
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
@@ -244,6 +248,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this as FindOneResult<T, Omit<TReturn, TProperty> & PickAsType<T, TProperty, TValue>>;
       },
+      toJSON(): FindOneResultJSON<T, TReturn> {
+        returnAsPlainObjects = true;
+        return this as unknown as FindOneResultJSON<T, TReturn>;
+      },
       async then<TResult = TReturn | null, TErrorResult = void>(
         resolve: (result: TReturn | null) => PromiseLike<TResult> | TResult,
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
@@ -268,10 +276,11 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           const results = await pool.query<Partial<QueryResult<T>>>(query, params);
           const firstResult = results.rows[0];
           if (firstResult) {
-            const result = modelInstance._buildInstance(firstResult);
+            const result = returnAsPlainObjects ? modelInstance._buildPlainObject(firstResult) : modelInstance._buildInstance(firstResult);
 
             if (populates.length) {
-              await modelInstance.populateFields([result], populates);
+              const populatesWithFlag = populates.map((pop) => ({ ...pop, asPlainObjects: returnAsPlainObjects }));
+              await modelInstance.populateFields([result], populatesWithFlag);
             }
 
             for (const manuallySetField of manuallySetFields) {
@@ -361,6 +370,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     const sorts = sort ? this._convertSortsToOrderBy(sort) : [];
     const joins: JoinDefinition[] = [];
     let includeCount = false;
+    let returnAsPlainObjects = false;
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
@@ -492,6 +502,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         includeCount = true;
         return this as unknown as FindQueryWithCount<T, TReturn>;
       },
+      toJSON(): FindResultJSON<T, TReturn> {
+        returnAsPlainObjects = true;
+        return this as unknown as FindResultJSON<T, TReturn>;
+      },
       async then<TResult = TReturn[], TErrorResult = void>(
         resolve: (result: TReturn[]) => PromiseLike<TResult> | TResult,
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
@@ -529,10 +543,11 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
               })
             : results.rows;
 
-          const entities = modelInstance._buildInstances(rows);
+          const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(rows) : modelInstance._buildInstances(rows);
 
           if (populates.length) {
-            await modelInstance.populateFields(entities, populates);
+            const populatesWithFlag = populates.map((pop) => ({ ...pop, asPlainObjects: returnAsPlainObjects }));
+            await modelInstance.populateFields(entities, populatesWithFlag);
           }
 
           if (includeCount) {
@@ -681,6 +696,47 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     return rows.map((row: Partial<QueryResult<T>>) => this._buildInstance(row));
   }
 
+  protected _buildPlainObject(row: Partial<QueryResult<T>>): QueryResult<T> {
+    const plainObject = { ...row } as Record<string, unknown>;
+
+    for (const name of this._floatProperties) {
+      const originalValue = plainObject[name] as number | string | null | undefined;
+      if (originalValue != null && typeof originalValue === 'string') {
+        try {
+          const value = Number(originalValue);
+          if (Number.isFinite(value) && value.toString() === originalValue) {
+            plainObject[name] = value;
+          }
+        } catch {
+          // Ignore and leave value as original
+        }
+      }
+    }
+
+    for (const name of this._intProperties) {
+      const originalValue = plainObject[name] as number | string | null | undefined;
+      if (originalValue != null && typeof originalValue === 'string') {
+        try {
+          const value = Number(originalValue);
+          if (Number.isFinite(value) && value.toString() === originalValue) {
+            const valueAsInt = Math.trunc(value);
+            if (Number.isSafeInteger(valueAsInt)) {
+              plainObject[name] = valueAsInt;
+            }
+          }
+        } catch {
+          // Ignore and leave value as original
+        }
+      }
+    }
+
+    return plainObject as QueryResult<T>;
+  }
+
+  protected _buildPlainObjects(rows: Partial<QueryResult<T>>[]): QueryResult<T>[] {
+    return rows.map((row: Partial<QueryResult<T>>) => this._buildPlainObject(row));
+  }
+
   protected _convertSortsToOrderBy(sorts: SortObject<T> | string): OrderBy<T>[] {
     const result: OrderBy<T>[] = [];
     if (sorts) {
@@ -814,12 +870,13 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       ...populate.where,
     };
 
-    const populateResults = await populateRepository.find({
+    const findQuery = populateRepository.find({
       select: populate.select,
       where: populateWhere,
       sort: populate.sort,
       pool: populate.pool,
     } as FindArgs<Entity>);
+    const populateResults = populate.asPlainObjects ? await findQuery.toJSON() : await findQuery;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const populateResultsById = keyBy(populateResults, populateRepository.model.primaryKeyColumn.propertyName) as Record<number | string, any>;
 
@@ -846,7 +903,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       ...populate.where,
     };
 
-    const populateResults = await populateRepository.find({
+    const findQuery = populateRepository.find({
       select: populate.select,
       where: populateWhere,
       sort: populate.sort,
@@ -854,6 +911,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       limit: populate.limit,
       pool: populate.pool,
     } as FindArgs<Entity>);
+    const populateResults = populate.asPlainObjects ? await findQuery.toJSON() : await findQuery;
 
     if (entities.length === 1) {
       for (const entity of entities) {
@@ -930,7 +988,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       ...populate.where,
     };
 
-    const populateResults = await populateRepository.find({
+    const findQuery = populateRepository.find({
       select: populate.select,
       where: populateWhere,
       sort: populate.sort,
@@ -938,6 +996,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       limit: populate.limit,
       pool: populate.pool,
     } as FindArgs<Entity>);
+    const populateResults = populate.asPlainObjects ? await findQuery.toJSON() : await findQuery;
 
     const populateResultsById = keyBy(populateResults, populateModelPrimaryKeyPropertyName as string) as Record<PrimaryId, Entity>;
 
