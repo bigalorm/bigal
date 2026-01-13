@@ -1,3 +1,9 @@
+# [15.5.0](https://github.com/bigalorm/bigal/compare/v15.4.0...v15.5.0) (2026-01-13)
+
+### Features
+
+- Add toJSON() method for returning plain objects instead of class instances ([#271](https://github.com/bigalorm/bigal/issues/271)) ([3e2ee5d](https://github.com/bigalorm/bigal/commit/3e2ee5d803d705bc54bc8b08044f5848088563bb))
+
 # [15.4.0](https://github.com/bigalorm/bigal/compare/v15.3.0...v15.4.0) (2026-01-08)
 
 ### Features
