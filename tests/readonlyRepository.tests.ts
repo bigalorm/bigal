@@ -1396,6 +1396,35 @@ describe('ReadonlyRepository', () => {
       assert(productResult.store.name);
       productResult.store.name.should.equal(store.name);
     });
+
+    describe('toJSON()', () => {
+      it('should return plain object without prototype chain', async () => {
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+        const result = await ProductRepository.findOne().toJSON();
+
+        should.exist(result);
+        Object.getPrototypeOf(result!).should.equal(Object.prototype);
+      });
+
+      it('should return null when no results', async () => {
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([]));
+
+        const result = await ProductRepository.findOne().toJSON();
+
+        should.not.exist(result);
+      });
+
+      it('should cascade to populated entities', async () => {
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
+
+        const result = await ProductRepository.findOne().populate('store').toJSON();
+
+        should.exist(result);
+        Object.getPrototypeOf(result!).should.equal(Object.prototype);
+        Object.getPrototypeOf(result!.store).should.equal(Object.prototype);
+      });
+    });
   });
 
   describe('#find()', () => {
@@ -3036,137 +3065,195 @@ describe('ReadonlyRepository', () => {
         }
       });
     });
-  });
 
-  describe('#find().withCount()', () => {
-    let store: QueryResult<Store>;
+    describe('withCount()', () => {
+      it('should return results and totalCount', async () => {
+        const products = [
+          { ...generator.product({ store: store.id }), __total_count__: '42' },
+          { ...generator.product({ store: store.id }), __total_count__: '42' },
+        ];
 
-    beforeEach(() => {
-      store = generator.store();
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.find().withCount();
+
+        result.should.have.property('results');
+        result.should.have.property('totalCount');
+        result.results.should.have.length(2);
+        result.totalCount.should.equal(42);
+        result.results[0]!.should.not.have.property('__total_count__');
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products"');
+        assert(params);
+        params.should.deep.equal([]);
+      });
+
+      it('should work with where clause and pagination', async () => {
+        const products = [{ ...generator.product({ store: store.id }), __total_count__: '100' }];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.find().where({ store: store.id }).skip(10).limit(20).withCount();
+
+        result.results.should.have.length(1);
+        result.totalCount.should.equal(100);
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal(
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" WHERE "store_id"=$1 LIMIT 20 OFFSET 10',
+        );
+        assert(params);
+        params.should.deep.equal([store.id]);
+      });
+
+      it('should work with joins', async () => {
+        const products = [{ ...generator.product({ store: store.id }), __total_count__: '5' }];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.find()
+          .join('store')
+          .where({
+            store: {
+              name: 'Test',
+            },
+          })
+          .withCount();
+
+        result.results.should.have.length(1);
+        result.totalCount.should.equal(5);
+
+        const [query] = capture(mockedPool.query).first();
+        query.should.equal(
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name"=$1',
+        );
+      });
+
+      it('should return 0 totalCount when no results', async () => {
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([]));
+
+        const result = await ProductRepository.find().where({ store: store.id }).withCount();
+
+        result.results.should.have.length(0);
+        result.totalCount.should.equal(0);
+      });
+
+      it('should support chaining withCount before other methods', async () => {
+        const products = [{ ...generator.product({ store: store.id }), __total_count__: '50' }];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.find().withCount().where({ store: store.id }).sort('name').limit(10);
+
+        result.totalCount.should.equal(50);
+
+        const [query] = capture(mockedPool.query).first();
+        query.should.equal(
+          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" WHERE "store_id"=$1 ORDER BY "name" LIMIT 10',
+        );
+      });
+
+      it('should work with select', async () => {
+        const products = [{ id: 1, name: 'Test', __total_count__: '25' }];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.find().select(['name']).withCount();
+
+        result.totalCount.should.equal(25);
+
+        const [query] = capture(mockedPool.query).first();
+        query.should.equal('SELECT "name","id",count(*) OVER() AS "__total_count__" FROM "products"');
+      });
+
+      it('should work with populate', async () => {
+        const product = { ...generator.product({ store: store.id }), __total_count__: '10' };
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
+
+        const result = await ProductRepository.find().populate('store').withCount();
+
+        result.totalCount.should.equal(10);
+        result.results[0]!.store.should.deep.equal(store);
+      });
+
+      it('should work with paginate helper', async () => {
+        const products = [{ ...generator.product({ store: store.id }), __total_count__: '200' }];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.find().withCount().paginate({ page: 3, limit: 25 });
+
+        result.totalCount.should.equal(200);
+
+        const [query] = capture(mockedPool.query).first();
+        query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" LIMIT 25 OFFSET 50');
+      });
     });
 
-    it('should return results and totalCount', async () => {
-      const products = [
-        { ...generator.product({ store: store.id }), __total_count__: '42' },
-        { ...generator.product({ store: store.id }), __total_count__: '42' },
-      ];
+    describe('toJSON()', () => {
+      it('should return plain objects without prototype chain', async () => {
+        const products = [generator.product({ store: store.id }), generator.product({ store: store.id })];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
-      const result = await ProductRepository.find().withCount();
+        const result = await ProductRepository.find().toJSON();
 
-      result.should.have.property('results');
-      result.should.have.property('totalCount');
-      result.results.should.have.length(2);
-      result.totalCount.should.equal(42);
-      result.results[0]!.should.not.have.property('__total_count__');
+        result.should.have.length(2);
+        // Verify results are plain objects (no prototype chain from Product class)
+        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+        Object.getPrototypeOf(result[1]!).should.equal(Object.prototype);
+      });
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products"');
-      assert(params);
-      params.should.deep.equal([]);
-    });
+      it('should work with where clause', async () => {
+        const products = [generator.product({ store: store.id })];
 
-    it('should work with where clause and pagination', async () => {
-      const products = [{ ...generator.product({ store: store.id }), __total_count__: '100' }];
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        const result = await ProductRepository.find().where({ store: store.id }).toJSON();
 
-      const result = await ProductRepository.find().where({ store: store.id }).skip(10).limit(20).withCount();
+        result.should.have.length(1);
+        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+      });
 
-      result.results.should.have.length(1);
-      result.totalCount.should.equal(100);
+      it('should work with select', async () => {
+        const products = [{ id: 1, name: 'Test' }];
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal(
-        'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" WHERE "store_id"=$1 LIMIT 20 OFFSET 10',
-      );
-      assert(params);
-      params.should.deep.equal([store.id]);
-    });
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
-    it('should work with joins', async () => {
-      const products = [{ ...generator.product({ store: store.id }), __total_count__: '5' }];
+        const result = await ProductRepository.find().select(['name']).toJSON();
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        result.should.have.length(1);
+        result[0]!.should.have.property('name', 'Test');
+        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+      });
 
-      const result = await ProductRepository.find()
-        .join('store')
-        .where({
-          store: {
-            name: 'Test',
-          },
-        })
-        .withCount();
+      it('should cascade to populated entities', async () => {
+        const product = generator.product({ store: store.id });
 
-      result.results.should.have.length(1);
-      result.totalCount.should.equal(5);
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
 
-      const [query] = capture(mockedPool.query).first();
-      query.should.equal(
-        'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name"=$1',
-      );
-    });
+        const result = await ProductRepository.find().populate('store').toJSON();
 
-    it('should return 0 totalCount when no results', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([]));
+        result.should.have.length(1);
+        // Both the product and the populated store should be plain objects
+        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+        Object.getPrototypeOf(result[0]!.store).should.equal(Object.prototype);
+      });
 
-      const result = await ProductRepository.find().where({ store: store.id }).withCount();
+      it('should work with withCount', async () => {
+        const products = [{ ...generator.product({ store: store.id }), __total_count__: '42' }];
 
-      result.results.should.have.length(0);
-      result.totalCount.should.equal(0);
-    });
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
 
-    it('should support chaining withCount before other methods', async () => {
-      const products = [{ ...generator.product({ store: store.id }), __total_count__: '50' }];
+        const result = await ProductRepository.find().withCount().toJSON();
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
-
-      const result = await ProductRepository.find().withCount().where({ store: store.id }).sort('name').limit(10);
-
-      result.totalCount.should.equal(50);
-
-      const [query] = capture(mockedPool.query).first();
-      query.should.equal(
-        'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" WHERE "store_id"=$1 ORDER BY "name" LIMIT 10',
-      );
-    });
-
-    it('should work with select', async () => {
-      const products = [{ id: 1, name: 'Test', __total_count__: '25' }];
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
-
-      const result = await ProductRepository.find().select(['name']).withCount();
-
-      result.totalCount.should.equal(25);
-
-      const [query] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "name","id",count(*) OVER() AS "__total_count__" FROM "products"');
-    });
-
-    it('should work with populate', async () => {
-      const product = { ...generator.product({ store: store.id }), __total_count__: '10' };
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
-
-      const result = await ProductRepository.find().populate('store').withCount();
-
-      result.totalCount.should.equal(10);
-      result.results[0]!.store.should.deep.equal(store);
-    });
-
-    it('should work with paginate helper', async () => {
-      const products = [{ ...generator.product({ store: store.id }), __total_count__: '200' }];
-
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
-
-      const result = await ProductRepository.find().withCount().paginate({ page: 3, limit: 25 });
-
-      result.totalCount.should.equal(200);
-
-      const [query] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" LIMIT 25 OFFSET 50');
+        result.should.have.property('results');
+        result.should.have.property('totalCount');
+        result.totalCount.should.equal(42);
+        Object.getPrototypeOf(result.results[0]!).should.equal(Object.prototype);
+      });
     });
   });
 
