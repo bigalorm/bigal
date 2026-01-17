@@ -8,7 +8,7 @@ import { anyString, anything, capture, instance, mock, reset, verify, when } fro
 
 import type { PoolQueryResult, QueryResult, QueryResultPopulated, QueryResultRow, ReadonlyRepository, Repository } from '../src/index.js';
 import { initialize, subquery } from '../src/index.js';
-import type { WhereQuery } from '../src/query/index.js';
+import type { SelectAggregateExpression, WhereQuery } from '../src/query/index.js';
 
 import type { ParkingLot } from './models/index.js';
 import {
@@ -2245,6 +2245,139 @@ describe('ReadonlyRepository', () => {
         );
         assert(params);
         params.should.deep.equal(['Widget', 'Premium']);
+      });
+
+      describe('subquery joins', () => {
+        it('should support inner join to subquery with COUNT aggregate', async () => {
+          const stores = [generator.store()];
+
+          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+          const productCounts = subquery(ProductRepository)
+            .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+            .groupBy(['store']);
+
+          const result = await StoreRepository.find().join(productCounts, 'productStats', { on: { id: 'store' } });
+
+          assert(result);
+          result.should.deep.equal(stores);
+
+          const [query, params] = capture(mockedPool.query).first();
+          query.should.equal(
+            'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"',
+          );
+          assert(params);
+          params.should.deep.equal([]);
+        });
+
+        it('should support left join to subquery', async () => {
+          const stores = [generator.store()];
+
+          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+          const productCounts = subquery(ProductRepository)
+            .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+            .groupBy(['store']);
+
+          const result = await StoreRepository.find().leftJoin(productCounts, 'productStats', { on: { id: 'store' } });
+
+          assert(result);
+          result.should.deep.equal(stores);
+
+          const [query, params] = capture(mockedPool.query).first();
+          query.should.equal(
+            'SELECT "id","name" FROM "stores" LEFT JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"',
+          );
+          assert(params);
+          params.should.deep.equal([]);
+        });
+
+        it('should support sorting by subquery column', async () => {
+          const stores = [generator.store()];
+
+          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+          const productCounts = subquery(ProductRepository)
+            .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+            .groupBy(['store']);
+
+          const result = await StoreRepository.find()
+            .join(productCounts, 'productStats', { on: { id: 'store' } })
+            .sort('productStats.productCount desc');
+
+          assert(result);
+          result.should.deep.equal(stores);
+
+          const [query, params] = capture(mockedPool.query).first();
+          query.should.equal(
+            'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."productCount" DESC',
+          );
+          assert(params);
+          params.should.deep.equal([]);
+        });
+
+        it('should support subquery join with WHERE in subquery', async () => {
+          const stores = [generator.store()];
+
+          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+          const widgetCounts = subquery(ProductRepository)
+            .select(['store', (sb): SelectAggregateExpression => sb.count().as('widgetCount')])
+            .where({ name: 'Widget' })
+            .groupBy(['store']);
+
+          const result = await StoreRepository.find().join(widgetCounts, 'widgetStats', { on: { id: 'store' } });
+
+          assert(result);
+          result.should.deep.equal(stores);
+
+          const [query, params] = capture(mockedPool.query).first();
+          query.should.equal(
+            'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "widgetCount" FROM "products" WHERE "name"=$1 GROUP BY "store_id") AS "widgetStats" ON "stores"."id"="widgetStats"."store"',
+          );
+          assert(params);
+          params.should.deep.equal(['Widget']);
+        });
+
+        it('should support COUNT DISTINCT in subquery join', async () => {
+          const stores = [generator.store()];
+
+          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+          const uniqueProductCounts = subquery(ProductRepository)
+            .select(['store', (sb): SelectAggregateExpression => sb.count('name').distinct().as('uniqueNames')])
+            .groupBy(['store']);
+
+          const result = await StoreRepository.find().join(uniqueProductCounts, 'stats', { on: { id: 'store' } });
+
+          assert(result);
+          result.should.deep.equal(stores);
+
+          const [query, params] = capture(mockedPool.query).first();
+          query.should.equal(
+            'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(DISTINCT "name") AS "uniqueNames" FROM "products" GROUP BY "store_id") AS "stats" ON "stores"."id"="stats"."store"',
+          );
+          assert(params);
+          params.should.deep.equal([]);
+        });
+
+        it('should throw error when joining subquery without alias', async () => {
+          const productCounts = subquery(ProductRepository)
+            .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+            .groupBy(['store']);
+
+          let thrownError: Error | undefined;
+
+          try {
+            // @ts-expect-error - intentionally passing undefined for alias to test runtime error
+            await StoreRepository.find().join(productCounts, undefined, { on: { id: 'store' } });
+          } catch (ex) {
+            thrownError = ex as Error;
+          }
+
+          should.exist(thrownError);
+          thrownError!.message.should.equal('Alias is required when joining to a subquery');
+        });
       });
     });
 

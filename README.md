@@ -803,6 +803,133 @@ const orders = await OrderRepository.find().where({ store: { in: activeStoreIds 
 
 ---
 
+#### Joining to Subqueries
+
+You can join to subqueries (derived tables) using `join()` or `leftJoin()`. This is useful for aggregating data and joining it back to the main query.
+
+##### Basic subquery join with COUNT aggregate
+
+```ts
+import { subquery } from 'bigal';
+
+// Count products per store
+const productCounts = subquery(ProductRepository)
+  .select(['store', (s) => s.count().as('productCount')])
+  .groupBy(['store']);
+
+// Join to get stores with their product counts
+const stores = await StoreRepository.find().join(productCounts, 'productStats', { on: { id: 'store' } });
+```
+
+Equivalent SQL:
+
+```sql
+SELECT * FROM stores
+INNER JOIN (
+  SELECT store_id AS store, COUNT(*) AS "productCount"
+  FROM products
+  GROUP BY store_id
+) AS "productStats" ON stores.id = "productStats".store
+```
+
+##### LEFT JOIN to subquery
+
+Use `leftJoin()` to include rows even when there's no matching subquery row:
+
+```ts
+const productCounts = subquery(ProductRepository)
+  .select(['store', (s) => s.count().as('productCount')])
+  .groupBy(['store']);
+
+// LEFT JOIN returns all stores, even those with no products
+const stores = await StoreRepository.find().leftJoin(productCounts, 'productStats', { on: { id: 'store' } });
+```
+
+##### Sorting by subquery columns
+
+Use dot notation to sort by columns from the subquery:
+
+```ts
+const productCounts = subquery(ProductRepository)
+  .select(['store', (s) => s.count().as('productCount')])
+  .groupBy(['store']);
+
+// Sort by product count descending (most products first)
+const stores = await StoreRepository.find()
+  .join(productCounts, 'productStats', { on: { id: 'store' } })
+  .sort('productStats.productCount desc');
+```
+
+##### Subquery with WHERE clause and aggregate
+
+Filter within the subquery before aggregating:
+
+```ts
+// Count only active products per store
+const activeProductCounts = subquery(ProductRepository)
+  .select(['store', (s) => s.count().as('activeCount')])
+  .where({ isActive: true })
+  .groupBy(['store']);
+
+const stores = await StoreRepository.find().join(activeProductCounts, 'activeStats', { on: { id: 'store' } });
+```
+
+##### COUNT DISTINCT in subquery
+
+Use `.distinct()` for counting unique values:
+
+```ts
+// Count unique product names per store
+const uniqueNameCounts = subquery(ProductRepository)
+  .select(['store', (s) => s.count('name').distinct().as('uniqueNames')])
+  .groupBy(['store']);
+
+const stores = await StoreRepository.find().join(uniqueNameCounts, 'stats', { on: { id: 'store' } });
+```
+
+Equivalent SQL:
+
+```sql
+SELECT * FROM stores
+INNER JOIN (
+  SELECT store_id AS store, COUNT(DISTINCT name) AS "uniqueNames"
+  FROM products
+  GROUP BY store_id
+) AS stats ON stores.id = stats.store
+```
+
+##### Multiple aggregates in a single subquery
+
+Compute multiple aggregates in one subquery:
+
+```ts
+const orderStats = subquery(OrderRepository)
+  .select(['store', (s) => s.count().as('orderCount'), (s) => s.sum('total').as('totalRevenue'), (s) => s.avg('total').as('avgOrderValue')])
+  .groupBy(['store']);
+
+const stores = await StoreRepository.find()
+  .join(orderStats, 'stats', { on: { id: 'store' } })
+  .sort('stats.totalRevenue desc');
+```
+
+##### Default aggregate aliases
+
+Aggregate functions have default aliases matching their function name:
+
+```ts
+// Without .as() - alias defaults to function name
+const counts = subquery(ProductRepository)
+  .select(['store', (s) => s.count()]) // alias: "count"
+  .groupBy(['store']);
+
+// With .as() - custom alias
+const counts = subquery(ProductRepository)
+  .select(['store', (s) => s.count().as('productCount')]) // alias: "productCount"
+  .groupBy(['store']);
+```
+
+---
+
 ### `.count()` - Get the number of records matching the where criteria
 
 ```ts
