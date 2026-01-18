@@ -11,6 +11,15 @@ import type { HavingCondition, SubqueryBuilderLike } from './query/Subquery.js';
 import { ScalarSubquery, SubqueryBuilder } from './query/Subquery.js';
 import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types/index.js';
 
+// Valid PostgreSQL identifier: starts with letter or underscore, contains letters, digits, underscores, or dots (for alias.column notation)
+const VALID_SQL_IDENTIFIER = /^[A-Z_a-z][\w.]*$/;
+
+function assertValidSqlIdentifier(value: string, context: string): void {
+  if (!VALID_SQL_IDENTIFIER.test(value)) {
+    throw new Error(`Invalid SQL identifier for ${context}: "${value}". Identifiers must start with a letter or underscore and contain only letters, numbers, underscores, and dots.`);
+  }
+}
+
 interface QueryAndParams {
   query: string;
   params: readonly unknown[];
@@ -734,6 +743,7 @@ function buildModelJoinClause<T extends Entity>({
 
   const joinType = join.type === 'left' ? 'LEFT JOIN' : 'INNER JOIN';
   const alias = join.alias || join.propertyName;
+  assertValidSqlIdentifier(alias, 'join alias');
 
   let joinSql = ` ${joinType} ${relatedModel.qualifiedTableName}`;
 
@@ -769,6 +779,8 @@ function buildSubqueryJoinClause<T extends Entity>({
   params: unknown[];
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
 }): string {
+  assertValidSqlIdentifier(join.alias, 'subquery join alias');
+
   const subquerySQL = buildSubquerySelectSQL({
     subquery: join.subquery,
     params,
@@ -784,6 +796,7 @@ function buildSubqueryJoinClause<T extends Entity>({
       throw new QueryError(`Unable to find property "${mainColumn}" on model "${model.name}" for subquery join`, model);
     }
 
+    assertValidSqlIdentifier(subqueryColumn, 'subquery join ON column');
     onConditions.push(`"${model.tableName}"."${column.name}"="${join.alias}"."${subqueryColumn}"`);
   }
 
@@ -873,7 +886,11 @@ function buildSubquerySelectSQL({
   }
 
   // LIMIT
-  if (subquery._limit) {
+  if (subquery._limit !== undefined) {
+    if (typeof subquery._limit !== 'number' || !Number.isFinite(subquery._limit) || subquery._limit < 0) {
+      throw new QueryError('Subquery limit must be a non-negative finite number', subqueryModel);
+    }
+
     sql += ` LIMIT ${subquery._limit}`;
   }
 
@@ -881,6 +898,7 @@ function buildSubquerySelectSQL({
 }
 
 function buildAggregateSQL(expr: SelectAggregateExpression, model: ModelMetadata<Entity>): string {
+  assertValidSqlIdentifier(expr.alias, 'aggregate alias');
   const sql = buildAggregateSQLWithoutAlias(expr, model);
   return `${sql} AS "${expr.alias}"`;
 }
@@ -1708,6 +1726,7 @@ function resolvePropertyPath<T extends Entity>({
 
   // For subquery joins, the nestedPropertyName refers to a column alias in the subquery
   if (isSubqueryJoin(matchingJoin)) {
+    assertValidSqlIdentifier(nestedPropertyName, 'subquery column reference');
     // Return a minimal column metadata for the subquery column (which is an alias, not a real column)
     return {
       column: { name: nestedPropertyName, propertyName: nestedPropertyName } as ColumnBaseMetadata,
@@ -2141,7 +2160,11 @@ export function buildSubquerySQL<T extends Entity>({
     }
   }
 
-  if (subquery._limit) {
+  if (subquery._limit !== undefined) {
+    if (typeof subquery._limit !== 'number' || !Number.isFinite(subquery._limit) || subquery._limit < 0) {
+      throw new QueryError('Subquery limit must be a non-negative finite number', model);
+    }
+
     sql += ` LIMIT ${subquery._limit}`;
   }
 

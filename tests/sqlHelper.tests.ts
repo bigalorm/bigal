@@ -4117,6 +4117,72 @@ describe('sqlHelper', () => {
         assert(thrownError instanceof QueryError);
         thrownError.message.should.include('unknown alias');
       });
+
+      it('should throw error for SQL injection in subquery join alias', () => {
+        const subq = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('count')])
+          .groupBy(['store']);
+
+        let thrownError: Error | undefined;
+
+        try {
+          sqlHelper.buildJoinClauses({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+            joins: [{ subquery: subq, alias: 'stats"; DROP TABLE products; --', type: 'inner', on: { id: 'store' } }],
+            params: [],
+          });
+        } catch (ex) {
+          thrownError = ex as Error;
+        }
+
+        assert(thrownError);
+        thrownError.message.should.include('Invalid SQL identifier');
+      });
+
+      it('should throw error for SQL injection in subquery join ON column', () => {
+        const subq = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('count')])
+          .groupBy(['store']);
+
+        let thrownError: Error | undefined;
+
+        try {
+          sqlHelper.buildJoinClauses({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+            joins: [{ subquery: subq, alias: 'stats', type: 'inner', on: { id: 'store"; DROP TABLE products; --' } }],
+            params: [],
+          });
+        } catch (ex) {
+          thrownError = ex as Error;
+        }
+
+        assert(thrownError);
+        thrownError.message.should.include('Invalid SQL identifier');
+      });
+
+      it('should throw error for SQL injection in aggregate alias', () => {
+        const subq = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('count"; DROP TABLE products; --')])
+          .groupBy(['store']);
+
+        let thrownError: Error | undefined;
+
+        try {
+          sqlHelper.buildJoinClauses({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+            joins: [{ subquery: subq, alias: 'stats', type: 'inner', on: { id: 'store' } }],
+            params: [],
+          });
+        } catch (ex) {
+          thrownError = ex as Error;
+        }
+
+        assert(thrownError);
+        thrownError.message.should.include('Invalid SQL identifier');
+      });
     });
   });
 });
