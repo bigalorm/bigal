@@ -1,3 +1,9 @@
+# [15.6.0](https://github.com/bigalorm/bigal/compare/v15.5.0...v15.6.0) (2026-01-18)
+
+### Features
+
+- Add support for joining to subqueries with GROUP BY and aggregates ([#275](https://github.com/bigalorm/bigal/issues/275)) ([6108663](https://github.com/bigalorm/bigal/commit/6108663f29f22bc4abb87028f9537305c69055b7))
+
 # [15.5.0](https://github.com/bigalorm/bigal/compare/v15.4.0...v15.5.0) (2026-01-13)
 
 ### Features
