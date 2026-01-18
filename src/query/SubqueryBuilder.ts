@@ -10,6 +10,16 @@ import type { Sort, SortObject, WhereQuery } from './index.js';
 
 export type SelectItem<T extends Entity> = ((builder: SelectBuilder<T>) => AggregateBuilder | SelectAggregateExpression) | (string & keyof T);
 
+export interface HavingComparer {
+  '<'?: number;
+  '<='?: number;
+  '>'?: number;
+  '>='?: number;
+  '!='?: number;
+}
+
+export type HavingCondition = Record<string, HavingComparer | number>;
+
 /**
  * Structural type that accepts any SubqueryBuilder<T> regardless of T.
  * Uses `unknown` for generic-dependent properties to allow variance.
@@ -23,6 +33,7 @@ export interface SubqueryBuilderLike {
   _sort?: unknown;
   _limit?: number;
   _groupBy?: string[];
+  _having?: HavingCondition;
 }
 
 export class SubqueryBuilder<T extends Entity> {
@@ -33,6 +44,7 @@ export class SubqueryBuilder<T extends Entity> {
   public _sort?: SortObject<T> | string;
   public _limit?: number;
   public _groupBy?: (string & keyof T)[];
+  public _having?: HavingCondition;
 
   public constructor(repository: IReadonlyRepository<T> | IRepository<T>) {
     this._repository = repository;
@@ -82,6 +94,21 @@ export class SubqueryBuilder<T extends Entity> {
     return cloned;
   }
 
+  /**
+   * Filter groups based on aggregate values (used with groupBy).
+   * @returns New SubqueryBuilder with the having condition applied
+   * @example
+   * subquery(ProductRepository)
+   *   .select(['storeId', s => s.count().as('productCount')])
+   *   .groupBy(['storeId'])
+   *   .having({ productCount: { '>': 5 } })
+   */
+  public having(condition: HavingCondition): SubqueryBuilder<T> {
+    const cloned = this.cloneBuilder();
+    cloned._having = condition;
+    return cloned;
+  }
+
   public where(query: WhereQuery<T>): SubqueryBuilder<T> {
     const cloned = this.cloneBuilder();
     cloned._where = query;
@@ -128,6 +155,7 @@ export class SubqueryBuilder<T extends Entity> {
     cloned._sort = this._sort;
     cloned._limit = this._limit;
     cloned._groupBy = this._groupBy;
+    cloned._having = this._having;
     return cloned;
   }
 }

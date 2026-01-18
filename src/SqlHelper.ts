@@ -7,8 +7,8 @@ import type { Comparer, JoinDefinition, ModelJoinDefinition, OrderBy, SubqueryJo
 import { isSubqueryJoin } from './query/JoinDefinition.js';
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
 import type { SelectAggregateExpression } from './query/SelectBuilder.js';
+import type { HavingCondition, SubqueryBuilderLike } from './query/Subquery.js';
 import { ScalarSubquery, SubqueryBuilder } from './query/Subquery.js';
-import type { SubqueryBuilderLike } from './query/SubqueryBuilder.js';
 import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types/index.js';
 
 interface QueryAndParams {
@@ -855,6 +855,10 @@ function buildSubquerySelectSQL({
     sql += ` GROUP BY ${groupColumns.join(',')}`;
   }
 
+  if (subquery._having && subquery._selectExpressions?.length) {
+    sql += buildHavingClause(subquery._having, subquery._selectExpressions, subqueryModel);
+  }
+
   if (subquery._sort) {
     const sorts = convertSortToOrderBy(subquery._sort as Record<string, unknown> | string);
     const orderStatement = buildOrderStatement({
@@ -877,11 +881,16 @@ function buildSubquerySelectSQL({
 }
 
 function buildAggregateSQL(expr: SelectAggregateExpression, model: ModelMetadata<Entity>): string {
-  let sql: string;
+  const sql = buildAggregateSQLWithoutAlias(expr, model);
+  return `${sql} AS "${expr.alias}"`;
+}
 
+function buildAggregateSQLWithoutAlias(expr: SelectAggregateExpression, model: ModelMetadata<Entity>): string {
   if (expr.fn === 'count' && !expr.column) {
-    sql = 'COUNT(*)';
-  } else if (expr.column) {
+    return 'COUNT(*)';
+  }
+
+  if (expr.column) {
     const column = model.columnsByPropertyName[expr.column];
     if (!column) {
       throw new QueryError(`Unable to find column for aggregate: ${expr.column}`, model);
@@ -889,12 +898,56 @@ function buildAggregateSQL(expr: SelectAggregateExpression, model: ModelMetadata
 
     const colRef = `"${column.name}"`;
     const distinctPrefix = expr.distinct ? 'DISTINCT ' : '';
-    sql = `${expr.fn.toUpperCase()}(${distinctPrefix}${colRef})`;
-  } else {
-    sql = `${expr.fn.toUpperCase()}(*)`;
+    return `${expr.fn.toUpperCase()}(${distinctPrefix}${colRef})`;
   }
 
-  return `${sql} AS "${expr.alias}"`;
+  return `${expr.fn.toUpperCase()}(*)`;
+}
+
+const VALID_HAVING_OPERATORS = new Set(['<', '<=', '>', '>=', '!=']);
+
+function buildHavingClause(having: HavingCondition, selectExpressions: SelectAggregateExpression[], model: ModelMetadata<Entity>): string {
+  const conditions: string[] = [];
+
+  for (const [alias, condition] of Object.entries(having)) {
+    const expr = selectExpressions.find((expression) => expression.alias === alias);
+    if (!expr) {
+      throw new QueryError(`HAVING condition references unknown alias "${alias}". Make sure it matches an aggregate alias in select().`, model);
+    }
+
+    const aggregateSQL = buildAggregateSQLWithoutAlias(expr, model);
+
+    if (typeof condition === 'number') {
+      if (!Number.isFinite(condition)) {
+        throw new QueryError(`HAVING condition value must be a finite number`, model);
+      }
+
+      conditions.push(`${aggregateSQL}=${condition}`);
+    } else {
+      const comparer = condition as Record<string, number>;
+      for (const [operator, value] of Object.entries(comparer)) {
+        if (!VALID_HAVING_OPERATORS.has(operator)) {
+          throw new QueryError(`Invalid HAVING operator "${operator}". Valid operators are: <, <=, >, >=, !=`, model);
+        }
+
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          throw new QueryError(`HAVING condition value must be a finite number`, model);
+        }
+
+        if (operator === '!=') {
+          conditions.push(`${aggregateSQL}<>${value}`);
+        } else {
+          conditions.push(`${aggregateSQL}${operator}${value}`);
+        }
+      }
+    }
+  }
+
+  if (!conditions.length) {
+    return '';
+  }
+
+  return ` HAVING ${conditions.join(' AND ')}`;
 }
 
 /**

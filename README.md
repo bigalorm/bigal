@@ -928,6 +928,58 @@ const counts = subquery(ProductRepository)
   .groupBy(['store']);
 ```
 
+##### HAVING clause for filtering aggregated results
+
+Use `.having()` to filter groups based on aggregate values:
+
+```ts
+// Only include stores with more than 10 products
+const productCounts = subquery(ProductRepository)
+  .select(['store', (s) => s.count().as('productCount')])
+  .groupBy(['store'])
+  .having({ productCount: { '>': 10 } });
+
+const popularStores = await StoreRepository.find().join(productCounts, 'stats', { on: { id: 'store' } });
+```
+
+Supported comparison operators: `>`, `>=`, `<`, `<=`, `!=`, or exact equality (number).
+
+```ts
+// Multiple conditions on different aggregates
+const orderStats = subquery(OrderRepository)
+  .select(['store', (s) => s.count().as('orderCount'), (s) => s.avg('total').as('avgOrderValue')])
+  .groupBy(['store'])
+  .having({ orderCount: { '>=': 5 }, avgOrderValue: { '>': 100 } });
+```
+
+##### WHERE vs HAVING in subqueries
+
+`WHERE` and `HAVING` serve different purposes in aggregated subqueries:
+
+- **WHERE** filters individual rows _before_ grouping
+- **HAVING** filters groups _after_ aggregation
+
+```ts
+// WHERE: Only count active products (filters rows before counting)
+const activeProductCounts = subquery(ProductRepository)
+  .select(['store', (s) => s.count().as('productCount')])
+  .where({ isActive: true }) // Excludes inactive products from the count
+  .groupBy(['store']);
+
+// HAVING: Only include stores with high product counts (filters groups after counting)
+const highVolumeStores = subquery(ProductRepository)
+  .select(['store', (s) => s.count().as('productCount')])
+  .groupBy(['store'])
+  .having({ productCount: { '>': 100 } }); // Excludes stores with 100 or fewer products
+
+// Combined: Count active products, then filter to stores with many active products
+const highVolumeActiveStores = subquery(ProductRepository)
+  .select(['store', (s) => s.count().as('activeCount')])
+  .where({ isActive: true }) // Step 1: Only consider active products
+  .groupBy(['store'])
+  .having({ activeCount: { '>': 50 } }); // Step 2: Only keep stores with >50 active products
+```
+
 ---
 
 ### `.count()` - Get the number of records matching the where criteria

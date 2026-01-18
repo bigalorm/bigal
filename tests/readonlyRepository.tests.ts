@@ -8,7 +8,7 @@ import { anyString, anything, capture, instance, mock, reset, verify, when } fro
 
 import type { PoolQueryResult, QueryResult, QueryResultPopulated, QueryResultRow, ReadonlyRepository, Repository } from '../src/index.js';
 import { initialize, subquery } from '../src/index.js';
-import type { SelectAggregateExpression, WhereQuery } from '../src/query/index.js';
+import type { SelectAggregateExpression, Sort, WhereQuery } from '../src/query/index.js';
 
 import type { ParkingLot } from './models/index.js';
 import {
@@ -2303,7 +2303,8 @@ describe('ReadonlyRepository', () => {
 
           const result = await StoreRepository.find()
             .join(productCounts, 'productStats', { on: { id: 'store' } })
-            .sort('productStats.productCount desc');
+            // Type assertion needed because Sort<Store> doesn't include joined column aliases
+            .sort('productStats.productCount desc' as Sort<Store>);
 
           assert(result);
           result.should.deep.equal(stores);
@@ -2356,6 +2357,53 @@ describe('ReadonlyRepository', () => {
           const [query, params] = capture(mockedPool.query).first();
           query.should.equal(
             'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(DISTINCT "name") AS "uniqueNames" FROM "products" GROUP BY "store_id") AS "stats" ON "stores"."id"="stats"."store"',
+          );
+          assert(params);
+          params.should.deep.equal([]);
+        });
+
+        it('should support subquery join with HAVING clause', async () => {
+          const stores = [generator.store()];
+
+          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+          const productCounts = subquery(ProductRepository)
+            .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+            .groupBy(['store'])
+            .having({ productCount: { '>': 5 } });
+
+          const result = await StoreRepository.find().join(productCounts, 'productStats', { on: { id: 'store' } });
+
+          assert(result);
+          result.should.deep.equal(stores);
+
+          const [query, params] = capture(mockedPool.query).first();
+          query.should.equal(
+            'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id" HAVING COUNT(*)>5) AS "productStats" ON "stores"."id"="productStats"."store"',
+          );
+          assert(params);
+          params.should.deep.equal([]);
+        });
+
+        it('should support subquery join with HAVING and WHERE', async () => {
+          const stores = [generator.store()];
+
+          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+          const productCounts = subquery(ProductRepository)
+            .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+            .where({ name: { '!': null } })
+            .groupBy(['store'])
+            .having({ productCount: { '>=': 3 } });
+
+          const result = await StoreRepository.find().join(productCounts, 'productStats', { on: { id: 'store' } });
+
+          assert(result);
+          result.should.deep.equal(stores);
+
+          const [query, params] = capture(mockedPool.query).first();
+          query.should.equal(
+            'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" WHERE "name" IS NOT NULL GROUP BY "store_id" HAVING COUNT(*)>=3) AS "productStats" ON "stores"."id"="productStats"."store"',
           );
           assert(params);
           params.should.deep.equal([]);
