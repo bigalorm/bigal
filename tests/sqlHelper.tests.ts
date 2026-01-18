@@ -8,7 +8,7 @@ import { mock } from 'ts-mockito';
 
 import { QueryError } from '../src/errors/index.js';
 import { initialize, subquery } from '../src/index.js';
-import type { Entity, IReadonlyRepository, IRepository, ModelMetadata, WhereQuery } from '../src/index.js';
+import type { AggregateBuilder, Entity, IReadonlyRepository, IRepository, ModelMetadata, SelectAggregateExpression, WhereQuery } from '../src/index.js';
 import * as sqlHelper from '../src/SqlHelper.js';
 
 import {
@@ -3603,6 +3603,585 @@ describe('sqlHelper', () => {
         assert(whereStatement);
         whereStatement.should.equal('WHERE "name"=$1 AND "store_id" IN (SELECT "id" FROM "stores" WHERE "name"=$2)');
         params.should.deep.equal([productName, 'Premium']);
+      });
+    });
+
+    describe('subquery joins', () => {
+      it('should generate INNER JOIN to subquery with COUNT aggregate', () => {
+        const productCountSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store']);
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: productCountSubquery,
+              alias: 'productStats',
+              type: 'inner',
+              on: { id: 'store' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"');
+      });
+
+      it('should generate LEFT JOIN to subquery', () => {
+        const productCountSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store']);
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: productCountSubquery,
+              alias: 'productStats',
+              type: 'left',
+              on: { id: 'store' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(' LEFT JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"');
+      });
+
+      it('should generate subquery join with SUM aggregate', () => {
+        const sumSubquery = subquery(repositoriesByModelNameLowered.kitchensink as IRepository<KitchenSink>)
+          .select(['id', (sb): SelectAggregateExpression => sb.sum('intColumn').as('total')])
+          .groupBy(['id']);
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: sumSubquery,
+              alias: 'totals',
+              type: 'inner',
+              on: { id: 'id' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(' INNER JOIN (SELECT "id",SUM("int_column") AS "total" FROM "kitchen_sink" GROUP BY "id") AS "totals" ON "stores"."id"="totals"."id"');
+      });
+
+      it('should generate subquery join with COUNT DISTINCT', () => {
+        const distinctCountSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count('name').distinct().as('uniqueNames')])
+          .groupBy(['store']);
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: distinctCountSubquery,
+              alias: 'stats',
+              type: 'inner',
+              on: { id: 'store' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(' INNER JOIN (SELECT "store_id" AS "store",COUNT(DISTINCT "name") AS "uniqueNames" FROM "products" GROUP BY "store_id") AS "stats" ON "stores"."id"="stats"."store"');
+      });
+
+      it('should generate subquery join with WHERE clause', () => {
+        const filteredSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('activeCount')])
+          .where({ name: { '!': null } })
+          .groupBy(['store']);
+
+        const params: unknown[] = [];
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: filteredSubquery,
+              alias: 'activeProducts',
+              type: 'inner',
+              on: { id: 'store' },
+            },
+          ],
+          params,
+        });
+
+        result.should.equal(
+          ' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "activeCount" FROM "products" WHERE "name" IS NOT NULL GROUP BY "store_id") AS "activeProducts" ON "stores"."id"="activeProducts"."store"',
+        );
+        params.should.deep.equal([]);
+      });
+
+      it('should generate subquery join with parameterized WHERE clause', () => {
+        const filteredSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('count')])
+          .where({ name: 'Widget' })
+          .groupBy(['store']);
+
+        const params: unknown[] = [];
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: filteredSubquery,
+              alias: 'widgetCounts',
+              type: 'inner',
+              on: { id: 'store' },
+            },
+          ],
+          params,
+        });
+
+        result.should.equal(
+          ' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "count" FROM "products" WHERE "name"=$1 GROUP BY "store_id") AS "widgetCounts" ON "stores"."id"="widgetCounts"."store"',
+        );
+        params.should.deep.equal(['Widget']);
+      });
+
+      it('should generate subquery join with multiple aggregates', () => {
+        const multiAggSubquery = subquery(repositoriesByModelNameLowered.kitchensink as IRepository<KitchenSink>)
+          .select([
+            'id',
+            (sb): SelectAggregateExpression => sb.count().as('count'),
+            (sb): SelectAggregateExpression => sb.sum('intColumn').as('total'),
+            (sb): SelectAggregateExpression => sb.avg('intColumn').as('average'),
+          ])
+          .groupBy(['id']);
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: multiAggSubquery,
+              alias: 'stats',
+              type: 'inner',
+              on: { id: 'id' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(
+          ' INNER JOIN (SELECT "id",COUNT(*) AS "count",SUM("int_column") AS "total",AVG("int_column") AS "average" FROM "kitchen_sink" GROUP BY "id") AS "stats" ON "stores"."id"="stats"."id"',
+        );
+      });
+
+      it('should generate subquery join with default aggregate aliases', () => {
+        const defaultAliasSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): AggregateBuilder => sb.count()])
+          .groupBy(['store']);
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: defaultAliasSubquery,
+              alias: 'productStats',
+              type: 'inner',
+              on: { id: 'store' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "count" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"');
+      });
+
+      it('should generate subquery join with default aliases for sum, avg, max, min', () => {
+        const subq = subquery(repositoriesByModelNameLowered.kitchensink as IRepository<KitchenSink>)
+          .select([
+            'id',
+            (sb): AggregateBuilder => sb.sum('intColumn'),
+            (sb): AggregateBuilder => sb.avg('intColumn'),
+            (sb): AggregateBuilder => sb.max('intColumn'),
+            (sb): AggregateBuilder => sb.min('intColumn'),
+          ])
+          .groupBy(['id']);
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: subq,
+              alias: 'stats',
+              type: 'inner',
+              on: { id: 'id' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(
+          ' INNER JOIN (SELECT "id",SUM("int_column") AS "sum",AVG("int_column") AS "avg",MAX("int_column") AS "max",MIN("int_column") AS "min" FROM "kitchen_sink" GROUP BY "id") AS "stats" ON "stores"."id"="stats"."id"',
+        );
+      });
+
+      it('should generate subquery join with distinct count without .as()', () => {
+        const subq = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): AggregateBuilder => sb.count('name').distinct()])
+          .groupBy(['store']);
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: subq,
+              alias: 'stats',
+              type: 'inner',
+              on: { id: 'store' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(' INNER JOIN (SELECT "store_id" AS "store",COUNT(DISTINCT "name") AS "count" FROM "products" GROUP BY "store_id") AS "stats" ON "stores"."id"="stats"."store"');
+      });
+
+      it('should support multiple ON conditions in subquery join', () => {
+        const subq = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', 'name', (sb): SelectAggregateExpression => sb.count().as('count')])
+          .groupBy(['store', 'name']);
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: subq,
+              alias: 'productStats',
+              type: 'inner',
+              on: { id: 'store', name: 'name' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(
+          ' INNER JOIN (SELECT "store_id" AS "store","name",COUNT(*) AS "count" FROM "products" GROUP BY "store_id","name") AS "productStats" ON "stores"."id"="productStats"."store" AND "stores"."name"="productStats"."name"',
+        );
+      });
+
+      it('should generate subquery join with HAVING clause and equals condition', () => {
+        const havingSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store'])
+          .having({ productCount: 5 });
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: havingSubquery,
+              alias: 'productStats',
+              type: 'inner',
+              on: { id: 'store' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(
+          ' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id" HAVING COUNT(*)=5) AS "productStats" ON "stores"."id"="productStats"."store"',
+        );
+      });
+
+      it('should generate subquery join with HAVING clause and greater than condition', () => {
+        const havingSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store'])
+          .having({ productCount: { '>': 10 } });
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: havingSubquery,
+              alias: 'productStats',
+              type: 'inner',
+              on: { id: 'store' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(
+          ' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id" HAVING COUNT(*)>10) AS "productStats" ON "stores"."id"="productStats"."store"',
+        );
+      });
+
+      it('should generate subquery join with HAVING clause and multiple comparison operators', () => {
+        const havingSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store'])
+          .having({ productCount: { '>=': 5, '<=': 100 } });
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: havingSubquery,
+              alias: 'productStats',
+              type: 'inner',
+              on: { id: 'store' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(
+          ' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id" HAVING COUNT(*)>=5 AND COUNT(*)<=100) AS "productStats" ON "stores"."id"="productStats"."store"',
+        );
+      });
+
+      it('should generate subquery join with HAVING clause and not equals condition', () => {
+        const havingSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store'])
+          .having({ productCount: { '!=': 0 } });
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: havingSubquery,
+              alias: 'productStats',
+              type: 'inner',
+              on: { id: 'store' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(
+          ' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id" HAVING COUNT(*)<>0) AS "productStats" ON "stores"."id"="productStats"."store"',
+        );
+      });
+
+      it('should generate subquery join with HAVING on SUM aggregate', () => {
+        const havingSubquery = subquery(repositoriesByModelNameLowered.kitchensink as IRepository<KitchenSink>)
+          .select(['id', (sb): SelectAggregateExpression => sb.sum('intColumn').as('totalInt')])
+          .groupBy(['id'])
+          .having({ totalInt: { '>': 1000 } });
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: havingSubquery,
+              alias: 'stats',
+              type: 'inner',
+              on: { id: 'id' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(' INNER JOIN (SELECT "id",SUM("int_column") AS "totalInt" FROM "kitchen_sink" GROUP BY "id" HAVING SUM("int_column")>1000) AS "stats" ON "stores"."id"="stats"."id"');
+      });
+
+      it('should generate subquery join with HAVING on multiple aggregates', () => {
+        const havingSubquery = subquery(repositoriesByModelNameLowered.kitchensink as IRepository<KitchenSink>)
+          .select(['id', (sb): SelectAggregateExpression => sb.count().as('rowCount'), (sb): SelectAggregateExpression => sb.avg('intColumn').as('avgInt')])
+          .groupBy(['id'])
+          .having({ rowCount: { '>': 5 }, avgInt: { '>=': 50 } });
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: havingSubquery,
+              alias: 'stats',
+              type: 'inner',
+              on: { id: 'id' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(
+          ' INNER JOIN (SELECT "id",COUNT(*) AS "rowCount",AVG("int_column") AS "avgInt" FROM "kitchen_sink" GROUP BY "id" HAVING COUNT(*)>5 AND AVG("int_column")>=50) AS "stats" ON "stores"."id"="stats"."id"',
+        );
+      });
+
+      it('should throw error for invalid HAVING operator', () => {
+        const havingSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store'])
+          // @ts-expect-error - intentionally using invalid operator
+          .having({ productCount: { 'DROP TABLE': 1 } });
+
+        let thrownError: Error | undefined;
+
+        try {
+          sqlHelper.buildJoinClauses({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+            joins: [{ subquery: havingSubquery, alias: 'stats', type: 'inner', on: { id: 'store' } }],
+            params: [],
+          });
+        } catch (ex) {
+          thrownError = ex as Error;
+        }
+
+        assert(thrownError instanceof QueryError);
+        thrownError.message.should.include('Invalid HAVING operator');
+      });
+
+      it('should throw error for non-number HAVING value', () => {
+        const havingSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store'])
+          // @ts-expect-error - intentionally using string value
+          .having({ productCount: { '>': '1; DROP TABLE products;' } });
+
+        let thrownError: Error | undefined;
+
+        try {
+          sqlHelper.buildJoinClauses({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+            joins: [{ subquery: havingSubquery, alias: 'stats', type: 'inner', on: { id: 'store' } }],
+            params: [],
+          });
+        } catch (ex) {
+          thrownError = ex as Error;
+        }
+
+        assert(thrownError instanceof QueryError);
+        thrownError.message.should.include('must be a finite number');
+      });
+
+      it('should throw error for Infinity HAVING value', () => {
+        const havingSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store'])
+          .having({ productCount: { '>': Infinity } });
+
+        let thrownError: Error | undefined;
+
+        try {
+          sqlHelper.buildJoinClauses({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+            joins: [{ subquery: havingSubquery, alias: 'stats', type: 'inner', on: { id: 'store' } }],
+            params: [],
+          });
+        } catch (ex) {
+          thrownError = ex as Error;
+        }
+
+        assert(thrownError instanceof QueryError);
+        thrownError.message.should.include('must be a finite number');
+      });
+
+      it('should throw error for unknown HAVING alias', () => {
+        const havingSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store'])
+          .having({ unknownAlias: { '>': 5 } });
+
+        let thrownError: Error | undefined;
+
+        try {
+          sqlHelper.buildJoinClauses({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+            joins: [{ subquery: havingSubquery, alias: 'stats', type: 'inner', on: { id: 'store' } }],
+            params: [],
+          });
+        } catch (ex) {
+          thrownError = ex as Error;
+        }
+
+        assert(thrownError instanceof QueryError);
+        thrownError.message.should.include('unknown alias');
+      });
+
+      it('should throw error for SQL injection in subquery join alias', () => {
+        const subq = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('count')])
+          .groupBy(['store']);
+
+        let thrownError: Error | undefined;
+
+        try {
+          sqlHelper.buildJoinClauses({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+            joins: [{ subquery: subq, alias: 'stats"; DROP TABLE products; --', type: 'inner', on: { id: 'store' } }],
+            params: [],
+          });
+        } catch (ex) {
+          thrownError = ex as Error;
+        }
+
+        assert(thrownError);
+        thrownError.message.should.include('Invalid SQL identifier');
+      });
+
+      it('should throw error for SQL injection in subquery join ON column', () => {
+        const subq = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('count')])
+          .groupBy(['store']);
+
+        let thrownError: Error | undefined;
+
+        try {
+          sqlHelper.buildJoinClauses({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+            joins: [{ subquery: subq, alias: 'stats', type: 'inner', on: { id: 'store"; DROP TABLE products; --' } }],
+            params: [],
+          });
+        } catch (ex) {
+          thrownError = ex as Error;
+        }
+
+        assert(thrownError);
+        thrownError.message.should.include('Invalid SQL identifier');
+      });
+
+      it('should throw error for SQL injection in aggregate alias', () => {
+        const subq = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('count"; DROP TABLE products; --')])
+          .groupBy(['store']);
+
+        let thrownError: Error | undefined;
+
+        try {
+          sqlHelper.buildJoinClauses({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+            joins: [{ subquery: subq, alias: 'stats', type: 'inner', on: { id: 'store' } }],
+            params: [],
+          });
+        } catch (ex) {
+          thrownError = ex as Error;
+        }
+
+        assert(thrownError);
+        thrownError.message.should.include('Invalid SQL identifier');
       });
     });
   });

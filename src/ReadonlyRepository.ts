@@ -20,6 +20,8 @@ import type {
   Sort,
   SortObject,
   SortObjectValue,
+  SubqueryBuilderLike,
+  SubqueryJoinOnCondition,
   WhereQuery,
 } from './query/index.js';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
@@ -433,22 +435,49 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this as unknown as FindResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>>;
       },
-      join(propertyName: string, alias?: string): FindResult<T, TReturn> {
-        joins.push({
-          propertyName,
-          alias: alias ?? propertyName,
-          type: 'inner',
-        });
+      join(propertyNameOrSubquery: SubqueryBuilderLike | string, aliasOrUndefined?: string, options?: { on: SubqueryJoinOnCondition }): FindResult<T, TReturn> {
+        if (typeof propertyNameOrSubquery === 'string') {
+          joins.push({
+            propertyName: propertyNameOrSubquery,
+            alias: aliasOrUndefined ?? propertyNameOrSubquery,
+            type: 'inner',
+          });
+        } else {
+          if (!aliasOrUndefined) {
+            throw new Error('Alias is required when joining to a subquery');
+          }
+
+          joins.push({
+            subquery: propertyNameOrSubquery,
+            alias: aliasOrUndefined,
+            type: 'inner',
+            on: options?.on ?? {},
+          });
+        }
 
         return this;
       },
-      leftJoin(propertyName: string, alias?: string, on?: WhereQuery<Entity>): FindResult<T, TReturn> {
-        joins.push({
-          propertyName,
-          alias: alias ?? propertyName,
-          type: 'left',
-          on,
-        });
+      leftJoin(propertyNameOrSubquery: SubqueryBuilderLike | string, aliasOrUndefined?: string, onOrOptions?: WhereQuery<Entity> | { on: SubqueryJoinOnCondition }): FindResult<T, TReturn> {
+        if (typeof propertyNameOrSubquery === 'string') {
+          joins.push({
+            propertyName: propertyNameOrSubquery,
+            alias: aliasOrUndefined ?? propertyNameOrSubquery,
+            type: 'left',
+            on: onOrOptions as WhereQuery<Entity> | undefined,
+          });
+        } else {
+          if (!aliasOrUndefined) {
+            throw new Error('Alias is required when joining to a subquery');
+          }
+
+          const subqueryOptions = onOrOptions as { on: SubqueryJoinOnCondition } | undefined;
+          joins.push({
+            subquery: propertyNameOrSubquery,
+            alias: aliasOrUndefined,
+            type: 'left',
+            on: subqueryOptions?.on ?? {},
+          });
+        }
 
         return this;
       },

@@ -3,10 +3,22 @@ import { QueryError } from './errors/index.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
 import type { ColumnBaseMetadata, ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata/index.js';
-import type { Comparer, JoinDefinition, OrderBy, WhereClauseValue, WhereQuery } from './query/index.js';
+import type { Comparer, JoinDefinition, ModelJoinDefinition, OrderBy, SubqueryJoinDefinition, WhereClauseValue, WhereQuery } from './query/index.js';
+import { isSubqueryJoin } from './query/JoinDefinition.js';
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
+import type { SelectAggregateExpression } from './query/SelectBuilder.js';
+import type { HavingCondition, SubqueryBuilderLike } from './query/Subquery.js';
 import { ScalarSubquery, SubqueryBuilder } from './query/Subquery.js';
 import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types/index.js';
+
+// Valid PostgreSQL identifier: starts with letter or underscore, contains letters, digits, underscores, or dots (for alias.column notation)
+const VALID_SQL_IDENTIFIER = /^[A-Z_a-z][\w.]*$/;
+
+function assertValidSqlIdentifier(value: string, context: string): void {
+  if (!VALID_SQL_IDENTIFIER.test(value)) {
+    throw new Error(`Invalid SQL identifier for ${context}: "${value}". Identifiers must start with a letter or underscore and contain only letters, numbers, underscores, and dots.`);
+  }
+}
 
 interface QueryAndParams {
   query: string;
@@ -678,51 +690,282 @@ export function buildJoinClauses<T extends Entity>({
   let joinSql = '';
 
   for (const join of joins) {
-    const column = model.columnsByPropertyName[join.propertyName] as ColumnModelMetadata | undefined;
-    if (!column) {
-      throw new QueryError(`Unable to find property "${join.propertyName}" on model "${model.name}" for join`, model);
-    }
-
-    if (!('model' in column) || !column.model) {
-      throw new QueryError(`Property "${join.propertyName}" on model "${model.name}" is not a relationship and cannot be joined`, model);
-    }
-
-    const relatedRepository = repositoriesByModelNameLowered[column.model.toLowerCase()];
-    if (!relatedRepository) {
-      throw new QueryError(`Unable to find model "${column.model}" for join on "${join.propertyName}"`, model);
-    }
-
-    const relatedModel = relatedRepository.model;
-    const relatedPrimaryKey = relatedModel.primaryKeyColumn;
-    if (!relatedPrimaryKey) {
-      throw new QueryError(`Unable to find primary key for model "${column.model}" when building join`, model);
-    }
-
-    const joinType = join.type === 'left' ? 'LEFT JOIN' : 'INNER JOIN';
-    const alias = join.alias || join.propertyName;
-
-    joinSql += ` ${joinType} ${relatedModel.qualifiedTableName}`;
-
-    if (alias !== relatedModel.tableName) {
-      joinSql += ` AS "${alias}"`;
-    }
-
-    joinSql += ` ON ${model.qualifiedTableName}."${column.name}"="${alias}"."${relatedPrimaryKey.name}"`;
-
-    if (join.on) {
-      for (const [propertyName, value] of Object.entries(join.on)) {
-        const onColumn = relatedModel.columnsByPropertyName[propertyName] as ColumnTypeMetadata | undefined;
-        if (!onColumn) {
-          throw new QueryError(`Unable to find property "${propertyName}" on model "${relatedModel.name}" for ON constraint`, relatedModel);
-        }
-
-        params.push(value);
-        joinSql += ` AND "${alias}"."${onColumn.name}"=$${params.length}`;
-      }
+    if (isSubqueryJoin(join)) {
+      joinSql += buildSubqueryJoinClause({
+        model,
+        join,
+        params,
+        repositoriesByModelNameLowered,
+      });
+    } else {
+      joinSql += buildModelJoinClause({
+        model,
+        join,
+        params,
+        repositoriesByModelNameLowered,
+      });
     }
   }
 
   return joinSql;
+}
+
+function buildModelJoinClause<T extends Entity>({
+  model,
+  join,
+  params,
+  repositoriesByModelNameLowered,
+}: {
+  model: ModelMetadata<T>;
+  join: ModelJoinDefinition;
+  params: unknown[];
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+}): string {
+  const column = model.columnsByPropertyName[join.propertyName] as ColumnModelMetadata | undefined;
+  if (!column) {
+    throw new QueryError(`Unable to find property "${join.propertyName}" on model "${model.name}" for join`, model);
+  }
+
+  if (!('model' in column) || !column.model) {
+    throw new QueryError(`Property "${join.propertyName}" on model "${model.name}" is not a relationship and cannot be joined`, model);
+  }
+
+  const relatedRepository = repositoriesByModelNameLowered[column.model.toLowerCase()];
+  if (!relatedRepository) {
+    throw new QueryError(`Unable to find model "${column.model}" for join on "${join.propertyName}"`, model);
+  }
+
+  const relatedModel = relatedRepository.model;
+  const relatedPrimaryKey = relatedModel.primaryKeyColumn;
+  if (!relatedPrimaryKey) {
+    throw new QueryError(`Unable to find primary key for model "${column.model}" when building join`, model);
+  }
+
+  const joinType = join.type === 'left' ? 'LEFT JOIN' : 'INNER JOIN';
+  const alias = join.alias || join.propertyName;
+  assertValidSqlIdentifier(alias, 'join alias');
+
+  let joinSql = ` ${joinType} ${relatedModel.qualifiedTableName}`;
+
+  if (alias !== relatedModel.tableName) {
+    joinSql += ` AS "${alias}"`;
+  }
+
+  joinSql += ` ON ${model.qualifiedTableName}."${column.name}"="${alias}"."${relatedPrimaryKey.name}"`;
+
+  if (join.on) {
+    for (const [propertyName, value] of Object.entries(join.on)) {
+      const onColumn = relatedModel.columnsByPropertyName[propertyName] as ColumnTypeMetadata | undefined;
+      if (!onColumn) {
+        throw new QueryError(`Unable to find property "${propertyName}" on model "${relatedModel.name}" for ON constraint`, relatedModel);
+      }
+
+      params.push(value);
+      joinSql += ` AND "${alias}"."${onColumn.name}"=$${params.length}`;
+    }
+  }
+
+  return joinSql;
+}
+
+function buildSubqueryJoinClause<T extends Entity>({
+  model,
+  join,
+  params,
+  repositoriesByModelNameLowered,
+}: {
+  model: ModelMetadata<T>;
+  join: SubqueryJoinDefinition;
+  params: unknown[];
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+}): string {
+  assertValidSqlIdentifier(join.alias, 'subquery join alias');
+
+  const subquerySQL = buildSubquerySelectSQL({
+    subquery: join.subquery,
+    params,
+    repositoriesByModelNameLowered,
+  });
+
+  const joinType = join.type === 'left' ? 'LEFT JOIN' : 'INNER JOIN';
+
+  const onConditions: string[] = [];
+  for (const [mainColumn, subqueryColumn] of Object.entries(join.on)) {
+    const column = model.columnsByPropertyName[mainColumn];
+    if (!column) {
+      throw new QueryError(`Unable to find property "${mainColumn}" on model "${model.name}" for subquery join`, model);
+    }
+
+    assertValidSqlIdentifier(subqueryColumn, 'subquery join ON column');
+    onConditions.push(`"${model.tableName}"."${column.name}"="${join.alias}"."${subqueryColumn}"`);
+  }
+
+  return ` ${joinType} (${subquerySQL}) AS "${join.alias}" ON ${onConditions.join(' AND ')}`;
+}
+
+function buildSubquerySelectSQL({
+  subquery,
+  params,
+  repositoriesByModelNameLowered,
+}: {
+  subquery: SubqueryBuilderLike;
+  params: unknown[];
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+}): string {
+  const repository = subquery._repository as IReadonlyRepository<Entity>;
+  const subqueryModel = repository.model;
+  const selectParts: string[] = [];
+
+  if (subquery._select?.length) {
+    for (const propertyName of subquery._select) {
+      const column = subqueryModel.columnsByPropertyName[propertyName];
+      if (!column) {
+        throw new QueryError(`Unable to find column for property: ${propertyName} on ${subqueryModel.tableName}`, subqueryModel);
+      }
+
+      if (column.name === propertyName) {
+        selectParts.push(`"${column.name}"`);
+      } else {
+        selectParts.push(`"${column.name}" AS "${propertyName}"`);
+      }
+    }
+  }
+
+  if (subquery._selectExpressions?.length) {
+    for (const expr of subquery._selectExpressions) {
+      selectParts.push(buildAggregateSQL(expr, subqueryModel));
+    }
+  }
+
+  if (!selectParts.length) {
+    throw new QueryError('Subquery join must have at least one selected column or expression', subqueryModel);
+  }
+
+  let sql = `SELECT ${selectParts.join(',')} FROM "${subqueryModel.tableName}"`;
+
+  if (subquery._where && Object.keys(subquery._where as object).length) {
+    const { whereStatement } = buildWhereStatement({
+      repositoriesByModelNameLowered,
+      model: subqueryModel,
+      where: subquery._where as WhereQuery<Entity>,
+      params,
+    });
+
+    if (whereStatement) {
+      sql += ` ${whereStatement}`;
+    }
+  }
+
+  if (subquery._groupBy?.length) {
+    const groupColumns = subquery._groupBy.map((propertyName) => {
+      const column = subqueryModel.columnsByPropertyName[propertyName];
+      if (!column) {
+        throw new QueryError(`Unable to find column for groupBy: ${propertyName}`, subqueryModel);
+      }
+
+      return `"${column.name}"`;
+    });
+    sql += ` GROUP BY ${groupColumns.join(',')}`;
+  }
+
+  if (subquery._having && subquery._selectExpressions?.length) {
+    sql += buildHavingClause(subquery._having, subquery._selectExpressions, subqueryModel);
+  }
+
+  if (subquery._sort) {
+    const sorts = convertSortToOrderBy(subquery._sort as Record<string, unknown> | string);
+    const orderStatement = buildOrderStatement({
+      repositoriesByModelNameLowered,
+      model: subqueryModel,
+      sorts,
+    });
+
+    if (orderStatement) {
+      sql += ` ${orderStatement}`;
+    }
+  }
+
+  // LIMIT
+  if (subquery._limit !== undefined) {
+    if (typeof subquery._limit !== 'number' || !Number.isFinite(subquery._limit) || subquery._limit < 0) {
+      throw new QueryError('Subquery limit must be a non-negative finite number', subqueryModel);
+    }
+
+    sql += ` LIMIT ${subquery._limit}`;
+  }
+
+  return sql;
+}
+
+function buildAggregateSQL(expr: SelectAggregateExpression, model: ModelMetadata<Entity>): string {
+  assertValidSqlIdentifier(expr.alias, 'aggregate alias');
+  const sql = buildAggregateSQLWithoutAlias(expr, model);
+  return `${sql} AS "${expr.alias}"`;
+}
+
+function buildAggregateSQLWithoutAlias(expr: SelectAggregateExpression, model: ModelMetadata<Entity>): string {
+  if (expr.fn === 'count' && !expr.column) {
+    return 'COUNT(*)';
+  }
+
+  if (expr.column) {
+    const column = model.columnsByPropertyName[expr.column];
+    if (!column) {
+      throw new QueryError(`Unable to find column for aggregate: ${expr.column}`, model);
+    }
+
+    const colRef = `"${column.name}"`;
+    const distinctPrefix = expr.distinct ? 'DISTINCT ' : '';
+    return `${expr.fn.toUpperCase()}(${distinctPrefix}${colRef})`;
+  }
+
+  return `${expr.fn.toUpperCase()}(*)`;
+}
+
+const VALID_HAVING_OPERATORS = new Set(['<', '<=', '>', '>=', '!=']);
+
+function buildHavingClause(having: HavingCondition, selectExpressions: SelectAggregateExpression[], model: ModelMetadata<Entity>): string {
+  const conditions: string[] = [];
+
+  for (const [alias, condition] of Object.entries(having)) {
+    const expr = selectExpressions.find((expression) => expression.alias === alias);
+    if (!expr) {
+      throw new QueryError(`HAVING condition references unknown alias "${alias}". Make sure it matches an aggregate alias in select().`, model);
+    }
+
+    const aggregateSQL = buildAggregateSQLWithoutAlias(expr, model);
+
+    if (typeof condition === 'number') {
+      if (!Number.isFinite(condition)) {
+        throw new QueryError(`HAVING condition value must be a finite number`, model);
+      }
+
+      conditions.push(`${aggregateSQL}=${condition}`);
+    } else {
+      const comparer = condition as Record<string, number>;
+      for (const [operator, value] of Object.entries(comparer)) {
+        if (!VALID_HAVING_OPERATORS.has(operator)) {
+          throw new QueryError(`Invalid HAVING operator "${operator}". Valid operators are: <, <=, >, >=, !=`, model);
+        }
+
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          throw new QueryError(`HAVING condition value must be a finite number`, model);
+        }
+
+        if (operator === '!=') {
+          conditions.push(`${aggregateSQL}<>${value}`);
+        } else {
+          conditions.push(`${aggregateSQL}${operator}${value}`);
+        }
+      }
+    }
+  }
+
+  if (!conditions.length) {
+    return '';
+  }
+
+  return ` HAVING ${conditions.join(' AND ')}`;
 }
 
 /**
@@ -1476,9 +1719,19 @@ function resolvePropertyPath<T extends Entity>({
     throw new QueryError(`Cannot use dot notation "${propertyPath}" without a join. Did you forget to call .join('${aliasOrRelationship}')?`, model);
   }
 
-  const matchingJoin = joins.find((j) => j.alias === aliasOrRelationship || j.propertyName === aliasOrRelationship);
+  const matchingJoin = joins.find((join) => join.alias === aliasOrRelationship || (!isSubqueryJoin(join) && join.propertyName === aliasOrRelationship));
   if (!matchingJoin) {
-    throw new QueryError(`Cannot find join for "${aliasOrRelationship}" in property path "${propertyPath}". Available joins: ${joins.map((j) => j.alias).join(', ')}`, model);
+    throw new QueryError(`Cannot find join for "${aliasOrRelationship}" in property path "${propertyPath}". Available joins: ${joins.map((join) => join.alias).join(', ')}`, model);
+  }
+
+  // For subquery joins, the nestedPropertyName refers to a column alias in the subquery
+  if (isSubqueryJoin(matchingJoin)) {
+    assertValidSqlIdentifier(nestedPropertyName, 'subquery column reference');
+    // Return a minimal column metadata for the subquery column (which is an alias, not a real column)
+    return {
+      column: { name: nestedPropertyName, propertyName: nestedPropertyName } as ColumnBaseMetadata,
+      tableAlias: matchingJoin.alias,
+    };
   }
 
   const relationshipColumn = model.columnsByPropertyName[matchingJoin.propertyName] as ColumnModelMetadata | undefined;
@@ -1523,8 +1776,13 @@ function resolveJoinAlias<T extends Entity>({
     return null;
   }
 
-  const matchingJoin = joins.find((j) => j.alias === aliasOrPropertyName || j.propertyName === aliasOrPropertyName);
+  const matchingJoin = joins.find((join) => join.alias === aliasOrPropertyName || (!isSubqueryJoin(join) && join.propertyName === aliasOrPropertyName));
   if (!matchingJoin) {
+    return null;
+  }
+
+  // Subquery joins don't have a related model in the same way
+  if (isSubqueryJoin(matchingJoin)) {
     return null;
   }
 
@@ -1902,7 +2160,11 @@ export function buildSubquerySQL<T extends Entity>({
     }
   }
 
-  if (subquery._limit) {
+  if (subquery._limit !== undefined) {
+    if (typeof subquery._limit !== 'number' || !Number.isFinite(subquery._limit) || subquery._limit < 0) {
+      throw new QueryError('Subquery limit must be a non-negative finite number', model);
+    }
+
     sql += ` LIMIT ${subquery._limit}`;
   }
 
