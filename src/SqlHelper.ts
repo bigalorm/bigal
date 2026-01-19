@@ -1715,6 +1715,22 @@ interface JsonContainmentStatementParams<T extends Entity> extends Omit<Comparis
   value: unknown;
 }
 
+interface SingleValueStatementContext {
+  column: ColumnBaseMetadata;
+  tablePrefix: string;
+}
+
+interface ArrayOrSingleStatementParams<T extends Entity> {
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  model: ModelMetadata<T>;
+  propertyName: string;
+  isNegated: boolean;
+  value: unknown;
+  params: unknown[];
+  joins?: readonly JoinDefinition[];
+  buildNonNullStatement: (context: SingleValueStatementContext, nonNullValue: unknown, params: unknown[]) => string;
+}
+
 interface ResolvedProperty {
   column: ColumnBaseMetadata;
   tableAlias: string;
@@ -1778,6 +1794,82 @@ function resolvePropertyPath<T extends Entity>({
     column,
     tableAlias: matchingJoin.alias,
   };
+}
+
+function buildArrayOrSingleStatement<T extends Entity>({
+  repositoriesByModelNameLowered,
+  model,
+  propertyName,
+  isNegated,
+  value,
+  params,
+  joins,
+  buildNonNullStatement,
+}: ArrayOrSingleStatementParams<T>): string {
+  if (Array.isArray(value)) {
+    if (!value.length) {
+      return isNegated ? '1=1' : '1<>1';
+    }
+
+    if (value.length > 1) {
+      const orConstraints: string[] = [];
+      for (const item of value) {
+        orConstraints.push(
+          buildArrayOrSingleStatement({
+            repositoriesByModelNameLowered,
+            model,
+            propertyName,
+            isNegated,
+            value: item,
+            params,
+            joins,
+            buildNonNullStatement,
+          }),
+        );
+      }
+
+      if (orConstraints.length === 1) {
+        return orConstraints[0] ?? '';
+      }
+
+      if (isNegated) {
+        return orConstraints.join(' AND ');
+      }
+
+      return orConstraints.length ? `(${orConstraints.join(' OR ')})` : '';
+    }
+
+    value = value[0];
+  }
+
+  const resolved = resolvePropertyPath({
+    propertyPath: propertyName,
+    model,
+    joins,
+    repositoriesByModelNameLowered,
+  });
+
+  let column: ColumnBaseMetadata;
+  let tablePrefix: string;
+
+  if (resolved) {
+    column = resolved.column;
+    tablePrefix = `"${resolved.tableAlias}".`;
+  } else {
+    const localColumn = model.columnsByPropertyName[propertyName];
+    if (!localColumn) {
+      throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
+    }
+
+    column = localColumn;
+    tablePrefix = '';
+  }
+
+  if (value === null) {
+    return `${tablePrefix}"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
+  }
+
+  return buildNonNullStatement({ column, tablePrefix }, value, params);
 }
 
 interface ResolvedJoin {
@@ -1963,158 +2055,42 @@ function buildNestedJoinWhere({
 }
 
 function buildJsonContainmentStatement<T extends Entity>({ repositoriesByModelNameLowered, model, propertyName, isNegated, value, params, joins }: JsonContainmentStatementParams<T>): string {
-  if (Array.isArray(value)) {
-    if (!value.length) {
-      if (isNegated) {
-        return '1=1';
-      }
-
-      return '1<>1';
-    }
-
-    if (value.length > 1) {
-      const orConstraints: string[] = [];
-      for (const item of value) {
-        orConstraints.push(
-          buildJsonContainmentStatement({
-            repositoriesByModelNameLowered,
-            model,
-            propertyName,
-            isNegated,
-            value: item,
-            params,
-            joins,
-          }),
-        );
-      }
-
-      if (orConstraints.length === 1) {
-        return orConstraints[0] ?? '';
-      }
-
-      if (isNegated) {
-        return orConstraints.join(' AND ');
-      }
-
-      if (orConstraints.length) {
-        return `(${orConstraints.join(' OR ')})`;
-      }
-
-      return '';
-    }
-
-    value = value[0];
-  }
-
-  const resolved = resolvePropertyPath({
-    propertyPath: propertyName,
-    model,
-    joins,
+  return buildArrayOrSingleStatement({
     repositoriesByModelNameLowered,
+    model,
+    propertyName,
+    isNegated,
+    value,
+    params,
+    joins,
+    buildNonNullStatement({ column, tablePrefix }, nonNullValue, paramsList) {
+      paramsList.push(nonNullValue);
+      return `${isNegated ? 'NOT ' : ''}${tablePrefix}"${column.name}"@>$${paramsList.length}::jsonb`;
+    },
   });
-
-  let column: ColumnBaseMetadata;
-  let tablePrefix: string;
-
-  if (resolved) {
-    column = resolved.column;
-    tablePrefix = `"${resolved.tableAlias}".`;
-  } else {
-    const localColumn = model.columnsByPropertyName[propertyName];
-    if (!localColumn) {
-      throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
-    }
-
-    column = localColumn;
-    tablePrefix = '';
-  }
-
-  if (value === null) {
-    return `${tablePrefix}"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
-  }
-
-  params.push(value);
-  return `${isNegated ? 'NOT ' : ''}${tablePrefix}"${column.name}"@>$${params.length}::jsonb`;
 }
 
 function buildLikeOperatorStatement<T extends Entity>({ repositoriesByModelNameLowered, model, propertyName, isNegated, value, params, joins }: LikeOperatorStatementParams<T>): string {
-  if (Array.isArray(value)) {
-    if (!value.length) {
-      if (isNegated) {
-        return '1=1';
-      }
-
-      return '1<>1';
-    }
-
-    if (value.length > 1) {
-      const orConstraints: string[] = [];
-      for (const item of value as readonly string[]) {
-        orConstraints.push(
-          buildLikeOperatorStatement({
-            repositoriesByModelNameLowered,
-            model,
-            propertyName,
-            isNegated,
-            value: item,
-            params,
-            joins,
-          }),
-        );
-      }
-
-      if (orConstraints.length === 1) {
-        return orConstraints[0] ?? '';
-      }
-
-      if (isNegated) {
-        return orConstraints.join(' AND ');
-      }
-
-      if (orConstraints.length) {
-        return `(${orConstraints.join(' OR ')})`;
-      }
-
-      return '';
-    }
-
-    value = value[0] as string | null;
-  }
-
-  const resolved = resolvePropertyPath({
-    propertyPath: propertyName,
-    model,
-    joins,
+  return buildArrayOrSingleStatement({
     repositoriesByModelNameLowered,
-  });
+    model,
+    propertyName,
+    isNegated,
+    value,
+    params,
+    joins,
+    buildNonNullStatement({ column, tablePrefix }, nonNullValue, paramsList) {
+      if (typeof nonNullValue !== 'string') {
+        throw new QueryError(`Expected value to be a string for "like" constraint. Property (${propertyName}) in model (${model.name}).`, model);
+      }
 
-  let column: ColumnBaseMetadata;
-  let tablePrefix: string;
+      if (!nonNullValue) {
+        return `${tablePrefix}"${column.name}" ${isNegated ? '!=' : '='} ''`;
+      }
 
-  if (resolved) {
-    column = resolved.column;
-    tablePrefix = `"${resolved.tableAlias}".`;
-  } else {
-    const localColumn = model.columnsByPropertyName[propertyName];
-    if (!localColumn) {
-      throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
-    }
+      paramsList.push(nonNullValue);
 
-    column = localColumn;
-    tablePrefix = '';
-  }
-
-  if (value === null) {
-    return `${tablePrefix}"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
-  }
-
-  if (typeof value === 'string') {
-    if (value) {
-      // NOTE: This is doing a case-insensitive pattern match
-      params.push(value);
-
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      const columnType = (column as ColumnTypeMetadata).type?.toLowerCase();
+      const columnType = 'type' in column && typeof column.type === 'string' ? column.type.toLowerCase() : undefined;
       if (columnType === 'json') {
         throw new QueryError(
           `"like" operator is not supported for JSON columns. Use "contains" with an object value for JSON containment. Property (${propertyName}) in model (${model.name}).`,
@@ -2123,16 +2099,12 @@ function buildLikeOperatorStatement<T extends Entity>({ repositoriesByModelNameL
       }
 
       if (columnType === 'array' || columnType === 'string[]') {
-        return `${isNegated ? 'NOT ' : ''}EXISTS(SELECT 1 FROM (SELECT unnest(${tablePrefix}"${column.name}") AS "unnested_${column.name}") __unnested WHERE "unnested_${column.name}" ILIKE $${params.length})`;
+        return `${isNegated ? 'NOT ' : ''}EXISTS(SELECT 1 FROM (SELECT unnest(${tablePrefix}"${column.name}") AS "unnested_${column.name}") __unnested WHERE "unnested_${column.name}" ILIKE $${paramsList.length})`;
       }
 
-      return `${tablePrefix}"${column.name}"${isNegated ? ' NOT' : ''} ILIKE $${params.length}`;
-    }
-
-    return `${tablePrefix}"${column.name}" ${isNegated ? '!=' : '='} ''`;
-  }
-
-  throw new QueryError(`Expected value to be a string for "like" constraint. Property (${propertyName}) in model (${model.name}).`, model);
+      return `${tablePrefix}"${column.name}"${isNegated ? ' NOT' : ''} ILIKE $${paramsList.length}`;
+    },
+  });
 }
 
 function buildComparisonOperatorStatement<T extends Entity>({
