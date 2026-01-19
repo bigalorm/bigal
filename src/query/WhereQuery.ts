@@ -19,6 +19,8 @@ export type WhereClauseValue<TValue> = TValue extends NotEntityBrand | undefined
 
 export type StringConstraint<TValue extends string> = Partial<Record<'contains' | 'endsWith' | 'like' | 'startsWith', LiteralValues<ExcludeUndefined<TValue>>>>;
 
+export type JsonConstraint<TValue> = Partial<Record<'contains', ExcludeUndefined<TValue> | LiteralValues<ExcludeUndefined<TValue>>>>;
+
 export type NumberOrDateConstraint<TValue extends Date | number> = Partial<Record<'<' | '<=' | '>' | '>=', LiteralValues<ExcludeUndefined<TValue>>>>;
 
 export interface SubqueryInConstraint {
@@ -41,7 +43,7 @@ export type WhereQueryStatement<TValue> = [TValue] extends [string] // Avoid dis
     ? NegatableConstraint<StringConstraint<TValue> | SubqueryInConstraint | WhereClauseValue<TValue>>
     : TValue extends Date | number
       ? NegatableConstraint<NumberOrDateConstraintWithSubquery<TValue> | SubqueryInConstraint | WhereClauseValue<TValue>>
-      : NegatableConstraint<SubqueryInConstraint | WhereClauseValue<TValue>>;
+      : NegatableConstraint<JsonConstraint<TValue> | SubqueryInConstraint | WhereClauseValue<TValue>>;
 
 export type WhereQuery<T extends Entity> = {
   // Exclude entity collections and functions. Make the rest of the properties optional

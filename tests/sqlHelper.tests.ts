@@ -2155,6 +2155,166 @@ describe('sqlHelper', () => {
       params.should.deep.equal([name1, name2]);
     });
 
+    describe('JSON column containment', () => {
+      it('should handle contains with an object value on JSON column', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              contains: { content: 'foo' },
+            },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "bar"@>$1::jsonb');
+        params.should.deep.equal(['{"content":"foo"}']);
+      });
+
+      it('should handle negated contains with an object value on JSON column', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              '!': {
+                contains: { content: 'foo' },
+              },
+            },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE NOT "bar"@>$1::jsonb');
+        params.should.deep.equal(['{"content":"foo"}']);
+      });
+
+      it('should handle contains with an array of object values on JSON column (OR)', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              contains: [{ content: 'foo' }, { content: 'bar' }],
+            },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE ("bar"@>$1::jsonb OR "bar"@>$2::jsonb)');
+        params.should.deep.equal(['{"content":"foo"}', '{"content":"bar"}']);
+      });
+
+      it('should handle negated contains with an array of object values on JSON column (AND)', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              '!': {
+                contains: [{ content: 'foo' }, { content: 'bar' }],
+              },
+            },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE NOT "bar"@>$1::jsonb AND NOT "bar"@>$2::jsonb');
+        params.should.deep.equal(['{"content":"foo"}', '{"content":"bar"}']);
+      });
+
+      it('should handle contains with an empty object on JSON column', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              contains: {},
+            },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "bar"@>$1::jsonb');
+        params.should.deep.equal(['{}']);
+      });
+
+      it('should handle contains with null on JSON column', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              contains: null,
+            },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "bar" IS NULL');
+        params.should.deep.equal([]);
+      });
+
+      it('should handle contains with an empty array on JSON column', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              contains: [],
+            },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE 1<>1');
+        params.should.deep.equal([]);
+      });
+
+      it('should throw error for like operator on JSON column', () => {
+        ((): void => {
+          sqlHelper.buildWhereStatement({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+            where: {
+              bar: {
+                like: 'foo',
+              },
+            } as WhereQuery<SimpleWithJson>,
+          });
+        }).should.throw(QueryError, '"like" operator is not supported for JSON columns');
+      });
+
+      it('should throw error for startsWith operator on JSON column', () => {
+        ((): void => {
+          sqlHelper.buildWhereStatement({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+            where: {
+              bar: {
+                startsWith: 'foo',
+              },
+            } as WhereQuery<SimpleWithJson>,
+          });
+        }).should.throw(QueryError, '"like" operator is not supported for JSON columns');
+      });
+
+      it('should throw error for endsWith operator on JSON column', () => {
+        ((): void => {
+          sqlHelper.buildWhereStatement({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+            where: {
+              bar: {
+                endsWith: 'foo',
+              },
+            } as WhereQuery<SimpleWithJson>,
+          });
+        }).should.throw(QueryError, '"like" operator is not supported for JSON columns');
+      });
+    });
+
     it('should handle date value', () => {
       const now = new Date();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({

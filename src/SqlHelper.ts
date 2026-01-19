@@ -1126,7 +1126,25 @@ function buildWhere<T extends Entity>({
         params,
         joins,
       });
-    case 'contains':
+    case 'contains': {
+      // Check if this is a JSON column
+      const containsColumn = propertyName ? (model.columnsByPropertyName[propertyName] as ColumnTypeMetadata) : null;
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      const containsColumnType = containsColumn?.type?.toLowerCase();
+
+      if (containsColumnType === 'json') {
+        return buildJsonContainmentStatement({
+          repositoriesByModelNameLowered,
+          model,
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          propertyName: propertyName!,
+          isNegated,
+          value,
+          params,
+          joins,
+        });
+      }
+
       if (Array.isArray(value)) {
         const values = (value as string[]).map((val) => {
           if (typeof val !== 'string') {
@@ -1162,6 +1180,8 @@ function buildWhere<T extends Entity>({
       }
 
       throw new QueryError(`Expected value to be a string for "contains" constraint. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
+    }
+
     case 'startsWith':
       if (Array.isArray(value)) {
         const values = (value as string[]).map((val) => {
@@ -1691,6 +1711,10 @@ interface LikeOperatorStatementParams<T extends Entity> extends Omit<ComparisonO
   value: string | readonly string[] | null;
 }
 
+interface JsonContainmentStatementParams<T extends Entity> extends Omit<ComparisonOperatorStatementParams<T>, 'value'> {
+  value: unknown;
+}
+
 interface ResolvedProperty {
   column: ColumnBaseMetadata;
   tableAlias: string;
@@ -1850,22 +1874,73 @@ function buildNestedJoinWhere({
         if (op === '!') {
           if (opValue === null) {
             andClauses.push(`"${tableAlias}"."${column.name}" IS NOT NULL`);
+          } else if (typeof opValue === 'object' && !Array.isArray(opValue)) {
+            // Handle negated nested operators like { '!': { contains: {...} } }
+            for (const [nestedOp, nestedOpValue] of Object.entries(opValue as Record<string, unknown>)) {
+              if (nestedOp === 'like' || nestedOp === 'contains' || nestedOp === 'startsWith' || nestedOp === 'endsWith') {
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                const negatedColumnType = (column as ColumnTypeMetadata).type?.toLowerCase();
+
+                if (negatedColumnType === 'json') {
+                  if (nestedOp !== 'contains') {
+                    throw new QueryError(
+                      `"${nestedOp}" operator is not supported for JSON columns. Use "contains" with an object value for JSON containment. Property (${key}) in model (${joinedModel.name}).`,
+                      joinedModel,
+                    );
+                  }
+
+                  params.push(JSON.stringify(nestedOpValue));
+                  andClauses.push(`NOT "${tableAlias}"."${column.name}"@>$${params.length}::jsonb`);
+                } else {
+                  let likeValue = nestedOpValue as string;
+                  if (nestedOp === 'contains') {
+                    likeValue = `%${likeValue}%`;
+                  } else if (nestedOp === 'startsWith') {
+                    likeValue = `${likeValue}%`;
+                  } else if (nestedOp === 'endsWith') {
+                    likeValue = `%${likeValue}`;
+                  }
+
+                  params.push(likeValue);
+                  andClauses.push(`"${tableAlias}"."${column.name}" NOT ILIKE $${params.length}`);
+                }
+              } else if (nestedOp === '>' || nestedOp === '>=' || nestedOp === '<' || nestedOp === '<=') {
+                params.push(nestedOpValue);
+                const negatedComparisonOps: Record<string, string> = { '>': '<=', '>=': '<', '<': '>=', '<=': '>' };
+                andClauses.push(`"${tableAlias}"."${column.name}"${negatedComparisonOps[nestedOp]}$${params.length}`);
+              }
+            }
           } else {
             params.push(opValue);
             andClauses.push(`"${tableAlias}"."${column.name}"<>$${params.length}`);
           }
         } else if (op === 'like' || op === 'contains' || op === 'startsWith' || op === 'endsWith') {
-          let likeValue = opValue as string;
-          if (op === 'contains') {
-            likeValue = `%${likeValue}%`;
-          } else if (op === 'startsWith') {
-            likeValue = `${likeValue}%`;
-          } else if (op === 'endsWith') {
-            likeValue = `%${likeValue}`;
-          }
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          const nestedColumnType = (column as ColumnTypeMetadata).type?.toLowerCase();
 
-          params.push(likeValue);
-          andClauses.push(`"${tableAlias}"."${column.name}" ILIKE $${params.length}`);
+          if (nestedColumnType === 'json') {
+            if (op !== 'contains') {
+              throw new QueryError(
+                `"${op}" operator is not supported for JSON columns. Use "contains" with an object value for JSON containment. Property (${key}) in model (${joinedModel.name}).`,
+                joinedModel,
+              );
+            }
+
+            params.push(JSON.stringify(opValue));
+            andClauses.push(`"${tableAlias}"."${column.name}"@>$${params.length}::jsonb`);
+          } else {
+            let likeValue = opValue as string;
+            if (op === 'contains') {
+              likeValue = `%${likeValue}%`;
+            } else if (op === 'startsWith') {
+              likeValue = `${likeValue}%`;
+            } else if (op === 'endsWith') {
+              likeValue = `%${likeValue}`;
+            }
+
+            params.push(likeValue);
+            andClauses.push(`"${tableAlias}"."${column.name}" ILIKE $${params.length}`);
+          }
         } else if (op === '>' || op === '>=' || op === '<' || op === '<=') {
           params.push(opValue);
           andClauses.push(`"${tableAlias}"."${column.name}"${op}$${params.length}`);
@@ -1885,6 +1960,81 @@ function buildNestedJoinWhere({
   }
 
   return andClauses.join(' AND ');
+}
+
+function buildJsonContainmentStatement<T extends Entity>({ repositoriesByModelNameLowered, model, propertyName, isNegated, value, params, joins }: JsonContainmentStatementParams<T>): string {
+  if (Array.isArray(value)) {
+    if (!value.length) {
+      if (isNegated) {
+        return '1=1';
+      }
+
+      return '1<>1';
+    }
+
+    if (value.length > 1) {
+      const orConstraints: string[] = [];
+      for (const item of value) {
+        orConstraints.push(
+          buildJsonContainmentStatement({
+            repositoriesByModelNameLowered,
+            model,
+            propertyName,
+            isNegated,
+            value: item,
+            params,
+            joins,
+          }),
+        );
+      }
+
+      if (orConstraints.length === 1) {
+        return orConstraints[0] ?? '';
+      }
+
+      if (isNegated) {
+        return orConstraints.join(' AND ');
+      }
+
+      if (orConstraints.length) {
+        return `(${orConstraints.join(' OR ')})`;
+      }
+
+      return '';
+    }
+
+    value = value[0];
+  }
+
+  const resolved = resolvePropertyPath({
+    propertyPath: propertyName,
+    model,
+    joins,
+    repositoriesByModelNameLowered,
+  });
+
+  let column: ColumnBaseMetadata;
+  let tablePrefix: string;
+
+  if (resolved) {
+    column = resolved.column;
+    tablePrefix = `"${resolved.tableAlias}".`;
+  } else {
+    const localColumn = model.columnsByPropertyName[propertyName];
+    if (!localColumn) {
+      throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
+    }
+
+    column = localColumn;
+    tablePrefix = '';
+  }
+
+  if (value === null) {
+    return `${tablePrefix}"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
+  }
+
+  params.push(JSON.stringify(value));
+  return `${isNegated ? 'NOT ' : ''}${tablePrefix}"${column.name}"@>$${params.length}::jsonb`;
 }
 
 function buildLikeOperatorStatement<T extends Entity>({ repositoriesByModelNameLowered, model, propertyName, isNegated, value, params, joins }: LikeOperatorStatementParams<T>): string {
@@ -1965,6 +2115,13 @@ function buildLikeOperatorStatement<T extends Entity>({ repositoriesByModelNameL
 
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       const columnType = (column as ColumnTypeMetadata).type?.toLowerCase();
+      if (columnType === 'json') {
+        throw new QueryError(
+          `"like" operator is not supported for JSON columns. Use "contains" with an object value for JSON containment. Property (${propertyName}) in model (${model.name}).`,
+          model,
+        );
+      }
+
       if (columnType === 'array' || columnType === 'string[]') {
         return `${isNegated ? 'NOT ' : ''}EXISTS(SELECT 1 FROM (SELECT unnest(${tablePrefix}"${column.name}") AS "unnested_${column.name}") __unnested WHERE "unnested_${column.name}" ILIKE $${params.length})`;
       }
