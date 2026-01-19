@@ -1,3 +1,9 @@
+# [15.7.0](https://github.com/bigalorm/bigal/compare/v15.6.0...v15.7.0) (2026-01-19)
+
+### Features
+
+- Support contains for json columns ([#279](https://github.com/bigalorm/bigal/issues/279)) ([229ea23](https://github.com/bigalorm/bigal/commit/229ea23b9dc90e48913f08578d6be1258df84896))
+
 # [15.6.0](https://github.com/bigalorm/bigal/compare/v15.5.0...v15.6.0) (2026-01-18)
 
 ### Features
