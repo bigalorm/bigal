@@ -1889,7 +1889,7 @@ function buildNestedJoinWhere({
                     );
                   }
 
-                  params.push(JSON.stringify(nestedOpValue));
+                  params.push(nestedOpValue);
                   andClauses.push(`NOT "${tableAlias}"."${column.name}"@>$${params.length}::jsonb`);
                 } else {
                   let likeValue = nestedOpValue as string;
@@ -1926,7 +1926,7 @@ function buildNestedJoinWhere({
               );
             }
 
-            params.push(JSON.stringify(opValue));
+            params.push(opValue);
             andClauses.push(`"${tableAlias}"."${column.name}"@>$${params.length}::jsonb`);
           } else {
             let likeValue = opValue as string;
@@ -2033,7 +2033,7 @@ function buildJsonContainmentStatement<T extends Entity>({ repositoriesByModelNa
     return `${tablePrefix}"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
   }
 
-  params.push(JSON.stringify(value));
+  params.push(value);
   return `${isNegated ? 'NOT ' : ''}${tablePrefix}"${column.name}"@>$${params.length}::jsonb`;
 }
 

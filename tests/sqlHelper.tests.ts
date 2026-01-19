@@ -2169,7 +2169,7 @@ describe('sqlHelper', () => {
 
         assert(whereStatement);
         whereStatement.should.equal('WHERE "bar"@>$1::jsonb');
-        params.should.deep.equal(['{"content":"foo"}']);
+        params.should.deep.equal([{ content: 'foo' }]);
       });
 
       it('should handle negated contains with an object value on JSON column', () => {
@@ -2187,7 +2187,7 @@ describe('sqlHelper', () => {
 
         assert(whereStatement);
         whereStatement.should.equal('WHERE NOT "bar"@>$1::jsonb');
-        params.should.deep.equal(['{"content":"foo"}']);
+        params.should.deep.equal([{ content: 'foo' }]);
       });
 
       it('should handle contains with an array of object values on JSON column (OR)', () => {
@@ -2203,7 +2203,7 @@ describe('sqlHelper', () => {
 
         assert(whereStatement);
         whereStatement.should.equal('WHERE ("bar"@>$1::jsonb OR "bar"@>$2::jsonb)');
-        params.should.deep.equal(['{"content":"foo"}', '{"content":"bar"}']);
+        params.should.deep.equal([{ content: 'foo' }, { content: 'bar' }]);
       });
 
       it('should handle negated contains with an array of object values on JSON column (AND)', () => {
@@ -2221,7 +2221,7 @@ describe('sqlHelper', () => {
 
         assert(whereStatement);
         whereStatement.should.equal('WHERE NOT "bar"@>$1::jsonb AND NOT "bar"@>$2::jsonb');
-        params.should.deep.equal(['{"content":"foo"}', '{"content":"bar"}']);
+        params.should.deep.equal([{ content: 'foo' }, { content: 'bar' }]);
       });
 
       it('should handle contains with an empty object on JSON column', () => {
@@ -2237,7 +2237,7 @@ describe('sqlHelper', () => {
 
         assert(whereStatement);
         whereStatement.should.equal('WHERE "bar"@>$1::jsonb');
-        params.should.deep.equal(['{}']);
+        params.should.deep.equal([{}]);
       });
 
       it('should handle contains with null on JSON column', () => {
