@@ -587,6 +587,59 @@ describe('Repository', () => {
       assert(params);
       params.should.deep.equal([product.name, [], product.store]);
     });
+
+    describe('toJSON()', () => {
+      it('should return plain object without prototype chain for single create', async () => {
+        const product = generator.product({
+          store: store.id,
+        });
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+
+        const result = await ProductRepository.create({
+          name: product.name,
+          store: store.id,
+        }).toJSON();
+
+        should.exist(result);
+        Object.getPrototypeOf(result).should.equal(Object.prototype);
+        result.name.should.equal(product.name);
+      });
+
+      it('should return plain objects without prototype chain for array create', async () => {
+        const products = [generator.product({ store: store.id }), generator.product({ store: store.id })];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.create([
+          { name: products[0]!.name, store: store.id },
+          { name: products[1]!.name, store: store.id },
+        ]).toJSON();
+
+        result.should.have.length(2);
+        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+        Object.getPrototypeOf(result[1]!).should.equal(Object.prototype);
+      });
+
+      it('should work with returnSelect option', async () => {
+        const product = generator.product({
+          store: store.id,
+        });
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{ id: product.id, name: product.name }]));
+
+        const result = await ProductRepository.create(
+          {
+            name: product.name,
+            store: store.id,
+          },
+          { returnSelect: ['name'] },
+        ).toJSON();
+
+        should.exist(result);
+        Object.getPrototypeOf(result).should.equal(Object.prototype);
+      });
+    });
   });
 
   describe('#update()', () => {
@@ -792,6 +845,31 @@ describe('Repository', () => {
       query.should.equal('UPDATE "product__category" SET "product_id"=$1,"category_id"=$2 WHERE "id"=$3 RETURNING "id","product_id" AS "product","category_id" AS "category"');
       assert(params);
       params.should.deep.equal([product.id, category.id, productCategory.id]);
+    });
+
+    describe('toJSON()', () => {
+      it('should return plain objects without prototype chain', async () => {
+        const products = [generator.product({ store: store.id }), generator.product({ store: store.id })];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.update({ store: store.id }, { name: 'updated' }).toJSON();
+
+        result.should.have.length(2);
+        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+        Object.getPrototypeOf(result[1]!).should.equal(Object.prototype);
+      });
+
+      it('should work with returnSelect option', async () => {
+        const products = [{ id: 1, name: 'updated' }];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.update({ id: 1 }, { name: 'updated' }, { returnSelect: ['name'] }).toJSON();
+
+        result.should.have.length(1);
+        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+      });
     });
   });
 
@@ -1034,6 +1112,53 @@ describe('Repository', () => {
       query.should.equal('DELETE FROM "products" WHERE "store_id"=$1 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       params.should.deep.equal([store.id]);
+    });
+
+    describe('toJSON()', () => {
+      it('should return plain objects without prototype chain when returnRecords is true', async () => {
+        const products = [generator.product({ store: store.id }), generator.product({ store: store.id })];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.destroy({}, { returnRecords: true }).toJSON();
+
+        result.should.have.length(2);
+        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+        Object.getPrototypeOf(result[1]!).should.equal(Object.prototype);
+      });
+
+      it('should work with where clause', async () => {
+        const products = [generator.product({ store: store.id })];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.destroy({ store: store.id }, { returnRecords: true }).toJSON();
+
+        result.should.have.length(1);
+        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+      });
+
+      it('should work with chained where', async () => {
+        const products = [generator.product({ store: store.id })];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.destroy({}, { returnRecords: true }).where({ store: store.id }).toJSON();
+
+        result.should.have.length(1);
+        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+      });
+
+      it('should work with returnSelect option', async () => {
+        const products = [{ id: 1, name: 'deleted' }];
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.destroy({}, { returnSelect: ['name'] }).toJSON();
+
+        result.should.have.length(1);
+        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+      });
     });
   });
 });

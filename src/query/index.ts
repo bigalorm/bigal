@@ -1,5 +1,6 @@
 export * from './Comparer.js';
 export * from './CountResult.js';
+export * from './CreateResult.js';
 export * from './Subquery.js';
 export * from './JoinDefinition.js';
 export * from './JoinedSort.js';
@@ -7,6 +8,7 @@ export * from './JoinedWhereQuery.js';
 export * from './CreateUpdateOptions.js';
 export * from './DeleteOptions.js';
 export * from './DestroyResult.js';
+export * from './UpdateResult.js';
 export * from './DoNotReturnRecords.js';
 export * from './FindArgs.js';
 export * from './FindOneArgs.js';
