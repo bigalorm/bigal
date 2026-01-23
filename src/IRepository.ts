@@ -1,7 +1,18 @@
 import type { Entity } from './Entity.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { CreateOptions } from './query/CreateOptions.js';
-import type { CreateUpdateOptions, DeleteOptions, DestroyResult, DoNotReturnRecords, ReturnSelect, WhereQuery } from './query/index.js';
+import type {
+  CreateResult,
+  CreateResultArray,
+  CreateUpdateOptions,
+  DeleteOptions,
+  DestroyResult,
+  DestroyResultWithRecords,
+  DoNotReturnRecords,
+  ReturnSelect,
+  UpdateResult,
+  WhereQuery,
+} from './query/index.js';
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
 import type { CreateUpdateParams, QueryResult } from './types/index.js';
 
@@ -14,7 +25,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {object}
    */
-  create(values: CreateUpdateParams<T>, options?: OnConflictOptions<T> | (Partial<OnConflictOptions<T>> & ReturnSelect<T>)): Promise<QueryResult<T>>;
+  create(values: CreateUpdateParams<T>, options?: OnConflictOptions<T> | (Partial<OnConflictOptions<T>> & ReturnSelect<T>)): CreateResult<T>;
 
   /**
    * Creates an object or objects using the specified values
@@ -34,7 +45,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  create(values: CreateUpdateParams<T>[], options?: (OnConflictOptions<T> & Partial<ReturnSelect<T>>) | (Partial<OnConflictOptions<T>> & ReturnSelect<T>)): Promise<QueryResult<T>[]>;
+  create(values: CreateUpdateParams<T>[], options?: (OnConflictOptions<T> & Partial<ReturnSelect<T>>) | (Partial<OnConflictOptions<T>> & ReturnSelect<T>)): CreateResultArray<T>;
 
   /**
    * Creates an object using the specified values
@@ -45,7 +56,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {object|object[]|void} Return value from the db
    */
-  create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options?: CreateOptions<T>): Promise<QueryResult<T>[]> | Promise<QueryResult<T>> | Promise<void>;
+  create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options?: CreateOptions<T>): CreateResult<T> | CreateResultArray<T> | Promise<void>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -66,7 +77,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: ReturnSelect<T>): Promise<QueryResult<T>[]>;
+  update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: ReturnSelect<T>): UpdateResult<T>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -77,7 +88,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} Return values from the db or `true` if returnRecords=false
    */
-  update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: CreateUpdateOptions<T>): Promise<QueryResult<T>[]> | Promise<void>;
+  update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: CreateUpdateOptions<T>): Promise<void> | UpdateResult<T>;
 
   /**
    * Destroys object(s) matching the where query
@@ -94,15 +105,5 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResult<T, QueryResult<T>[]>;
-
-  /**
-   * Destroys object(s) matching the where query
-   * @param {object} where - Object representing the where query
-   * @param {object} [options]
-   * @param {boolean} [options.returnRecords=false] - Determines if inserted records should be returned
-   * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
-   * @returns {object[]|void} `void` or records affected if returnRecords=true
-   */
-  destroy<TOptions extends DeleteOptions<T> = DeleteOptions<T>>(where: WhereQuery<T>, options?: TOptions): TOptions extends DeleteOptions<T> ? Promise<void> : DestroyResult<T, QueryResult<T>[]>;
+  destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResultWithRecords<T, QueryResult<T>>;
 }
