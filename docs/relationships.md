@@ -13,6 +13,7 @@ This guide covers how to define relationships between entities and how BigAl's t
   - [How Type Narrowing Works](#how-type-narrowing-works)
   - [Using QueryResult in Type Definitions](#using-queryresult-in-type-definitions)
   - [Working with Populated Relations](#working-with-populated-relations)
+  - [Filtering and Sorting by Junction Table Columns](#filtering-and-sorting-by-junction-table-columns)
 - [Best Practices](#best-practices)
 
 ## Relationship Types
@@ -285,6 +286,56 @@ import type { Product } from './Product';
 type ProductWithStore = QueryResultPopulated<Product, 'store'>;
 // ProductWithStore.store is QueryResult<Store>
 ```
+
+### Filtering and Sorting by Junction Table Columns
+
+When using many-to-many relationships with `through`, you can filter and sort by columns on the junction table using the `through` option in `.populate()`:
+
+```ts
+// Example: A Compilation has many Tracks through CompilationTrackMap
+// The junction table has ordering and revisionDeleted columns
+
+// Filter by junction table columns
+const compilation = await compilationRepository
+  .findOne()
+  .where({ id: compilationId })
+  .populate('tracks', {
+    through: {
+      where: { revisionDeleted: null }, // Only non-deleted mappings
+    },
+  });
+
+// Sort by junction table columns
+const compilation = await compilationRepository
+  .findOne()
+  .where({ id: compilationId })
+  .populate('tracks', {
+    through: {
+      sort: 'ordering asc', // Order by position in compilation
+    },
+  });
+
+// Combine junction and target options
+const compilation = await compilationRepository
+  .findOne()
+  .where({ id: compilationId })
+  .populate('tracks', {
+    select: ['name', 'duration'],
+    where: { isPublished: true }, // Filter on Track
+    through: {
+      where: { revisionDeleted: null }, // Filter on junction table
+      sort: 'ordering asc', // Sort by junction table column
+    },
+  });
+```
+
+**Key points:**
+
+- `through.where` filters which junction table records are included
+- `through.sort` determines the order of populated items based on junction table columns
+- When `through.sort` is specified, it takes precedence over the target entity `sort` option
+- These options only apply to many-to-many relationships that use `through`
+- If `through.where` filters out all junction records, the target query is skipped (optimization)
 
 ## Best Practices
 

@@ -21,4 +21,10 @@ export class ProductCategory extends Entity {
     name: 'category_id',
   })
   public category!: Category | number;
+
+  @column({ type: 'integer', name: 'ordering' })
+  public ordering?: number;
+
+  @column({ type: 'boolean', name: 'is_primary' })
+  public isPrimary?: boolean;
 }
