@@ -143,6 +143,8 @@ export class Product extends Entity {
 }
 ```
 
+For detailed information about defining relationships and understanding the `QueryResult` type system, see the [Relationships Guide](docs/relationships.md).
+
 ### Initialize repositories
 
 ```ts
