@@ -1,3 +1,9 @@
+# [15.9.0](https://github.com/bigalorm/bigal/compare/v15.8.0...v15.9.0) (2026-01-24)
+
+### Features
+
+- Add through filtering and better relationship docs ([#285](https://github.com/bigalorm/bigal/issues/285)) ([915fed2](https://github.com/bigalorm/bigal/commit/915fed234a844715bcfc514972365f68850ec8ed))
+
 # [15.8.0](https://github.com/bigalorm/bigal/compare/v15.7.0...v15.8.0) (2026-01-24)
 
 ### Features
