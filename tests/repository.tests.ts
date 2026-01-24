@@ -487,7 +487,9 @@ describe('Repository', () => {
       result.should.deep.equal(productCategory);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "product__category" ("product_id","category_id") VALUES ($1,$2) RETURNING "id","product_id" AS "product","category_id" AS "category"');
+      query.should.equal(
+        'INSERT INTO "product__category" ("product_id","category_id") VALUES ($1,$2) RETURNING "id","product_id" AS "product","category_id" AS "category","ordering","is_primary" AS "isPrimary"',
+      );
       assert(params);
       params.should.deep.equal([product.id, category.id]);
     });
@@ -842,7 +844,9 @@ describe('Repository', () => {
       results.should.deep.equal([productCategory]);
 
       const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "product__category" SET "product_id"=$1,"category_id"=$2 WHERE "id"=$3 RETURNING "id","product_id" AS "product","category_id" AS "category"');
+      query.should.equal(
+        'UPDATE "product__category" SET "product_id"=$1,"category_id"=$2 WHERE "id"=$3 RETURNING "id","product_id" AS "product","category_id" AS "category","ordering","is_primary" AS "isPrimary"',
+      );
       assert(params);
       params.should.deep.equal([product.id, category.id, productCategory.id]);
     });

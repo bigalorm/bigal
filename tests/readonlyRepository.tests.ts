@@ -1088,6 +1088,174 @@ describe('ReadonlyRepository', () => {
       categoryQueryParams.should.deep.equal([[category1.id, category2.id], 'category%']);
     });
 
+    describe('through options', () => {
+      it('should filter by junction table columns with through.where', async () => {
+        const category1 = generator.category();
+        const category2 = generator.category();
+        const productCategory1Map = {
+          ...generator.productCategory(product, category1),
+          isPrimary: true,
+        };
+        // productCategory2Map is not returned from the junction query due to isPrimary filter
+        generator.productCategory(product, category2);
+
+        // Only return the primary category mapping from junction query
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory1Map]), getQueryResult([category1]));
+
+        const result = await ProductRepository.findOne().populate('categories', {
+          through: {
+            where: { isPrimary: true },
+          },
+        });
+
+        verify(mockedPool.query(anyString(), anything())).thrice();
+        assert(result);
+        result.should.deep.equal({
+          ...product,
+          categories: [category1],
+        });
+
+        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
+        productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+        assert(productQueryParams);
+        productQueryParams.should.deep.equal([]);
+        const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).second();
+        productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 AND "is_primary"=$2');
+        assert(productCategoryMapQueryParams);
+        productCategoryMapQueryParams.should.deep.equal([product.id, true]);
+        const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
+        categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=$1');
+        assert(categoryQueryParams);
+        categoryQueryParams.should.deep.equal([category1.id]);
+      });
+
+      it('should order by junction table columns with through.sort', async () => {
+        const category1 = generator.category();
+        const category2 = generator.category();
+        const productCategory1Map = {
+          ...generator.productCategory(product, category1),
+          ordering: 2,
+        };
+        const productCategory2Map = {
+          ...generator.productCategory(product, category2),
+          ordering: 1,
+        };
+
+        // Junction query returns in ordering order (category2 first, then category1)
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory2Map, productCategory1Map]), getQueryResult([category1, category2]));
+
+        const result = await ProductRepository.findOne().populate('categories', {
+          through: {
+            sort: 'ordering asc',
+          },
+        });
+
+        verify(mockedPool.query(anyString(), anything())).thrice();
+        assert(result);
+        // Categories should be in junction order: category2 (ordering=1) before category1 (ordering=2)
+        result.categories.should.have.length(2);
+        result.categories[0]!.id.should.equal(category2.id);
+        result.categories[1]!.id.should.equal(category1.id);
+
+        const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).second();
+        productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 ORDER BY "ordering"');
+        assert(productCategoryMapQueryParams);
+        productCategoryMapQueryParams.should.deep.equal([product.id]);
+      });
+
+      it('should combine through.where and through.sort', async () => {
+        const category1 = generator.category();
+        const category2 = generator.category();
+        const productCategory1Map = {
+          ...generator.productCategory(product, category1),
+          ordering: 2,
+          isPrimary: true,
+        };
+        const productCategory2Map = {
+          ...generator.productCategory(product, category2),
+          ordering: 1,
+          isPrimary: true,
+        };
+
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory2Map, productCategory1Map]), getQueryResult([category1, category2]));
+
+        const result = await ProductRepository.findOne().populate('categories', {
+          through: {
+            where: { isPrimary: true },
+            sort: 'ordering asc',
+          },
+        });
+
+        verify(mockedPool.query(anyString(), anything())).thrice();
+        assert(result);
+        result.categories[0]!.id.should.equal(category2.id);
+        result.categories[1]!.id.should.equal(category1.id);
+
+        const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).second();
+        productCategoryMapQuery.should.equal(
+          'SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 AND "is_primary"=$2 ORDER BY "ordering"',
+        );
+        assert(productCategoryMapQueryParams);
+        productCategoryMapQueryParams.should.deep.equal([product.id, true]);
+      });
+
+      it('should combine through options with target where filter', async () => {
+        const category1 = generator.category({ name: 'Active Category' });
+        const category2 = generator.category({ name: 'Deleted Category' });
+        const productCategory1Map = {
+          ...generator.productCategory(product, category1),
+          isPrimary: true,
+        };
+        const productCategory2Map = {
+          ...generator.productCategory(product, category2),
+          isPrimary: true,
+        };
+
+        // Junction returns both, but target where filters to only category1
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([product]),
+          getQueryResult([productCategory1Map, productCategory2Map]),
+          getQueryResult([category1]), // Only category1 matches target where
+        );
+
+        const result = await ProductRepository.findOne().populate('categories', {
+          where: { name: { startsWith: 'Active' } },
+          through: {
+            where: { isPrimary: true },
+          },
+        });
+
+        verify(mockedPool.query(anyString(), anything())).thrice();
+        assert(result);
+        result.categories.should.have.length(1);
+        result.categories[0]!.id.should.equal(category1.id);
+
+        const [productCategoryMapQuery] = capture(mockedPool.query).second();
+        productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 AND "is_primary"=$2');
+        const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
+        categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) AND "name" ILIKE $2');
+        assert(categoryQueryParams);
+        categoryQueryParams.should.deep.equal([[category1.id, category2.id], 'Active%']);
+      });
+
+      it('should not run target query when through.where filters out all junction records', async () => {
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([product]),
+          getQueryResult([]), // No junction records match
+        );
+
+        const result = await ProductRepository.findOne().populate('categories', {
+          through: {
+            where: { isPrimary: true },
+          },
+        });
+
+        verify(mockedPool.query(anyString(), anything())).twice();
+        assert(result);
+        result.categories.should.deep.equal([]);
+      });
+    });
+
     it('should have instance functions be equal across multiple queries', async () => {
       const result = {
         id: faker.number.int(),
@@ -3216,6 +3384,120 @@ describe('ReadonlyRepository', () => {
         translationsQuery.should.equal('SELECT "id","name","source_id" AS "source" FROM "simple" WHERE "source_id"=ANY($1::TEXT[])');
         assert(translationsQueryParams);
         translationsQueryParams.should.deep.equal([[source1.id, source2.id]]);
+      });
+
+      describe('through options', () => {
+        it('should filter by junction table columns with through.where for multiple entities', async () => {
+          const product1Category1MapPrimary = {
+            ...product1Category1,
+            isPrimary: true,
+          };
+          // product1Category2 is not returned from the junction query due to isPrimary filter
+          const product2Category1MapPrimary = {
+            ...product2Category1,
+            isPrimary: true,
+          };
+
+          when(mockedPool.query(anyString(), anything()))
+            .thenResolve(getQueryResult([product1, product2]))
+            .thenResolve(getQueryResult([product1Category1MapPrimary, product2Category1MapPrimary])) // Only primary mappings
+            .thenResolve(getQueryResult([category1]));
+
+          const results = await ProductRepository.find().populate('categories', {
+            through: {
+              where: { isPrimary: true },
+            },
+          });
+
+          verify(mockedPool.query(anyString(), anything())).thrice();
+          results.should.deep.equal([
+            {
+              ...product1,
+              categories: [category1],
+            },
+            {
+              ...product2,
+              categories: [category1],
+            },
+          ]);
+
+          const [productCategoryQuery, productCategoryQueryParams] = capture(mockedPool.query).second();
+          productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[]) AND "is_primary"=$2');
+          assert(productCategoryQueryParams);
+          productCategoryQueryParams.should.deep.equal([[product1.id, product2.id], true]);
+        });
+
+        it('should order by junction table columns with through.sort for multiple entities', async () => {
+          const product1Category1MapOrdering2 = {
+            ...product1Category1,
+            ordering: 2,
+          };
+          const product1Category2MapOrdering1 = {
+            ...product1Category2,
+            ordering: 1,
+          };
+
+          // Junction query returns in ordering order
+          when(mockedPool.query(anyString(), anything()))
+            .thenResolve(getQueryResult([product1]))
+            .thenResolve(getQueryResult([product1Category2MapOrdering1, product1Category1MapOrdering2]))
+            .thenResolve(getQueryResult([category1, category2]));
+
+          const results = await ProductRepository.find()
+            .where({ id: product1.id })
+            .populate('categories', {
+              through: {
+                sort: 'ordering asc',
+              },
+            });
+
+          verify(mockedPool.query(anyString(), anything())).thrice();
+          // Categories should be in junction order: category2 (ordering=1) before category1 (ordering=2)
+          results[0]!.categories[0]!.id.should.equal(category2.id);
+          results[0]!.categories[1]!.id.should.equal(category1.id);
+
+          const [productCategoryQuery, productCategoryQueryParams] = capture(mockedPool.query).second();
+          productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 ORDER BY "ordering"');
+          assert(productCategoryQueryParams);
+          productCategoryQueryParams.should.deep.equal([product1.id]);
+        });
+
+        it('should preserve per-entity ordering when using through.sort with multiple entities', async () => {
+          // Product1: categories in order [category2, category1]
+          // Product2: categories in order [category1] only
+          const product1Category1MapOrdering2 = {
+            ...product1Category1,
+            ordering: 2,
+          };
+          const product1Category2MapOrdering1 = {
+            ...product1Category2,
+            ordering: 1,
+          };
+          const product2Category1MapOrdering1 = {
+            ...product2Category1,
+            ordering: 1,
+          };
+
+          when(mockedPool.query(anyString(), anything()))
+            .thenResolve(getQueryResult([product1, product2]))
+            .thenResolve(getQueryResult([product1Category2MapOrdering1, product1Category1MapOrdering2, product2Category1MapOrdering1]))
+            .thenResolve(getQueryResult([category1, category2]));
+
+          const results = await ProductRepository.find()
+            .where({ id: [product1.id, product2.id] })
+            .populate('categories', {
+              through: {
+                sort: 'ordering asc',
+              },
+            });
+
+          verify(mockedPool.query(anyString(), anything())).thrice();
+          // Product1: category2 first (ordering=1), then category1 (ordering=2)
+          results[0]!.categories[0]!.id.should.equal(category2.id);
+          results[0]!.categories[1]!.id.should.equal(category1.id);
+          // Product2: only category1
+          results[1]!.categories[0]!.id.should.equal(category1.id);
+        });
       });
 
       it('should throw when attempting to populate collection and not not explicitly specifying relation column', async () => {

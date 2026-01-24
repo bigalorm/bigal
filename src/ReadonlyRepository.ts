@@ -45,6 +45,10 @@ interface Populate {
   limit?: number;
   pool?: PoolLike;
   asPlainObjects?: boolean;
+  through?: {
+    where?: Record<string, unknown>;
+    sort?: SortObject<Entity> | string;
+  };
 }
 
 type PrimaryId = number | string;
@@ -200,6 +204,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           skip: options?.skip,
           limit: options?.limit,
           pool: options?.pool ?? poolOverride,
+          through: options?.through,
         });
 
         return this as FindOneResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>>;
@@ -431,6 +436,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           skip: options?.skip,
           limit: options?.limit,
           pool: options?.pool ?? poolOverride,
+          through: options?.through,
         });
 
         return this as unknown as FindResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>>;
@@ -944,17 +950,13 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
     if (entities.length === 1) {
       for (const entity of entities) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (entity[populate.propertyName as string & keyof QueryResult<T>] as any) = populateResults;
+        (entity as Record<string, unknown>)[populate.propertyName] = populateResults;
       }
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const populateResultsByEntityId = groupBy(populateResults, column.via) as Record<PrimaryId, any>;
+      const populateResultsByEntityId = groupBy(populateResults, column.via) as Record<PrimaryId, Entity[]>;
       for (const entity of entities) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/no-unsafe-assignment
-        const id = entity[primaryKeyPropertyName] as any;
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access,@typescript-eslint/no-unsafe-assignment,@typescript-eslint/prefer-nullish-coalescing
-        entity[populate.propertyName as string & keyof QueryResult<T>] = populateResultsByEntityId[id] || [];
+        const id = entity[primaryKeyPropertyName] as PrimaryId;
+        (entity as Record<string, unknown>)[populate.propertyName] = populateResultsByEntityId[id] ?? [];
       }
     }
   }
@@ -983,7 +985,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     let relatedModelColumn: ColumnCollectionMetadata | undefined;
     for (const populateModelColumn of populateRepository.model.columns) {
       const { through } = populateModelColumn as ColumnCollectionMetadata;
-      if (through && through.toLowerCase() === column.through.toLowerCase()) {
+      if (through?.toLowerCase() === column.through.toLowerCase()) {
         relatedModelColumn = populateModelColumn as ColumnCollectionMetadata;
         break;
       }
@@ -993,13 +995,19 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       throw new Error(`Unable to find property on related model for multi-map collection: ${column.through}. From ${column.target}#${populate.propertyName}`);
     }
 
+    // Build the through/junction table query with optional where and sort
+    const throughWhere = {
+      [column.via]: entityIds,
+      ...populate.through?.where,
+    } as WhereQuery<T>;
+
     const mapRecords = await throughRepository.find({
       select: [column.via, relatedModelColumn.via],
-      where: {
-        [column.via]: entityIds,
-      } as WhereQuery<T>,
+      where: throughWhere,
+      sort: populate.through?.sort,
       pool: populate.pool,
     });
+
     const populateIds = new Set<PrimaryId>();
     const populateIdsByEntityId: Record<PrimaryId, PrimaryId[]> = {};
     for (const mapRecord of mapRecords) {
@@ -1010,6 +1018,15 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       entityPopulateIds.push(populatedId);
 
       populateIdsByEntityId[entityId] = entityPopulateIds;
+    }
+
+    // Short-circuit if no junction records matched (optimization)
+    if (populateIds.size === 0) {
+      for (const entity of entities) {
+        (entity as Record<string, unknown>)[populate.propertyName] = [];
+      }
+
+      return;
     }
 
     const populateWhere = {
@@ -1040,8 +1057,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         }
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (entity[populate.propertyName as string & keyof QueryResult<T>] as any) = populatedItems;
+      (entity as Record<string, unknown>)[populate.propertyName] = populatedItems;
     }
   }
 }
