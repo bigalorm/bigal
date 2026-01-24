@@ -1,3 +1,9 @@
+# [15.8.0](https://github.com/bigalorm/bigal/compare/v15.7.0...v15.8.0) (2026-01-24)
+
+### Features
+
+- Support .toJSON for create, update, and delete calls ([#284](https://github.com/bigalorm/bigal/issues/284)) ([d74c6f0](https://github.com/bigalorm/bigal/commit/d74c6f07a036b44cf43cdcce9224c3b256dbb3dc))
+
 # [15.7.0](https://github.com/bigalorm/bigal/compare/v15.6.0...v15.7.0) (2026-01-19)
 
 ### Features
