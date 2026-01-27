@@ -982,6 +982,8 @@ const highVolumeActiveStores = subquery(ProductRepository)
   .having({ activeCount: { '>': 50 } }); // Step 2: Only keep stores with >50 active products
 ```
 
+For more details on subqueries and joins, see the [Subqueries and Joins Guide](docs/subqueries-and-joins.md).
+
 ---
 
 ### `.count()` - Get the number of records matching the where criteria
