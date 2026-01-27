@@ -3,14 +3,16 @@ import type { GetValueType, ModelRelationshipKeys, PickByValueType, PlainObject,
 
 import type { FindQueryWithCount, FindQueryWithCountJSON } from './FindWithCountResult.js';
 import type { SubqueryJoinOnCondition } from './JoinDefinition.js';
-import type { JoinedSort } from './JoinedSort.js';
-import type { JoinedWhereQuery, JoinInfo } from './JoinedWhereQuery.js';
+import type { AnyJoinInfo, JoinedSort } from './JoinedSort.js';
+import type { JoinedWhereQuery, JoinInfo, SubqueryJoinInfo } from './JoinedWhereQuery.js';
 import type { PaginateOptions } from './PaginateOptions.js';
 import type { PopulateArgs } from './PopulateArgs.js';
-import type { SubqueryBuilderLike } from './SubqueryBuilder.js';
+import type { SubqueryBuilderLike, TypedSubqueryBuilder } from './SubqueryBuilder.js';
 import type { WhereQuery } from './WhereQuery.js';
 
-export interface FindResultJSON<T extends Entity, TReturn, TJoins extends JoinInfo = never> extends PromiseLike<PlainObject<TReturn>[]> {
+// WhereQuery is used for leftJoin 'on' condition
+
+export interface FindResultJSON<T extends Entity, TReturn, TJoins extends AnyJoinInfo = never> extends PromiseLike<PlainObject<TReturn>[]> {
   select<TKeys extends string & keyof T>(keys: TKeys[]): FindResultJSON<T, Pick<T, TKeys>, TJoins>;
   where(args: JoinedWhereQuery<T, TJoins>): FindResultJSON<T, TReturn, TJoins>;
   populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T, TPopulateType extends GetValueType<T[TProperty], Entity>, TPopulateSelectKeys extends string & keyof TPopulateType>(
@@ -21,12 +23,39 @@ export interface FindResultJSON<T extends Entity, TReturn, TJoins extends JoinIn
     propertyName: TProperty,
     alias?: TAlias,
   ): FindResultJSON<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
+  /**
+   * Join a subquery with type-safe column tracking.
+   * Use `agg()` helper when building the subquery to enable type-safe sorting.
+   * @example
+   * const counts = subquery(ProductRepository)
+   *   .select(['store', agg(s => s.count(), 'productCount')])
+   *   .groupBy(['store']);
+   * StoreRepository.find()
+   *   .join(counts, 'stats', { on: { id: 'store' } })
+   *   .sort('stats.productCount desc')  // Type-safe!
+   */
+  join<TAlias extends string, TColumns extends string>(
+    subquery: TypedSubqueryBuilder<TColumns>,
+    alias: TAlias,
+    options: { on: SubqueryJoinOnCondition },
+  ): FindResultJSON<T, TReturn, SubqueryJoinInfo<TAlias, TColumns> | TJoins>;
+  /** @deprecated Use `agg()` helper for type-safe subquery column sorting */
   join(subquery: SubqueryBuilderLike, alias: string, options: { on: SubqueryJoinOnCondition }): FindResultJSON<T, TReturn, TJoins>;
   leftJoin<TProperty extends ModelRelationshipKeys<T>, TAlias extends string = TProperty>(
     propertyName: TProperty,
     alias?: TAlias,
     on?: WhereQuery<GetValueType<T[TProperty], Entity>>,
   ): FindResultJSON<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
+  /**
+   * Left join a subquery with type-safe column tracking.
+   * Use `agg()` helper when building the subquery to enable type-safe sorting.
+   */
+  leftJoin<TAlias extends string, TColumns extends string>(
+    subquery: TypedSubqueryBuilder<TColumns>,
+    alias: TAlias,
+    options: { on: SubqueryJoinOnCondition },
+  ): FindResultJSON<T, TReturn, SubqueryJoinInfo<TAlias, TColumns> | TJoins>;
+  /** @deprecated Use `agg()` helper for type-safe subquery column sorting */
   leftJoin(subquery: SubqueryBuilderLike, alias: string, options: { on: SubqueryJoinOnCondition }): FindResultJSON<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindResultJSON<T, TReturn, TJoins>;
   limit(value: number): FindResultJSON<T, TReturn, TJoins>;
@@ -38,7 +67,7 @@ export interface FindResultJSON<T extends Entity, TReturn, TJoins extends JoinIn
   ): FindResultJSON<T, Omit<TReturn, TProperty> & Pick<T, TProperty>, TJoins>;
 }
 
-export interface FindResult<T extends Entity, TReturn, TJoins extends JoinInfo = never> extends PromiseLike<TReturn[]> {
+export interface FindResult<T extends Entity, TReturn, TJoins extends AnyJoinInfo = never> extends PromiseLike<TReturn[]> {
   select<TKeys extends string & keyof T>(keys: TKeys[]): FindResult<T, Pick<T, TKeys>, TJoins>;
   where(args: JoinedWhereQuery<T, TJoins>): FindResult<T, TReturn, TJoins>;
   populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T, TPopulateType extends GetValueType<T[TProperty], Entity>, TPopulateSelectKeys extends string & keyof TPopulateType>(
@@ -49,12 +78,39 @@ export interface FindResult<T extends Entity, TReturn, TJoins extends JoinInfo =
     propertyName: TProperty,
     alias?: TAlias,
   ): FindResult<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
+  /**
+   * Join a subquery with type-safe column tracking.
+   * Use `agg()` helper when building the subquery to enable type-safe sorting.
+   * @example
+   * const counts = subquery(ProductRepository)
+   *   .select(['store', agg(s => s.count(), 'productCount')])
+   *   .groupBy(['store']);
+   * StoreRepository.find()
+   *   .join(counts, 'stats', { on: { id: 'store' } })
+   *   .sort('stats.productCount desc')  // Type-safe!
+   */
+  join<TAlias extends string, TColumns extends string>(
+    subquery: TypedSubqueryBuilder<TColumns>,
+    alias: TAlias,
+    options: { on: SubqueryJoinOnCondition },
+  ): FindResult<T, TReturn, SubqueryJoinInfo<TAlias, TColumns> | TJoins>;
+  /** @deprecated Use `agg()` helper for type-safe subquery column sorting */
   join(subquery: SubqueryBuilderLike, alias: string, options: { on: SubqueryJoinOnCondition }): FindResult<T, TReturn, TJoins>;
   leftJoin<TProperty extends ModelRelationshipKeys<T>, TAlias extends string = TProperty>(
     propertyName: TProperty,
     alias?: TAlias,
     on?: WhereQuery<GetValueType<T[TProperty], Entity>>,
   ): FindResult<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
+  /**
+   * Left join a subquery with type-safe column tracking.
+   * Use `agg()` helper when building the subquery to enable type-safe sorting.
+   */
+  leftJoin<TAlias extends string, TColumns extends string>(
+    subquery: TypedSubqueryBuilder<TColumns>,
+    alias: TAlias,
+    options: { on: SubqueryJoinOnCondition },
+  ): FindResult<T, TReturn, SubqueryJoinInfo<TAlias, TColumns> | TJoins>;
+  /** @deprecated Use `agg()` helper for type-safe subquery column sorting */
   leftJoin(subquery: SubqueryBuilderLike, alias: string, options: { on: SubqueryJoinOnCondition }): FindResult<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindResult<T, TReturn, TJoins>;
   limit(value: number): FindResult<T, TReturn, TJoins>;

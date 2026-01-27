@@ -8,7 +8,7 @@ import { anyString, anything, capture, instance, mock, reset, verify, when } fro
 
 import type { PoolQueryResult, QueryResult, QueryResultPopulated, QueryResultRow, ReadonlyRepository, Repository } from '../src/index.js';
 import { initialize, subquery } from '../src/index.js';
-import type { SelectAggregateExpression, Sort, WhereQuery } from '../src/query/index.js';
+import type { SelectAggregateExpression, Sort, TypedAggregateExpression, WhereQuery } from '../src/query/index.js';
 
 import type { ParkingLot } from './models/index.js';
 import {
@@ -2593,6 +2593,140 @@ describe('ReadonlyRepository', () => {
 
           should.exist(thrownError);
           thrownError!.message.should.equal('Alias is required when joining to a subquery');
+        });
+
+        describe('type-safe subquery column sorting', () => {
+          it('should support sorting by subquery column without type cast', async () => {
+            const stores = [generator.store()];
+
+            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+            const productCounts = subquery(ProductRepository)
+              .select(['store', (sb): TypedAggregateExpression<'productCount'> => sb.count().as('productCount')])
+              .groupBy(['store']);
+
+            const result = await StoreRepository.find()
+              .join(productCounts, 'productStats', { on: { id: 'store' } })
+              .sort('productStats.productCount desc');
+
+            assert(result);
+            result.should.deep.equal(stores);
+
+            const [query, params] = capture(mockedPool.query).first();
+            query.should.equal(
+              'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."productCount" DESC',
+            );
+            assert(params);
+            params.should.deep.equal([]);
+          });
+
+          it('should support sorting by subquery property column without type cast', async () => {
+            const stores = [generator.store()];
+
+            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+            const productCounts = subquery(ProductRepository)
+              .select(['store', (sb): TypedAggregateExpression<'productCount'> => sb.count().as('productCount')])
+              .groupBy(['store']);
+
+            const result = await StoreRepository.find()
+              .join(productCounts, 'productStats', { on: { id: 'store' } })
+              .sort('productStats.store asc');
+
+            assert(result);
+            result.should.deep.equal(stores);
+
+            const [query, params] = capture(mockedPool.query).first();
+            query.should.equal(
+              'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."store"',
+            );
+            assert(params);
+            params.should.deep.equal([]);
+          });
+
+          it('should reject invalid subquery column names at compile time', () => {
+            // This test verifies TypeScript catches invalid column names at compile time.
+            // The @ts-expect-error directive on the .sort() call confirms the type error is detected.
+            const productCounts = subquery(ProductRepository)
+              .select(['store', (sb): TypedAggregateExpression<'productCount'> => sb.count().as('productCount')])
+              .groupBy(['store']);
+
+            // We don't actually execute this - just building it to verify types
+            const _query = StoreRepository.find()
+              .join(productCounts, 'productStats', { on: { id: 'store' } })
+              // @ts-expect-error - 'invalidColumn' is not a selected column in the subquery
+              .sort('productStats.invalidColumn desc');
+
+            // The existence of @ts-expect-error above proves the type system rejects invalid columns
+            assert(_query);
+          });
+
+          it('should support mixed model and subquery joins with type-safe sorting', async () => {
+            const testStore = generator.store();
+            const products = [generator.product({ store: testStore.id })];
+
+            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+            const categoryCounts = subquery(ProductRepository)
+              .select(['store', (sb): TypedAggregateExpression<'categoryProductCount'> => sb.count().as('categoryProductCount')])
+              .groupBy(['store']);
+
+            const result = await ProductRepository.find()
+              .join('store')
+              .join(categoryCounts, 'stats', { on: { store: 'store' } })
+              .sort('store.name asc')
+              .sort('stats.categoryProductCount desc');
+
+            assert(result);
+            result.should.deep.equal(products);
+          });
+
+          it('should support multiple subquery joins with type-safe sorting', async () => {
+            const stores = [generator.store()];
+
+            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+            const productCounts = subquery(ProductRepository)
+              .select(['store', (sb): TypedAggregateExpression<'productCount'> => sb.count().as('productCount')])
+              .groupBy(['store']);
+
+            const avgPrices = subquery(ProductRepository)
+              .select(['store', (sb): TypedAggregateExpression<'avgPrice'> => sb.avg('id').as('avgPrice')])
+              .groupBy(['store']);
+
+            const result = await StoreRepository.find()
+              .join(productCounts, 'counts', { on: { id: 'store' } })
+              .join(avgPrices, 'prices', { on: { id: 'store' } })
+              .sort('counts.productCount desc')
+              .sort('prices.avgPrice asc');
+
+            assert(result);
+            result.should.deep.equal(stores);
+          });
+
+          it('should support left join with type-safe subquery sorting', async () => {
+            const stores = [generator.store()];
+
+            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+            const productCounts = subquery(ProductRepository)
+              .select(['store', (sb): TypedAggregateExpression<'productCount'> => sb.count().as('productCount')])
+              .groupBy(['store']);
+
+            const result = await StoreRepository.find()
+              .leftJoin(productCounts, 'productStats', { on: { id: 'store' } })
+              .sort('productStats.productCount desc');
+
+            assert(result);
+            result.should.deep.equal(stores);
+
+            const [query, params] = capture(mockedPool.query).first();
+            query.should.equal(
+              'SELECT "id","name" FROM "stores" LEFT JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."productCount" DESC',
+            );
+            assert(params);
+            params.should.deep.equal([]);
+          });
         });
       });
     });

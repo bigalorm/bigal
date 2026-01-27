@@ -10,7 +10,7 @@ export interface SelectAggregateExpression {
 
 export interface AggregateBuilder {
   distinct(): AggregateBuilder;
-  as(alias: string): SelectAggregateExpression;
+  as<TAlias extends string>(alias: TAlias): SelectAggregateExpression & { readonly alias: TAlias };
   readonly _expression: SelectAggregateExpression;
 }
 
@@ -35,7 +35,7 @@ export class SelectBuilder<T extends Entity> {
     return this._createAggregateBuilder('min', column);
   }
 
-  private _createAggregateBuilder(fn: SelectAggregateExpression['fn'], column?: string): AggregateBuilder {
+  protected _createAggregateBuilder(fn: SelectAggregateExpression['fn'], column?: string): AggregateBuilder {
     let expression: SelectAggregateExpression = {
       _type: 'aggregate',
       fn,
@@ -52,8 +52,8 @@ export class SelectBuilder<T extends Entity> {
         expression = { ...expression, distinct: true };
         return builder;
       },
-      as(alias: string) {
-        return { ...expression, alias };
+      as<TAlias extends string>(alias: TAlias) {
+        return { ...expression, alias } as SelectAggregateExpression & { readonly alias: TAlias };
       },
     };
 

@@ -17,6 +17,12 @@ npx tsc --noEmit # Type-check without emitting files
 
 ## Code Style Guidelines
 
+## Required Skills
+
+Always invoke the following skills when editing files:
+
+- `/enforcing-typescript-standards` - When creating or modifying `.ts` files
+
 ### Naming Conventions
 
 - Use self-descriptive names for variables, functions, parameters, and types

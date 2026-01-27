@@ -8,6 +8,33 @@ import type { AggregateBuilder, SelectAggregateExpression } from './SelectBuilde
 
 import type { Sort, SortObject, WhereQuery } from './index.js';
 
+/**
+ * An aggregate expression with a typed alias from `.as()`.
+ */
+export type TypedAggregateExpression<TAlias extends string> = SelectAggregateExpression & { readonly alias: TAlias };
+
+/**
+ * A callback that creates an aggregate with a typed alias.
+ */
+export type AggregateCallback<T extends Entity, TAlias extends string> = (builder: SelectBuilder<T>) => TypedAggregateExpression<TAlias>;
+
+/**
+ * Extracts the alias type from a select item.
+ */
+type ExtractItemAlias<T extends Entity, TItem> = TItem extends string & keyof T ? TItem : TItem extends AggregateCallback<T, infer A> ? A : TItem extends TypedAggregateExpression<infer A> ? A : never;
+
+/**
+ * Extracts all alias types from an array of select items using mapped type.
+ */
+type ExtractAllAliases<T extends Entity, TItems extends readonly unknown[]> = {
+  [K in keyof TItems]: ExtractItemAlias<T, TItems[K]>;
+}[number];
+
+/**
+ * Valid select items for type-safe column tracking.
+ */
+export type TypedSelectItem<T extends Entity> = AggregateCallback<T, string> | TypedAggregateExpression<string> | (string & keyof T);
+
 export type SelectItem<T extends Entity> = ((builder: SelectBuilder<T>) => AggregateBuilder | SelectAggregateExpression) | (string & keyof T);
 
 export interface HavingComparer {
@@ -21,7 +48,7 @@ export interface HavingComparer {
 export type HavingCondition = Record<string, HavingComparer | number>;
 
 /**
- * Structural type that accepts any SubqueryBuilder<T> regardless of T.
+ * Structural type that accepts any SubqueryBuilder<T, TColumns> regardless of T or TColumns.
  * Uses `unknown` for generic-dependent properties to allow variance.
  * Only includes data properties, not methods, to avoid method return type variance issues.
  */
@@ -36,7 +63,15 @@ export interface SubqueryBuilderLike {
   _having?: HavingCondition;
 }
 
-export class SubqueryBuilder<T extends Entity> {
+/**
+ * Structural type for typed subquery builders that tracks selected columns.
+ * Used by join operations to enable type-safe sorting on subquery columns.
+ */
+export interface TypedSubqueryBuilder<TColumns extends string = never> extends SubqueryBuilderLike {
+  readonly _columns?: TColumns;
+}
+
+export class SubqueryBuilder<T extends Entity, TColumns extends string = never> implements TypedSubqueryBuilder<TColumns> {
   public readonly _repository: IReadonlyRepository<T> | IRepository<T>;
   public _select?: string[];
   public _selectExpressions?: SelectAggregateExpression[];
@@ -46,22 +81,39 @@ export class SubqueryBuilder<T extends Entity> {
   public _groupBy?: (string & keyof T)[];
   public _having?: HavingCondition;
 
+  // Phantom property to carry column type information
+  public readonly _columns?: TColumns;
+
   public constructor(repository: IReadonlyRepository<T> | IRepository<T>) {
     this._repository = repository;
   }
 
   /**
-   * Select columns and/or aggregate expressions for the subquery.
-   * @returns New SubqueryBuilder with the select applied
+   * Select columns and/or aggregate expressions for the subquery with type-safe column tracking.
+   * @returns New SubqueryBuilder with the select applied and column types tracked
    * @example
-   * // Select columns only
-   * subquery(ProductRepository).select(['id', 'name'])
+   * // Type-safe select with callback aggregates
+   * subquery(ProductRepository)
+   *   .select(['store', (sb) => sb.count().as('productCount')])
+   *   .groupBy(['store']);
    *
-   * // Select with aggregates
-   * subquery(ProductRepository).select(['storeId', s => s.count().as('productCount')])
+   * // Can then sort type-safely after joining:
+   * StoreRepository.find()
+   *   .join(productCounts, 'stats', { on: { id: 'store' } })
+   *   .sort('stats.productCount desc')  // No type cast needed!
    */
-  public select(columns: SelectItem<T>[]): SubqueryBuilder<T> {
-    const cloned = this.cloneBuilder();
+  public select<const TItems extends readonly TypedSelectItem<T>[]>(columns: TItems): SubqueryBuilder<T, ExtractAllAliases<T, TItems>>;
+
+  /**
+   * Select columns and/or aggregate expressions for the subquery (untyped signature).
+   * Note: Using aggregate callbacks that return `AggregateBuilder` instead of calling `.as()`
+   * does not enable type-safe sorting.
+   * @returns New SubqueryBuilder with the select applied
+   */
+  public select(columns: SelectItem<T>[]): SubqueryBuilder<T>;
+
+  public select<const TItems extends readonly (SelectItem<T> | TypedSelectItem<T>)[]>(columns: TItems): SubqueryBuilder<T, ExtractAllAliases<T, TItems>> {
+    const cloned = this.cloneBuilder<ExtractAllAliases<T, TItems>>();
     cloned._select = [];
     cloned._selectExpressions = [];
 
@@ -70,10 +122,14 @@ export class SubqueryBuilder<T extends Entity> {
     for (const item of columns) {
       if (typeof item === 'string') {
         cloned._select.push(item);
-      } else {
-        const result = item(selectBuilder);
+      } else if (typeof item === 'function') {
+        const fn = item as (builder: SelectBuilder<T>) => AggregateBuilder | SelectAggregateExpression;
+        const result = fn(selectBuilder);
         const expr = '_expression' in result ? result._expression : result;
         cloned._selectExpressions.push(expr);
+      } else {
+        // TypedAggregateExpression or SelectAggregateExpression
+        cloned._selectExpressions.push(item);
       }
     }
 
@@ -85,11 +141,11 @@ export class SubqueryBuilder<T extends Entity> {
    * @returns New SubqueryBuilder with the groupBy applied
    * @example
    * subquery(ProductRepository)
-   *   .select(['storeId', s => s.count().as('productCount')])
+   *   .select(['storeId', (sb) => sb.count().as('productCount')])
    *   .groupBy(['storeId'])
    */
-  public groupBy(columns: (string & keyof T)[]): SubqueryBuilder<T> {
-    const cloned = this.cloneBuilder();
+  public groupBy(columns: (string & keyof T)[]): SubqueryBuilder<T, TColumns> {
+    const cloned = this.cloneBuilder<TColumns>();
     cloned._groupBy = columns;
     return cloned;
   }
@@ -99,30 +155,30 @@ export class SubqueryBuilder<T extends Entity> {
    * @returns New SubqueryBuilder with the having condition applied
    * @example
    * subquery(ProductRepository)
-   *   .select(['storeId', s => s.count().as('productCount')])
+   *   .select(['storeId', (sb) => sb.count().as('productCount')])
    *   .groupBy(['storeId'])
    *   .having({ productCount: { '>': 5 } })
    */
-  public having(condition: HavingCondition): SubqueryBuilder<T> {
-    const cloned = this.cloneBuilder();
+  public having(condition: HavingCondition): SubqueryBuilder<T, TColumns> {
+    const cloned = this.cloneBuilder<TColumns>();
     cloned._having = condition;
     return cloned;
   }
 
-  public where(query: WhereQuery<T>): SubqueryBuilder<T> {
-    const cloned = this.cloneBuilder();
+  public where(query: WhereQuery<T>): SubqueryBuilder<T, TColumns> {
+    const cloned = this.cloneBuilder<TColumns>();
     cloned._where = query;
     return cloned;
   }
 
-  public sort(value: Sort<T>): SubqueryBuilder<T> {
-    const cloned = this.cloneBuilder();
+  public sort(value: Sort<T>): SubqueryBuilder<T, TColumns> {
+    const cloned = this.cloneBuilder<TColumns>();
     cloned._sort = value as SortObject<T> | string;
     return cloned;
   }
 
-  public limit(maxRows: number): SubqueryBuilder<T> {
-    const cloned = this.cloneBuilder();
+  public limit(maxRows: number): SubqueryBuilder<T, TColumns> {
+    const cloned = this.cloneBuilder<TColumns>();
     cloned._limit = maxRows;
     return cloned;
   }
@@ -147,8 +203,8 @@ export class SubqueryBuilder<T extends Entity> {
     return new ScalarSubquery<T[K]>(this as unknown as SubqueryBuilder<Entity>, 'min', column);
   }
 
-  private cloneBuilder(): SubqueryBuilder<T> {
-    const cloned = new SubqueryBuilder<T>(this._repository);
+  private cloneBuilder<TNewColumns extends string>(): SubqueryBuilder<T, TNewColumns> {
+    const cloned = new SubqueryBuilder<T, TNewColumns>(this._repository);
     cloned._select = this._select;
     cloned._selectExpressions = this._selectExpressions;
     cloned._where = this._where;
