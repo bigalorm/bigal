@@ -295,10 +295,10 @@ Generated SQL:
 
 ```sql
 SELECT "store_id" AS "store",
-       COUNT(*) AS "totalProducts",
-       SUM("price") AS "totalValue",
-       AVG("price") AS "avgPrice",
-       COUNT(DISTINCT "name") AS "uniqueNames"
+  COUNT(*) AS "totalProducts",
+  SUM("price") AS "totalValue",
+  AVG("price") AS "avgPrice",
+  COUNT(DISTINCT "name") AS "uniqueNames"
 FROM "products"
 GROUP BY "store_id"
 ```
