@@ -66,7 +66,7 @@
     "build": "unbuild",
     "check:types": "tsc --noEmit --skipLibCheck",
     "test": "mocha --loader=ts-node/esm tests/**/*.tests.ts",
-    "lint:markdown": "prettier --write '*.md' '!(node_modules|dist)/**/*.md' && markdownlint '*.md' '!(node_modules|dist)/**/*.md' --config=.github/linters/.markdown-lint.yml --fix",
+    "lint:markdown": "prettier --write '**/*.md' '!**/node_modules/**' '!**/dist/**' && markdownlint '**/*.md' --ignore '**/node_modules/**' --ignore '**/dist/**' --config=.github/linters/.markdown-lint.yml --fix",
     "lint:code": "eslint --fix",
     "lint": "run-p lint:*",
     "lint-staged": "lint-staged",

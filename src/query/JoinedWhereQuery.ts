@@ -10,7 +10,25 @@ export interface JoinInfo<TProperty extends string = string, TAlias extends stri
   entity: TEntity;
 }
 
-type JoinAliases<TJoins extends JoinInfo> = TJoins['alias'];
+/**
+ * Join info for subquery joins - tracks alias and available column names.
+ * Distinguished from JoinInfo by the _brand discriminator.
+ */
+export interface SubqueryJoinInfo<TAlias extends string = string, TColumns extends string = string> {
+  alias: TAlias;
+  columns: TColumns;
+  _brand: 'subquery';
+}
+
+/**
+ * Union type for any join info (model or subquery).
+ */
+export type AnyJoinInfo = JoinInfo | SubqueryJoinInfo;
+
+/**
+ * Extracts aliases from model JoinInfo only.
+ */
+type ModelJoinAliases<TJoins extends AnyJoinInfo> = Extract<TJoins, JoinInfo>['alias'];
 
 type GetJoinedEntity<TJoins extends JoinInfo, TAlias extends string> = Extract<TJoins, { alias: TAlias }>['entity'];
 
@@ -18,6 +36,7 @@ type JoinedPropertyConstraint<TJoinedEntity extends Entity, TPropertyValue> = Wh
 
 /**
  * WhereQuery that supports nested where clauses for joined relationships.
+ * Note: Subquery joins do not support where clause filtering by alias.
  * @example
  * .join('store', 'primaryStore')
  * .where({ primaryStore: { name: 'Acme' } })
@@ -25,13 +44,16 @@ type JoinedPropertyConstraint<TJoinedEntity extends Entity, TPropertyValue> = Wh
  * .join('store')
  * .where({ store: { name: 'Acme' } })
  */
-export type JoinedWhereQuery<T extends Entity, TJoins extends JoinInfo = never> = WhereQuery<T> &
+export type JoinedWhereQuery<T extends Entity, TJoins extends AnyJoinInfo = never> = WhereQuery<T> &
   ([TJoins] extends [never]
     ? // eslint-disable-next-line @typescript-eslint/no-empty-object-type
       {}
-    : {
-        [K in JoinAliases<TJoins>]?: JoinedPropertyConstraint<GetJoinedEntity<TJoins, K>, GetJoinedEntity<TJoins, K>>;
-      }) & {
+    : [Extract<TJoins, JoinInfo>] extends [never]
+      ? // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+        {}
+      : {
+          [K in ModelJoinAliases<TJoins>]?: JoinedPropertyConstraint<GetJoinedEntity<Extract<TJoins, JoinInfo>, K>, GetJoinedEntity<Extract<TJoins, JoinInfo>, K>>;
+        }) & {
     and?: JoinedWhereQuery<T, TJoins>[];
     or?: JoinedWhereQuery<T, TJoins>[];
   };

@@ -1,22 +1,45 @@
 import type { Entity } from '../Entity.js';
 import type { OmitEntityCollections, OmitFunctions } from '../types/index.js';
 
-import type { JoinInfo } from './JoinedWhereQuery.js';
+import type { AnyJoinInfo, JoinInfo, SubqueryJoinInfo } from './JoinedWhereQuery.js';
 import type { Sort } from './Sort.js';
 
-type JoinAliases<TJoins extends JoinInfo> = TJoins['alias'];
+// Re-export for convenience
+export type { AnyJoinInfo } from './JoinedWhereQuery.js';
 
-type GetJoinedEntity<TJoins extends JoinInfo, TAlias extends string> = Extract<TJoins, { alias: TAlias }>['entity'];
+/**
+ * Extracts all aliases from a union of join info types.
+ */
+type AnyJoinAliases<TJoins extends AnyJoinInfo> = TJoins['alias'];
 
-type JoinedColumnPath<TJoins extends JoinInfo, TAlias extends JoinAliases<TJoins> = JoinAliases<TJoins>> = TAlias extends string
-  ? `${TAlias}.${string & keyof OmitFunctions<OmitEntityCollections<GetJoinedEntity<TJoins, TAlias>>>}`
-  : never;
+/**
+ * Gets available columns for any join type (model or subquery).
+ */
+type GetJoinColumns<TJoins extends AnyJoinInfo, TAlias extends string> =
+  Extract<TJoins, { alias: TAlias }> extends SubqueryJoinInfo<TAlias, infer TColumns>
+    ? TColumns
+    : Extract<TJoins, { alias: TAlias }> extends JoinInfo<string, TAlias, infer TEntity>
+      ? string & keyof OmitFunctions<OmitEntityCollections<TEntity>>
+      : never;
 
-type JoinedSortString<TJoins extends JoinInfo> =
-  | JoinedColumnPath<TJoins>
-  | `${JoinedColumnPath<TJoins>} ASC`
-  | `${JoinedColumnPath<TJoins>} asc`
-  | `${JoinedColumnPath<TJoins>} DESC`
-  | `${JoinedColumnPath<TJoins>} desc`;
+/**
+ * Creates column path strings for any join type.
+ * For model joins: uses entity property names
+ * For subquery joins: uses tracked column names
+ */
+type AnyJoinedColumnPath<TJoins extends AnyJoinInfo, TAlias extends AnyJoinAliases<TJoins> = AnyJoinAliases<TJoins>> = TAlias extends string ? `${TAlias}.${GetJoinColumns<TJoins, TAlias>}` : never;
 
-export type JoinedSort<T extends Entity, TJoins extends JoinInfo = never> = [TJoins] extends [never] ? Sort<T> : JoinedSortString<TJoins> | Sort<T>;
+/**
+ * Sort strings for joined columns (model or subquery joins).
+ */
+type JoinedSortString<TJoins extends AnyJoinInfo> =
+  | AnyJoinedColumnPath<TJoins>
+  | `${AnyJoinedColumnPath<TJoins>} ASC`
+  | `${AnyJoinedColumnPath<TJoins>} asc`
+  | `${AnyJoinedColumnPath<TJoins>} DESC`
+  | `${AnyJoinedColumnPath<TJoins>} desc`;
+
+/**
+ * Sort type that supports both base entity columns and joined columns (from model or subquery joins).
+ */
+export type JoinedSort<T extends Entity, TJoins extends AnyJoinInfo = never> = [TJoins] extends [never] ? Sort<T> : JoinedSortString<TJoins> | Sort<T>;
