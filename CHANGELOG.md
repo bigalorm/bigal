@@ -1,3 +1,9 @@
+## [15.9.1](https://github.com/bigalorm/bigal/compare/v15.9.0...v15.9.1) (2026-01-27)
+
+### Bug Fixes
+
+- Type-safe sorting on subquery join columns ([#289](https://github.com/bigalorm/bigal/issues/289)) ([59d74bb](https://github.com/bigalorm/bigal/commit/59d74bbbf5fd768d99316d910e6345c4000f3de4))
+
 # [15.9.0](https://github.com/bigalorm/bigal/compare/v15.8.0...v15.9.0) (2026-01-24)
 
 ### Features
