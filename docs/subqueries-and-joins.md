@@ -474,19 +474,19 @@ const latestActiveProducts = await ProductRepository.find()
 
 2. **ORDER BY must start with DISTINCT ON columns**: The first columns in ORDER BY must match the DISTINCT ON columns in the same order.
 
-   ```ts
-   // Correct
-   .distinctOn(['store', 'category'])
-   .sort('store')
-   .sort('category')
-   .sort('createdAt desc')
+```ts
+// Correct
+.distinctOn(['store', 'category'])
+.sort('store')
+.sort('category')
+.sort('createdAt desc')
 
-   // Error: ORDER BY must start with 'store', not 'createdAt'
-   .distinctOn(['store'])
-   .sort('createdAt desc')
-   ```
+// Error: ORDER BY must start with 'store', not 'createdAt'
+.distinctOn(['store'])
+.sort('createdAt desc')
+```
 
-3. **Cannot be combined with `withCount()`**: Due to PostgreSQL limitations, `distinctOn()` throws an error if combined with `withCount()`.
+1. **Cannot be combined with `withCount()`**: Due to PostgreSQL limitations, `distinctOn()` throws an error if combined with `withCount()`.
 
 ### Using DISTINCT ON in Subqueries
 
