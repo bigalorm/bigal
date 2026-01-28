@@ -1,3 +1,9 @@
+# [15.10.0](https://github.com/bigalorm/bigal/compare/v15.9.1...v15.10.0) (2026-01-28)
+
+### Features
+
+- Add support for distinctOn ([#291](https://github.com/bigalorm/bigal/issues/291)) ([6abfa70](https://github.com/bigalorm/bigal/commit/6abfa70c43ecb20e43f60ac2838a33dd40ac4f34))
+
 ## [15.9.1](https://github.com/bigalorm/bigal/compare/v15.9.0...v15.9.1) (2026-01-27)
 
 ### Bug Fixes
