@@ -1,5 +1,5 @@
 import type { Entity } from '../Entity.js';
-import type { GetValueType, ModelRelationshipKeys, PickByValueType, PlainObject, Populated } from '../types/index.js';
+import type { GetValueType, ModelRelationshipKeys, OmitEntityCollections, OmitFunctions, PickByValueType, PlainObject, Populated } from '../types/index.js';
 
 import type { FindQueryWithCount, FindQueryWithCountJSON } from './FindWithCountResult.js';
 import type { SubqueryJoinOnCondition } from './JoinDefinition.js';
@@ -57,6 +57,13 @@ export interface FindResultJSON<T extends Entity, TReturn, TJoins extends AnyJoi
   ): FindResultJSON<T, TReturn, SubqueryJoinInfo<TAlias, TColumns> | TJoins>;
   /** @deprecated Use `agg()` helper for type-safe subquery column sorting */
   leftJoin(subquery: SubqueryBuilderLike, alias: string, options: { on: SubqueryJoinOnCondition }): FindResultJSON<T, TReturn, TJoins>;
+  /**
+   * Selects distinct rows based on the specified columns (PostgreSQL DISTINCT ON).
+   * The ORDER BY clause must start with the same columns in the same order.
+   * Cannot be combined with withCount().
+   * @param columns - Column names for DISTINCT ON clause
+   */
+  distinctOn(columns: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]): FindResultJSON<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindResultJSON<T, TReturn, TJoins>;
   limit(value: number): FindResultJSON<T, TReturn, TJoins>;
   skip(value: number): FindResultJSON<T, TReturn, TJoins>;
@@ -112,6 +119,13 @@ export interface FindResult<T extends Entity, TReturn, TJoins extends AnyJoinInf
   ): FindResult<T, TReturn, SubqueryJoinInfo<TAlias, TColumns> | TJoins>;
   /** @deprecated Use `agg()` helper for type-safe subquery column sorting */
   leftJoin(subquery: SubqueryBuilderLike, alias: string, options: { on: SubqueryJoinOnCondition }): FindResult<T, TReturn, TJoins>;
+  /**
+   * Selects distinct rows based on the specified columns (PostgreSQL DISTINCT ON).
+   * The ORDER BY clause must start with the same columns in the same order.
+   * Cannot be combined with withCount().
+   * @param columns - Column names for DISTINCT ON clause
+   */
+  distinctOn(columns: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]): FindResult<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindResult<T, TReturn, TJoins>;
   limit(value: number): FindResult<T, TReturn, TJoins>;
   skip(value: number): FindResult<T, TReturn, TJoins>;

@@ -37,6 +37,7 @@ interface QueryAndParams {
  * @param {number} [args.limit] - Number of results to return
  * @param {JoinDefinition[]} [args.joins] - Array of join definitions
  * @param {boolean} [args.includeCount] - If true, includes COUNT(*) OVER() for total count
+ * @param {string[]} [args.distinctOn] - Column names for DISTINCT ON clause
  * @returns {{query: string, params: object[]}}
  */
 export function getSelectQueryAndParams<T extends Entity>({
@@ -49,6 +50,7 @@ export function getSelectQueryAndParams<T extends Entity>({
   limit,
   joins,
   includeCount,
+  distinctOn,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
@@ -59,8 +61,56 @@ export function getSelectQueryAndParams<T extends Entity>({
   limit: number;
   joins?: readonly JoinDefinition[];
   includeCount?: boolean;
+  distinctOn?: readonly string[];
 }): QueryAndParams {
+  // Validate DISTINCT ON usage
+  if (distinctOn?.length) {
+    if (!sorts.length) {
+      throw new QueryError('DISTINCT ON requires ORDER BY clause. The ORDER BY must start with the DISTINCT ON columns.', model);
+    }
+
+    for (const [i, distinctOnProperty] of distinctOn.entries()) {
+      if (!distinctOnProperty) {
+        continue;
+      }
+
+      const orderByEntry = sorts[i];
+      if (!orderByEntry) {
+        throw new QueryError(`DISTINCT ON columns must match the leftmost ORDER BY columns. Missing ORDER BY for column "${distinctOnProperty}".`, model);
+      }
+
+      const distinctOnColumn = model.columnsByPropertyName[distinctOnProperty];
+      if (!distinctOnColumn) {
+        throw new QueryError(`Unable to find column for DISTINCT ON property: ${distinctOnProperty} on ${model.tableName}`, model);
+      }
+
+      const orderByColumn = model.columnsByPropertyName[orderByEntry.propertyName];
+      if (!orderByColumn) {
+        throw new QueryError(`Unable to find column for ORDER BY property: ${orderByEntry.propertyName} on ${model.tableName}`, model);
+      }
+
+      if (distinctOnColumn.name !== orderByColumn.name) {
+        throw new QueryError(
+          `DISTINCT ON columns must match the leftmost ORDER BY columns in order. Expected ORDER BY to start with "${distinctOnProperty}" but found "${orderByEntry.propertyName}".`,
+          model,
+        );
+      }
+    }
+  }
+
   let query = 'SELECT ';
+
+  if (distinctOn?.length) {
+    const distinctOnColumnNames = distinctOn.map((propertyName) => {
+      const column = model.columnsByPropertyName[propertyName];
+      if (!column) {
+        throw new QueryError(`Unable to find column for DISTINCT ON property: ${propertyName} on ${model.tableName}`, model);
+      }
+
+      return `"${column.name}"`;
+    });
+    query += `DISTINCT ON (${distinctOnColumnNames.join(',')}) `;
+  }
 
   query += getColumnsToSelect({
     model,
@@ -841,7 +891,22 @@ function buildSubquerySelectSQL({
     throw new QueryError('Subquery join must have at least one selected column or expression', subqueryModel);
   }
 
-  let sql = `SELECT ${selectParts.join(',')} FROM "${subqueryModel.tableName}"`;
+  let sql = 'SELECT ';
+
+  // Add DISTINCT ON clause if specified
+  if (subquery._distinctOn?.length) {
+    const distinctOnColumns = subquery._distinctOn.map((propertyName) => {
+      const column = subqueryModel.columnsByPropertyName[propertyName];
+      if (!column) {
+        throw new QueryError(`Unable to find column for DISTINCT ON property: ${propertyName} on ${subqueryModel.tableName}`, subqueryModel);
+      }
+
+      return `"${column.name}"`;
+    });
+    sql += `DISTINCT ON (${distinctOnColumns.join(',')}) `;
+  }
+
+  sql += `${selectParts.join(',')} FROM "${subqueryModel.tableName}"`;
 
   if (subquery._where && Object.keys(subquery._where as object).length) {
     const { whereStatement } = buildWhereStatement({
@@ -2245,6 +2310,19 @@ export function buildSubquerySQL<T extends Entity>({
   const model = subquery._repository.model;
 
   let sql = 'SELECT ';
+
+  // Add DISTINCT ON clause if specified
+  if (subquery._distinctOn?.length) {
+    const distinctOnColumns = subquery._distinctOn.map((propertyName) => {
+      const column = model.columnsByPropertyName[propertyName];
+      if (!column) {
+        throw new QueryError(`Unable to find column for DISTINCT ON property: ${propertyName} on ${model.tableName}`, model);
+      }
+
+      return `"${column.name}"`;
+    });
+    sql += `DISTINCT ON (${distinctOnColumns.join(',')}) `;
+  }
 
   if (subquery._select?.length) {
     sql += subquery._select

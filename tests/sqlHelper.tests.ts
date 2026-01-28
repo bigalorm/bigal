@@ -246,6 +246,143 @@ describe('sqlHelper', () => {
         params.should.deep.equal([]);
       });
     });
+
+    describe('distinctOn', () => {
+      it('should generate DISTINCT ON clause with single column', () => {
+        const { query, params } = sqlHelper.getSelectQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: {},
+          sorts: [{ propertyName: 'store' }],
+          skip: 0,
+          limit: 0,
+          distinctOn: ['store'],
+        });
+
+        query.should.equal('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id"');
+        params.should.deep.equal([]);
+      });
+
+      it('should generate DISTINCT ON clause with multiple columns', () => {
+        const { query, params } = sqlHelper.getSelectQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: {},
+          sorts: [{ propertyName: 'store' }, { propertyName: 'name', descending: true }],
+          skip: 0,
+          limit: 0,
+          distinctOn: ['store', 'name'],
+        });
+
+        query.should.equal('SELECT DISTINCT ON ("store_id","name") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id","name" DESC');
+        params.should.deep.equal([]);
+      });
+
+      it('should work with additional ORDER BY columns after DISTINCT ON columns', () => {
+        const { query, params } = sqlHelper.getSelectQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
+          where: {},
+          sorts: [{ propertyName: 'store' }, { propertyName: 'createdAt', descending: true }],
+          skip: 0,
+          limit: 0,
+          distinctOn: ['store'],
+        });
+
+        query.should.equal(
+          'SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "products" ORDER BY "store_id","created_at" DESC',
+        );
+        params.should.deep.equal([]);
+      });
+
+      it('should throw error if ORDER BY is missing when using DISTINCT ON', () => {
+        ((): void => {
+          sqlHelper.getSelectQueryAndParams({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+            where: {},
+            sorts: [],
+            skip: 0,
+            limit: 0,
+            distinctOn: ['store'],
+          });
+        }).should.throw(QueryError, /DISTINCT ON requires ORDER BY/);
+      });
+
+      it('should throw error if DISTINCT ON columns do not match leftmost ORDER BY columns', () => {
+        ((): void => {
+          sqlHelper.getSelectQueryAndParams({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+            where: {},
+            sorts: [{ propertyName: 'name' }],
+            skip: 0,
+            limit: 0,
+            distinctOn: ['store'],
+          });
+        }).should.throw(QueryError, /DISTINCT ON columns must match the leftmost ORDER BY columns/);
+      });
+
+      it('should throw error if fewer ORDER BY columns than DISTINCT ON columns', () => {
+        ((): void => {
+          sqlHelper.getSelectQueryAndParams({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+            where: {},
+            sorts: [{ propertyName: 'store' }],
+            skip: 0,
+            limit: 0,
+            distinctOn: ['store', 'name'],
+          });
+        }).should.throw(QueryError, /DISTINCT ON columns must match the leftmost ORDER BY columns/);
+      });
+
+      it('should work with WHERE clause', () => {
+        const { query, params } = sqlHelper.getSelectQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: { name: 'Widget' },
+          sorts: [{ propertyName: 'store' }],
+          skip: 0,
+          limit: 0,
+          distinctOn: ['store'],
+        });
+
+        query.should.equal('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "name"=$1 ORDER BY "store_id"');
+        params.should.deep.equal(['Widget']);
+      });
+
+      it('should work with LIMIT', () => {
+        const { query, params } = sqlHelper.getSelectQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: {},
+          sorts: [{ propertyName: 'store' }],
+          skip: 0,
+          limit: 10,
+          distinctOn: ['store'],
+        });
+
+        query.should.equal('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id" LIMIT 10');
+        params.should.deep.equal([]);
+      });
+
+      it('should work with select projection', () => {
+        const { query, params } = sqlHelper.getSelectQueryAndParams({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          select: ['name', 'store'],
+          where: {},
+          sorts: [{ propertyName: 'store' }],
+          skip: 0,
+          limit: 0,
+          distinctOn: ['store'],
+        });
+
+        query.should.equal('SELECT DISTINCT ON ("store_id") "name","store_id" AS "store","id" FROM "products" ORDER BY "store_id"');
+        params.should.deep.equal([]);
+      });
+    });
   });
 
   describe('#getCountQueryAndParams()', () => {
@@ -4342,6 +4479,130 @@ describe('sqlHelper', () => {
 
         assert(thrownError);
         thrownError.message.should.include('Invalid SQL identifier');
+      });
+    });
+
+    describe('subquery distinctOn', () => {
+      it('should generate DISTINCT ON clause in subquery join', () => {
+        const distinctSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', 'name'])
+          .distinctOn(['store'])
+          .sort('store');
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: distinctSubquery,
+              alias: 'latestProducts',
+              type: 'inner',
+              on: { id: 'store' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(
+          ' INNER JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" ORDER BY "store_id") AS "latestProducts" ON "stores"."id"="latestProducts"."store"',
+        );
+      });
+
+      it('should generate DISTINCT ON with multiple columns in subquery join', () => {
+        const distinctSubquery = subquery(repositoriesByModelNameLowered.kitchensink as IRepository<KitchenSink>)
+          .select(['id', 'name', 'intColumn'])
+          .distinctOn(['id', 'name'])
+          .sort('id, name' as 'id');
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: distinctSubquery,
+              alias: 'distinctItems',
+              type: 'inner',
+              on: { id: 'id' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(
+          ' INNER JOIN (SELECT DISTINCT ON ("id","name") "id","name","int_column" AS "intColumn" FROM "kitchen_sink" ORDER BY "id","name") AS "distinctItems" ON "stores"."id"="distinctItems"."id"',
+        );
+      });
+
+      it('should generate DISTINCT ON with WHERE clause in subquery join', () => {
+        const distinctSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store', 'name'])
+          .where({ name: { '!': null } })
+          .distinctOn(['store'])
+          .sort('store');
+
+        const params: unknown[] = [];
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: distinctSubquery,
+              alias: 'activeProducts',
+              type: 'inner',
+              on: { id: 'store' },
+            },
+          ],
+          params,
+        });
+
+        result.should.equal(
+          ' INNER JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" WHERE "name" IS NOT NULL ORDER BY "store_id") AS "activeProducts" ON "stores"."id"="activeProducts"."store"',
+        );
+        params.should.deep.equal([]);
+      });
+
+      it('should generate DISTINCT ON with secondary sort in subquery join', () => {
+        const distinctSubquery = subquery(repositoriesByModelNameLowered.kitchensink as IRepository<KitchenSink>)
+          .select(['id', 'name', 'intColumn'])
+          .distinctOn(['id'])
+          .sort('id, intColumn desc' as 'id');
+
+        const result = sqlHelper.buildJoinClauses({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          joins: [
+            {
+              subquery: distinctSubquery,
+              alias: 'latestByInt',
+              type: 'left',
+              on: { id: 'id' },
+            },
+          ],
+          params: [],
+        });
+
+        result.should.equal(
+          ' LEFT JOIN (SELECT DISTINCT ON ("id") "id","name","int_column" AS "intColumn" FROM "kitchen_sink" ORDER BY "id","int_column" DESC) AS "latestByInt" ON "stores"."id"="latestByInt"."id"',
+        );
+      });
+
+      it('should generate DISTINCT ON in WHERE IN subquery', () => {
+        const distinctSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>)
+          .select(['store'])
+          .distinctOn(['store'])
+          .sort('store');
+
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.store.model as ModelMetadata<Store>,
+          where: {
+            id: { in: distinctSubquery },
+          },
+        });
+
+        assert(whereStatement);
+        whereStatement.should.equal('WHERE "id" IN (SELECT DISTINCT ON ("store_id") "store_id" FROM "products" ORDER BY "store_id")');
+        params.should.deep.equal([]);
       });
     });
   });

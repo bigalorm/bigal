@@ -18,6 +18,7 @@ This guide covers how to use subqueries and joins for advanced querying in BigAl
   - [GROUP BY](#group-by)
   - [HAVING](#having)
 - [Type-Safe Subquery Column Sorting](#type-safe-subquery-column-sorting)
+- [DISTINCT ON](#distinct-on)
 - [Best Practices](#best-practices)
 
 ## Creating Subqueries
@@ -32,14 +33,15 @@ const storeSubquery = subquery(StoreRepository).select(['id']).where({ isActive:
 
 The `SubqueryBuilder` supports the following methods:
 
-| Method              | Description                                 |
-| ------------------- | ------------------------------------------- |
-| `select(columns)`   | Specify columns and/or aggregates to select |
-| `where(query)`      | Filter rows                                 |
-| `sort(value)`       | Order results                               |
-| `limit(n)`          | Limit number of rows                        |
-| `groupBy(columns)`  | Group rows for aggregation                  |
-| `having(condition)` | Filter groups based on aggregate values     |
+| Method                | Description                                              |
+| --------------------- | -------------------------------------------------------- |
+| `select(columns)`     | Specify columns and/or aggregates to select              |
+| `where(query)`        | Filter rows                                              |
+| `sort(value)`         | Order results                                            |
+| `limit(n)`            | Limit number of rows                                     |
+| `groupBy(columns)`    | Group rows for aggregation                               |
+| `having(condition)`   | Filter groups based on aggregate values                  |
+| `distinctOn(columns)` | PostgreSQL DISTINCT ON (see [DISTINCT ON](#distinct-on)) |
 
 ## WHERE Clauses with Subqueries
 
@@ -409,6 +411,114 @@ const stores = await StoreRepository.find()
   .join(totals, 'productTotals', { on: { id: 'store' } })
   .sort('productCounts.count desc')
   .sort('productTotals.total asc');
+```
+
+## DISTINCT ON
+
+PostgreSQL's `DISTINCT ON` clause lets you get one row per unique combination of specified columns. This is useful for "greatest-per-group" queries like "get the latest order per customer."
+
+### Basic Usage
+
+```ts
+// Get one product per store (arbitrary selection)
+const products = await ProductRepository.find().distinctOn(['store']).sort('store');
+```
+
+Generated SQL:
+
+```sql
+SELECT DISTINCT ON ("store_id") * FROM "products" ORDER BY "store_id"
+```
+
+### Controlling Which Row is Selected
+
+The ORDER BY clause determines which row is kept for each group. Add secondary sort columns after the DISTINCT ON columns:
+
+```ts
+// Get the most recently created product per store
+const latestProducts = await ProductRepository.find().distinctOn(['store']).sort('store').sort('createdAt desc');
+```
+
+Generated SQL:
+
+```sql
+SELECT DISTINCT ON ("store_id") * FROM "products"
+ORDER BY "store_id", "created_at" DESC
+```
+
+### Multiple DISTINCT ON Columns
+
+```ts
+// Get one product per store+category combination
+const products = await ProductRepository.find().distinctOn(['store', 'category']).sort('store').sort('category').sort('createdAt desc');
+```
+
+### Combined with Other Query Methods
+
+`distinctOn()` works with `where()`, `select()`, `limit()`, and `toJSON()`:
+
+```ts
+const latestActiveProducts = await ProductRepository.find()
+  .select(['name', 'store', 'createdAt'])
+  .where({ isActive: true })
+  .distinctOn(['store'])
+  .sort('store')
+  .sort('createdAt desc')
+  .limit(10)
+  .toJSON();
+```
+
+### Important Constraints
+
+1. **ORDER BY is required**: PostgreSQL requires an ORDER BY clause when using DISTINCT ON.
+
+2. **ORDER BY must start with DISTINCT ON columns**: The first columns in ORDER BY must match the DISTINCT ON columns in the same order.
+
+```ts
+// Correct
+.distinctOn(['store', 'category'])
+.sort('store')
+.sort('category')
+.sort('createdAt desc')
+
+// Error: ORDER BY must start with 'store', not 'createdAt'
+.distinctOn(['store'])
+.sort('createdAt desc')
+```
+
+1. **Cannot be combined with `withCount()`**: Due to PostgreSQL limitations, `distinctOn()` throws an error if combined with `withCount()`.
+
+### Using DISTINCT ON in Subqueries
+
+`distinctOn()` is also available on `SubqueryBuilder`, enabling "greatest-per-group" patterns in subquery joins and WHERE IN clauses:
+
+```ts
+// Get the latest product per store via subquery join
+const latestProducts = subquery(ProductRepository).select(['store', 'name', 'createdAt']).distinctOn(['store']).sort('store').sort('createdAt desc');
+
+const stores = await StoreRepository.find().join(latestProducts, 'latestProduct', { on: { id: 'store' } });
+```
+
+Generated SQL:
+
+```sql
+SELECT "stores".* FROM "stores"
+INNER JOIN (
+  SELECT DISTINCT ON ("store_id") "store_id" AS "store", "name", "created_at" AS "createdAt"
+  FROM "products"
+  ORDER BY "store_id", "created_at" DESC
+) AS "latestProduct" ON "stores"."id"="latestProduct"."store"
+```
+
+You can also use it in WHERE IN subqueries:
+
+```ts
+// Find stores that have at least one product
+const distinctStores = subquery(ProductRepository).select(['store']).distinctOn(['store']).sort('store');
+
+const stores = await StoreRepository.find().where({
+  id: { in: distinctStores },
+});
 ```
 
 ## Best Practices
