@@ -513,6 +513,23 @@ const items = await PersonRepository.find().where({ lastName: 'Smith' }).sort({ 
 // SQL: SELECT ... FROM person WHERE last_name = $1 ORDER BY age ASC, created_at DESC
 ```
 
+#### DISTINCT ON
+
+Get one row per unique combination of specified columns. Useful for "greatest-per-group" queries.
+
+```ts
+// Get the most recently created product per store
+const latestPerStore = await ProductRepository.find().distinctOn(['store']).sort('store').sort('createdAt desc');
+// SQL: SELECT DISTINCT ON ("store_id") ... FROM "products" ORDER BY "store_id", "created_at" DESC
+```
+
+**Requirements:**
+
+- ORDER BY is required and must start with the DISTINCT ON columns
+- Cannot be combined with `withCount()`
+
+See the [DISTINCT ON documentation](docs/subqueries-and-joins.md#distinct-on) for more details.
+
 #### Limit number results returned
 
 ```ts

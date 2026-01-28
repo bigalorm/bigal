@@ -61,6 +61,7 @@ export interface SubqueryBuilderLike {
   _limit?: number;
   _groupBy?: string[];
   _having?: HavingCondition;
+  _distinctOn?: string[];
 }
 
 /**
@@ -80,6 +81,7 @@ export class SubqueryBuilder<T extends Entity, TColumns extends string = never> 
   public _limit?: number;
   public _groupBy?: (string & keyof T)[];
   public _having?: HavingCondition;
+  public _distinctOn?: (string & keyof T)[];
 
   // Phantom property to carry column type information
   public readonly _columns?: TColumns;
@@ -183,6 +185,24 @@ export class SubqueryBuilder<T extends Entity, TColumns extends string = never> 
     return cloned;
   }
 
+  /**
+   * Selects distinct rows based on the specified columns (PostgreSQL DISTINCT ON).
+   * The sort() clause must start with the same columns in the same order.
+   * @param {string[]} columns - Column names for DISTINCT ON clause
+   * @returns New SubqueryBuilder with the distinctOn applied
+   * @example
+   * subquery(ProductRepository)
+   *   .distinctOn(['store'])
+   *   .select(['store', 'name', 'createdAt'])
+   *   .sort('store')
+   *   .sort('createdAt desc');
+   */
+  public distinctOn(columns: (string & keyof T)[]): SubqueryBuilder<T, TColumns> {
+    const cloned = this.cloneBuilder<TColumns>();
+    cloned._distinctOn = columns;
+    return cloned;
+  }
+
   public count(): ScalarSubquery<number> {
     return new ScalarSubquery<number>(this as unknown as SubqueryBuilder<Entity>, 'count');
   }
@@ -212,6 +232,7 @@ export class SubqueryBuilder<T extends Entity, TColumns extends string = never> 
     cloned._limit = this._limit;
     cloned._groupBy = this._groupBy;
     cloned._having = this._having;
+    cloned._distinctOn = this._distinctOn;
     return cloned;
   }
 }

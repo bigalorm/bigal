@@ -2728,6 +2728,99 @@ describe('ReadonlyRepository', () => {
             params.should.deep.equal([]);
           });
         });
+
+        describe('subquery distinctOn', () => {
+          it('should support distinctOn in subquery join', async () => {
+            const stores = [generator.store()];
+
+            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+            const latestProducts = subquery(ProductRepository).select(['store', 'name']).distinctOn(['store']).sort('store');
+
+            const result = await StoreRepository.find().join(latestProducts, 'latestProduct', { on: { id: 'store' } });
+
+            assert(result);
+            result.should.deep.equal(stores);
+
+            const [query, params] = capture(mockedPool.query).first();
+            query.should.equal(
+              'SELECT "id","name" FROM "stores" INNER JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" ORDER BY "store_id") AS "latestProduct" ON "stores"."id"="latestProduct"."store"',
+            );
+            assert(params);
+            params.should.deep.equal([]);
+          });
+
+          it('should support distinctOn with where clause in subquery join', async () => {
+            const stores = [generator.store()];
+
+            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+            const latestProducts = subquery(ProductRepository)
+              .select(['store', 'name'])
+              .where({ name: { '!': null } })
+              .distinctOn(['store'])
+              .sort('store');
+
+            const result = await StoreRepository.find().leftJoin(latestProducts, 'latestProduct', { on: { id: 'store' } });
+
+            assert(result);
+            result.should.deep.equal(stores);
+
+            const [query, params] = capture(mockedPool.query).first();
+            query.should.equal(
+              'SELECT "id","name" FROM "stores" LEFT JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" WHERE "name" IS NOT NULL ORDER BY "store_id") AS "latestProduct" ON "stores"."id"="latestProduct"."store"',
+            );
+            assert(params);
+            params.should.deep.equal([]);
+          });
+
+          it('should support distinctOn with secondary sort in subquery', async () => {
+            const stores = [generator.store()];
+
+            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+
+            // Get the latest product per store (sorted by name desc as secondary sort)
+            const latestProducts = subquery(ProductRepository)
+              .select(['store', 'name'])
+              .distinctOn(['store'])
+              .sort('store, name desc' as 'store');
+
+            const result = await StoreRepository.find().join(latestProducts, 'latestProduct', { on: { id: 'store' } });
+
+            assert(result);
+            result.should.deep.equal(stores);
+
+            const [query, params] = capture(mockedPool.query).first();
+            query.should.equal(
+              'SELECT "id","name" FROM "stores" INNER JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" ORDER BY "store_id","name" DESC) AS "latestProduct" ON "stores"."id"="latestProduct"."store"',
+            );
+            assert(params);
+            params.should.deep.equal([]);
+          });
+
+          it('should support distinctOn in WHERE IN subquery', async () => {
+            const testStore = generator.store();
+            const products = [generator.product({ store: testStore.id })];
+
+            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+            const distinctStores = subquery(ProductRepository).select(['store']).distinctOn(['store']).sort('store');
+
+            const result = await ProductRepository.find().where({
+              store: { in: distinctStores },
+            });
+
+            assert(result);
+            result.should.deep.equal(products);
+
+            const [query, params] = capture(mockedPool.query).first();
+            query.should.equal(
+              'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id" IN (SELECT DISTINCT ON ("store_id") "store_id" FROM "products" ORDER BY "store_id")',
+            );
+            assert(params);
+            params.should.deep.equal([]);
+          });
+        });
       });
     });
 
@@ -3886,6 +3979,116 @@ describe('ReadonlyRepository', () => {
         result.should.deep.equal(stores);
         Array.isArray(result).should.equal(true);
         Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+      });
+    });
+
+    describe('distinctOn()', () => {
+      it('should support distinctOn with sort', async () => {
+        const products = [generator.product({ store: store.id })];
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.find().distinctOn(['store']).sort('store');
+
+        result.should.deep.equal(products);
+
+        const [query] = capture(mockedPool.query).first();
+        query.should.equal('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id"');
+      });
+
+      it('should support distinctOn with multiple columns', async () => {
+        const products = [generator.product({ store: store.id })];
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const result = await ProductRepository.find().distinctOn(['store', 'name']).sort({ store: 'asc', name: 'desc' });
+
+        result.should.deep.equal(products);
+
+        const [query] = capture(mockedPool.query).first();
+        query.should.equal('SELECT DISTINCT ON ("store_id","name") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id","name" DESC');
+      });
+
+      it('should work with where clause', async () => {
+        const products = [generator.product({ store: store.id })];
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        await ProductRepository.find()
+          .where({ name: { startsWith: 'Test' } })
+          .distinctOn(['store'])
+          .sort('store');
+
+        const [query, params] = capture(mockedPool.query).first();
+        query.should.equal('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "name" ILIKE $1 ORDER BY "store_id"');
+        assert(params);
+        params.should.deep.equal(['Test%']);
+      });
+
+      it('should work with select', async () => {
+        const products = [{ id: 1, name: 'Test', store: store.id }];
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        await ProductRepository.find().select(['name', 'store']).distinctOn(['store']).sort('store');
+
+        const [query] = capture(mockedPool.query).first();
+        query.should.equal('SELECT DISTINCT ON ("store_id") "name","store_id" AS "store","id" FROM "products" ORDER BY "store_id"');
+      });
+
+      it('should work with limit', async () => {
+        const products = [generator.product({ store: store.id })];
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        await ProductRepository.find().distinctOn(['store']).sort('store').limit(10);
+
+        const [query] = capture(mockedPool.query).first();
+        query.should.equal('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id" LIMIT 10');
+      });
+
+      it('should work with toJSON', async () => {
+        const products = [generator.product({ store: store.id })];
+        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+
+        const results = await ProductRepository.find().distinctOn(['store']).sort('store').toJSON();
+
+        results.should.deep.equal(products);
+        Object.getPrototypeOf(results[0]!).should.equal(Object.prototype);
+      });
+
+      it('should throw if distinctOn is used with withCount', async () => {
+        let thrownError: Error | undefined;
+
+        try {
+          await ProductRepository.find().distinctOn(['store']).sort('store').withCount();
+        } catch (ex) {
+          thrownError = ex as Error;
+        }
+
+        assert(thrownError);
+        thrownError.message.should.include('distinctOn cannot be used with withCount');
+      });
+
+      it('should throw if ORDER BY is missing', async () => {
+        let thrownError: Error | undefined;
+
+        try {
+          await ProductRepository.find().distinctOn(['store']);
+        } catch (ex) {
+          thrownError = ex as Error;
+        }
+
+        assert(thrownError);
+        thrownError.message.should.include('DISTINCT ON requires ORDER BY');
+      });
+
+      it('should throw if ORDER BY columns do not match DISTINCT ON columns', async () => {
+        let thrownError: Error | undefined;
+
+        try {
+          await ProductRepository.find().distinctOn(['store']).sort('name');
+        } catch (ex) {
+          thrownError = ex as Error;
+        }
+
+        assert(thrownError);
+        thrownError.message.should.include('DISTINCT ON columns must match');
       });
     });
   });

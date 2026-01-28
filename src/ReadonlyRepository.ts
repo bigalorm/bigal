@@ -378,6 +378,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     const joins: JoinDefinition[] = [];
     let includeCount = false;
     let returnAsPlainObjects = false;
+    let distinctOnColumns: string[] | undefined;
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
@@ -519,6 +520,18 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
+      /**
+       * Selects distinct rows based on the specified columns (PostgreSQL DISTINCT ON).
+       * The ORDER BY clause must start with the same columns in the same order.
+       * Cannot be combined with withCount().
+       * @param {string[]} columns - Column names for DISTINCT ON clause
+       * @returns Query instance
+       */
+      distinctOn(columns: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]): FindResult<T, TReturn> {
+        distinctOnColumns = columns;
+
+        return this;
+      },
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(_propertyName: TProperty): FindResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>> {
         return this as unknown as FindResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
@@ -534,6 +547,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         return this.skip(safePage * paginateLimit - paginateLimit).limit(paginateLimit);
       },
       withCount(): FindQueryWithCount<T, TReturn> {
+        if (distinctOnColumns?.length) {
+          throw new Error('distinctOn cannot be used with withCount due to PostgreSQL limitations');
+        }
+
         includeCount = true;
         return this as unknown as FindQueryWithCount<T, TReturn>;
       },
@@ -560,6 +577,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             limit: limit ?? 0,
             joins,
             includeCount,
+            distinctOn: distinctOnColumns,
           });
 
           const pool = poolOverride ?? modelInstance._readonlyPool;
