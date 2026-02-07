@@ -712,14 +712,11 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     for (const name of this._floatProperties) {
       const originalValue = row[name as keyof QueryResult<T>] as number | string | null | undefined;
       if (originalValue != null && typeof originalValue === 'string') {
-        try {
-          const value = Number(originalValue);
-          if (Number.isFinite(value) && value.toString() === originalValue) {
-            // @ts-expect-error - string cannot be used to index type T
-            instance[name] = value;
-          }
-        } catch {
-          // Ignore and leave value as original
+        const value = Number(originalValue);
+        // Skip conversion for very large numbers to avoid precision loss
+        if (Number.isFinite(value) && Math.abs(value) <= Number.MAX_SAFE_INTEGER) {
+          // @ts-expect-error - string cannot be used to index type T
+          instance[name] = value;
         }
       }
     }
@@ -727,17 +724,14 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     for (const name of this._intProperties) {
       const originalValue = row[name as keyof QueryResult<T>] as number | string | null | undefined;
       if (originalValue != null && typeof originalValue === 'string') {
-        try {
-          const value = Number(originalValue);
-          if (Number.isFinite(value) && value.toString() === originalValue) {
-            const valueAsInt = Math.trunc(value);
-            if (Number.isSafeInteger(valueAsInt)) {
-              // @ts-expect-error - string cannot be used to index type T
-              instance[name] = valueAsInt;
-            }
+        const value = Number(originalValue);
+        // Integer columns keep the round-trip check to avoid converting decimal strings to truncated integers
+        if (Number.isFinite(value) && value.toString() === originalValue) {
+          const valueAsInt = Math.trunc(value);
+          if (Number.isSafeInteger(valueAsInt)) {
+            // @ts-expect-error - string cannot be used to index type T
+            instance[name] = valueAsInt;
           }
-        } catch {
-          // Ignore and leave value as original
         }
       }
     }
@@ -755,13 +749,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     for (const name of this._floatProperties) {
       const originalValue = plainObject[name] as number | string | null | undefined;
       if (originalValue != null && typeof originalValue === 'string') {
-        try {
-          const value = Number(originalValue);
-          if (Number.isFinite(value) && value.toString() === originalValue) {
-            plainObject[name] = value;
-          }
-        } catch {
-          // Ignore and leave value as original
+        const value = Number(originalValue);
+        // Skip conversion for very large numbers to avoid precision loss
+        if (Number.isFinite(value) && Math.abs(value) <= Number.MAX_SAFE_INTEGER) {
+          plainObject[name] = value;
         }
       }
     }
@@ -769,16 +760,13 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     for (const name of this._intProperties) {
       const originalValue = plainObject[name] as number | string | null | undefined;
       if (originalValue != null && typeof originalValue === 'string') {
-        try {
-          const value = Number(originalValue);
-          if (Number.isFinite(value) && value.toString() === originalValue) {
-            const valueAsInt = Math.trunc(value);
-            if (Number.isSafeInteger(valueAsInt)) {
-              plainObject[name] = valueAsInt;
-            }
+        const value = Number(originalValue);
+        // Integer columns keep the round-trip check to avoid converting decimal strings to truncated integers
+        if (Number.isFinite(value) && value.toString() === originalValue) {
+          const valueAsInt = Math.trunc(value);
+          if (Number.isSafeInteger(valueAsInt)) {
+            plainObject[name] = valueAsInt;
           }
-        } catch {
-          // Ignore and leave value as original
         }
       }
     }

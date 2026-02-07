@@ -506,6 +506,73 @@ describe('ReadonlyRepository', () => {
         assert(params);
         params.should.deep.equal([]);
       });
+
+      it('should parse float columns with trailing zeros from PostgreSQL numeric type', async () => {
+        const id = faker.number.int();
+        const name = faker.string.uuid();
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([
+            {
+              id,
+              name,
+              floatColumn: '0.00',
+            },
+          ]),
+        );
+
+        const result = await ReadonlyKitchenSinkRepository.findOne();
+        assert(result);
+        result.should.deep.equal({
+          id,
+          name,
+          floatColumn: 0,
+        });
+      });
+
+      it('should parse float columns with trailing zeros like "100.50"', async () => {
+        const id = faker.number.int();
+        const name = faker.string.uuid();
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([
+            {
+              id,
+              name,
+              floatColumn: '100.50',
+            },
+          ]),
+        );
+
+        const result = await ReadonlyKitchenSinkRepository.findOne();
+        assert(result);
+        result.should.deep.equal({
+          id,
+          name,
+          floatColumn: 100.5,
+        });
+      });
+
+      it('should not coerce non-numeric float column strings', async () => {
+        const id = faker.number.int();
+        const name = faker.string.uuid();
+        const invalidValue = 'not-a-number';
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([
+            {
+              id,
+              name,
+              floatColumn: invalidValue,
+            },
+          ]),
+        );
+
+        const result = await ReadonlyKitchenSinkRepository.findOne();
+        assert(result);
+        result.should.deep.equal({
+          id,
+          name,
+          floatColumn: invalidValue,
+        });
+      });
     });
 
     it('should support populating a single relation', async () => {
@@ -1591,6 +1658,42 @@ describe('ReadonlyRepository', () => {
         should.exist(result);
         Object.getPrototypeOf(result!).should.equal(Object.prototype);
         Object.getPrototypeOf(result!.store).should.equal(Object.prototype);
+      });
+
+      it('should parse float columns with trailing zeros in plain objects', async () => {
+        const id = faker.number.int();
+        const name = faker.string.uuid();
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([
+            {
+              id,
+              name,
+              floatColumn: '0.00',
+            },
+          ]),
+        );
+
+        const result = await ReadonlyKitchenSinkRepository.findOne().toJSON();
+        assert(result);
+        result.floatColumn!.should.equal(0);
+      });
+
+      it('should parse integer columns in plain objects (regression check)', async () => {
+        const id = faker.number.int();
+        const name = faker.string.uuid();
+        when(mockedPool.query(anyString(), anything())).thenResolve(
+          getQueryResult([
+            {
+              id,
+              name,
+              intColumn: '42',
+            },
+          ]),
+        );
+
+        const result = await ReadonlyKitchenSinkRepository.findOne().toJSON();
+        assert(result);
+        result.intColumn!.should.equal(42);
       });
     });
   });
