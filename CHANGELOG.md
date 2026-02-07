@@ -1,3 +1,9 @@
+## [15.10.1](https://github.com/bigalorm/bigal/compare/v15.10.0...v15.10.1) (2026-02-07)
+
+### Bug Fixes
+
+- convert float columns with trailing zeros from string to number ([#301](https://github.com/bigalorm/bigal/issues/301)) ([60192ac](https://github.com/bigalorm/bigal/commit/60192acd977743c490b2c22e11a4de58c426f67b))
+
 # [15.10.0](https://github.com/bigalorm/bigal/compare/v15.9.1...v15.10.0) (2026-01-28)
 
 ### Features
