@@ -46,7 +46,7 @@
     "@types/node": ">=20",
     "chai": "6.2.2",
     "eslint": "9.39.3",
-    "eslint-config-decent": "3.1.131",
+    "eslint-config-decent": "3.1.132",
     "husky": "9.1.7",
     "lint-staged": "16.2.7",
     "markdownlint-cli": "0.47.0",
