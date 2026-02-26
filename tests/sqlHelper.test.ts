@@ -1,14 +1,11 @@
 import assert from 'node:assert';
 
 import { faker } from '@faker-js/faker';
-import * as chai from 'chai';
-import 'chai/register-should.js';
-import { Pool } from 'postgres-pool';
-import { mock } from 'ts-mockito';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { QueryError } from '../src/errors/index.js';
 import { initialize, subquery } from '../src/index.js';
-import type { AggregateBuilder, Entity, IReadonlyRepository, IRepository, ModelMetadata, SelectAggregateExpression, WhereQuery } from '../src/index.js';
+import { type AggregateBuilder, type Entity, type IReadonlyRepository, type IRepository, type ModelMetadata, type PoolLike, type SelectAggregateExpression, type WhereQuery } from '../src/index.js';
 import * as sqlHelper from '../src/SqlHelper.js';
 
 import {
@@ -60,14 +57,11 @@ interface RepositoriesByModelName {
 type LowerCaseKeys<T, K extends string & keyof T = string & keyof T> = Record<Lowercase<K>, T[K]>;
 
 describe('sqlHelper', () => {
-  let should: Chai.Should;
-  let mockedPool: Pool;
   let repositoriesByModelName: RepositoriesByModelName;
   const repositoriesByModelNameLowered = {} as LowerCaseKeys<RepositoriesByModelName>;
 
-  before(() => {
-    should = chai.should();
-    mockedPool = mock(Pool);
+  beforeAll(() => {
+    const mockedPool: PoolLike = { query: vi.fn() };
     repositoriesByModelName = initialize({
       models: [
         Category,
@@ -116,10 +110,10 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(
+        expect(query).toBe(
           `SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`,
         );
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
 
       it('should include primaryKey column if select is empty', () => {
@@ -133,8 +127,8 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "id" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`);
-        params.should.deep.equal([]);
+        expect(query).toBe(`SELECT "id" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`);
+        expect(params).toStrictEqual([]);
       });
 
       it('should include primaryKey column if select does not include it', () => {
@@ -148,8 +142,8 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "name","id" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`);
-        params.should.deep.equal([]);
+        expect(query).toBe(`SELECT "name","id" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1`);
+        expect(params).toStrictEqual([]);
       });
 
       it('should include schema if specified for model', () => {
@@ -163,8 +157,8 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(`SELECT "name","id" FROM "${repositoriesByModelNameLowered.simplewithschema.model.schema}"."${repositoriesByModelNameLowered.simplewithschema.model.tableName}" LIMIT 1`);
-        params.should.deep.equal([]);
+        expect(query).toBe(`SELECT "name","id" FROM "${repositoriesByModelNameLowered.simplewithschema.model.schema}"."${repositoriesByModelNameLowered.simplewithschema.model.tableName}" LIMIT 1`);
+        expect(params).toStrictEqual([]);
       });
     });
 
@@ -182,10 +176,10 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(
+        expect(query).toBe(
           `SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "name"=$1 LIMIT 1`,
         );
-        params.should.deep.equal([name]);
+        expect(params).toStrictEqual([name]);
       });
     });
 
@@ -204,10 +198,10 @@ describe('sqlHelper', () => {
           skip: 0,
         });
 
-        query.should.equal(
+        expect(query).toBe(
           `SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" ORDER BY "name" LIMIT 1`,
         );
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
     });
 
@@ -222,10 +216,10 @@ describe('sqlHelper', () => {
           skip: 100,
         });
 
-        query.should.equal(
+        expect(query).toBe(
           `SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 1 OFFSET 100`,
         );
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
     });
 
@@ -240,10 +234,10 @@ describe('sqlHelper', () => {
           limit: 100,
         });
 
-        query.should.equal(
+        expect(query).toBe(
           `SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "${repositoriesByModelNameLowered.product.model.tableName}" LIMIT 100`,
         );
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
     });
 
@@ -259,8 +253,8 @@ describe('sqlHelper', () => {
           distinctOn: ['store'],
         });
 
-        query.should.equal('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id"');
-        params.should.deep.equal([]);
+        expect(query).toBe('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id"');
+        expect(params).toStrictEqual([]);
       });
 
       it('should generate DISTINCT ON clause with multiple columns', () => {
@@ -274,8 +268,8 @@ describe('sqlHelper', () => {
           distinctOn: ['store', 'name'],
         });
 
-        query.should.equal('SELECT DISTINCT ON ("store_id","name") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id","name" DESC');
-        params.should.deep.equal([]);
+        expect(query).toBe('SELECT DISTINCT ON ("store_id","name") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id","name" DESC');
+        expect(params).toStrictEqual([]);
       });
 
       it('should work with additional ORDER BY columns after DISTINCT ON columns', () => {
@@ -289,14 +283,14 @@ describe('sqlHelper', () => {
           distinctOn: ['store'],
         });
 
-        query.should.equal(
+        expect(query).toBe(
           'SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt" FROM "products" ORDER BY "store_id","created_at" DESC',
         );
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
 
       it('should throw error if ORDER BY is missing when using DISTINCT ON', () => {
-        ((): void => {
+        expect((): void => {
           sqlHelper.getSelectQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -306,11 +300,11 @@ describe('sqlHelper', () => {
             limit: 0,
             distinctOn: ['store'],
           });
-        }).should.throw(QueryError, /DISTINCT ON requires ORDER BY/);
+        }).to.throw(QueryError, /DISTINCT ON requires ORDER BY/);
       });
 
       it('should throw error if DISTINCT ON columns do not match leftmost ORDER BY columns', () => {
-        ((): void => {
+        expect((): void => {
           sqlHelper.getSelectQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -320,11 +314,11 @@ describe('sqlHelper', () => {
             limit: 0,
             distinctOn: ['store'],
           });
-        }).should.throw(QueryError, /DISTINCT ON columns must match the leftmost ORDER BY columns/);
+        }).to.throw(QueryError, /DISTINCT ON columns must match the leftmost ORDER BY columns/);
       });
 
       it('should throw error if fewer ORDER BY columns than DISTINCT ON columns', () => {
-        ((): void => {
+        expect((): void => {
           sqlHelper.getSelectQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -334,7 +328,7 @@ describe('sqlHelper', () => {
             limit: 0,
             distinctOn: ['store', 'name'],
           });
-        }).should.throw(QueryError, /DISTINCT ON columns must match the leftmost ORDER BY columns/);
+        }).to.throw(QueryError, /DISTINCT ON columns must match the leftmost ORDER BY columns/);
       });
 
       it('should work with WHERE clause', () => {
@@ -348,8 +342,8 @@ describe('sqlHelper', () => {
           distinctOn: ['store'],
         });
 
-        query.should.equal('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "name"=$1 ORDER BY "store_id"');
-        params.should.deep.equal(['Widget']);
+        expect(query).toBe('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "name"=$1 ORDER BY "store_id"');
+        expect(params).toStrictEqual(['Widget']);
       });
 
       it('should work with LIMIT', () => {
@@ -363,8 +357,8 @@ describe('sqlHelper', () => {
           distinctOn: ['store'],
         });
 
-        query.should.equal('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id" LIMIT 10');
-        params.should.deep.equal([]);
+        expect(query).toBe('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id" LIMIT 10');
+        expect(params).toStrictEqual([]);
       });
 
       it('should work with select projection', () => {
@@ -379,8 +373,8 @@ describe('sqlHelper', () => {
           distinctOn: ['store'],
         });
 
-        query.should.equal('SELECT DISTINCT ON ("store_id") "name","store_id" AS "store","id" FROM "products" ORDER BY "store_id"');
-        params.should.deep.equal([]);
+        expect(query).toBe('SELECT DISTINCT ON ("store_id") "name","store_id" AS "store","id" FROM "products" ORDER BY "store_id"');
+        expect(params).toStrictEqual([]);
       });
     });
   });
@@ -392,8 +386,8 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
       });
 
-      query.should.equal(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered.product.model.tableName}"`);
-      params.should.deep.equal([]);
+      expect(query).toBe(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered.product.model.tableName}"`);
+      expect(params).toStrictEqual([]);
     });
 
     it('should include where statement if defined', () => {
@@ -410,8 +404,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "store_id"=$1`);
-      params.should.deep.equal([store.id]);
+      expect(query).toBe(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "store_id"=$1`);
+      expect(params).toStrictEqual([store.id]);
     });
 
     it('should include schema if specified for model', () => {
@@ -420,14 +414,14 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.simplewithschema.model as ModelMetadata<SimpleWithSchema>,
       });
 
-      query.should.equal(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered.simplewithschema.model.schema}"."${repositoriesByModelNameLowered.simplewithschema.model.tableName}"`);
-      params.should.deep.equal([]);
+      expect(query).toBe(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered.simplewithschema.model.schema}"."${repositoriesByModelNameLowered.simplewithschema.model.tableName}"`);
+      expect(params).toStrictEqual([]);
     });
   });
 
   describe('#getInsertQueryAndParams()', () => {
     it('should throw if a required property has an undefined value', () => {
-      ((): void => {
+      expect((): void => {
         sqlHelper.getInsertQueryAndParams({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -436,11 +430,11 @@ describe('sqlHelper', () => {
           },
           returnRecords: true,
         });
-      }).should.throw(Error, `Create statement for "${repositoriesByModelNameLowered.product.model.name}" is missing value for required field: name`);
+      }).to.throw(Error, `Create statement for "${repositoriesByModelNameLowered.product.model.name}" is missing value for required field: name`);
     });
 
     it('should not throw if a required property has a defaultValue and an undefined initial value', () => {
-      ((): void => {
+      expect((): void => {
         sqlHelper.getInsertQueryAndParams({
           repositoriesByModelNameLowered,
           model: repositoriesByModelName.RequiredPropertyWithDefaultValue.model as ModelMetadata<RequiredPropertyWithDefaultValue>,
@@ -449,7 +443,7 @@ describe('sqlHelper', () => {
           },
           returnRecords: true,
         });
-      }).should.not.throw();
+      }).to.not.throw();
     });
 
     it('should not override properties with defaultValue if value is defined', () => {
@@ -463,7 +457,7 @@ describe('sqlHelper', () => {
         returnRecords: true,
       });
 
-      params.should.deep.equal([value]);
+      expect(params).toStrictEqual([value]);
     });
 
     it('should set undefined properties to defaultValue if defined on schema', () => {
@@ -476,7 +470,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      params.should.deep.equal(['foobar', bar]);
+      expect(params).toStrictEqual(['foobar', bar]);
     });
 
     it('should set undefined properties to result of defaultValue function if defined on schema', () => {
@@ -489,7 +483,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      params.should.deep.equal(['foobar', bar]);
+      expect(params).toStrictEqual(['foobar', bar]);
     });
 
     it('should set createdAt if schema.autoCreatedAt and value is undefined', () => {
@@ -503,17 +497,12 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithCreatedAt.model.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
-      params.should.have.length(2);
+      expect(query).toBe(`INSERT INTO "${repositoriesByModelName.SimpleWithCreatedAt.model.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
+      expect(params).toHaveLength(2);
       const afterTime = new Date();
-      for (const [index, value] of params.entries()) {
-        if (index === 0) {
-          (value as string).should.equal(name);
-        } else if (index === 1) {
-          const valueDate = value as Date;
-          (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
-        }
-      }
+      expect(params[0] as string).toBe(name);
+      const createdAtValue = params[1] as Date;
+      expect(beforeTime <= createdAtValue && createdAtValue <= afterTime).toBe(true);
     });
 
     it('should not override createdAt if schema.autoCreatedAt and value is defined', () => {
@@ -528,8 +517,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithCreatedAt.model.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
-      params.should.deep.equal([name, createdAt]);
+      expect(query).toBe(`INSERT INTO "${repositoriesByModelName.SimpleWithCreatedAt.model.tableName}" ("name","created_at") VALUES ($1,$2) RETURNING "id","name","created_at" AS "createdAt"`);
+      expect(params).toStrictEqual([name, createdAt]);
     });
 
     it('should set updatedAt if schema.autoUpdatedAt and value is undefined', () => {
@@ -543,17 +532,12 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithUpdatedAt.model.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
-      params.should.have.length(2);
+      expect(query).toBe(`INSERT INTO "${repositoriesByModelName.SimpleWithUpdatedAt.model.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
+      expect(params).toHaveLength(2);
       const afterTime = new Date();
-      for (const [index, value] of params.entries()) {
-        if (index === 0) {
-          (value as string).should.equal(name);
-        } else if (index === 1) {
-          const valueDate = value as Date;
-          (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
-        }
-      }
+      expect(params[0] as string).toBe(name);
+      const updatedAtValue = params[1] as Date;
+      expect(beforeTime <= updatedAtValue && updatedAtValue <= afterTime).toBe(true);
     });
 
     it('should not override updatedAt if schema.autoUpdatedAt and value is defined', () => {
@@ -568,8 +552,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithUpdatedAt.model.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
-      params.should.deep.equal([name, updatedAt]);
+      expect(query).toBe(`INSERT INTO "${repositoriesByModelName.SimpleWithUpdatedAt.model.tableName}" ("name","updated_at") VALUES ($1,$2) RETURNING "id","name","updated_at" AS "updatedAt"`);
+      expect(params).toStrictEqual([name, updatedAt]);
     });
 
     it('should ignore collection properties', () => {
@@ -590,8 +574,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithCollections.model.tableName}" ("name") VALUES ($1) RETURNING "id","name"`);
-      params.should.deep.equal([name]);
+      expect(query).toBe(`INSERT INTO "${repositoriesByModelName.SimpleWithCollections.model.tableName}" ("name") VALUES ($1) RETURNING "id","name"`);
+      expect(params).toStrictEqual([name]);
     });
 
     it('should use primaryKey value if hydrated object is passed as a value', () => {
@@ -609,10 +593,10 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(
+      expect(query).toBe(
         `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"`,
       );
-      params.should.deep.equal([name, [], store.id]);
+      expect(params).toStrictEqual([name, [], store.id]);
     });
 
     it('should include schema if specified for model', () => {
@@ -625,7 +609,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(
+      expect(query).toBe(
         `INSERT INTO "${repositoriesByModelNameLowered.simplewithschema.model.schema}"."${repositoriesByModelNameLowered.simplewithschema.model.tableName}" ("name") VALUES ($1) RETURNING "id","name"`,
       );
     });
@@ -648,8 +632,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelName.SimpleWithJson.model.tableName}" ("name","bar") VALUES ($1,$2::jsonb) RETURNING "id","name","bar","key_value" AS "keyValue"`);
-      params.should.deep.equal([name, JSON.stringify(bar)]);
+      expect(query).toBe(`INSERT INTO "${repositoriesByModelName.SimpleWithJson.model.tableName}" ("name","bar") VALUES ($1,$2::jsonb) RETURNING "id","name","bar","key_value" AS "keyValue"`);
+      expect(params).toStrictEqual([name, JSON.stringify(bar)]);
     });
 
     it('should support inserting a single record and return records if returnRecords=true', () => {
@@ -665,10 +649,10 @@ describe('sqlHelper', () => {
         returnRecords: true,
       });
 
-      query.should.equal(
+      expect(query).toBe(
         `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"`,
       );
-      params.should.deep.equal([name, [], storeId]);
+      expect(params).toStrictEqual([name, [], storeId]);
     });
 
     it('should support inserting a single record and return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
@@ -685,8 +669,8 @@ describe('sqlHelper', () => {
         returnSelect: ['name'],
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "name","id"`);
-      params.should.deep.equal([name, [], storeId]);
+      expect(query).toBe(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "name","id"`);
+      expect(params).toStrictEqual([name, [], storeId]);
     });
 
     it('should support inserting a single record and not return records if returnRecords=false', () => {
@@ -702,8 +686,8 @@ describe('sqlHelper', () => {
         returnRecords: false,
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3)`);
-      params.should.deep.equal([name, [], storeId]);
+      expect(query).toBe(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$2,$3)`);
+      expect(params).toStrictEqual([name, [], storeId]);
     });
 
     it('should support inserting multiple records and return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
@@ -728,8 +712,8 @@ describe('sqlHelper', () => {
         returnSelect: ['store'],
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "store_id" AS "store","id"`);
-      params.should.deep.equal([name1, name2, [], [], storeId1, storeId2]);
+      expect(query).toBe(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "store_id" AS "store","id"`);
+      expect(params).toStrictEqual([name1, name2, [], [], storeId1, storeId2]);
     });
 
     it('should support inserting multiple records and return records if returnRecords=true', () => {
@@ -752,10 +736,10 @@ describe('sqlHelper', () => {
         ],
       });
 
-      query.should.equal(
+      expect(query).toBe(
         `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"`,
       );
-      params.should.deep.equal([name1, name2, [], [], storeId1, storeId2]);
+      expect(params).toStrictEqual([name1, name2, [], [], storeId1, storeId2]);
     });
 
     it('should support inserting multiple records and not return records if returnRecords=false', () => {
@@ -779,8 +763,8 @@ describe('sqlHelper', () => {
         returnRecords: false,
       });
 
-      query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)`);
-      params.should.deep.equal([name1, name2, [], [], storeId1, storeId2]);
+      expect(query).toBe(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)`);
+      expect(params).toStrictEqual([name1, name2, [], [], storeId1, storeId2]);
     });
 
     describe('onConflict', () => {
@@ -799,10 +783,10 @@ describe('sqlHelper', () => {
             },
           });
 
-          query.should.equal(
+          expect(query).toBe(
             `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("name") VALUES ($1) ON CONFLICT ("name","other_id") DO NOTHING RETURNING "id","name","other_id" AS "otherId"`,
           );
-          params.should.deep.equal([name]);
+          expect(params).toStrictEqual([name]);
         });
       });
 
@@ -821,10 +805,10 @@ describe('sqlHelper', () => {
             },
           });
 
-          query.should.equal(
+          expect(query).toBe(
             `INSERT INTO "${repositoriesByModelNameLowered.simplewithversion.model.tableName}" ("name","version") VALUES ($1,$2) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name","version"="version"+1 RETURNING "id","name","version"`,
           );
-          params.should.deep.equal([name, 1]);
+          expect(params).toStrictEqual([name, 1]);
         });
 
         it('should update non-primary and non-createDate columns if merge is undefined', () => {
@@ -842,20 +826,17 @@ describe('sqlHelper', () => {
             },
           });
 
-          query.should.equal(
+          expect(query).toBe(
             `INSERT INTO "${repositoriesByModelNameLowered.simplewithcreatedatandupdatedat.model.tableName}" ("name","created_at","updated_at") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name","updated_at"=EXCLUDED."updated_at" RETURNING "id","name","created_at" AS "createdAt","updated_at" AS "updatedAt"`,
           );
 
-          params.should.have.length(3);
+          expect(params).toHaveLength(3);
           const afterTime = new Date();
-          for (const [index, value] of params.entries()) {
-            if (index === 0) {
-              (value as string).should.equal(name);
-            } else {
-              const valueDate = value as Date;
-              (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
-            }
-          }
+          expect(params[0] as string).toBe(name);
+          const createdAtValue = params[1] as Date;
+          expect(beforeTime <= createdAtValue && createdAtValue <= afterTime).toBe(true);
+          const updatedAtValue = params[2] as Date;
+          expect(beforeTime <= updatedAtValue && updatedAtValue <= afterTime).toBe(true);
         });
 
         it('should update primaryColumn if explicitly specified', () => {
@@ -875,10 +856,10 @@ describe('sqlHelper', () => {
             },
           });
 
-          query.should.equal(
+          expect(query).toBe(
             `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("id","name") VALUES ($1,$2) ON CONFLICT ("name") DO UPDATE SET "id"=EXCLUDED."id" RETURNING "id","name","other_id" AS "otherId"`,
           );
-          params.should.deep.equal([id, name]);
+          expect(params).toStrictEqual([id, name]);
         });
 
         it('should update createDateColumn if explicitly specified', () => {
@@ -897,20 +878,15 @@ describe('sqlHelper', () => {
             },
           });
 
-          query.should.equal(
+          expect(query).toBe(
             `INSERT INTO "${repositoriesByModelNameLowered.simplewithcreatedat.model.tableName}" ("name","created_at") VALUES ($1,$2) ON CONFLICT ("name") DO UPDATE SET "created_at"=EXCLUDED."created_at" RETURNING "id","name","created_at" AS "createdAt"`,
           );
 
-          params.should.have.length(2);
+          expect(params).toHaveLength(2);
           const afterTime = new Date();
-          for (const [index, value] of params.entries()) {
-            if (index === 0) {
-              (value as string).should.equal(name);
-            } else {
-              const valueDate = value as Date;
-              (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
-            }
-          }
+          expect(params[0] as string).toBe(name);
+          const createdAtValue = params[1] as Date;
+          expect(beforeTime <= createdAtValue && createdAtValue <= afterTime).toBe(true);
         });
 
         it('should limit columns to update if merge is defined', () => {
@@ -933,10 +909,10 @@ describe('sqlHelper', () => {
             },
           });
 
-          query.should.equal(
+          expect(query).toBe(
             `INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","sku","alias_names","store_id") VALUES ($1,$2,$3,$4) ON CONFLICT ("sku","store_id") DO UPDATE SET "name"=EXCLUDED."name","alias_names"=EXCLUDED."alias_names" RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"`,
           );
-          params.should.deep.equal([name, sku, [], storeId]);
+          expect(params).toStrictEqual([name, sku, [], storeId]);
         });
 
         it('should ignore if merge is empty', () => {
@@ -955,19 +931,14 @@ describe('sqlHelper', () => {
             },
           });
 
-          query.should.equal(
+          expect(query).toBe(
             `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("name","created_at") VALUES ($1,$2) ON CONFLICT ("name") DO NOTHING RETURNING "id","name","created_at" AS "createdAt"`,
           );
-          params.should.have.length(2);
+          expect(params).toHaveLength(2);
           const afterTime = new Date();
-          for (const [index, value] of params.entries()) {
-            if (index === 0) {
-              (value as string).should.equal(name);
-            } else {
-              const valueDate = value as Date;
-              (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
-            }
-          }
+          expect(params[0] as string).toBe(name);
+          const createdAtValue = params[1] as Date;
+          expect(beforeTime <= createdAtValue && createdAtValue <= afterTime).toBe(true);
         });
 
         it('should include where statement if defined for merge', () => {
@@ -993,10 +964,10 @@ describe('sqlHelper', () => {
             },
           });
 
-          query.should.equal(
+          expect(query).toBe(
             `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("id","name","other_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name","other_id"=EXCLUDED."other_id" WHERE ("other_id" IS NULL OR "other_id"=$4) RETURNING "id","name","other_id" AS "otherId"`,
           );
-          params.should.deep.equal([id, name, otherId, '']);
+          expect(params).toStrictEqual([id, name, otherId, '']);
         });
 
         it('should include where statement and merge explicit columns if defined', () => {
@@ -1023,10 +994,10 @@ describe('sqlHelper', () => {
             },
           });
 
-          query.should.equal(
+          expect(query).toBe(
             `INSERT INTO "${repositoriesByModelNameLowered.simplewithstringid.model.tableName}" ("id","name","other_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name" WHERE ("other_id" IS NULL OR "other_id"=$4) RETURNING "id","name","other_id" AS "otherId"`,
           );
-          params.should.deep.equal([id, name, otherId, '']);
+          expect(params).toStrictEqual([id, name, otherId, '']);
         });
 
         it('should use a where clause on the index specification if provided on the targets', () => {
@@ -1048,22 +1019,16 @@ describe('sqlHelper', () => {
             },
           });
 
-          query.should.equal(
+          expect(query).toBe(
             `INSERT INTO "${repositoriesByModelNameLowered.simplewithcreatedat.model.tableName}" ("name","created_at") VALUES ($1,$2) ON CONFLICT ("name") WHERE "name"=$3 DO UPDATE SET "created_at"=EXCLUDED."created_at" RETURNING "id","name","created_at" AS "createdAt"`,
           );
 
-          params.should.have.length(3);
+          expect(params).toHaveLength(3);
           const afterTime = new Date();
-          for (const [index, value] of params.entries()) {
-            if (index === 0) {
-              (value as string).should.equal(name);
-            } else if (index === 1) {
-              const valueDate = value as Date;
-              (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
-            } else {
-              (value as string).should.equal('foo');
-            }
-          }
+          expect(params[0] as string).toBe(name);
+          const createdAtValue = params[1] as Date;
+          expect(beforeTime <= createdAtValue && createdAtValue <= afterTime).toBe(true);
+          expect(params[2] as string).toBe('foo');
         });
       });
     });
@@ -1086,8 +1051,8 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","external_id_string") VALUES ($1,$2,NULL)`);
-        params.should.deep.equal([itemId, itemName]);
+        expect(query).toBe(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","external_id_string") VALUES ($1,$2,NULL)`);
+        expect(params).toStrictEqual([itemId, itemName]);
       });
 
       it('should allow insert when maxLength set and providing undefined value', () => {
@@ -1107,8 +1072,8 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name") VALUES ($1,$2)`);
-        params.should.deep.equal([itemId, itemName]);
+        expect(query).toBe(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name") VALUES ($1,$2)`);
+        expect(params).toStrictEqual([itemId, itemName]);
       });
 
       it('should allow insert when maxLength set but column not required AND value not set', () => {
@@ -1127,8 +1092,8 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name") VALUES ($1,$2)`);
-        params.should.deep.equal([itemId, itemName]);
+        expect(query).toBe(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name") VALUES ($1,$2)`);
+        expect(params).toStrictEqual([itemId, itemName]);
       });
 
       it('should not enforce maxLength when not set for column', () => {
@@ -1149,8 +1114,8 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","external_id_no_max_length") VALUES ($1,$2,$3)`);
-        params.should.deep.equal([itemId, itemName, externalId]);
+        expect(query).toBe(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","external_id_no_max_length") VALUES ($1,$2,$3)`);
+        expect(params).toStrictEqual([itemId, itemName, externalId]);
       });
 
       it('should not enforce maxLength when set on unsupported column type', () => {
@@ -1171,8 +1136,8 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","unrelated") VALUES ($1,$2,$3)`);
-        params.should.deep.equal([itemId, itemName, unrelatedValue]);
+        expect(query).toBe(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","unrelated") VALUES ($1,$2,$3)`);
+        expect(params).toStrictEqual([itemId, itemName, unrelatedValue]);
       });
 
       it('should allow insert (string) when under maxLength', () => {
@@ -1193,8 +1158,8 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","external_id_string") VALUES ($1,$2,$3)`);
-        params.should.deep.equal([itemId, itemName, externalId]);
+        expect(query).toBe(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","external_id_string") VALUES ($1,$2,$3)`);
+        expect(params).toStrictEqual([itemId, itemName, externalId]);
       });
 
       it('should throw error on insert (string) when above maxLength', () => {
@@ -1202,7 +1167,7 @@ describe('sqlHelper', () => {
         const itemName = faker.string.uuid();
         const externalId = 'a'.repeat(6);
 
-        ((): void => {
+        expect((): void => {
           sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
@@ -1215,7 +1180,7 @@ describe('sqlHelper', () => {
             ],
             returnRecords: false,
           });
-        }).should.throw(QueryError, `Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
+        }).to.throw(QueryError, `Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
 
       it('should allow insert (string[]) when under maxLength', () => {
@@ -1236,8 +1201,8 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","external_id_string_array") VALUES ($1,$2,$3)`);
-        params.should.deep.equal([itemId, itemName, externalIds]);
+        expect(query).toBe(`INSERT INTO "${repositoriesByModelNameLowered.importeditem.model.tableName}" ("id","name","external_id_string_array") VALUES ($1,$2,$3)`);
+        expect(params).toStrictEqual([itemId, itemName, externalIds]);
       });
 
       it('should throw error on insert (string[]) when above maxLength', () => {
@@ -1245,7 +1210,7 @@ describe('sqlHelper', () => {
         const itemName = faker.string.uuid();
         const externalIds = ['a'.repeat(11), 'b'.repeat(10)];
 
-        ((): void => {
+        expect((): void => {
           sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
@@ -1258,7 +1223,7 @@ describe('sqlHelper', () => {
             ],
             returnRecords: false,
           });
-        }).should.throw(QueryError, `Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
+        }).to.throw(QueryError, `Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
     });
   });
@@ -1275,8 +1240,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${repositoriesByModelName.SimpleWithCreatedAt.model.tableName}" SET "name"=$1 RETURNING "id","name","created_at" AS "createdAt"`);
-      params.should.deep.equal([name]);
+      expect(query).toBe(`UPDATE "${repositoriesByModelName.SimpleWithCreatedAt.model.tableName}" SET "name"=$1 RETURNING "id","name","created_at" AS "createdAt"`);
+      expect(params).toStrictEqual([name]);
     });
 
     it('should set updatedAt if schema.autoUpdatedAt and value is undefined', () => {
@@ -1291,17 +1256,12 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${repositoriesByModelName.SimpleWithUpdatedAt.model.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
-      params.should.have.length(2);
+      expect(query).toBe(`UPDATE "${repositoriesByModelName.SimpleWithUpdatedAt.model.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
+      expect(params).toHaveLength(2);
       const afterTime = new Date();
-      for (const [index, value] of params.entries()) {
-        if (index === 0) {
-          (value as string).should.equal(name);
-        } else if (index === 1) {
-          const valueDate = value as Date;
-          (beforeTime <= valueDate && valueDate <= afterTime).should.equal(true);
-        }
-      }
+      expect(params[0] as string).toBe(name);
+      const updatedAtValue = params[1] as Date;
+      expect(beforeTime <= updatedAtValue && updatedAtValue <= afterTime).toBe(true);
     });
 
     it('should not override updatedAt if schema.autoUpdatedAt and value is defined', () => {
@@ -1317,8 +1277,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${repositoriesByModelName.SimpleWithUpdatedAt.model.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
-      params.should.deep.equal([name, updatedAt]);
+      expect(query).toBe(`UPDATE "${repositoriesByModelName.SimpleWithUpdatedAt.model.tableName}" SET "name"=$1,"updated_at"=$2 RETURNING "id","name","updated_at" AS "updatedAt"`);
+      expect(params).toStrictEqual([name, updatedAt]);
     });
 
     it('should ignore collection properties', () => {
@@ -1340,8 +1300,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${repositoriesByModelName.SimpleWithCollections.model.tableName}" SET "name"=$1 RETURNING "id","name"`);
-      params.should.deep.equal([name]);
+      expect(query).toBe(`UPDATE "${repositoriesByModelName.SimpleWithCollections.model.tableName}" SET "name"=$1 RETURNING "id","name"`);
+      expect(params).toStrictEqual([name]);
     });
 
     it('should use primaryKey value if hydrated object is passed as a value', () => {
@@ -1360,10 +1320,10 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(
+      expect(query).toBe(
         `UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
-      params.should.deep.equal([name, store.id]);
+      expect(params).toStrictEqual([name, store.id]);
     });
 
     it('should include schema if specified for model', () => {
@@ -1377,7 +1337,7 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(
+      expect(query).toBe(
         `UPDATE "${repositoriesByModelNameLowered.simplewithschema.model.schema}"."${repositoriesByModelNameLowered.simplewithschema.model.tableName}" SET "name"=$1 RETURNING "id","name"`,
       );
     });
@@ -1401,8 +1361,8 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(`UPDATE "${repositoriesByModelName.SimpleWithJson.model.tableName}" SET "name"=$1,"bar"=$2::jsonb RETURNING "id","name","bar","key_value" AS "keyValue"`);
-      params.should.deep.equal([name, JSON.stringify(bar)]);
+      expect(query).toBe(`UPDATE "${repositoriesByModelName.SimpleWithJson.model.tableName}" SET "name"=$1,"bar"=$2::jsonb RETURNING "id","name","bar","key_value" AS "keyValue"`);
+      expect(params).toStrictEqual([name, JSON.stringify(bar)]);
     });
 
     it('should include where statement if defined', () => {
@@ -1423,10 +1383,10 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(
+      expect(query).toBe(
         `UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1 WHERE "store_id"=$2 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
-      params.should.deep.equal([name, store.id]);
+      expect(params).toStrictEqual([name, store.id]);
     });
 
     it('should return records if returnRecords=true', () => {
@@ -1446,10 +1406,10 @@ describe('sqlHelper', () => {
         returnRecords: true,
       });
 
-      query.should.equal(
+      expect(query).toBe(
         `UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
-      params.should.deep.equal([name, storeId, productId]);
+      expect(params).toStrictEqual([name, storeId, productId]);
     });
 
     it('should return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
@@ -1470,8 +1430,8 @@ describe('sqlHelper', () => {
         returnSelect: ['name'],
       });
 
-      query.should.equal(`UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "name","id"`);
-      params.should.deep.equal([name, storeId, productId]);
+      expect(query).toBe(`UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "name","id"`);
+      expect(params).toStrictEqual([name, storeId, productId]);
     });
 
     it('should not return records if returnRecords=false', () => {
@@ -1491,8 +1451,8 @@ describe('sqlHelper', () => {
         returnRecords: false,
       });
 
-      query.should.equal(`UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3`);
-      params.should.deep.equal([name, storeId, productId]);
+      expect(query).toBe(`UPDATE "${repositoriesByModelNameLowered.product.model.tableName}" SET "name"=$1,"store_id"=$2 WHERE "id"=$3`);
+      expect(params).toStrictEqual([name, storeId, productId]);
     });
 
     describe('maxLength', () => {
@@ -1513,8 +1473,8 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "name"=$1,"external_id_string"=NULL WHERE "id"=$2`);
-        params.should.deep.equal([itemName, itemId]);
+        expect(query).toBe(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "name"=$1,"external_id_string"=NULL WHERE "id"=$2`);
+        expect(params).toStrictEqual([itemName, itemId]);
       });
 
       it('should allow update when maxLength set and providing undefined', () => {
@@ -1534,8 +1494,8 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "name"=$1,"external_id_string"=NULL WHERE "id"=$2`);
-        params.should.deep.equal([itemName, itemId]);
+        expect(query).toBe(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "name"=$1,"external_id_string"=NULL WHERE "id"=$2`);
+        expect(params).toStrictEqual([itemName, itemId]);
       });
 
       it('should allow update when maxLength set but column not required AND value not set', () => {
@@ -1554,8 +1514,8 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "name"=$1 WHERE "id"=$2`);
-        params.should.deep.equal([itemName, itemId]);
+        expect(query).toBe(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "name"=$1 WHERE "id"=$2`);
+        expect(params).toStrictEqual([itemName, itemId]);
       });
 
       it('should not enforce maxLength when not set for column', () => {
@@ -1574,8 +1534,8 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "external_id_no_max_length"=$1 WHERE "id"=$2`);
-        params.should.deep.equal([externalId, itemId]);
+        expect(query).toBe(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "external_id_no_max_length"=$1 WHERE "id"=$2`);
+        expect(params).toStrictEqual([externalId, itemId]);
       });
 
       it('should not enforce maxLength when set on unsupported column type', () => {
@@ -1594,8 +1554,8 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "unrelated"=$1 WHERE "id"=$2`);
-        params.should.deep.equal([unrelatedValue, itemId]);
+        expect(query).toBe(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "unrelated"=$1 WHERE "id"=$2`);
+        expect(params).toStrictEqual([unrelatedValue, itemId]);
       });
 
       it('should allow update (string) when under maxLength', () => {
@@ -1614,15 +1574,15 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "external_id_string"=$1 WHERE "id"=$2`);
-        params.should.deep.equal([externalId, itemId]);
+        expect(query).toBe(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "external_id_string"=$1 WHERE "id"=$2`);
+        expect(params).toStrictEqual([externalId, itemId]);
       });
 
       it('should throw error on update (string) when above maxLength', () => {
         const itemId = faker.string.uuid();
         const externalId = 'a'.repeat(6);
 
-        ((): void => {
+        expect((): void => {
           sqlHelper.getUpdateQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
@@ -1634,7 +1594,7 @@ describe('sqlHelper', () => {
             },
             returnRecords: false,
           });
-        }).should.throw(QueryError, `Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
+        }).to.throw(QueryError, `Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
 
       it('should allow update (string[]) when under maxLength', () => {
@@ -1653,15 +1613,15 @@ describe('sqlHelper', () => {
           returnRecords: false,
         });
 
-        query.should.equal(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "external_id_string_array"=$1 WHERE "id"=$2`);
-        params.should.deep.equal([externalIds, itemId]);
+        expect(query).toBe(`UPDATE "${repositoriesByModelNameLowered.importeditem.model.tableName}" SET "external_id_string_array"=$1 WHERE "id"=$2`);
+        expect(params).toStrictEqual([externalIds, itemId]);
       });
 
       it('should throw error on update (string[]) when above maxLength', () => {
         const itemId = faker.string.uuid();
         const externalIds = ['a'.repeat(11), 'b'.repeat(10)];
 
-        ((): void => {
+        expect((): void => {
           sqlHelper.getUpdateQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
@@ -1673,7 +1633,7 @@ describe('sqlHelper', () => {
             },
             returnRecords: false,
           });
-        }).should.throw(QueryError, `Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
+        }).to.throw(QueryError, `Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
     });
   });
@@ -1685,10 +1645,10 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
       });
 
-      query.should.equal(
+      expect(query).toBe(
         `DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should include where statement if defined', () => {
@@ -1705,10 +1665,10 @@ describe('sqlHelper', () => {
         },
       });
 
-      query.should.equal(
+      expect(query).toBe(
         `DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" WHERE "store_id"=$1 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
-      params.should.deep.equal([store.id]);
+      expect(params).toStrictEqual([store.id]);
     });
 
     it('should include schema if specified for model', () => {
@@ -1717,7 +1677,7 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.simplewithschema.model as ModelMetadata<SimpleWithSchema>,
       });
 
-      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.simplewithschema.model.schema}"."${repositoriesByModelNameLowered.simplewithschema.model.tableName}" RETURNING "id","name"`);
+      expect(query).toBe(`DELETE FROM "${repositoriesByModelNameLowered.simplewithschema.model.schema}"."${repositoriesByModelNameLowered.simplewithschema.model.tableName}" RETURNING "id","name"`);
     });
 
     it('should return records if returnRecords=true', () => {
@@ -1731,10 +1691,10 @@ describe('sqlHelper', () => {
         returnRecords: true,
       });
 
-      query.should.equal(
+      expect(query).toBe(
         `DELETE FROM "${repositoriesByModelNameLowered.productwithcreatedat.model.tableName}" WHERE "id"=$1 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"`,
       );
-      params.should.deep.equal([productId]);
+      expect(params).toStrictEqual([productId]);
     });
 
     it('should return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
@@ -1749,8 +1709,8 @@ describe('sqlHelper', () => {
         returnSelect: ['name'],
       });
 
-      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "id"=$1 RETURNING "name","id"`);
-      params.should.deep.equal([productId]);
+      expect(query).toBe(`DELETE FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "id"=$1 RETURNING "name","id"`);
+      expect(params).toStrictEqual([productId]);
     });
 
     it('should not return records if returnRecords=false', () => {
@@ -1764,8 +1724,8 @@ describe('sqlHelper', () => {
         returnRecords: false,
       });
 
-      query.should.equal(`DELETE FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "id"=$1`);
-      params.should.deep.equal([productId]);
+      expect(query).toBe(`DELETE FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "id"=$1`);
+      expect(params).toStrictEqual([productId]);
     });
   });
 
@@ -1776,7 +1736,7 @@ describe('sqlHelper', () => {
         select: undefined,
       });
 
-      query.should.equal('"id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
+      expect(query).toBe('"id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
     });
 
     it('should include all columns if select is undefined (implicit)', () => {
@@ -1784,7 +1744,7 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
       });
 
-      query.should.equal('"id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
+      expect(query).toBe('"id","name","sku","location","alias_names" AS "aliases","store_id" AS "store","created_at" AS "createdAt"');
     });
 
     it('should include primaryKey column if select is empty', () => {
@@ -1793,7 +1753,7 @@ describe('sqlHelper', () => {
         select: [],
       });
 
-      query.should.equal('"id"');
+      expect(query).toBe('"id"');
     });
 
     it('should include primaryKey column if select does not include it', () => {
@@ -1802,7 +1762,7 @@ describe('sqlHelper', () => {
         select: ['name'],
       });
 
-      query.should.equal('"name","id"');
+      expect(query).toBe('"name","id"');
     });
   });
 
@@ -1813,12 +1773,12 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
       });
 
-      should.not.exist(whereStatement);
-      params.should.deep.equal([]);
+      expect(whereStatement).toBeUndefined();
+      expect(params).toStrictEqual([]);
     });
 
     it('should throw if query value is undefined', () => {
-      ((): void => {
+      expect((): void => {
         sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1826,7 +1786,7 @@ describe('sqlHelper', () => {
             store: undefined,
           },
         });
-      }).should.throw(QueryError, `Attempting to query with an undefined value. store on ${repositoriesByModelNameLowered.product.model.name}`);
+      }).to.throw(QueryError, `Attempting to query with an undefined value. store on ${repositoriesByModelNameLowered.product.model.name}`);
     });
 
     it('should use column name if defined', () => {
@@ -1840,8 +1800,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "store_id"=$1');
-      params.should.deep.equal([storeId]);
+      expect(whereStatement).toBe('WHERE "store_id"=$1');
+      expect(params).toStrictEqual([storeId]);
     });
 
     it('should use property name if columnName is not defined', () => {
@@ -1855,8 +1815,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name"=$1');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE "name"=$1');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should handle startsWith', () => {
@@ -1872,8 +1832,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name" ILIKE $1');
-      params.should.deep.equal([`${name}%`]);
+      expect(whereStatement).toBe('WHERE "name" ILIKE $1');
+      expect(params).toStrictEqual([`${name}%`]);
     });
 
     it('should handle startsWith with an array of values', () => {
@@ -1890,8 +1850,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE ("name" ILIKE $1 OR "name" ILIKE $2)');
-      params.should.deep.equal([`${name1}%`, `${name2}%`]);
+      expect(whereStatement).toBe('WHERE ("name" ILIKE $1 OR "name" ILIKE $2)');
+      expect(params).toStrictEqual([`${name1}%`, `${name2}%`]);
     });
 
     it('should handle endsWith', () => {
@@ -1907,8 +1867,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name" ILIKE $1');
-      params.should.deep.equal([`%${name}`]);
+      expect(whereStatement).toBe('WHERE "name" ILIKE $1');
+      expect(params).toStrictEqual([`%${name}`]);
     });
 
     it('should handle endsWith with an array of values', () => {
@@ -1925,8 +1885,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE ("name" ILIKE $1 OR "name" ILIKE $2)');
-      params.should.deep.equal([`%${name1}`, `%${name2}`]);
+      expect(whereStatement).toBe('WHERE ("name" ILIKE $1 OR "name" ILIKE $2)');
+      expect(params).toStrictEqual([`%${name1}`, `%${name2}`]);
     });
 
     it('should handle contains', () => {
@@ -1942,8 +1902,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name" ILIKE $1');
-      params.should.deep.equal([`%${name}%`]);
+      expect(whereStatement).toBe('WHERE "name" ILIKE $1');
+      expect(params).toStrictEqual([`%${name}%`]);
     });
 
     it('should handle contains with an array of values', () => {
@@ -1960,8 +1920,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE ("name" ILIKE $1 OR "name" ILIKE $2)');
-      params.should.deep.equal([`%${name1}%`, `%${name2}%`]);
+      expect(whereStatement).toBe('WHERE ("name" ILIKE $1 OR "name" ILIKE $2)');
+      expect(params).toStrictEqual([`%${name1}%`, `%${name2}%`]);
     });
 
     it('should handle like', () => {
@@ -1977,8 +1937,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name" ILIKE $1');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE "name" ILIKE $1');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should handle not like', () => {
@@ -1996,8 +1956,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name" NOT ILIKE $1');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE "name" NOT ILIKE $1');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should handle like with an empty value', () => {
@@ -2012,8 +1972,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name" = \'\'');
-      params.should.deep.equal([]);
+      expect(whereStatement).toBe('WHERE "name" = \'\'');
+      expect(params).toStrictEqual([]);
     });
 
     it('should handle not like with an empty value', () => {
@@ -2030,8 +1990,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name" != \'\'');
-      params.should.deep.equal([]);
+      expect(whereStatement).toBe('WHERE "name" != \'\'');
+      expect(params).toStrictEqual([]);
     });
 
     it('should handle like with array with a single value', () => {
@@ -2047,8 +2007,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name" ILIKE $1');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE "name" ILIKE $1');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should handle not like with array with a single value', () => {
@@ -2066,8 +2026,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name" NOT ILIKE $1');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE "name" NOT ILIKE $1');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should handle like with an array of values', () => {
@@ -2084,8 +2044,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE ("name" ILIKE $1 OR "name" ILIKE $2)');
-      params.should.deep.equal([name1, name2]);
+      expect(whereStatement).toBe('WHERE ("name" ILIKE $1 OR "name" ILIKE $2)');
+      expect(params).toStrictEqual([name1, name2]);
     });
 
     it('should handle like with an array of null, empty string, and single value', () => {
@@ -2101,8 +2061,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE ("name" IS NULL OR "name" = \'\' OR "name" ILIKE $1)');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE ("name" IS NULL OR "name" = \'\' OR "name" ILIKE $1)');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should handle not like with an array of values', () => {
@@ -2121,8 +2081,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name" NOT ILIKE $1 AND "name" NOT ILIKE $2');
-      params.should.deep.equal([name1, name2]);
+      expect(whereStatement).toBe('WHERE "name" NOT ILIKE $1 AND "name" NOT ILIKE $2');
+      expect(params).toStrictEqual([name1, name2]);
     });
 
     it('should handle not like with an array of null, empty string, and single value', () => {
@@ -2140,8 +2100,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name" IS NOT NULL AND "name" != \'\' AND "name" NOT ILIKE $1');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE "name" IS NOT NULL AND "name" != \'\' AND "name" NOT ILIKE $1');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should handle like with an empty array', () => {
@@ -2156,8 +2116,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE 1<>1');
-      params.should.deep.equal([]);
+      expect(whereStatement).toBe('WHERE 1<>1');
+      expect(params).toStrictEqual([]);
     });
 
     it('should handle not like with an empty array', () => {
@@ -2174,8 +2134,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE 1=1');
-      params.should.deep.equal([]);
+      expect(whereStatement).toBe('WHERE 1=1');
+      expect(params).toStrictEqual([]);
     });
 
     it('should handle like with array column and array with a single value', () => {
@@ -2191,8 +2151,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should handle not like with array column and array with a single value', () => {
@@ -2210,8 +2170,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should handle like with array column and single value', () => {
@@ -2227,8 +2187,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should handle not like with array column and a single value', () => {
@@ -2246,8 +2206,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1)');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should handle like with array column and an array of values', () => {
@@ -2264,10 +2224,10 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal(
+      expect(whereStatement).toBe(
         'WHERE (EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1) OR EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $2))',
       );
-      params.should.deep.equal([name1, name2]);
+      expect(params).toStrictEqual([name1, name2]);
     });
 
     it('should handle not like with array column and an array of values', () => {
@@ -2286,10 +2246,10 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal(
+      expect(whereStatement).toBe(
         'WHERE NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $1) AND NOT EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $2)',
       );
-      params.should.deep.equal([name1, name2]);
+      expect(params).toStrictEqual([name1, name2]);
     });
 
     describe('JSON column containment', () => {
@@ -2305,8 +2265,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "bar"@>$1::jsonb');
-        params.should.deep.equal([{ content: 'foo' }]);
+        expect(whereStatement).toBe('WHERE "bar"@>$1::jsonb');
+        expect(params).toStrictEqual([{ content: 'foo' }]);
       });
 
       it('should handle negated contains with an object value on JSON column', () => {
@@ -2323,8 +2283,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE NOT "bar"@>$1::jsonb');
-        params.should.deep.equal([{ content: 'foo' }]);
+        expect(whereStatement).toBe('WHERE NOT "bar"@>$1::jsonb');
+        expect(params).toStrictEqual([{ content: 'foo' }]);
       });
 
       it('should handle contains with an array of object values on JSON column (OR)', () => {
@@ -2339,8 +2299,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE ("bar"@>$1::jsonb OR "bar"@>$2::jsonb)');
-        params.should.deep.equal([{ content: 'foo' }, { content: 'bar' }]);
+        expect(whereStatement).toBe('WHERE ("bar"@>$1::jsonb OR "bar"@>$2::jsonb)');
+        expect(params).toStrictEqual([{ content: 'foo' }, { content: 'bar' }]);
       });
 
       it('should handle negated contains with an array of object values on JSON column (AND)', () => {
@@ -2357,8 +2317,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE NOT "bar"@>$1::jsonb AND NOT "bar"@>$2::jsonb');
-        params.should.deep.equal([{ content: 'foo' }, { content: 'bar' }]);
+        expect(whereStatement).toBe('WHERE NOT "bar"@>$1::jsonb AND NOT "bar"@>$2::jsonb');
+        expect(params).toStrictEqual([{ content: 'foo' }, { content: 'bar' }]);
       });
 
       it('should handle contains with an empty object on JSON column', () => {
@@ -2373,8 +2333,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "bar"@>$1::jsonb');
-        params.should.deep.equal([{}]);
+        expect(whereStatement).toBe('WHERE "bar"@>$1::jsonb');
+        expect(params).toStrictEqual([{}]);
       });
 
       it('should handle contains with null on JSON column', () => {
@@ -2389,8 +2349,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "bar" IS NULL');
-        params.should.deep.equal([]);
+        expect(whereStatement).toBe('WHERE "bar" IS NULL');
+        expect(params).toStrictEqual([]);
       });
 
       it('should handle contains with an empty array on JSON column', () => {
@@ -2405,12 +2365,12 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE 1<>1');
-        params.should.deep.equal([]);
+        expect(whereStatement).toBe('WHERE 1<>1');
+        expect(params).toStrictEqual([]);
       });
 
       it('should throw error for like operator on JSON column', () => {
-        ((): void => {
+        expect((): void => {
           sqlHelper.buildWhereStatement({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
@@ -2420,11 +2380,11 @@ describe('sqlHelper', () => {
               },
             } as WhereQuery<SimpleWithJson>,
           });
-        }).should.throw(QueryError, '"like" operator is not supported for JSON columns');
+        }).to.throw(QueryError, '"like" operator is not supported for JSON columns');
       });
 
       it('should throw error for startsWith operator on JSON column', () => {
-        ((): void => {
+        expect((): void => {
           sqlHelper.buildWhereStatement({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
@@ -2434,11 +2394,11 @@ describe('sqlHelper', () => {
               },
             } as WhereQuery<SimpleWithJson>,
           });
-        }).should.throw(QueryError, '"like" operator is not supported for JSON columns');
+        }).to.throw(QueryError, '"like" operator is not supported for JSON columns');
       });
 
       it('should throw error for endsWith operator on JSON column', () => {
-        ((): void => {
+        expect((): void => {
           sqlHelper.buildWhereStatement({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
@@ -2448,7 +2408,7 @@ describe('sqlHelper', () => {
               },
             } as WhereQuery<SimpleWithJson>,
           });
-        }).should.throw(QueryError, '"like" operator is not supported for JSON columns');
+        }).to.throw(QueryError, '"like" operator is not supported for JSON columns');
       });
     });
 
@@ -2465,8 +2425,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "created_at">$1');
-      params.should.deep.equal([now]);
+      expect(whereStatement).toBe('WHERE "created_at">$1');
+      expect(params).toStrictEqual([now]);
     });
 
     it('should handle date range', () => {
@@ -2484,8 +2444,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "created_at">=$1 AND "created_at"<$2');
-      params.should.deep.equal([now, future]);
+      expect(whereStatement).toBe('WHERE "created_at">=$1 AND "created_at"<$2');
+      expect(params).toStrictEqual([now, future]);
     });
 
     it('should handle or', () => {
@@ -2510,12 +2470,12 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE (("name"=$1) OR ("name"<>$2 AND "store_id"=$3))');
-      params.should.deep.equal([name, name, store]);
+      expect(whereStatement).toBe('WHERE (("name"=$1) OR ("name"<>$2 AND "store_id"=$3))');
+      expect(params).toStrictEqual([name, name, store]);
     });
 
     it('should throw for empty or', () => {
-      ((): void => {
+      expect((): void => {
         sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -2523,7 +2483,7 @@ describe('sqlHelper', () => {
             or: [],
           },
         });
-      }).should.throw(QueryError, `WHERE statement is unexpectedly empty.`);
+      }).to.throw(QueryError, `WHERE statement is unexpectedly empty.`);
     });
 
     it('should handle or with a int field and a string array field', () => {
@@ -2554,8 +2514,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE (("store_id"=$1 AND $2=ANY("alias_names")) OR ("store_id"=$3 AND $4=ANY("alias_names")) OR ("store_id"=$5 AND $6=ANY("alias_names")))');
-      params.should.deep.equal([store, alias1, store, alias2, store2, alias3]);
+      expect(whereStatement).toBe('WHERE (("store_id"=$1 AND $2=ANY("alias_names")) OR ("store_id"=$3 AND $4=ANY("alias_names")) OR ("store_id"=$5 AND $6=ANY("alias_names")))');
+      expect(params).toStrictEqual([store, alias1, store, alias2, store2, alias3]);
     });
 
     it('should handle or with two string fields', () => {
@@ -2581,8 +2541,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE (("name"=$1 AND "location"=$2) OR ("name"=$3 AND "location"=$4))');
-      params.should.deep.equal([name, location1, name1, location2]);
+      expect(whereStatement).toBe('WHERE (("name"=$1 AND "location"=$2) OR ("name"=$3 AND "location"=$4))');
+      expect(params).toStrictEqual([name, location1, name1, location2]);
     });
 
     it('should handle mixed or/and constraints', () => {
@@ -2611,8 +2571,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "id"=$1 AND (("name"=$2) OR ("name"<>$3 AND "store_id"=$4)) AND "sku"=$5');
-      params.should.deep.equal([id, name, name, store, sku]);
+      expect(whereStatement).toBe('WHERE "id"=$1 AND (("name"=$2) OR ("name"<>$3 AND "store_id"=$4)) AND "sku"=$5');
+      expect(params).toStrictEqual([id, name, name, store, sku]);
     });
 
     it('should handle and', () => {
@@ -2634,12 +2594,12 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE (("name"=$1) AND ("sku"=$2))');
-      params.should.deep.equal([name, sku]);
+      expect(whereStatement).toBe('WHERE (("name"=$1) AND ("sku"=$2))');
+      expect(params).toStrictEqual([name, sku]);
     });
 
     it('should throw for empty and', () => {
-      ((): void => {
+      expect((): void => {
         sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -2647,7 +2607,7 @@ describe('sqlHelper', () => {
             and: [],
           },
         });
-      }).should.throw(QueryError, `WHERE statement is unexpectedly empty.`);
+      }).to.throw(QueryError, `WHERE statement is unexpectedly empty.`);
     });
 
     it('should handle and with nested or', () => {
@@ -2671,8 +2631,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE (((("name"=$1) OR ("name"=$2))) AND ((("sku"=$3) OR ("sku"=$4))))');
-      params.should.deep.equal([name1, name2, sku1, sku2]);
+      expect(whereStatement).toBe('WHERE (((("name"=$1) OR ("name"=$2))) AND ((("sku"=$3) OR ("sku"=$4))))');
+      expect(params).toStrictEqual([name1, name2, sku1, sku2]);
     });
 
     it('should handle or with nested and', () => {
@@ -2696,9 +2656,9 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE (((("name"=$1) AND ("sku"=$2))) OR ((("name"=$3) AND ("sku"=$4))))');
+      expect(whereStatement).toBe('WHERE (((("name"=$1) AND ("sku"=$2))) OR ((("name"=$3) AND ("sku"=$4))))');
 
-      params.should.deep.equal([name1, sku1, name2, sku2]);
+      expect(params).toStrictEqual([name1, sku1, name2, sku2]);
     });
 
     it('should handle and mixed with regular conditions', () => {
@@ -2724,8 +2684,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "id"=$1 AND (("name"=$2) AND ("sku"=$3)) AND "location"=$4');
-      params.should.deep.equal([id, name, sku, location]);
+      expect(whereStatement).toBe('WHERE "id"=$1 AND (("name"=$2) AND ("sku"=$3)) AND "location"=$4');
+      expect(params).toStrictEqual([id, name, sku, location]);
     });
 
     it('should handle single item and array', () => {
@@ -2739,8 +2699,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE ("name"=$1)');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE ("name"=$1)');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should treat string type with array values as an =ANY() statement', () => {
@@ -2754,8 +2714,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name"=ANY($1::TEXT[])');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE "name"=ANY($1::TEXT[])');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should treat uuid type with array values as an =ANY() statement', () => {
@@ -2769,8 +2729,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "id"=ANY($1::UUID[])');
-      params.should.deep.equal([id]);
+      expect(whereStatement).toBe('WHERE "id"=ANY($1::UUID[])');
+      expect(params).toStrictEqual([id]);
     });
 
     it('should treat uuid type with string values as an = statement', () => {
@@ -2784,8 +2744,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "id"=$1');
-      params.should.deep.equal([id]);
+      expect(whereStatement).toBe('WHERE "id"=$1');
+      expect(params).toStrictEqual([id]);
     });
 
     it('should treat integer type with array values as an =ANY() statement', () => {
@@ -2800,8 +2760,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "int_column"=ANY($1::INTEGER[])');
-      params.should.deep.equal([values]);
+      expect(whereStatement).toBe('WHERE "int_column"=ANY($1::INTEGER[])');
+      expect(params).toStrictEqual([values]);
     });
 
     it('should treat float type with array values as an =ANY() statement', () => {
@@ -2816,8 +2776,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "float_column"=ANY($1::NUMERIC[])');
-      params.should.deep.equal([values]);
+      expect(whereStatement).toBe('WHERE "float_column"=ANY($1::NUMERIC[])');
+      expect(params).toStrictEqual([values]);
     });
 
     describe('type: "array"', () => {
@@ -2831,8 +2791,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "array_column"=\'{}\'');
-        params.should.deep.equal([]);
+        expect(whereStatement).toBe('WHERE "array_column"=\'{}\'');
+        expect(params).toStrictEqual([]);
       });
 
       it('should handle comparing array type as an array of null or empty', () => {
@@ -2845,8 +2805,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE ("array_column" IS NULL OR "array_column"=\'{}\')');
-        params.should.deep.equal([]);
+        expect(whereStatement).toBe('WHERE ("array_column" IS NULL OR "array_column"=\'{}\')');
+        expect(params).toStrictEqual([]);
       });
 
       it('should handle comparing array type with single value as =ANY()', () => {
@@ -2860,8 +2820,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE $1=ANY("array_column")');
-        params.should.deep.equal([value]);
+        expect(whereStatement).toBe('WHERE $1=ANY("array_column")');
+        expect(params).toStrictEqual([value]);
       });
 
       it('should handle comparing array type with array of a single value as =ANY()', () => {
@@ -2875,8 +2835,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE $1=ANY("array_column")');
-        params.should.deep.equal([value]);
+        expect(whereStatement).toBe('WHERE $1=ANY("array_column")');
+        expect(params).toStrictEqual([value]);
       });
 
       it('should handle comparing array type with negated single value as <>ALL()', () => {
@@ -2892,8 +2852,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE $1<>ALL("array_column")');
-        params.should.deep.equal([value]);
+        expect(whereStatement).toBe('WHERE $1<>ALL("array_column")');
+        expect(params).toStrictEqual([value]);
       });
 
       it('should handle comparing array type with negated array of a single value as <>ALL()', () => {
@@ -2909,8 +2869,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE $1<>ALL("array_column")');
-        params.should.deep.equal([value]);
+        expect(whereStatement).toBe('WHERE $1<>ALL("array_column")');
+        expect(params).toStrictEqual([value]);
       });
 
       it('should handle comparing array type with array value as separate =ANY() statements', () => {
@@ -2924,8 +2884,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE ($1=ANY("array_column") OR $2=ANY("array_column"))');
-        params.should.deep.equal([values[0], values[1]]);
+        expect(whereStatement).toBe('WHERE ($1=ANY("array_column") OR $2=ANY("array_column"))');
+        expect(params).toStrictEqual([values[0], values[1]]);
       });
 
       it('should handle comparing array type with negated array value as separate <>ALL() statements', () => {
@@ -2941,8 +2901,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE $1<>ALL("array_column") AND $2<>ALL("array_column")');
-        params.should.deep.equal([values[0], values[1]]);
+        expect(whereStatement).toBe('WHERE $1<>ALL("array_column") AND $2<>ALL("array_column")');
+        expect(params).toStrictEqual([values[0], values[1]]);
       });
     });
 
@@ -2957,8 +2917,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "string_array_column"=\'{}\'');
-        params.should.deep.equal([]);
+        expect(whereStatement).toBe('WHERE "string_array_column"=\'{}\'');
+        expect(params).toStrictEqual([]);
       });
 
       it('should handle comparing array type as an array of null or empty', () => {
@@ -2972,8 +2932,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE ("string_array_column" IS NULL OR "string_array_column"=\'{}\')');
-        params.should.deep.equal([]);
+        expect(whereStatement).toBe('WHERE ("string_array_column" IS NULL OR "string_array_column"=\'{}\')');
+        expect(params).toStrictEqual([]);
       });
 
       it('should handle comparing array type with single value as =ANY()', () => {
@@ -2987,8 +2947,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE $1=ANY("string_array_column")');
-        params.should.deep.equal([value]);
+        expect(whereStatement).toBe('WHERE $1=ANY("string_array_column")');
+        expect(params).toStrictEqual([value]);
       });
 
       it('should handle comparing array type with array of a single value as =ANY()', () => {
@@ -3002,8 +2962,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE $1=ANY("string_array_column")');
-        params.should.deep.equal([value]);
+        expect(whereStatement).toBe('WHERE $1=ANY("string_array_column")');
+        expect(params).toStrictEqual([value]);
       });
 
       it('should handle comparing array type with negated single value as <>ALL()', () => {
@@ -3019,8 +2979,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE $1<>ALL("string_array_column")');
-        params.should.deep.equal([value]);
+        expect(whereStatement).toBe('WHERE $1<>ALL("string_array_column")');
+        expect(params).toStrictEqual([value]);
       });
 
       it('should handle comparing array type with negated array of a single value as <>ALL()', () => {
@@ -3036,8 +2996,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE $1<>ALL("string_array_column")');
-        params.should.deep.equal([value]);
+        expect(whereStatement).toBe('WHERE $1<>ALL("string_array_column")');
+        expect(params).toStrictEqual([value]);
       });
 
       it('should handle comparing array type with array value as separate =ANY() statements', () => {
@@ -3051,8 +3011,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE ($1=ANY("string_array_column") OR $2=ANY("string_array_column"))');
-        params.should.deep.equal([values[0], values[1]]);
+        expect(whereStatement).toBe('WHERE ($1=ANY("string_array_column") OR $2=ANY("string_array_column"))');
+        expect(params).toStrictEqual([values[0], values[1]]);
       });
 
       it('should handle comparing array type with negated array value as separate <>ALL() statements', () => {
@@ -3068,8 +3028,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE $1<>ALL("string_array_column") AND $2<>ALL("string_array_column")');
-        params.should.deep.equal([values[0], values[1]]);
+        expect(whereStatement).toBe('WHERE $1<>ALL("string_array_column") AND $2<>ALL("string_array_column")');
+        expect(params).toStrictEqual([values[0], values[1]]);
       });
     });
 
@@ -3083,8 +3043,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE 1<>1');
-      params.should.deep.equal([]);
+      expect(whereStatement).toBe('WHERE 1<>1');
+      expect(params).toStrictEqual([]);
     });
 
     it('should treat negated empty array value as "true"', () => {
@@ -3099,8 +3059,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE 1=1');
-      params.should.deep.equal([]);
+      expect(whereStatement).toBe('WHERE 1=1');
+      expect(params).toStrictEqual([]);
     });
 
     it('should handle single value array', () => {
@@ -3114,8 +3074,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name"=$1');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE "name"=$1');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should handle an array value with NULL explicitly', () => {
@@ -3128,8 +3088,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE ("name" IS NULL OR "name"=$1)');
-      params.should.deep.equal(['']);
+      expect(whereStatement).toBe('WHERE ("name" IS NULL OR "name"=$1)');
+      expect(params).toStrictEqual(['']);
     });
 
     it('should treat negation of array value as an <>ALL() statement', () => {
@@ -3145,8 +3105,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name"<>ALL($1::TEXT[])');
-      params.should.deep.equal([name]);
+      expect(whereStatement).toBe('WHERE "name"<>ALL($1::TEXT[])');
+      expect(params).toStrictEqual([name]);
     });
 
     it('should treat negation of empty array value as "true"', () => {
@@ -3161,8 +3121,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE 1=1');
-      params.should.deep.equal([]);
+      expect(whereStatement).toBe('WHERE 1=1');
+      expect(params).toStrictEqual([]);
     });
 
     it('should treat negation of array value with NULL explicitly as AND statements', () => {
@@ -3177,8 +3137,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "name" IS NOT NULL AND "name"<>$1');
-      params.should.deep.equal(['']);
+      expect(whereStatement).toBe('WHERE "name" IS NOT NULL AND "name"<>$1');
+      expect(params).toStrictEqual(['']);
     });
 
     it('should use primaryKey if hydrated object is passed as a query value', () => {
@@ -3195,8 +3155,8 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      whereStatement.should.equal('WHERE "store_id"=$1');
-      params.should.deep.equal([store.id]);
+      expect(whereStatement).toBe('WHERE "store_id"=$1');
+      expect(params).toStrictEqual([store.id]);
     });
   });
 
@@ -3208,7 +3168,7 @@ describe('sqlHelper', () => {
         sorts: [],
       });
 
-      result.should.equal('');
+      expect(result).toBe('');
     });
 
     it('should handle single string order with implicit direction', () => {
@@ -3222,7 +3182,7 @@ describe('sqlHelper', () => {
         ],
       });
 
-      result.should.equal('ORDER BY "name"');
+      expect(result).toBe('ORDER BY "name"');
     });
 
     it('should handle single string order with implicit direction and explicit columnName', () => {
@@ -3236,7 +3196,7 @@ describe('sqlHelper', () => {
         ],
       });
 
-      result.should.equal('ORDER BY "int_column"');
+      expect(result).toBe('ORDER BY "int_column"');
     });
 
     it('should handle single string order with explicit desc direction', () => {
@@ -3251,7 +3211,7 @@ describe('sqlHelper', () => {
         ],
       });
 
-      result.should.equal('ORDER BY "name" DESC');
+      expect(result).toBe('ORDER BY "name" DESC');
     });
 
     it('should handle single string order with explicit desc direction and explicit columnName', () => {
@@ -3266,7 +3226,7 @@ describe('sqlHelper', () => {
         ],
       });
 
-      result.should.equal('ORDER BY "int_column" DESC');
+      expect(result).toBe('ORDER BY "int_column" DESC');
     });
 
     it('should handle multiple string order', () => {
@@ -3284,7 +3244,7 @@ describe('sqlHelper', () => {
         ],
       });
 
-      result.should.equal('ORDER BY "int_column" DESC,"name"');
+      expect(result).toBe('ORDER BY "int_column" DESC,"name"');
     });
 
     it('should handle dot-notation for joined table column', () => {
@@ -3305,7 +3265,7 @@ describe('sqlHelper', () => {
         ],
       });
 
-      result.should.equal('ORDER BY "store"."name"');
+      expect(result).toBe('ORDER BY "store"."name"');
     });
 
     it('should handle dot-notation with custom alias', () => {
@@ -3327,7 +3287,7 @@ describe('sqlHelper', () => {
         ],
       });
 
-      result.should.equal('ORDER BY "primaryStore"."name" DESC');
+      expect(result).toBe('ORDER BY "primaryStore"."name" DESC');
     });
 
     it('should handle mixed regular and dot-notation sorts', () => {
@@ -3352,7 +3312,7 @@ describe('sqlHelper', () => {
         ],
       });
 
-      result.should.equal('ORDER BY "store"."name","name" DESC');
+      expect(result).toBe('ORDER BY "store"."name","name" DESC');
     });
   });
 
@@ -3365,7 +3325,7 @@ describe('sqlHelper', () => {
         params: [],
       });
 
-      result.should.equal('');
+      expect(result).toBe('');
     });
 
     it('should generate INNER JOIN clause for model relationship', () => {
@@ -3382,7 +3342,7 @@ describe('sqlHelper', () => {
         params: [],
       });
 
-      result.should.equal(' INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id"');
+      expect(result).toBe(' INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id"');
     });
 
     it('should generate LEFT JOIN clause for model relationship', () => {
@@ -3399,7 +3359,7 @@ describe('sqlHelper', () => {
         params: [],
       });
 
-      result.should.equal(' LEFT JOIN "stores" AS "store" ON "products"."store_id"="store"."id"');
+      expect(result).toBe(' LEFT JOIN "stores" AS "store" ON "products"."store_id"="store"."id"');
     });
 
     it('should use custom alias in join clause', () => {
@@ -3416,7 +3376,7 @@ describe('sqlHelper', () => {
         params: [],
       });
 
-      result.should.equal(' INNER JOIN "stores" AS "primaryStore" ON "products"."store_id"="primaryStore"."id"');
+      expect(result).toBe(' INNER JOIN "stores" AS "primaryStore" ON "products"."store_id"="primaryStore"."id"');
     });
 
     it('should include additional ON constraints for LEFT JOIN', () => {
@@ -3437,8 +3397,8 @@ describe('sqlHelper', () => {
         params,
       });
 
-      result.should.equal(' LEFT JOIN "stores" AS "store" ON "products"."store_id"="store"."id" AND "store"."name"=$1');
-      params.should.deep.equal(['Acme']);
+      expect(result).toBe(' LEFT JOIN "stores" AS "store" ON "products"."store_id"="store"."id" AND "store"."name"=$1');
+      expect(params).toStrictEqual(['Acme']);
     });
 
     it('should throw QueryError for non-existent property', () => {
@@ -3461,8 +3421,8 @@ describe('sqlHelper', () => {
         thrownError = ex as Error;
       }
 
-      should.exist(thrownError);
-      thrownError!.message.should.contain('Unable to find property "nonExistent"');
+      expect(thrownError).toBeDefined();
+      expect(thrownError!.message).toContain('Unable to find property "nonExistent"');
     });
 
     it('should throw QueryError for non-relationship property', () => {
@@ -3485,8 +3445,8 @@ describe('sqlHelper', () => {
         thrownError = ex as Error;
       }
 
-      should.exist(thrownError);
-      thrownError!.message.should.contain('is not a relationship and cannot be joined');
+      expect(thrownError).toBeDefined();
+      expect(thrownError!.message).toContain('is not a relationship and cannot be joined');
     });
   });
 
@@ -3507,8 +3467,8 @@ describe('sqlHelper', () => {
         ],
       });
 
-      whereStatement!.should.equal('WHERE "store"."name"=$1');
-      params.should.deep.equal(['Acme']);
+      expect(whereStatement!).toBe('WHERE "store"."name"=$1');
+      expect(params).toStrictEqual(['Acme']);
     });
 
     it('should handle dot-notation with like operator on joined table', () => {
@@ -3527,8 +3487,8 @@ describe('sqlHelper', () => {
         ],
       });
 
-      whereStatement!.should.equal('WHERE "store"."name" ILIKE $1');
-      params.should.deep.equal(['%mart%']);
+      expect(whereStatement!).toBe('WHERE "store"."name" ILIKE $1');
+      expect(params).toStrictEqual(['%mart%']);
     });
 
     it('should handle dot-notation with custom join alias', () => {
@@ -3547,8 +3507,8 @@ describe('sqlHelper', () => {
         ],
       });
 
-      whereStatement!.should.equal('WHERE "primaryStore"."name"=$1');
-      params.should.deep.equal(['Acme']);
+      expect(whereStatement!).toBe('WHERE "primaryStore"."name"=$1');
+      expect(params).toStrictEqual(['Acme']);
     });
 
     it('should handle multiple dot-notation properties', () => {
@@ -3568,8 +3528,8 @@ describe('sqlHelper', () => {
         ],
       });
 
-      whereStatement!.should.equal('WHERE "name"=$1 AND "store"."name"=$2');
-      params.should.deep.equal(['Widget', 'Acme']);
+      expect(whereStatement!).toBe('WHERE "name"=$1 AND "store"."name"=$2');
+      expect(params).toStrictEqual(['Widget', 'Acme']);
     });
 
     it('should handle dot-notation with comparison operators', () => {
@@ -3588,8 +3548,8 @@ describe('sqlHelper', () => {
         ],
       });
 
-      whereStatement!.should.equal('WHERE "store"."id">$1');
-      params.should.deep.equal([5]);
+      expect(whereStatement!).toBe('WHERE "store"."id">$1');
+      expect(params).toStrictEqual([5]);
     });
 
     it('should handle dot-notation with null value', () => {
@@ -3608,8 +3568,8 @@ describe('sqlHelper', () => {
         ],
       });
 
-      whereStatement!.should.equal('WHERE "store"."name" IS NULL');
-      params.should.deep.equal([]);
+      expect(whereStatement!).toBe('WHERE "store"."name" IS NULL');
+      expect(params).toStrictEqual([]);
     });
 
     it('should throw error when using dot-notation without corresponding join', () => {
@@ -3627,8 +3587,8 @@ describe('sqlHelper', () => {
         thrownError = ex as Error;
       }
 
-      should.exist(thrownError);
-      thrownError!.message.should.contain('Cannot use dot notation "store.name" without a join');
+      expect(thrownError).toBeDefined();
+      expect(thrownError!.message).toContain('Cannot use dot notation "store.name" without a join');
     });
 
     it('should throw error when join alias does not match', () => {
@@ -3653,8 +3613,8 @@ describe('sqlHelper', () => {
         thrownError = ex as Error;
       }
 
-      should.exist(thrownError);
-      thrownError!.message.should.contain('Cannot find join for "nonExistentAlias"');
+      expect(thrownError).toBeDefined();
+      expect(thrownError!.message).toContain('Cannot find join for "nonExistentAlias"');
     });
 
     it('should throw error when property does not exist on joined model', () => {
@@ -3679,8 +3639,8 @@ describe('sqlHelper', () => {
         thrownError = ex as Error;
       }
 
-      should.exist(thrownError);
-      thrownError!.message.should.contain('Unable to find property "nonExistentProperty" on model');
+      expect(thrownError).toBeDefined();
+      expect(thrownError!.message).toContain('Unable to find property "nonExistentProperty" on model');
     });
   });
 
@@ -3700,8 +3660,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "store_id" IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
-        params.should.deep.equal(['Acme']);
+        expect(whereStatement).toBe('WHERE "store_id" IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
+        expect(params).toStrictEqual(['Acme']);
       });
 
       it('should generate NOT IN subquery with negation', () => {
@@ -3718,8 +3678,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "store_id" NOT IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
-        params.should.deep.equal(['Inactive']);
+        expect(whereStatement).toBe('WHERE "store_id" NOT IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
+        expect(params).toStrictEqual(['Inactive']);
       });
 
       it('should generate IN subquery without select (defaults to 1)', () => {
@@ -3734,8 +3694,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "store_id" IN (SELECT 1 FROM "stores" WHERE "name"=$1)');
-        params.should.deep.equal(['Test']);
+        expect(whereStatement).toBe('WHERE "store_id" IN (SELECT 1 FROM "stores" WHERE "name"=$1)');
+        expect(params).toStrictEqual(['Test']);
       });
     });
 
@@ -3752,8 +3712,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE EXISTS (SELECT 1 FROM "products" WHERE "name"=$1)');
-        params.should.deep.equal(['Widget']);
+        expect(whereStatement).toBe('WHERE EXISTS (SELECT 1 FROM "products" WHERE "name"=$1)');
+        expect(params).toStrictEqual(['Widget']);
       });
 
       it('should generate NOT EXISTS subquery with negation', () => {
@@ -3768,8 +3728,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE NOT EXISTS (SELECT 1 FROM "products" WHERE "name"=$1)');
-        params.should.deep.equal(['Discontinued']);
+        expect(whereStatement).toBe('WHERE NOT EXISTS (SELECT 1 FROM "products" WHERE "name"=$1)');
+        expect(params).toStrictEqual(['Discontinued']);
       });
     });
 
@@ -3788,8 +3748,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "int_column">(SELECT AVG("int_column") FROM "kitchen_sink" WHERE "name"=$1)');
-        params.should.deep.equal(['test']);
+        expect(whereStatement).toBe('WHERE "int_column">(SELECT AVG("int_column") FROM "kitchen_sink" WHERE "name"=$1)');
+        expect(params).toStrictEqual(['test']);
       });
 
       it('should generate scalar subquery with COUNT', () => {
@@ -3806,8 +3766,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "int_column">=(SELECT COUNT(*) FROM "products" WHERE "name"=$1)');
-        params.should.deep.equal(['Popular']);
+        expect(whereStatement).toBe('WHERE "int_column">=(SELECT COUNT(*) FROM "products" WHERE "name"=$1)');
+        expect(params).toStrictEqual(['Popular']);
       });
 
       it('should generate scalar subquery with SUM', () => {
@@ -3822,8 +3782,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "int_column"<(SELECT SUM("int_column") FROM "kitchen_sink")');
-        params.should.deep.equal([]);
+        expect(whereStatement).toBe('WHERE "int_column"<(SELECT SUM("int_column") FROM "kitchen_sink")');
+        expect(params).toStrictEqual([]);
       });
 
       it('should generate scalar subquery with MAX', () => {
@@ -3838,8 +3798,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "int_column"<=(SELECT MAX("int_column") FROM "kitchen_sink")');
-        params.should.deep.equal([]);
+        expect(whereStatement).toBe('WHERE "int_column"<=(SELECT MAX("int_column") FROM "kitchen_sink")');
+        expect(params).toStrictEqual([]);
       });
 
       it('should generate scalar subquery with MIN', () => {
@@ -3854,8 +3814,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "int_column">(SELECT MIN("int_column") FROM "kitchen_sink")');
-        params.should.deep.equal([]);
+        expect(whereStatement).toBe('WHERE "int_column">(SELECT MIN("int_column") FROM "kitchen_sink")');
+        expect(params).toStrictEqual([]);
       });
     });
 
@@ -3876,8 +3836,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "store_id" IN (SELECT "id" FROM "stores" WHERE "name" ILIKE $1 ORDER BY "name" LIMIT 10)');
-        params.should.deep.equal(['A%']);
+        expect(whereStatement).toBe('WHERE "store_id" IN (SELECT "id" FROM "stores" WHERE "name" ILIKE $1 ORDER BY "name" LIMIT 10)');
+        expect(params).toStrictEqual(['A%']);
       });
     });
 
@@ -3898,8 +3858,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "name"=$1 AND "store_id" IN (SELECT "id" FROM "stores" WHERE "name"=$2)');
-        params.should.deep.equal([productName, 'Premium']);
+        expect(whereStatement).toBe('WHERE "name"=$1 AND "store_id" IN (SELECT "id" FROM "stores" WHERE "name"=$2)');
+        expect(params).toStrictEqual([productName, 'Premium']);
       });
     });
 
@@ -3923,7 +3883,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"');
+        expect(result).toBe(' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"');
       });
 
       it('should generate LEFT JOIN to subquery', () => {
@@ -3945,7 +3905,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(' LEFT JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"');
+        expect(result).toBe(' LEFT JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"');
       });
 
       it('should generate subquery join with SUM aggregate', () => {
@@ -3967,7 +3927,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(' INNER JOIN (SELECT "id",SUM("int_column") AS "total" FROM "kitchen_sink" GROUP BY "id") AS "totals" ON "stores"."id"="totals"."id"');
+        expect(result).toBe(' INNER JOIN (SELECT "id",SUM("int_column") AS "total" FROM "kitchen_sink" GROUP BY "id") AS "totals" ON "stores"."id"="totals"."id"');
       });
 
       it('should generate subquery join with COUNT DISTINCT', () => {
@@ -3989,7 +3949,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(' INNER JOIN (SELECT "store_id" AS "store",COUNT(DISTINCT "name") AS "uniqueNames" FROM "products" GROUP BY "store_id") AS "stats" ON "stores"."id"="stats"."store"');
+        expect(result).toBe(' INNER JOIN (SELECT "store_id" AS "store",COUNT(DISTINCT "name") AS "uniqueNames" FROM "products" GROUP BY "store_id") AS "stats" ON "stores"."id"="stats"."store"');
       });
 
       it('should generate subquery join with WHERE clause', () => {
@@ -4013,10 +3973,10 @@ describe('sqlHelper', () => {
           params,
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "activeCount" FROM "products" WHERE "name" IS NOT NULL GROUP BY "store_id") AS "activeProducts" ON "stores"."id"="activeProducts"."store"',
         );
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
 
       it('should generate subquery join with parameterized WHERE clause', () => {
@@ -4040,10 +4000,10 @@ describe('sqlHelper', () => {
           params,
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "count" FROM "products" WHERE "name"=$1 GROUP BY "store_id") AS "widgetCounts" ON "stores"."id"="widgetCounts"."store"',
         );
-        params.should.deep.equal(['Widget']);
+        expect(params).toStrictEqual(['Widget']);
       });
 
       it('should generate subquery join with multiple aggregates', () => {
@@ -4070,7 +4030,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' INNER JOIN (SELECT "id",COUNT(*) AS "count",SUM("int_column") AS "total",AVG("int_column") AS "average" FROM "kitchen_sink" GROUP BY "id") AS "stats" ON "stores"."id"="stats"."id"',
         );
       });
@@ -4094,7 +4054,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "count" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"');
+        expect(result).toBe(' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "count" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"');
       });
 
       it('should generate subquery join with default aliases for sum, avg, max, min', () => {
@@ -4122,7 +4082,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' INNER JOIN (SELECT "id",SUM("int_column") AS "sum",AVG("int_column") AS "avg",MAX("int_column") AS "max",MIN("int_column") AS "min" FROM "kitchen_sink" GROUP BY "id") AS "stats" ON "stores"."id"="stats"."id"',
         );
       });
@@ -4146,7 +4106,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(' INNER JOIN (SELECT "store_id" AS "store",COUNT(DISTINCT "name") AS "count" FROM "products" GROUP BY "store_id") AS "stats" ON "stores"."id"="stats"."store"');
+        expect(result).toBe(' INNER JOIN (SELECT "store_id" AS "store",COUNT(DISTINCT "name") AS "count" FROM "products" GROUP BY "store_id") AS "stats" ON "stores"."id"="stats"."store"');
       });
 
       it('should support multiple ON conditions in subquery join', () => {
@@ -4168,7 +4128,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' INNER JOIN (SELECT "store_id" AS "store","name",COUNT(*) AS "count" FROM "products" GROUP BY "store_id","name") AS "productStats" ON "stores"."id"="productStats"."store" AND "stores"."name"="productStats"."name"',
         );
       });
@@ -4193,7 +4153,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id" HAVING COUNT(*)=5) AS "productStats" ON "stores"."id"="productStats"."store"',
         );
       });
@@ -4218,7 +4178,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id" HAVING COUNT(*)>10) AS "productStats" ON "stores"."id"="productStats"."store"',
         );
       });
@@ -4243,7 +4203,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id" HAVING COUNT(*)>=5 AND COUNT(*)<=100) AS "productStats" ON "stores"."id"="productStats"."store"',
         );
       });
@@ -4268,7 +4228,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id" HAVING COUNT(*)<>0) AS "productStats" ON "stores"."id"="productStats"."store"',
         );
       });
@@ -4293,7 +4253,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(' INNER JOIN (SELECT "id",SUM("int_column") AS "totalInt" FROM "kitchen_sink" GROUP BY "id" HAVING SUM("int_column")>1000) AS "stats" ON "stores"."id"="stats"."id"');
+        expect(result).toBe(' INNER JOIN (SELECT "id",SUM("int_column") AS "totalInt" FROM "kitchen_sink" GROUP BY "id" HAVING SUM("int_column")>1000) AS "stats" ON "stores"."id"="stats"."id"');
       });
 
       it('should generate subquery join with HAVING on multiple aggregates', () => {
@@ -4316,7 +4276,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' INNER JOIN (SELECT "id",COUNT(*) AS "rowCount",AVG("int_column") AS "avgInt" FROM "kitchen_sink" GROUP BY "id" HAVING COUNT(*)>5 AND AVG("int_column")>=50) AS "stats" ON "stores"."id"="stats"."id"',
         );
       });
@@ -4342,7 +4302,7 @@ describe('sqlHelper', () => {
         }
 
         assert(thrownError instanceof QueryError);
-        thrownError.message.should.include('Invalid HAVING operator');
+        expect(thrownError.message).toContain('Invalid HAVING operator');
       });
 
       it('should throw error for non-number HAVING value', () => {
@@ -4366,7 +4326,7 @@ describe('sqlHelper', () => {
         }
 
         assert(thrownError instanceof QueryError);
-        thrownError.message.should.include('must be a finite number');
+        expect(thrownError.message).toContain('must be a finite number');
       });
 
       it('should throw error for Infinity HAVING value', () => {
@@ -4389,7 +4349,7 @@ describe('sqlHelper', () => {
         }
 
         assert(thrownError instanceof QueryError);
-        thrownError.message.should.include('must be a finite number');
+        expect(thrownError.message).toContain('must be a finite number');
       });
 
       it('should throw error for unknown HAVING alias', () => {
@@ -4412,7 +4372,7 @@ describe('sqlHelper', () => {
         }
 
         assert(thrownError instanceof QueryError);
-        thrownError.message.should.include('unknown alias');
+        expect(thrownError.message).toContain('unknown alias');
       });
 
       it('should throw error for SQL injection in subquery join alias', () => {
@@ -4434,7 +4394,7 @@ describe('sqlHelper', () => {
         }
 
         assert(thrownError);
-        thrownError.message.should.include('Invalid SQL identifier');
+        expect(thrownError.message).toContain('Invalid SQL identifier');
       });
 
       it('should throw error for SQL injection in subquery join ON column', () => {
@@ -4456,7 +4416,7 @@ describe('sqlHelper', () => {
         }
 
         assert(thrownError);
-        thrownError.message.should.include('Invalid SQL identifier');
+        expect(thrownError.message).toContain('Invalid SQL identifier');
       });
 
       it('should throw error for SQL injection in aggregate alias', () => {
@@ -4478,7 +4438,7 @@ describe('sqlHelper', () => {
         }
 
         assert(thrownError);
-        thrownError.message.should.include('Invalid SQL identifier');
+        expect(thrownError.message).toContain('Invalid SQL identifier');
       });
     });
 
@@ -4503,7 +4463,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' INNER JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" ORDER BY "store_id") AS "latestProducts" ON "stores"."id"="latestProducts"."store"',
         );
       });
@@ -4528,7 +4488,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' INNER JOIN (SELECT DISTINCT ON ("id","name") "id","name","int_column" AS "intColumn" FROM "kitchen_sink" ORDER BY "id","name") AS "distinctItems" ON "stores"."id"="distinctItems"."id"',
         );
       });
@@ -4555,10 +4515,10 @@ describe('sqlHelper', () => {
           params,
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' INNER JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" WHERE "name" IS NOT NULL ORDER BY "store_id") AS "activeProducts" ON "stores"."id"="activeProducts"."store"',
         );
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
 
       it('should generate DISTINCT ON with secondary sort in subquery join', () => {
@@ -4581,7 +4541,7 @@ describe('sqlHelper', () => {
           params: [],
         });
 
-        result.should.equal(
+        expect(result).toBe(
           ' LEFT JOIN (SELECT DISTINCT ON ("id") "id","name","int_column" AS "intColumn" FROM "kitchen_sink" ORDER BY "id","int_column" DESC) AS "latestByInt" ON "stores"."id"="latestByInt"."id"',
         );
       });
@@ -4601,8 +4561,8 @@ describe('sqlHelper', () => {
         });
 
         assert(whereStatement);
-        whereStatement.should.equal('WHERE "id" IN (SELECT DISTINCT ON ("store_id") "store_id" FROM "products" ORDER BY "store_id")');
-        params.should.deep.equal([]);
+        expect(whereStatement).toBe('WHERE "id" IN (SELECT DISTINCT ON ("store_id") "store_id" FROM "products" ORDER BY "store_id")');
+        expect(params).toStrictEqual([]);
       });
     });
   });
