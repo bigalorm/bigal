@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker';
 
-import type { NotEntity, QueryResult } from '../../src/index.js';
-import type { IJsonLikeEntity, ProductCategory, SimpleWithRelationAndJson, TeacherClassroom } from '../models/index.js';
+import { type NotEntity, type QueryResult } from '../../src/index.js';
+import { type IJsonLikeEntity, type ProductCategory, type SimpleWithRelationAndJson, type TeacherClassroom } from '../models/index.js';
 import {
   Category,
   Classroom,

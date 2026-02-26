@@ -1,4 +1,4 @@
-import type { CreateUpdateParams } from '../../src/index.js';
+import { type CreateUpdateParams } from '../../src/index.js';
 
 import { Product } from './Product.js';
 

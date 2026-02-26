@@ -1,8 +1,8 @@
 import { column, Entity, primaryColumn, table } from '../../src/index.js';
 
-import type { Student } from './Student.js';
+import { type Student } from './Student.js';
 import { StudentClassroom } from './StudentClassroom.js';
-import type { Teacher } from './Teacher.js';
+import { type Teacher } from './Teacher.js';
 import { TeacherClassroom } from './TeacherClassroom.js';
 
 @table({

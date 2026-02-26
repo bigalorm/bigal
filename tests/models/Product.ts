@@ -1,10 +1,10 @@
 import { column, table } from '../../src/decorators/index.js';
-import type { CreateUpdateParams } from '../../src/index.js';
+import { type CreateUpdateParams } from '../../src/index.js';
 
 import { Category } from './Category.js';
 import { ModelBase } from './ModelBase.js';
 import { ProductCategory } from './ProductCategory.js';
-import type { Store } from './Store.js';
+import { type Store } from './Store.js';
 
 @table({
   name: 'products',

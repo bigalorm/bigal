@@ -1,6 +1,6 @@
 import { column, Entity, primaryColumn, table } from '../../src/index.js';
 
-import type { LevelThree } from './LevelThree.js';
+import { type LevelThree } from './LevelThree.js';
 
 @table({
   name: 'level_two',
