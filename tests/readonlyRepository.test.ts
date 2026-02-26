@@ -1,16 +1,13 @@
 import assert from 'node:assert';
 
 import { faker } from '@faker-js/faker';
-import * as chai from 'chai';
-import 'chai/register-should.js';
-import { Pool } from 'postgres-pool';
-import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { PoolQueryResult, QueryResult, QueryResultPopulated, QueryResultRow, ReadonlyRepository, Repository } from '../src/index.js';
+import { type PoolLike, type PoolQueryResult, type QueryResult, type QueryResultPopulated, type QueryResultRow, type ReadonlyRepository, type Repository } from '../src/index.js';
 import { initialize, subquery } from '../src/index.js';
-import type { SelectAggregateExpression, Sort, TypedAggregateExpression, WhereQuery } from '../src/query/index.js';
+import { type SelectAggregateExpression, type Sort, type TypedAggregateExpression, type WhereQuery } from '../src/query/index.js';
 
-import type { ParkingLot } from './models/index.js';
+import { type ParkingLot } from './models/index.js';
 import {
   Category,
   Classroom,
@@ -35,6 +32,13 @@ import {
 import * as generator from './utils/generator.js';
 import { pick } from './utils/pick.js';
 
+type PoolQueryFn = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
+
+function createMockPool() {
+  const pool = { query: vi.fn<PoolQueryFn>() };
+  return pool as PoolLike & typeof pool;
+}
+
 function getQueryResult<T extends QueryResultRow>(rows: T[]): PoolQueryResult<T> & { command: string; oid: number; fields: never[] } {
   return {
     command: 'select',
@@ -46,8 +50,7 @@ function getQueryResult<T extends QueryResultRow>(rows: T[]): PoolQueryResult<T>
 }
 
 describe('ReadonlyRepository', () => {
-  let should: Chai.Should;
-  let mockedPool: Pool;
+  const mockedPool = createMockPool();
 
   let LevelOneRepository: Repository<LevelOne>;
   let LevelTwoRepository: Repository<LevelTwo>;
@@ -64,10 +67,7 @@ describe('ReadonlyRepository', () => {
   let SimpleWithUnionRepository: Repository<SimpleWithUnion>;
   let TeacherRepository: Repository<Teacher>;
 
-  before(() => {
-    should = chai.should();
-    mockedPool = mock(Pool);
-
+  beforeAll(() => {
     const repositoriesByModelName = initialize({
       models: [
         Classroom, //
@@ -90,7 +90,7 @@ describe('ReadonlyRepository', () => {
         Teacher,
         TeacherClassroom,
       ],
-      pool: instance(mockedPool),
+      pool: mockedPool,
     });
 
     LevelOneRepository = repositoriesByModelName.LevelOne as Repository<LevelOne>;
@@ -110,7 +110,7 @@ describe('ReadonlyRepository', () => {
   });
 
   beforeEach(() => {
-    reset(mockedPool);
+    mockedPool.query.mockReset();
   });
 
   describe('#findOne()', () => {
@@ -125,20 +125,21 @@ describe('ReadonlyRepository', () => {
     });
 
     it('should support call without constraints', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
       const result = await ReadonlyProductRepository.findOne();
       assert(result);
-      result.should.deep.equal(product);
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "readonly_products" LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "readonly_products" LIMIT 1');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should support call with constraints as a parameter', async () => {
       const productResult = pick(product, 'id', 'name');
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([productResult]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([productResult]));
 
       const result = await ProductRepository.findOne({
         select: ['name'],
@@ -148,112 +149,114 @@ describe('ReadonlyRepository', () => {
         sort: 'name asc',
       });
       assert(result);
-      result.should.deep.equal(productResult);
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual(productResult);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "name","id" FROM "products" WHERE "id"=$1 ORDER BY "name" LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "name","id" FROM "products" WHERE "id"=$1 ORDER BY "name" LIMIT 1');
       assert(params);
-      params.should.deep.equal([product.id]);
+      expect(params).toStrictEqual([product.id]);
     });
 
     it('should support call with sort as a parameter', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ReadonlyProductRepository.findOne({
         sort: 'name',
       });
       assert(result);
-      result.should.deep.equal(product);
-      result.name.should.equal(product.name);
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual(product);
+      expect(result.name).toBe(product.name);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "readonly_products" ORDER BY "name" LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "readonly_products" ORDER BY "name" LIMIT 1');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should support call with where constraint as a parameter', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.findOne({
         id: product.id,
       });
       assert(result);
-      result.should.deep.equal(product);
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
       assert(params);
-      params.should.deep.equal([product.id]);
+      expect(params).toStrictEqual([product.id]);
     });
 
     it('should support call with where constraint as a parameter and querying id by entity value', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.findOne({
         id: product,
       });
       assert(result);
-      result.should.deep.equal(product);
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
       assert(params);
-      params.should.deep.equal([product.id]);
+      expect(params).toStrictEqual([product.id]);
     });
 
     it('should support call with where constraint as a parameter and querying property by entity value', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.findOne({
         store,
       });
       assert(result);
-      result.should.deep.equal(product);
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 LIMIT 1');
       assert(params);
-      params.should.deep.equal([store.id]);
+      expect(params).toStrictEqual([store.id]);
     });
 
     it('should support call with explicit pool override', async () => {
-      const poolOverride = mock(Pool);
+      const poolOverride = createMockPool();
 
-      when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      poolOverride.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.findOne({
-        pool: instance(poolOverride),
+        pool: poolOverride,
       }).where({
         id: product.id,
       });
       assert(result);
-      result.should.deep.equal(product);
+      expect(result).toStrictEqual(product);
 
-      verify(mockedPool.query(anyString(), anything())).never();
-      const [query, params] = capture(poolOverride.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
+      expect(mockedPool.query).not.toHaveBeenCalled();
+      const [query, params] = poolOverride.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
       assert(params);
-      params.should.deep.equal([product.id]);
+      expect(params).toStrictEqual([product.id]);
     });
 
     it('should support call with chained where constraints', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.findOne().where({
         id: product.id,
       });
       assert(result);
-      result.should.deep.equal(product);
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
       assert(params);
-      params.should.deep.equal([product.id]);
+      expect(params).toStrictEqual([product.id]);
     });
 
     it('should support call with chained where constraints - Promise.all', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const [result] = await Promise.all([
         ProductRepository.findOne().where({
@@ -261,38 +264,38 @@ describe('ReadonlyRepository', () => {
         }),
       ]);
       assert(result);
-      result.should.deep.equal(product);
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1');
       assert(params);
-      params.should.deep.equal([product.id]);
+      expect(params).toStrictEqual([product.id]);
     });
 
     it('should support call with chained sort', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.findOne().sort('name asc');
       assert(result);
-      result.should.deep.equal(product);
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "name" LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "name" LIMIT 1');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should support call with chained select', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.findOne().select(['name', 'sku']);
       assert(result);
-      result.should.deep.equal(product);
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "name","sku","id" FROM "products" LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "name","sku","id" FROM "products" LIMIT 1');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     describe('Parse number columns', () => {
@@ -300,7 +303,7 @@ describe('ReadonlyRepository', () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
         const numberValue = 42;
-        when(mockedPool.query(anyString(), anything())).thenResolve(
+        mockedPool.query.mockResolvedValueOnce(
           getQueryResult([
             {
               id,
@@ -313,25 +316,26 @@ describe('ReadonlyRepository', () => {
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
 
-        result.should.deep.equal({
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(result).toEqual({
           id,
           name,
           intColumn: numberValue,
         });
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
         );
         assert(params);
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
 
       it('should parse integer columns from float strings query value', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
         const numberValue = 42.24;
-        when(mockedPool.query(anyString(), anything())).thenResolve(
+        mockedPool.query.mockResolvedValueOnce(
           getQueryResult([
             {
               id,
@@ -343,25 +347,26 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        result.should.deep.equal({
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(result).toEqual({
           id,
           name,
           intColumn: 42,
         });
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
         );
         assert(params);
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
 
       it('should parse integer columns that return as number', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
         const numberValue = 42;
-        when(mockedPool.query(anyString(), anything())).thenResolve(
+        mockedPool.query.mockResolvedValueOnce(
           getQueryResult([
             {
               id,
@@ -373,25 +378,26 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        result.should.deep.equal({
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(result).toEqual({
           id,
           name,
           intColumn: numberValue,
         });
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
         );
         assert(params);
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
 
       it('should ignore large integer columns values', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
         const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0`;
-        when(mockedPool.query(anyString(), anything())).thenResolve(
+        mockedPool.query.mockResolvedValueOnce(
           getQueryResult([
             {
               id,
@@ -403,25 +409,26 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        result.should.deep.equal({
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(result).toEqual({
           id,
           name,
           intColumn: largeNumberValue,
         });
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
         );
         assert(params);
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
 
       it('should parse float columns return as float strings', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
         const numberValue = 42.24;
-        when(mockedPool.query(anyString(), anything())).thenResolve(
+        mockedPool.query.mockResolvedValueOnce(
           getQueryResult([
             {
               id,
@@ -433,25 +440,26 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        result.should.deep.equal({
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(result).toEqual({
           id,
           name,
           floatColumn: numberValue,
         });
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
         );
         assert(params);
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
 
       it('should parse float columns return as number', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
         const numberValue = 42.24;
-        when(mockedPool.query(anyString(), anything())).thenResolve(
+        mockedPool.query.mockResolvedValueOnce(
           getQueryResult([
             {
               id,
@@ -463,25 +471,26 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        result.should.deep.equal({
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(result).toEqual({
           id,
           name,
           floatColumn: numberValue,
         });
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
         );
         assert(params);
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
 
       it('should ignore large float columns', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
         const largeNumberValue = `${Number.MAX_SAFE_INTEGER}0.42`;
-        when(mockedPool.query(anyString(), anything())).thenResolve(
+        mockedPool.query.mockResolvedValueOnce(
           getQueryResult([
             {
               id,
@@ -493,24 +502,25 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        result.should.deep.equal({
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(result).toEqual({
           id,
           name,
           floatColumn: largeNumberValue,
         });
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           `SELECT "id","name","int_column" AS "intColumn","float_column" AS "floatColumn","array_column" AS "arrayColumn","string_array_column" AS "stringArrayColumn" FROM "${ReadonlyKitchenSinkRepository.model.tableName}" LIMIT 1`,
         );
         assert(params);
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
 
       it('should parse float columns with trailing zeros from PostgreSQL numeric type', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
-        when(mockedPool.query(anyString(), anything())).thenResolve(
+        mockedPool.query.mockResolvedValueOnce(
           getQueryResult([
             {
               id,
@@ -522,7 +532,8 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        result.should.deep.equal({
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(result).toEqual({
           id,
           name,
           floatColumn: 0,
@@ -532,7 +543,7 @@ describe('ReadonlyRepository', () => {
       it('should parse float columns with trailing zeros like "100.50"', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
-        when(mockedPool.query(anyString(), anything())).thenResolve(
+        mockedPool.query.mockResolvedValueOnce(
           getQueryResult([
             {
               id,
@@ -544,7 +555,8 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        result.should.deep.equal({
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(result).toEqual({
           id,
           name,
           floatColumn: 100.5,
@@ -555,7 +567,7 @@ describe('ReadonlyRepository', () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
         const invalidValue = 'not-a-number';
-        when(mockedPool.query(anyString(), anything())).thenResolve(
+        mockedPool.query.mockResolvedValueOnce(
           getQueryResult([
             {
               id,
@@ -567,7 +579,8 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        result.should.deep.equal({
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(result).toEqual({
           id,
           name,
           floatColumn: invalidValue,
@@ -576,105 +589,109 @@ describe('ReadonlyRepository', () => {
     });
 
     it('should support populating a single relation', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([store]));
 
       const result = await ProductRepository.findOne().populate('store');
-      verify(mockedPool.query(anyString(), anything())).twice();
+      expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...product,
         store,
       });
 
-      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([]);
-      const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
-      storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1');
+      expect(productQueryParams).toStrictEqual([]);
+      const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[1]!;
+      expect(storeQuery).toBe('SELECT "id","name" FROM "stores" WHERE "id"=$1');
       assert(storeQueryParams);
-      storeQueryParams.should.deep.equal([store.id]);
+      expect(storeQueryParams).toStrictEqual([store.id]);
     });
 
     it('should support populating a single relation with implicit inherited pool override', async () => {
-      const poolOverride = mock(Pool);
+      const poolOverride = createMockPool();
 
-      when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
+      poolOverride.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([store]));
 
       const result = await ProductRepository.findOne({
-        pool: instance(poolOverride),
+        pool: poolOverride,
       }).populate('store');
 
-      verify(mockedPool.query(anyString(), anything())).never();
-      verify(poolOverride.query(anyString(), anything())).twice();
+      expect(mockedPool.query).not.toHaveBeenCalled();
+      expect(poolOverride.query).toHaveBeenCalledTimes(2);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...product,
         store,
       });
 
-      const [productQuery, productQueryParams] = capture(poolOverride.query).first();
-      productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      const [productQuery, productQueryParams] = poolOverride.query.mock.calls[0]!;
+      expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([]);
-      const [storeQuery, storeQueryParams] = capture(poolOverride.query).second();
-      storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1');
+      expect(productQueryParams).toStrictEqual([]);
+      const [storeQuery, storeQueryParams] = poolOverride.query.mock.calls[1]!;
+      expect(storeQuery).toBe('SELECT "id","name" FROM "stores" WHERE "id"=$1');
       assert(storeQueryParams);
-      storeQueryParams.should.deep.equal([store.id]);
+      expect(storeQueryParams).toStrictEqual([store.id]);
     });
 
     it('should support populating a single relation with explicit pool override', async () => {
-      const storePool = mock(Pool);
+      const storePool = createMockPool();
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
-      when(storePool.query(anyString(), anything())).thenResolve(getQueryResult([store]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
+      storePool.query.mockResolvedValueOnce(getQueryResult([store]));
 
       const result = await ProductRepository.findOne().populate('store', {
-        pool: instance(storePool),
+        pool: storePool,
       });
-      verify(mockedPool.query(anyString(), anything())).once();
-      verify(storePool.query(anyString(), anything())).once();
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(storePool.query).toHaveBeenCalledOnce();
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...product,
         store,
       });
 
-      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([]);
-      const [storeQuery, storeQueryParams] = capture(storePool.query).first();
-      storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1');
+      expect(productQueryParams).toStrictEqual([]);
+      const [storeQuery, storeQueryParams] = storePool.query.mock.calls[0]!;
+      expect(storeQuery).toBe('SELECT "id","name" FROM "stores" WHERE "id"=$1');
       assert(storeQueryParams);
-      storeQueryParams.should.deep.equal([store.id]);
+      expect(storeQueryParams).toStrictEqual([store.id]);
     });
 
     it('should support populating a single relation when column is missing from partial select', async () => {
       const productResult = pick(product, 'id', 'name', 'store');
       const storeResult = pick(store, 'id', 'name');
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([productResult]), getQueryResult([storeResult]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([productResult])).mockResolvedValueOnce(getQueryResult([storeResult]));
 
       const result = await ProductRepository.findOne({
         select: ['name'],
       }).populate('store', {
         select: ['name'],
       });
-      verify(mockedPool.query(anyString(), anything())).twice();
+      expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...productResult,
         store: storeResult,
       });
 
-      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "name","store_id" AS "store","id" FROM "products" LIMIT 1');
+      const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(productQuery).toBe('SELECT "name","store_id" AS "store","id" FROM "products" LIMIT 1');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([]);
-      const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
-      storeQuery.should.equal('SELECT "name","id" FROM "stores" WHERE "id"=$1');
+      expect(productQueryParams).toStrictEqual([]);
+      const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[1]!;
+      expect(storeQuery).toBe('SELECT "name","id" FROM "stores" WHERE "id"=$1');
       assert(storeQueryParams);
-      storeQueryParams.should.deep.equal([store.id]);
+      expect(storeQueryParams).toStrictEqual([store.id]);
     });
 
     it('should support populating a single relation as QueryResult with partial select', async () => {
@@ -685,48 +702,50 @@ describe('ReadonlyRepository', () => {
       const levelOneResult = pick(levelOneItem, 'id', 'one', 'levelTwo');
       const levelTwoResult = pick(levelTwoItem, 'id', 'two', 'levelThree');
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([levelOneResult]), getQueryResult([levelTwoResult]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([levelOneResult])).mockResolvedValueOnce(getQueryResult([levelTwoResult]));
 
       const result = await LevelOneRepository.findOne({
         select: ['one', 'levelTwo'],
       }).populate('levelTwo', {
         select: ['two', 'levelThree'],
       });
-      verify(mockedPool.query(anyString(), anything())).twice();
+      expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...levelOneResult,
         levelTwo: levelTwoResult,
       });
 
-      result.levelTwo.levelThree.should.equal(levelThreeItem.id);
+      expect(result.levelTwo.levelThree).toBe(levelThreeItem.id);
       // Verify string functions are available - aka, that the type is not LevelThree | string.
-      result.levelTwo.levelThree.toUpperCase().should.equal(levelThreeItem.id.toUpperCase());
+      expect(result.levelTwo.levelThree.toUpperCase()).toBe(levelThreeItem.id.toUpperCase());
     });
 
     it('should support populating a single relation with partial select and order', async () => {
       const storeResult = pick(store, 'id', 'name');
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([store]));
 
       const result = await ProductRepository.findOne().populate('store', {
         select: ['name'],
         sort: 'name',
       });
-      verify(mockedPool.query(anyString(), anything())).twice();
+      expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...product,
         store: storeResult,
       });
 
-      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([]);
-      const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
-      storeQuery.should.equal('SELECT "name","id" FROM "stores" WHERE "id"=$1 ORDER BY "name"');
+      expect(productQueryParams).toStrictEqual([]);
+      const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[1]!;
+      expect(storeQuery).toBe('SELECT "name","id" FROM "stores" WHERE "id"=$1 ORDER BY "name"');
       assert(storeQueryParams);
-      storeQueryParams.should.deep.equal([store.id]);
+      expect(storeQueryParams).toStrictEqual([store.id]);
     });
 
     it('should support populating collection', async () => {
@@ -742,32 +761,33 @@ describe('ReadonlyRepository', () => {
         products: [product1, product2],
       };
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1, product2]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([store])).mockResolvedValueOnce(getQueryResult([product1, product2]));
 
       const result = await StoreRepository.findOne().populate('products');
-      verify(mockedPool.query(anyString(), anything())).twice();
+      expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      result.should.deep.equal(storeWithProducts);
-      result.products.length.should.equal(2);
-      result.products[0]!.id.should.equal(product1.id);
-      result.products[1]!.id.should.equal(product2.id);
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual(storeWithProducts);
+      expect(result.products.length).toBe(2);
+      expect(result.products[0]!.id).toBe(product1.id);
+      expect(result.products[1]!.id).toBe(product2.id);
       // Make sure QueryResultPopulated types look ok
-      storeWithProducts.products.length.should.equal(2);
-      storeWithProducts.products[0]!.id.should.equal(product1.id);
-      storeWithProducts.products[1]!.id.should.equal(product2.id);
+      expect(storeWithProducts.products.length).toBe(2);
+      expect(storeWithProducts.products[0]!.id).toBe(product1.id);
+      expect(storeWithProducts.products[1]!.id).toBe(product2.id);
 
-      const [storeQuery, storeQueryParams] = capture(mockedPool.query).first();
-      storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
+      const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(storeQuery).toBe('SELECT "id","name" FROM "stores" LIMIT 1');
       assert(storeQueryParams);
-      storeQueryParams.should.deep.equal([]);
-      const [productQuery, productQueryParams] = capture(mockedPool.query).second();
-      productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
+      expect(storeQueryParams).toStrictEqual([]);
+      const [productQuery, productQueryParams] = mockedPool.query.mock.calls[1]!;
+      expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([store.id]);
+      expect(productQueryParams).toStrictEqual([store.id]);
     });
 
     it('should support populating collection with implicit inherited pool override', async () => {
-      const poolOverride = mock(Pool);
+      const poolOverride = createMockPool();
 
       const product1 = generator.product({
         store: store.id,
@@ -776,32 +796,33 @@ describe('ReadonlyRepository', () => {
         store: store.id,
       });
 
-      when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1, product2]));
+      poolOverride.query.mockResolvedValueOnce(getQueryResult([store])).mockResolvedValueOnce(getQueryResult([product1, product2]));
 
       const result = await StoreRepository.findOne({
-        pool: instance(poolOverride),
+        pool: poolOverride,
       }).populate('products');
 
-      verify(mockedPool.query(anyString(), anything())).never();
-      verify(poolOverride.query(anyString(), anything())).twice();
+      expect(mockedPool.query).not.toHaveBeenCalled();
+      expect(poolOverride.query).toHaveBeenCalledTimes(2);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...store,
         products: [product1, product2],
       });
 
-      const [storeQuery, storeQueryParams] = capture(poolOverride.query).first();
-      storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
+      const [storeQuery, storeQueryParams] = poolOverride.query.mock.calls[0]!;
+      expect(storeQuery).toBe('SELECT "id","name" FROM "stores" LIMIT 1');
       assert(storeQueryParams);
-      storeQueryParams.should.deep.equal([]);
-      const [productQuery, productQueryParams] = capture(poolOverride.query).second();
-      productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
+      expect(storeQueryParams).toStrictEqual([]);
+      const [productQuery, productQueryParams] = poolOverride.query.mock.calls[1]!;
+      expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([store.id]);
+      expect(productQueryParams).toStrictEqual([store.id]);
     });
 
     it('should support populating collection with explicit pool override', async () => {
-      const productPool = mock(Pool);
+      const productPool = createMockPool();
 
       const product1 = generator.product({
         store: store.id,
@@ -810,27 +831,28 @@ describe('ReadonlyRepository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]));
-      when(productPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product2]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([store]));
+      productPool.query.mockResolvedValueOnce(getQueryResult([product1, product2]));
 
       const result = await StoreRepository.findOne().populate('products', {
-        pool: instance(productPool),
+        pool: productPool,
       });
-      verify(mockedPool.query(anyString(), anything())).once();
+      expect(mockedPool.query).toHaveBeenCalledOnce();
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...store,
         products: [product1, product2],
       });
 
-      const [storeQuery, storeQueryParams] = capture(mockedPool.query).first();
-      storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
+      const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(storeQuery).toBe('SELECT "id","name" FROM "stores" LIMIT 1');
       assert(storeQueryParams);
-      storeQueryParams.should.deep.equal([]);
-      const [productQuery, productQueryParams] = capture(productPool.query).first();
-      productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
+      expect(storeQueryParams).toStrictEqual([]);
+      const [productQuery, productQueryParams] = productPool.query.mock.calls[0]!;
+      expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([store.id]);
+      expect(productQueryParams).toStrictEqual([store.id]);
     });
 
     it('should support populating collection with partial select and order', async () => {
@@ -844,27 +866,28 @@ describe('ReadonlyRepository', () => {
       const product1Result = pick(product1, 'id', 'name');
       const product2Result = pick(product2, 'id', 'name');
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]), getQueryResult([product1Result, product2Result]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([store])).mockResolvedValueOnce(getQueryResult([product1Result, product2Result]));
 
       const result = await StoreRepository.findOne().populate('products', {
         select: ['name'],
         sort: 'aliases',
       });
-      verify(mockedPool.query(anyString(), anything())).twice();
+      expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...store,
         products: [product1Result, product2Result],
       });
 
-      const [storeQuery, storeQueryParams] = capture(mockedPool.query).first();
-      storeQuery.should.equal('SELECT "id","name" FROM "stores" LIMIT 1');
+      const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(storeQuery).toBe('SELECT "id","name" FROM "stores" LIMIT 1');
       assert(storeQueryParams);
-      storeQueryParams.should.deep.equal([]);
-      const [productQuery, productQueryParams] = capture(mockedPool.query).second();
-      productQuery.should.equal('SELECT "name","id" FROM "products" WHERE "store_id"=$1 ORDER BY "alias_names"');
+      expect(storeQueryParams).toStrictEqual([]);
+      const [productQuery, productQueryParams] = mockedPool.query.mock.calls[1]!;
+      expect(productQuery).toBe('SELECT "name","id" FROM "products" WHERE "store_id"=$1 ORDER BY "alias_names"');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([store.id]);
+      expect(productQueryParams).toStrictEqual([store.id]);
     });
 
     it('should support populating multi-multi collection', async () => {
@@ -873,100 +896,109 @@ describe('ReadonlyRepository', () => {
       const productCategory1Map = generator.productCategory(product, category1);
       const productCategory2Map = generator.productCategory(product, category2);
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory1Map, productCategory2Map]), getQueryResult([category1, category2]));
+      mockedPool.query
+        .mockResolvedValueOnce(getQueryResult([product]))
+        .mockResolvedValueOnce(getQueryResult([productCategory1Map, productCategory2Map]))
+        .mockResolvedValueOnce(getQueryResult([category1, category2]));
 
       const result = await ProductRepository.findOne().populate('categories');
-      verify(mockedPool.query(anyString(), anything())).thrice();
+      expect(mockedPool.query).toHaveBeenCalledTimes(3);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...product,
         categories: [category1, category2],
       });
 
-      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([]);
-      const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).second();
-      productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
+      expect(productQueryParams).toStrictEqual([]);
+      const [productCategoryMapQuery, productCategoryMapQueryParams] = mockedPool.query.mock.calls[1]!;
+      expect(productCategoryMapQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
       assert(productCategoryMapQueryParams);
-      productCategoryMapQueryParams.should.deep.equal([product.id]);
-      const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
-      categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
+      expect(productCategoryMapQueryParams).toStrictEqual([product.id]);
+      const [categoryQuery, categoryQueryParams] = mockedPool.query.mock.calls[2]!;
+      expect(categoryQuery).toBe('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
       assert(categoryQueryParams);
-      categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
+      expect(categoryQueryParams).toStrictEqual([[category1.id, category2.id]]);
     });
 
     it('should support populating multi-multi collection with implicit inherited pool override', async () => {
-      const poolOverride = mock(Pool);
+      const poolOverride = createMockPool();
       const category1 = generator.category();
       const category2 = generator.category();
       const productCategory1Map = generator.productCategory(product, category1);
       const productCategory2Map = generator.productCategory(product, category2);
 
-      when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory1Map, productCategory2Map]), getQueryResult([category1, category2]));
+      poolOverride.query
+        .mockResolvedValueOnce(getQueryResult([product]))
+        .mockResolvedValueOnce(getQueryResult([productCategory1Map, productCategory2Map]))
+        .mockResolvedValueOnce(getQueryResult([category1, category2]));
 
       const result = await ProductRepository.findOne({
-        pool: instance(poolOverride),
+        pool: poolOverride,
       }).populate('categories');
 
-      verify(mockedPool.query(anyString(), anything())).never();
-      verify(poolOverride.query(anyString(), anything())).thrice();
+      expect(mockedPool.query).not.toHaveBeenCalled();
+      expect(poolOverride.query).toHaveBeenCalledTimes(3);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...product,
         categories: [category1, category2],
       });
 
-      const [productQuery, productQueryParams] = capture(poolOverride.query).first();
-      productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      const [productQuery, productQueryParams] = poolOverride.query.mock.calls[0]!;
+      expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([]);
-      const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(poolOverride.query).second();
-      productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
+      expect(productQueryParams).toStrictEqual([]);
+      const [productCategoryMapQuery, productCategoryMapQueryParams] = poolOverride.query.mock.calls[1]!;
+      expect(productCategoryMapQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
       assert(productCategoryMapQueryParams);
-      productCategoryMapQueryParams.should.deep.equal([product.id]);
-      const [categoryQuery, categoryQueryParams] = capture(poolOverride.query).third();
-      categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
+      expect(productCategoryMapQueryParams).toStrictEqual([product.id]);
+      const [categoryQuery, categoryQueryParams] = poolOverride.query.mock.calls[2]!;
+      expect(categoryQuery).toBe('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
       assert(categoryQueryParams);
-      categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
+      expect(categoryQueryParams).toStrictEqual([[category1.id, category2.id]]);
     });
 
     it('should support populating multi-multi collection with explicit pool override', async () => {
-      const categoryPool = mock(Pool);
+      const categoryPool = createMockPool();
 
       const category1 = generator.category();
       const category2 = generator.category();
       const productCategory1Map = generator.productCategory(product, category1);
       const productCategory2Map = generator.productCategory(product, category2);
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
-      when(categoryPool.query(anyString(), anything())).thenResolve(getQueryResult([productCategory1Map, productCategory2Map]), getQueryResult([category1, category2]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
+      categoryPool.query.mockResolvedValueOnce(getQueryResult([productCategory1Map, productCategory2Map])).mockResolvedValueOnce(getQueryResult([category1, category2]));
 
       const result = await ProductRepository.findOne().populate('categories', {
-        pool: instance(categoryPool),
+        pool: categoryPool,
       });
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      verify(categoryPool.query(anyString(), anything())).twice();
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(categoryPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...product,
         categories: [category1, category2],
       });
 
-      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([]);
-      const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(categoryPool.query).first();
-      productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
+      expect(productQueryParams).toStrictEqual([]);
+      const [productCategoryMapQuery, productCategoryMapQueryParams] = categoryPool.query.mock.calls[0]!;
+      expect(productCategoryMapQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
       assert(productCategoryMapQueryParams);
-      productCategoryMapQueryParams.should.deep.equal([product.id]);
-      const [categoryQuery, categoryQueryParams] = capture(categoryPool.query).second();
-      categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
+      expect(productCategoryMapQueryParams).toStrictEqual([product.id]);
+      const [categoryQuery, categoryQueryParams] = categoryPool.query.mock.calls[1]!;
+      expect(categoryQuery).toBe('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
       assert(categoryQueryParams);
-      categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
+      expect(categoryQueryParams).toStrictEqual([[category1.id, category2.id]]);
     });
 
     it('should support populating multi-multi collection with partial select and order', async () => {
@@ -978,35 +1010,35 @@ describe('ReadonlyRepository', () => {
       const category1Result = pick(category1, 'id', 'name');
       const category2Result = pick(category2, 'id', 'name');
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([product]),
-        getQueryResult([productCategory1Map, productCategory2Map]),
-        getQueryResult([category1Result, category2Result]),
-      );
+      mockedPool.query
+        .mockResolvedValueOnce(getQueryResult([product]))
+        .mockResolvedValueOnce(getQueryResult([productCategory1Map, productCategory2Map]))
+        .mockResolvedValueOnce(getQueryResult([category1Result, category2Result]));
 
       const result = await ProductRepository.findOne().populate('categories', {
         select: ['name'],
         sort: 'name desc',
       });
-      verify(mockedPool.query(anyString(), anything())).thrice();
+      expect(mockedPool.query).toHaveBeenCalledTimes(3);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...product,
         categories: [category1Result, category2Result],
       });
 
-      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+      const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([]);
-      const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).second();
-      productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
+      expect(productQueryParams).toStrictEqual([]);
+      const [productCategoryMapQuery, productCategoryMapQueryParams] = mockedPool.query.mock.calls[1]!;
+      expect(productCategoryMapQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
       assert(productCategoryMapQueryParams);
-      productCategoryMapQueryParams.should.deep.equal([product.id]);
-      const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
-      categoryQuery.should.equal('SELECT "name","id" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) ORDER BY "name" DESC');
+      expect(productCategoryMapQueryParams).toStrictEqual([product.id]);
+      const [categoryQuery, categoryQueryParams] = mockedPool.query.mock.calls[2]!;
+      expect(categoryQuery).toBe('SELECT "name","id" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) ORDER BY "name" DESC');
       assert(categoryQueryParams);
-      categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
+      expect(categoryQueryParams).toStrictEqual([[category1.id, category2.id]]);
     });
 
     it('should support populating self reference collection', async () => {
@@ -1022,7 +1054,7 @@ describe('ReadonlyRepository', () => {
 
       const source1Result = pick(source1, 'id', 'name');
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([source1Result]), getQueryResult([translation1, translation2]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([source1Result])).mockResolvedValueOnce(getQueryResult([translation1, translation2]));
 
       const result = await SimpleWithSelfReferenceRepository.findOne({
         select: ['name'],
@@ -1031,23 +1063,24 @@ describe('ReadonlyRepository', () => {
           id: source1.id,
         })
         .populate('translations');
-      verify(mockedPool.query(anyString(), anything())).twice();
+      expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...source1Result,
         translations: [translation1, translation2],
       });
-      result.translations.length.should.equal(2);
-      result.translations[0]!.id.should.equal(translation1.id);
+      expect(result.translations.length).toBe(2);
+      expect(result.translations[0]!.id).toBe(translation1.id);
 
-      const [sourceQuery, sourceQueryParams] = capture(mockedPool.query).first();
-      sourceQuery.should.equal('SELECT "name","id" FROM "simple" WHERE "id"=$1 LIMIT 1');
+      const [sourceQuery, sourceQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(sourceQuery).toBe('SELECT "name","id" FROM "simple" WHERE "id"=$1 LIMIT 1');
       assert(sourceQueryParams);
-      sourceQueryParams.should.deep.equal([source1.id]);
-      const [translationsQuery, translationsQueryParams] = capture(mockedPool.query).second();
-      translationsQuery.should.equal('SELECT "id","name","source_id" AS "source" FROM "simple" WHERE "source_id"=$1');
+      expect(sourceQueryParams).toStrictEqual([source1.id]);
+      const [translationsQuery, translationsQueryParams] = mockedPool.query.mock.calls[1]!;
+      expect(translationsQuery).toBe('SELECT "id","name","source_id" AS "source" FROM "simple" WHERE "source_id"=$1');
       assert(translationsQueryParams);
-      translationsQueryParams.should.deep.equal([source1.id]);
+      expect(translationsQueryParams).toStrictEqual([source1.id]);
     });
 
     it('should support populating collection and not explicitly selecting relation column', async () => {
@@ -1065,7 +1098,7 @@ describe('ReadonlyRepository', () => {
       const translation1Result = pick(translation1, 'id', 'name');
       const translation2Result = pick(translation2, 'id', 'name');
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([source1Result]), getQueryResult([translation1Result, translation2Result]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([source1Result])).mockResolvedValueOnce(getQueryResult([translation1Result, translation2Result]));
 
       const result = await SimpleWithSelfReferenceRepository.findOne({
         select: ['name'],
@@ -1076,23 +1109,24 @@ describe('ReadonlyRepository', () => {
         .populate('translations', {
           select: ['id', 'name'],
         });
-      verify(mockedPool.query(anyString(), anything())).twice();
+      expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...source1Result,
         translations: [translation1Result, translation2Result],
       });
-      result.translations.length.should.equal(2);
-      result.translations[0]!.id.should.equal(translation1.id);
+      expect(result.translations.length).toBe(2);
+      expect(result.translations[0]!.id).toBe(translation1.id);
 
-      const [sourceQuery, sourceQueryParams] = capture(mockedPool.query).first();
-      sourceQuery.should.equal('SELECT "name","id" FROM "simple" WHERE "id"=$1 LIMIT 1');
+      const [sourceQuery, sourceQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(sourceQuery).toBe('SELECT "name","id" FROM "simple" WHERE "id"=$1 LIMIT 1');
       assert(sourceQueryParams);
-      sourceQueryParams.should.deep.equal([source1.id]);
-      const [translationsQuery, translationsQueryParams] = capture(mockedPool.query).second();
-      translationsQuery.should.equal('SELECT "id","name" FROM "simple" WHERE "source_id"=$1');
+      expect(sourceQueryParams).toStrictEqual([source1.id]);
+      const [translationsQuery, translationsQueryParams] = mockedPool.query.mock.calls[1]!;
+      expect(translationsQuery).toBe('SELECT "id","name" FROM "simple" WHERE "source_id"=$1');
       assert(translationsQueryParams);
-      translationsQueryParams.should.deep.equal([source1.id]);
+      expect(translationsQueryParams).toStrictEqual([source1.id]);
     });
 
     it('should support complex query with multiple chained modifiers', async () => {
@@ -1101,12 +1135,11 @@ describe('ReadonlyRepository', () => {
       const productCategory1Map = generator.productCategory(product, category1);
       const productCategory2Map = generator.productCategory(product, category2);
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([product]),
-        getQueryResult([store]),
-        getQueryResult([productCategory1Map, productCategory2Map]),
-        getQueryResult([category1, category2]),
-      );
+      mockedPool.query
+        .mockResolvedValueOnce(getQueryResult([product]))
+        .mockResolvedValueOnce(getQueryResult([store]))
+        .mockResolvedValueOnce(getQueryResult([productCategory1Map, productCategory2Map]))
+        .mockResolvedValueOnce(getQueryResult([category1, category2]));
 
       const result = await ProductRepository.findOne()
         .where({
@@ -1129,30 +1162,31 @@ describe('ReadonlyRepository', () => {
           limit: 2,
         })
         .sort('store desc');
-      verify(mockedPool.query(anyString(), anything())).times(4);
+      expect(mockedPool.query).toHaveBeenCalledTimes(4);
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...product,
         store,
         categories: [category1, category2],
       });
 
-      const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-      productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 1');
+      const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 1');
       assert(productQueryParams);
-      productQueryParams.should.deep.equal([store.id]);
-      const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
-      storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1 AND "name" ILIKE $2');
+      expect(productQueryParams).toStrictEqual([store.id]);
+      const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[1]!;
+      expect(storeQuery).toBe('SELECT "id","name" FROM "stores" WHERE "id"=$1 AND "name" ILIKE $2');
       assert(storeQueryParams);
-      storeQueryParams.should.deep.equal([store.id, 'store%']);
-      const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).third();
-      productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
+      expect(storeQueryParams).toStrictEqual([store.id, 'store%']);
+      const [productCategoryMapQuery, productCategoryMapQueryParams] = mockedPool.query.mock.calls[2]!;
+      expect(productCategoryMapQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1');
       assert(productCategoryMapQueryParams);
-      productCategoryMapQueryParams.should.deep.equal([product.id]);
-      const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).byCallIndex(3);
-      categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) AND "name" ILIKE $2 ORDER BY "name" LIMIT 2');
+      expect(productCategoryMapQueryParams).toStrictEqual([product.id]);
+      const [categoryQuery, categoryQueryParams] = mockedPool.query.mock.calls[3]!;
+      expect(categoryQuery).toBe('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) AND "name" ILIKE $2 ORDER BY "name" LIMIT 2');
       assert(categoryQueryParams);
-      categoryQueryParams.should.deep.equal([[category1.id, category2.id], 'category%']);
+      expect(categoryQueryParams).toStrictEqual([[category1.id, category2.id], 'category%']);
     });
 
     describe('through options', () => {
@@ -1167,7 +1201,10 @@ describe('ReadonlyRepository', () => {
         generator.productCategory(product, category2);
 
         // Only return the primary category mapping from junction query
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory1Map]), getQueryResult([category1]));
+        mockedPool.query
+          .mockResolvedValueOnce(getQueryResult([product]))
+          .mockResolvedValueOnce(getQueryResult([productCategory1Map]))
+          .mockResolvedValueOnce(getQueryResult([category1]));
 
         const result = await ProductRepository.findOne().populate('categories', {
           through: {
@@ -1175,25 +1212,26 @@ describe('ReadonlyRepository', () => {
           },
         });
 
-        verify(mockedPool.query(anyString(), anything())).thrice();
+        expect(mockedPool.query).toHaveBeenCalledTimes(3);
         assert(result);
-        result.should.deep.equal({
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(result).toEqual({
           ...product,
           categories: [category1],
         });
 
-        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-        productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
+        const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 1');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).second();
-        productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 AND "is_primary"=$2');
+        expect(productQueryParams).toStrictEqual([]);
+        const [productCategoryMapQuery, productCategoryMapQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(productCategoryMapQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 AND "is_primary"=$2');
         assert(productCategoryMapQueryParams);
-        productCategoryMapQueryParams.should.deep.equal([product.id, true]);
-        const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
-        categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=$1');
+        expect(productCategoryMapQueryParams).toStrictEqual([product.id, true]);
+        const [categoryQuery, categoryQueryParams] = mockedPool.query.mock.calls[2]!;
+        expect(categoryQuery).toBe('SELECT "id","name" FROM "categories" WHERE "id"=$1');
         assert(categoryQueryParams);
-        categoryQueryParams.should.deep.equal([category1.id]);
+        expect(categoryQueryParams).toStrictEqual([category1.id]);
       });
 
       it('should order by junction table columns with through.sort', async () => {
@@ -1209,7 +1247,10 @@ describe('ReadonlyRepository', () => {
         };
 
         // Junction query returns in ordering order (category2 first, then category1)
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory2Map, productCategory1Map]), getQueryResult([category1, category2]));
+        mockedPool.query
+          .mockResolvedValueOnce(getQueryResult([product]))
+          .mockResolvedValueOnce(getQueryResult([productCategory2Map, productCategory1Map]))
+          .mockResolvedValueOnce(getQueryResult([category1, category2]));
 
         const result = await ProductRepository.findOne().populate('categories', {
           through: {
@@ -1217,17 +1258,17 @@ describe('ReadonlyRepository', () => {
           },
         });
 
-        verify(mockedPool.query(anyString(), anything())).thrice();
+        expect(mockedPool.query).toHaveBeenCalledTimes(3);
         assert(result);
         // Categories should be in junction order: category2 (ordering=1) before category1 (ordering=2)
-        result.categories.should.have.length(2);
-        result.categories[0]!.id.should.equal(category2.id);
-        result.categories[1]!.id.should.equal(category1.id);
+        expect(result.categories).toHaveLength(2);
+        expect(result.categories[0]!.id).toBe(category2.id);
+        expect(result.categories[1]!.id).toBe(category1.id);
 
-        const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).second();
-        productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 ORDER BY "ordering"');
+        const [productCategoryMapQuery, productCategoryMapQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(productCategoryMapQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 ORDER BY "ordering"');
         assert(productCategoryMapQueryParams);
-        productCategoryMapQueryParams.should.deep.equal([product.id]);
+        expect(productCategoryMapQueryParams).toStrictEqual([product.id]);
       });
 
       it('should combine through.where and through.sort', async () => {
@@ -1244,7 +1285,10 @@ describe('ReadonlyRepository', () => {
           isPrimary: true,
         };
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([productCategory2Map, productCategory1Map]), getQueryResult([category1, category2]));
+        mockedPool.query
+          .mockResolvedValueOnce(getQueryResult([product]))
+          .mockResolvedValueOnce(getQueryResult([productCategory2Map, productCategory1Map]))
+          .mockResolvedValueOnce(getQueryResult([category1, category2]));
 
         const result = await ProductRepository.findOne().populate('categories', {
           through: {
@@ -1253,17 +1297,17 @@ describe('ReadonlyRepository', () => {
           },
         });
 
-        verify(mockedPool.query(anyString(), anything())).thrice();
+        expect(mockedPool.query).toHaveBeenCalledTimes(3);
         assert(result);
-        result.categories[0]!.id.should.equal(category2.id);
-        result.categories[1]!.id.should.equal(category1.id);
+        expect(result.categories[0]!.id).toBe(category2.id);
+        expect(result.categories[1]!.id).toBe(category1.id);
 
-        const [productCategoryMapQuery, productCategoryMapQueryParams] = capture(mockedPool.query).second();
-        productCategoryMapQuery.should.equal(
+        const [productCategoryMapQuery, productCategoryMapQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(productCategoryMapQuery).toBe(
           'SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 AND "is_primary"=$2 ORDER BY "ordering"',
         );
         assert(productCategoryMapQueryParams);
-        productCategoryMapQueryParams.should.deep.equal([product.id, true]);
+        expect(productCategoryMapQueryParams).toStrictEqual([product.id, true]);
       });
 
       it('should combine through options with target where filter', async () => {
@@ -1279,11 +1323,11 @@ describe('ReadonlyRepository', () => {
         };
 
         // Junction returns both, but target where filters to only category1
-        when(mockedPool.query(anyString(), anything())).thenResolve(
-          getQueryResult([product]),
-          getQueryResult([productCategory1Map, productCategory2Map]),
-          getQueryResult([category1]), // Only category1 matches target where
-        );
+        // Only category1 matches target where
+        mockedPool.query
+          .mockResolvedValueOnce(getQueryResult([product]))
+          .mockResolvedValueOnce(getQueryResult([productCategory1Map, productCategory2Map]))
+          .mockResolvedValueOnce(getQueryResult([category1]));
 
         const result = await ProductRepository.findOne().populate('categories', {
           where: { name: { startsWith: 'Active' } },
@@ -1292,24 +1336,22 @@ describe('ReadonlyRepository', () => {
           },
         });
 
-        verify(mockedPool.query(anyString(), anything())).thrice();
+        expect(mockedPool.query).toHaveBeenCalledTimes(3);
         assert(result);
-        result.categories.should.have.length(1);
-        result.categories[0]!.id.should.equal(category1.id);
+        expect(result.categories).toHaveLength(1);
+        expect(result.categories[0]!.id).toBe(category1.id);
 
-        const [productCategoryMapQuery] = capture(mockedPool.query).second();
-        productCategoryMapQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 AND "is_primary"=$2');
-        const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
-        categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) AND "name" ILIKE $2');
+        const [productCategoryMapQuery] = mockedPool.query.mock.calls[1]!;
+        expect(productCategoryMapQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 AND "is_primary"=$2');
+        const [categoryQuery, categoryQueryParams] = mockedPool.query.mock.calls[2]!;
+        expect(categoryQuery).toBe('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) AND "name" ILIKE $2');
         assert(categoryQueryParams);
-        categoryQueryParams.should.deep.equal([[category1.id, category2.id], 'Active%']);
+        expect(categoryQueryParams).toStrictEqual([[category1.id, category2.id], 'Active%']);
       });
 
       it('should not run target query when through.where filters out all junction records', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(
-          getQueryResult([product]),
-          getQueryResult([]), // No junction records match
-        );
+        // No junction records match
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([]));
 
         const result = await ProductRepository.findOne().populate('categories', {
           through: {
@@ -1317,9 +1359,9 @@ describe('ReadonlyRepository', () => {
           },
         });
 
-        verify(mockedPool.query(anyString(), anything())).twice();
+        expect(mockedPool.query).toHaveBeenCalledTimes(2);
         assert(result);
-        result.categories.should.deep.equal([]);
+        expect(result.categories).toStrictEqual([]);
       });
     });
 
@@ -1328,34 +1370,28 @@ describe('ReadonlyRepository', () => {
         id: faker.number.int(),
         name: `sink - ${faker.string.uuid()}`,
       };
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([result]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([result])).mockResolvedValueOnce(getQueryResult([result]));
 
       const result1 = await ReadonlyKitchenSinkRepository.findOne();
       const result2 = await ReadonlyKitchenSinkRepository.findOne();
 
-      verify(mockedPool.query(anyString(), anything())).twice();
+      expect(mockedPool.query).toHaveBeenCalledTimes(2);
 
       assert(result1);
-      result1.should.deep.equal(result2);
-      result1.instanceFunction().should.equal(`${result.name} bar!`);
+      expect(result1).toStrictEqual(result2);
+      expect(result1.instanceFunction()).toBe(`${result.name} bar!`);
       assert(result2);
-      result2.instanceFunction().should.equal(`${result.name} bar!`);
+      expect(result2.instanceFunction()).toBe(`${result.name} bar!`);
     });
 
     it('should not create an object/assign instance functions to null results', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve({
-        command: 'select',
-        rowCount: 1,
-        oid: 1,
-        fields: [],
-        rows: [null],
-      });
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([null as never]));
 
       const result = await ReadonlyKitchenSinkRepository.findOne();
 
-      verify(mockedPool.query(anyString(), anything())).once();
+      expect(mockedPool.query).toHaveBeenCalledOnce();
 
-      should.not.exist(result);
+      expect(result).toBeNull();
     });
 
     it('should allow querying required string array', async () => {
@@ -1365,7 +1401,7 @@ describe('ReadonlyRepository', () => {
       });
       const simple = generator.simpleWithStringCollection();
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([simple]));
 
       const result = await SimpleWithStringCollectionRepository.findOne({
         or: [
@@ -1378,46 +1414,46 @@ describe('ReadonlyRepository', () => {
         ],
       });
       assert(result);
-      result.should.deep.equal(simple);
+      expect(result).toStrictEqual(simple);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","other_ids" AS "otherIds" FROM "simple" WHERE (("id"=$1) OR (($2=ANY("other_ids") OR $3=ANY("other_ids")))) LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","other_ids" AS "otherIds" FROM "simple" WHERE (("id"=$1) OR (($2=ANY("other_ids") OR $3=ANY("other_ids")))) LIMIT 1');
       assert(params);
-      params.should.deep.equal([simple.id, otherSimple.id, anotherSimple.id]);
+      expect(params).toStrictEqual([simple.id, otherSimple.id, anotherSimple.id]);
     });
 
     it('should support an object with an enum/union field', async () => {
       const simple = generator.simpleWithUnion();
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([simple]));
       const result = await SimpleWithUnionRepository.findOne().where({
         status: ['Bar', 'Foo'],
       });
       assert(result);
-      result.should.deep.equal(simple);
+      expect(result).toStrictEqual(simple);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","status" FROM "simple" WHERE "status"=ANY($1::TEXT[]) LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","status" FROM "simple" WHERE "status"=ANY($1::TEXT[]) LIMIT 1');
       assert(params);
-      params.should.deep.equal([['Bar', 'Foo']]);
+      expect(params).toStrictEqual([['Bar', 'Foo']]);
     });
 
     it('should support an object with negated enum/union field', async () => {
       const simple = generator.simpleWithUnion();
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([simple]));
       const result = await SimpleWithUnionRepository.findOne().where({
         status: {
           '!': ['Bar', 'Foo'],
         },
       });
       assert(result);
-      result.should.deep.equal(simple);
+      expect(result).toStrictEqual(simple);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","status" FROM "simple" WHERE "status"<>ALL($1::TEXT[]) LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","status" FROM "simple" WHERE "status"<>ALL($1::TEXT[]) LIMIT 1');
       assert(params);
-      params.should.deep.equal([['Bar', 'Foo']]);
+      expect(params).toStrictEqual([['Bar', 'Foo']]);
     });
 
     it('should support an object with an optional enum/union field', async () => {
@@ -1435,15 +1471,15 @@ describe('ReadonlyRepository', () => {
         };
       }
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([simple]));
       const result = await SimpleWithOptionalEnumRepository.findOne().where(whereClause);
       assert(result);
-      result.should.deep.equal(simple);
+      expect(result).toStrictEqual(simple);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","status" FROM "simple" WHERE "name"=$1 AND "status" ILIKE $2 LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","status" FROM "simple" WHERE "name"=$1 AND "status" ILIKE $2 LIMIT 1');
       assert(params);
-      params.should.deep.equal([simple.name, status]);
+      expect(params).toStrictEqual([simple.name, status]);
     });
 
     it('should support an object with an optional enum/union array', async () => {
@@ -1456,15 +1492,15 @@ describe('ReadonlyRepository', () => {
         },
       };
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([simple]));
       const result = await SimpleWithOptionalEnumRepository.findOne().where(whereClause);
       assert(result);
-      result.should.deep.equal(simple);
+      expect(result).toStrictEqual(simple);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","status" FROM "simple" WHERE "name"=$1 AND ("status" ILIKE $2 OR "status" ILIKE $3 OR "status" IS NULL) LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","status" FROM "simple" WHERE "name"=$1 AND ("status" ILIKE $2 OR "status" ILIKE $3 OR "status" IS NULL) LIMIT 1');
       assert(params);
-      params.should.deep.equal([simple.name, 'Bar', 'Foo']);
+      expect(params).toStrictEqual([simple.name, 'Bar', 'Foo']);
     });
 
     it('should support an object with an optional negated enum/union field', async () => {
@@ -1484,15 +1520,15 @@ describe('ReadonlyRepository', () => {
         };
       }
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([simple]));
       const result = await SimpleWithOptionalEnumRepository.findOne().where(whereClause);
       assert(result);
-      result.should.deep.equal(simple);
+      expect(result).toStrictEqual(simple);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","status" FROM "simple" WHERE "name"=$1 AND "status" NOT ILIKE $2 LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","status" FROM "simple" WHERE "name"=$1 AND "status" NOT ILIKE $2 LIMIT 1');
       assert(params);
-      params.should.deep.equal([simple.name, status]);
+      expect(params).toStrictEqual([simple.name, status]);
     });
 
     it('should support an object with an optional negated enum/union array', async () => {
@@ -1507,31 +1543,31 @@ describe('ReadonlyRepository', () => {
         },
       };
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([simple]));
       const result = await SimpleWithOptionalEnumRepository.findOne().where(whereClause);
       assert(result);
-      result.should.deep.equal(simple);
+      expect(result).toStrictEqual(simple);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","status" FROM "simple" WHERE "name"=$1 AND "status" NOT ILIKE $2 AND "status" NOT ILIKE $3 AND "status" IS NOT NULL LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","status" FROM "simple" WHERE "name"=$1 AND "status" NOT ILIKE $2 AND "status" NOT ILIKE $3 AND "status" IS NOT NULL LIMIT 1');
       assert(params);
-      params.should.deep.equal([simple.name, 'Bar', 'Foo']);
+      expect(params).toStrictEqual([simple.name, 'Bar', 'Foo']);
     });
 
     it('should support an object with a json field', async () => {
       const simple = generator.simpleWithJson();
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([simple]));
       const result = await SimpleWithJsonRepository.findOne();
       assert(result);
-      result.should.deep.equal(simple);
+      expect(result).toStrictEqual(simple);
       assert(result.keyValue);
-      result.keyValue.should.deep.equal(simple.keyValue);
+      expect(result.keyValue).toStrictEqual(simple.keyValue);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","bar","key_value" AS "keyValue" FROM "simple" LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","bar","key_value" AS "keyValue" FROM "simple" LIMIT 1');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should support an object with a json field (with id property)', async () => {
@@ -1539,7 +1575,7 @@ describe('ReadonlyRepository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([simple]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([simple]));
       const result = await SimpleWithRelationAndJsonRepository.findOne().where({
         or: [
           {
@@ -1550,14 +1586,15 @@ describe('ReadonlyRepository', () => {
         id: 42,
       });
       assert(result);
-      result.should.deep.equal(simple);
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual(simple);
       assert(result.message);
-      result.message.id.should.equal(simple.message.id);
+      expect(result.message.id).toBe(simple.message.id);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store","message" FROM "simple" WHERE ("name"=$1 AND "id"=$2) AND "id"=$3 LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","store_id" AS "store","message" FROM "simple" WHERE ("name"=$1 AND "id"=$2) AND "id"=$3 LIMIT 1');
       assert(params);
-      params.should.deep.equal([simple.name, simple.id, 42]);
+      expect(params).toStrictEqual([simple.name, simple.id, 42]);
     });
 
     it('should support an object with a json field (with id property) and populate statement', async () => {
@@ -1567,37 +1604,37 @@ describe('ReadonlyRepository', () => {
 
       const storeResult = pick(store, 'id', 'name');
 
-      when(mockedPool.query(anyString(), anything()))
-        .thenResolve(getQueryResult([simple]))
-        .thenResolve(getQueryResult([storeResult]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([simple])).mockResolvedValueOnce(getQueryResult([storeResult]));
       const result = await SimpleWithRelationAndJsonRepository.findOne().populate('store', {
         select: ['name'],
       });
       assert(result);
-      result.should.deep.equal({
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual({
         ...simple,
         store: storeResult,
       });
       assert(result.message);
-      result.message.id.should.equal(simple.message.id);
+      expect(result.message.id).toBe(simple.message.id);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","store_id" AS "store","message" FROM "simple" LIMIT 1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","store_id" AS "store","message" FROM "simple" LIMIT 1');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should support retaining original field - UNSAFE_withOriginalFieldType()', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([
-          {
-            id: faker.number.int(),
-            name: 'Product',
-            store: store.id,
-          },
-        ]),
-        getQueryResult([store]),
-      );
+      mockedPool.query
+        .mockResolvedValueOnce(
+          getQueryResult([
+            {
+              id: faker.number.int(),
+              name: 'Product',
+              store: store.id,
+            },
+          ]),
+        )
+        .mockResolvedValueOnce(getQueryResult([store]));
 
       const productResult = await ProductRepository.findOne().UNSAFE_withOriginalFieldType('store');
       assert(productResult);
@@ -1607,63 +1644,64 @@ describe('ReadonlyRepository', () => {
       assert(storeResult);
 
       productResult.store = storeResult;
-      productResult.store.id.should.equal(store.id);
+      expect(productResult.store.id).toBe(store.id);
       assert(productResult.store.name);
-      productResult.store.name.should.equal(store.name);
+      expect(productResult.store.name).toBe(store.name);
     });
 
     it('should support manually setting a field - UNSAFE_withFieldValue()', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(
-        getQueryResult([
-          {
-            id: faker.number.int(),
-            name: 'Product',
-            store: store.id,
-          },
-        ]),
-        getQueryResult([store]),
-      );
+      mockedPool.query
+        .mockResolvedValueOnce(
+          getQueryResult([
+            {
+              id: faker.number.int(),
+              name: 'Product',
+              store: store.id,
+            },
+          ]),
+        )
+        .mockResolvedValueOnce(getQueryResult([store]));
 
       const productResult = await ProductRepository.findOne().UNSAFE_withFieldValue('store', store);
       assert(productResult);
 
-      productResult.store.id.should.equal(store.id);
+      expect(productResult.store.id).toBe(store.id);
       assert(productResult.store.name);
-      productResult.store.name.should.equal(store.name);
+      expect(productResult.store.name).toBe(store.name);
     });
 
     describe('toJSON()', () => {
       it('should return plain object without prototype chain', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
         const result = await ProductRepository.findOne().toJSON();
 
-        should.exist(result);
-        Object.getPrototypeOf(result!).should.equal(Object.prototype);
+        expect(result).toBeDefined();
+        expect(Object.getPrototypeOf(result!)).toBe(Object.prototype);
       });
 
       it('should return null when no results', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
 
         const result = await ProductRepository.findOne().toJSON();
 
-        should.not.exist(result);
+        expect(result).toBeNull();
       });
 
       it('should cascade to populated entities', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([store]));
 
         const result = await ProductRepository.findOne().populate('store').toJSON();
 
-        should.exist(result);
-        Object.getPrototypeOf(result!).should.equal(Object.prototype);
-        Object.getPrototypeOf(result!.store).should.equal(Object.prototype);
+        expect(result).toBeDefined();
+        expect(Object.getPrototypeOf(result!)).toBe(Object.prototype);
+        expect(Object.getPrototypeOf(result!.store)).toBe(Object.prototype);
       });
 
       it('should parse float columns with trailing zeros in plain objects', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
-        when(mockedPool.query(anyString(), anything())).thenResolve(
+        mockedPool.query.mockResolvedValueOnce(
           getQueryResult([
             {
               id,
@@ -1675,13 +1713,13 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne().toJSON();
         assert(result);
-        result.floatColumn!.should.equal(0);
+        expect(result.floatColumn!).toBe(0);
       });
 
       it('should parse integer columns in plain objects (regression check)', async () => {
         const id = faker.number.int();
         const name = faker.string.uuid();
-        when(mockedPool.query(anyString(), anything())).thenResolve(
+        mockedPool.query.mockResolvedValueOnce(
           getQueryResult([
             {
               id,
@@ -1693,7 +1731,7 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne().toJSON();
         assert(result);
-        result.intColumn!.should.equal(42);
+        expect(result.intColumn!).toBe(42);
       });
     });
   });
@@ -1715,15 +1753,15 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const result = await ProductRepository.find();
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should support call with constraints as a parameter', async () => {
@@ -1736,7 +1774,7 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const result = await ProductRepository.find({
         select: ['name'],
         where: {
@@ -1748,12 +1786,12 @@ describe('ReadonlyRepository', () => {
         limit: 24,
       });
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "name","id" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2 ORDER BY "name" LIMIT 24 OFFSET 5');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "name","id" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2 ORDER BY "name" LIMIT 24 OFFSET 5');
       assert(params);
-      params.should.deep.equal([products.map((item) => item.id), store.id]);
+      expect(params).toStrictEqual([products.map((item) => item.id), store.id]);
     });
 
     it('should support call with where constraint as a parameter', async () => {
@@ -1766,22 +1804,22 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const result = await ProductRepository.find({
         id: products.map((item) => item.id),
         store,
       });
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
       assert(params);
-      params.should.deep.equal([products.map((item) => item.id), store.id]);
+      expect(params).toStrictEqual([products.map((item) => item.id), store.id]);
     });
 
     it('should support call with explicit pool override', async () => {
-      const poolOverride = mock(Pool);
+      const poolOverride = createMockPool();
       const products = [
         generator.product({
           store: store.id,
@@ -1791,18 +1829,18 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      poolOverride.query.mockResolvedValueOnce(getQueryResult(products));
       const result = await ProductRepository.find({
-        pool: instance(poolOverride),
+        pool: poolOverride,
       });
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      verify(mockedPool.query(anyString(), anything())).never();
-      const [query, params] = capture(poolOverride.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+      expect(mockedPool.query).not.toHaveBeenCalled();
+      const [query, params] = poolOverride.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should support call with chained where constraints', async () => {
@@ -1815,17 +1853,17 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const result = await ProductRepository.find().where({
         store: store.id,
       });
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
       assert(params);
-      params.should.deep.equal([store.id]);
+      expect(params).toStrictEqual([store.id]);
     });
 
     it('should support call with chained where constraints - array ILIKE array of values', async () => {
@@ -1838,7 +1876,7 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const result = await ProductRepository.find().where({
         or: [
           {
@@ -1857,14 +1895,14 @@ describe('ReadonlyRepository', () => {
         },
       });
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal(
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe(
         'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE (("name" ILIKE $1) OR ("name" ILIKE $2)) AND (EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $3) OR EXISTS(SELECT 1 FROM (SELECT unnest("alias_names") AS "unnested_alias_names") __unnested WHERE "unnested_alias_names" ILIKE $4))',
       );
       assert(params);
-      params.should.deep.equal(['product', 'Foo Bar', 'Foo', 'BAR']);
+      expect(params).toStrictEqual(['product', 'Foo Bar', 'Foo', 'BAR']);
     });
 
     it('should support call with chained where constraints - NOT ILIKE array of values', async () => {
@@ -1879,7 +1917,7 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const result = await ProductRepository.find().where({
         sku: {
           '!': {
@@ -1888,12 +1926,12 @@ describe('ReadonlyRepository', () => {
         },
       });
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "sku" NOT ILIKE $1 AND "sku" NOT ILIKE $2');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "sku" NOT ILIKE $1 AND "sku" NOT ILIKE $2');
       assert(params);
-      params.should.deep.equal(['Foo', 'BAR']);
+      expect(params).toStrictEqual(['Foo', 'BAR']);
     });
 
     it('should support call with chained where constraints - Promise.all', async () => {
@@ -1906,19 +1944,19 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const [result] = await Promise.all([
         ProductRepository.find().where({
           store: store.id,
         }),
       ]);
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1');
       assert(params);
-      params.should.deep.equal([store.id]);
+      expect(params).toStrictEqual([store.id]);
     });
 
     it('should support call with chained sort', async () => {
@@ -1931,15 +1969,15 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const result = await ProductRepository.find().sort('name asc');
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "name"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "name"');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should support call with chained limit', async () => {
@@ -1952,15 +1990,15 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const result = await ProductRepository.find().limit(42);
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 42');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 42');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should support call with chained skip', async () => {
@@ -1973,15 +2011,15 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const result = await ProductRepository.find().skip(24);
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" OFFSET 24');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" OFFSET 24');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should support call with chained paginate', async () => {
@@ -1994,18 +2032,18 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const result = await ProductRepository.find().paginate({
         page: 3,
         limit: 100,
       });
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 100 OFFSET 200');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LIMIT 100 OFFSET 200');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should allow multiple where constraints in an or clause', async () => {
@@ -2018,7 +2056,7 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
       const orStatements: WhereQuery<Product>[] = [
         {
@@ -2049,12 +2087,12 @@ describe('ReadonlyRepository', () => {
         limit: 24,
       });
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "name","id" FROM "products" WHERE "store_id"=$1 AND (("sku" ILIKE $2) OR ("location" ILIKE $3)) ORDER BY "name" LIMIT 24 OFFSET 5');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "name","id" FROM "products" WHERE "store_id"=$1 AND (("sku" ILIKE $2) OR ("location" ILIKE $3)) ORDER BY "name" LIMIT 24 OFFSET 5');
       assert(params);
-      params.should.deep.equal([store.id, 'foo', location]);
+      expect(params).toStrictEqual([store.id, 'foo', location]);
     });
 
     it('should support complex query with multiple chained modifiers', async () => {
@@ -2067,7 +2105,7 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
       const result = await ProductRepository.find()
         .where({
@@ -2077,14 +2115,14 @@ describe('ReadonlyRepository', () => {
         .limit(42)
         .sort('store desc');
 
-      verify(mockedPool.query(anyString(), anything())).once();
+      expect(mockedPool.query).toHaveBeenCalledOnce();
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 42 OFFSET 24');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=$1 ORDER BY "store_id" DESC LIMIT 42 OFFSET 24');
       assert(params);
-      params.should.deep.equal([store.id]);
+      expect(params).toStrictEqual([store.id]);
     });
 
     it('should have instance functions be equal across multiple queries', async () => {
@@ -2092,16 +2130,16 @@ describe('ReadonlyRepository', () => {
         id: faker.number.int(),
         name: `sink - ${faker.string.uuid()}`,
       };
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([result]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([result])).mockResolvedValueOnce(getQueryResult([result]));
 
       const result1 = await ReadonlyKitchenSinkRepository.find();
       const result2 = await ReadonlyKitchenSinkRepository.find();
-      verify(mockedPool.query(anyString(), anything())).twice();
+      expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result1);
       assert(result2);
-      result1.should.deep.equal(result2);
-      result1[0]!.instanceFunction().should.equal(`${result.name} bar!`);
-      result2[0]!.instanceFunction().should.equal(`${result.name} bar!`);
+      expect(result1).toStrictEqual(result2);
+      expect(result1[0]!.instanceFunction()).toBe(`${result.name} bar!`);
+      expect(result2[0]!.instanceFunction()).toBe(`${result.name} bar!`);
     });
 
     it('should allow types when used in promise.all with other queries', async () => {
@@ -2119,7 +2157,10 @@ describe('ReadonlyRepository', () => {
         foo: `one: ${faker.string.uuid()}`,
         levelTwo: two.id,
       });
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([one]), getQueryResult([two]), getQueryResult([three1, three2]));
+      mockedPool.query
+        .mockResolvedValueOnce(getQueryResult([one]))
+        .mockResolvedValueOnce(getQueryResult([two]))
+        .mockResolvedValueOnce(getQueryResult([three1, three2]));
 
       assert(one.foo);
       assert(two.foo);
@@ -2140,34 +2181,34 @@ describe('ReadonlyRepository', () => {
         }),
       ]);
 
-      verify(mockedPool.query(anyString(), anything())).thrice();
-      ones.should.deep.equal([one]);
-      ones.length.should.equal(1);
-      ones[0]!.one.should.deep.equal(one.one);
+      expect(mockedPool.query).toHaveBeenCalledTimes(3);
+      expect(ones).toStrictEqual([one]);
+      expect(ones.length).toBe(1);
+      expect(ones[0]!.one).toStrictEqual(one.one);
 
       assert(twoResult);
-      twoResult.should.deep.equal(two);
-      twoResult.two.should.deep.equal(two.two);
+      expect(twoResult).toStrictEqual(two);
+      expect(twoResult.two).toStrictEqual(two.two);
 
-      threes.should.deep.equal([three1, three2]);
-      threes.length.should.equal(2);
-      threes[0]!.three.should.equal(three1.three);
-      threes[1]!.three.should.equal(three2.three);
+      expect(threes).toStrictEqual([three1, three2]);
+      expect(threes.length).toBe(2);
+      expect(threes[0]!.three).toBe(three1.three);
+      expect(threes[1]!.three).toBe(three2.three);
 
-      const [levelOneQuery, levelOneQueryParams] = capture(mockedPool.query).first();
-      levelOneQuery.should.equal('SELECT "one","id" FROM "level_one" WHERE "foo"=ANY($1::TEXT[])');
+      const [levelOneQuery, levelOneQueryParams] = mockedPool.query.mock.calls[0]!;
+      expect(levelOneQuery).toBe('SELECT "one","id" FROM "level_one" WHERE "foo"=ANY($1::TEXT[])');
       assert(levelOneQueryParams);
-      levelOneQueryParams.should.deep.equal([[one.foo, two.foo, three1.foo.toUpperCase(), three2.foo.toUpperCase()]]);
+      expect(levelOneQueryParams).toStrictEqual([[one.foo, two.foo, three1.foo.toUpperCase(), three2.foo.toUpperCase()]]);
 
-      const [levelTwoQuery, levelTwoQueryParams] = capture(mockedPool.query).second();
-      levelTwoQuery.should.equal('SELECT "id","two","foo","level_three_id" AS "levelThree" FROM "level_two" LIMIT 1');
+      const [levelTwoQuery, levelTwoQueryParams] = mockedPool.query.mock.calls[1]!;
+      expect(levelTwoQuery).toBe('SELECT "id","two","foo","level_three_id" AS "levelThree" FROM "level_two" LIMIT 1');
       assert(levelTwoQueryParams);
-      levelTwoQueryParams.should.deep.equal([]);
+      expect(levelTwoQueryParams).toStrictEqual([]);
 
-      const [levelThreeQuery, levelThreeQueryParams] = capture(mockedPool.query).third();
-      levelThreeQuery.should.equal('SELECT "three","foo","id" FROM "level_three" WHERE "foo"=ANY($1::TEXT[])');
+      const [levelThreeQuery, levelThreeQueryParams] = mockedPool.query.mock.calls[2]!;
+      expect(levelThreeQuery).toBe('SELECT "three","foo","id" FROM "level_three" WHERE "foo"=ANY($1::TEXT[])');
       assert(levelThreeQueryParams);
-      levelThreeQueryParams.should.deep.equal([[three1.foo, three2.foo]]);
+      expect(levelThreeQueryParams).toStrictEqual([[three1.foo, three2.foo]]);
     });
 
     it('should support retaining original field - UNSAFE_withOriginalFieldType()', async () => {
@@ -2175,24 +2216,24 @@ describe('ReadonlyRepository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([store]));
 
       const products = await ProductRepository.find().UNSAFE_withOriginalFieldType('store');
-      products.length.should.equal(1);
+      expect(products.length).toBe(1);
       const [productResult] = products;
       assert(productResult);
 
       const stores = await StoreRepository.find().where({
         id: productResult.store,
       });
-      stores.length.should.equal(1);
+      expect(stores.length).toBe(1);
       const [storeResult] = stores;
       assert(storeResult);
 
       productResult.store = storeResult;
-      productResult.store.id.should.equal(store.id);
+      expect(productResult.store.id).toBe(store.id);
       assert(productResult.store.name);
-      productResult.store.name.should.equal(store.name);
+      expect(productResult.store.name).toBe(store.name);
     });
 
     it('should support call with chained select', async () => {
@@ -2205,15 +2246,15 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const result = await ProductRepository.find().select(['name', 'sku']);
       assert(result);
-      result.should.deep.equal(products);
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT "name","sku","id" FROM "products"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT "name","sku","id" FROM "products"');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     describe('join', () => {
@@ -2224,7 +2265,7 @@ describe('ReadonlyRepository', () => {
           }),
         ];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
         const result = await ProductRepository.find()
           .join('store')
           .where({
@@ -2235,14 +2276,14 @@ describe('ReadonlyRepository', () => {
             },
           });
         assert(result);
-        result.should.deep.equal(products);
+        expect(result).toStrictEqual(products);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name" ILIKE $1',
         );
         assert(params);
-        params.should.deep.equal(['Acme']);
+        expect(params).toStrictEqual(['Acme']);
       });
 
       it('should support left join with nested where clause', async () => {
@@ -2252,21 +2293,21 @@ describe('ReadonlyRepository', () => {
           }),
         ];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
         const result = await ProductRepository.find()
           .leftJoin('store')
           .where({
             store: { name: { like: '%mart%' } },
           });
         assert(result);
-        result.should.deep.equal(products);
+        expect(result).toStrictEqual(products);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LEFT JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name" ILIKE $1',
         );
         assert(params);
-        params.should.deep.equal(['%mart%']);
+        expect(params).toStrictEqual(['%mart%']);
       });
 
       it('should support join with alias and nested where clause', async () => {
@@ -2276,21 +2317,21 @@ describe('ReadonlyRepository', () => {
           }),
         ];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
         const result = await ProductRepository.find()
           .join('store', 'primaryStore')
           .where({
             primaryStore: { name: 'Acme' },
           });
         assert(result);
-        result.should.deep.equal(products);
+        expect(result).toStrictEqual(products);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "primaryStore" ON "products"."store_id"="primaryStore"."id" WHERE "primaryStore"."name"=$1',
         );
         assert(params);
-        params.should.deep.equal(['Acme']);
+        expect(params).toStrictEqual(['Acme']);
       });
 
       it('should support join with mixed nested and regular where constraints', async () => {
@@ -2300,7 +2341,7 @@ describe('ReadonlyRepository', () => {
           }),
         ];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
         const result = await ProductRepository.find()
           .join('store')
           .where({
@@ -2308,14 +2349,14 @@ describe('ReadonlyRepository', () => {
             store: { name: 'Acme' },
           });
         assert(result);
-        result.should.deep.equal(products);
+        expect(result).toStrictEqual(products);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "name"=$1 AND "store"."name"=$2',
         );
         assert(params);
-        params.should.deep.equal(['Widget', 'Acme']);
+        expect(params).toStrictEqual(['Widget', 'Acme']);
       });
 
       it('should support sort with dot notation for joined table', async () => {
@@ -2325,17 +2366,17 @@ describe('ReadonlyRepository', () => {
           }),
         ];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
         const result = await ProductRepository.find().join('store').sort('store.name asc');
         assert(result);
-        result.should.deep.equal(products);
+        expect(result).toStrictEqual(products);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" ORDER BY "store"."name"',
         );
         assert(params);
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
 
       it('should support sort with dot notation descending', async () => {
@@ -2345,17 +2386,17 @@ describe('ReadonlyRepository', () => {
           }),
         ];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
         const result = await ProductRepository.find().join('store', 'primaryStore').sort('primaryStore.name desc');
         assert(result);
-        result.should.deep.equal(products);
+        expect(result).toStrictEqual(products);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "primaryStore" ON "products"."store_id"="primaryStore"."id" ORDER BY "primaryStore"."name" DESC',
         );
         assert(params);
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
     });
 
@@ -2367,7 +2408,7 @@ describe('ReadonlyRepository', () => {
           }),
         ];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const activeStores = subquery(StoreRepository).select(['id']).where({ name: 'Acme' });
         const result = await ProductRepository.find().where({
@@ -2375,12 +2416,12 @@ describe('ReadonlyRepository', () => {
         });
 
         assert(result);
-        result.should.deep.equal(products);
+        expect(result).toStrictEqual(products);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id" IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id" IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
         assert(params);
-        params.should.deep.equal(['Acme']);
+        expect(params).toStrictEqual(['Acme']);
       });
 
       it('should support WHERE NOT IN with subquery using negation', async () => {
@@ -2390,7 +2431,7 @@ describe('ReadonlyRepository', () => {
           }),
         ];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const inactiveStores = subquery(StoreRepository).select(['id']).where({ name: 'Inactive' });
         const result = await ProductRepository.find().where({
@@ -2398,18 +2439,18 @@ describe('ReadonlyRepository', () => {
         });
 
         assert(result);
-        result.should.deep.equal(products);
+        expect(result).toStrictEqual(products);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id" NOT IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id" NOT IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
         assert(params);
-        params.should.deep.equal(['Inactive']);
+        expect(params).toStrictEqual(['Inactive']);
       });
 
       it('should support WHERE EXISTS with subquery', async () => {
         const stores = [generator.store()];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
         const hasProducts = subquery(ProductRepository).where({ name: 'Widget' });
         const result = await StoreRepository.find().where({
@@ -2417,18 +2458,18 @@ describe('ReadonlyRepository', () => {
         });
 
         assert(result);
-        result.should.deep.equal(stores);
+        expect(result).toStrictEqual(stores);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal('SELECT "id","name" FROM "stores" WHERE EXISTS (SELECT 1 FROM "products" WHERE "name"=$1)');
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe('SELECT "id","name" FROM "stores" WHERE EXISTS (SELECT 1 FROM "products" WHERE "name"=$1)');
         assert(params);
-        params.should.deep.equal(['Widget']);
+        expect(params).toStrictEqual(['Widget']);
       });
 
       it('should support WHERE NOT EXISTS with subquery using negation', async () => {
         const stores = [generator.store()];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
         const hasDiscontinued = subquery(ProductRepository).where({ name: 'Discontinued' });
         const result = await StoreRepository.find().where({
@@ -2436,18 +2477,18 @@ describe('ReadonlyRepository', () => {
         });
 
         assert(result);
-        result.should.deep.equal(stores);
+        expect(result).toStrictEqual(stores);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal('SELECT "id","name" FROM "stores" WHERE NOT EXISTS (SELECT 1 FROM "products" WHERE "name"=$1)');
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe('SELECT "id","name" FROM "stores" WHERE NOT EXISTS (SELECT 1 FROM "products" WHERE "name"=$1)');
         assert(params);
-        params.should.deep.equal(['Discontinued']);
+        expect(params).toStrictEqual(['Discontinued']);
       });
 
       it('should support scalar subquery with comparison operator', async () => {
         const stores = [generator.store()];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
         const productCount = subquery(ProductRepository).where({ name: 'Widget' }).count();
         const result = await StoreRepository.find().where({
@@ -2455,12 +2496,12 @@ describe('ReadonlyRepository', () => {
         });
 
         assert(result);
-        result.should.deep.equal(stores);
+        expect(result).toStrictEqual(stores);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal('SELECT "id","name" FROM "stores" WHERE "id">(SELECT COUNT(*) FROM "products" WHERE "name"=$1)');
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe('SELECT "id","name" FROM "stores" WHERE "id">(SELECT COUNT(*) FROM "products" WHERE "name"=$1)');
         assert(params);
-        params.should.deep.equal(['Widget']);
+        expect(params).toStrictEqual(['Widget']);
       });
 
       it('should support subquery with sort and limit', async () => {
@@ -2470,7 +2511,7 @@ describe('ReadonlyRepository', () => {
           }),
         ];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const topStores = subquery(StoreRepository)
           .select(['id'])
@@ -2482,14 +2523,14 @@ describe('ReadonlyRepository', () => {
         });
 
         assert(result);
-        result.should.deep.equal(products);
+        expect(result).toStrictEqual(products);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id" IN (SELECT "id" FROM "stores" WHERE "name" ILIKE $1 ORDER BY "name" LIMIT 10)',
         );
         assert(params);
-        params.should.deep.equal(['A%']);
+        expect(params).toStrictEqual(['A%']);
       });
 
       it('should support combining subquery with other where conditions', async () => {
@@ -2499,7 +2540,7 @@ describe('ReadonlyRepository', () => {
           }),
         ];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const premiumStores = subquery(StoreRepository).select(['id']).where({ name: 'Premium' });
         const result = await ProductRepository.find().where({
@@ -2508,21 +2549,21 @@ describe('ReadonlyRepository', () => {
         });
 
         assert(result);
-        result.should.deep.equal(products);
+        expect(result).toStrictEqual(products);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "name"=$1 AND "store_id" IN (SELECT "id" FROM "stores" WHERE "name"=$2)',
         );
         assert(params);
-        params.should.deep.equal(['Widget', 'Premium']);
+        expect(params).toStrictEqual(['Widget', 'Premium']);
       });
 
       describe('subquery joins', () => {
         it('should support inner join to subquery with COUNT aggregate', async () => {
           const stores = [generator.store()];
 
-          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+          mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
           const productCounts = subquery(ProductRepository)
             .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
@@ -2531,20 +2572,20 @@ describe('ReadonlyRepository', () => {
           const result = await StoreRepository.find().join(productCounts, 'productStats', { on: { id: 'store' } });
 
           assert(result);
-          result.should.deep.equal(stores);
+          expect(result).toStrictEqual(stores);
 
-          const [query, params] = capture(mockedPool.query).first();
-          query.should.equal(
+          const [query, params] = mockedPool.query.mock.calls[0]!;
+          expect(query).toBe(
             'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"',
           );
           assert(params);
-          params.should.deep.equal([]);
+          expect(params).toStrictEqual([]);
         });
 
         it('should support left join to subquery', async () => {
           const stores = [generator.store()];
 
-          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+          mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
           const productCounts = subquery(ProductRepository)
             .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
@@ -2553,20 +2594,20 @@ describe('ReadonlyRepository', () => {
           const result = await StoreRepository.find().leftJoin(productCounts, 'productStats', { on: { id: 'store' } });
 
           assert(result);
-          result.should.deep.equal(stores);
+          expect(result).toStrictEqual(stores);
 
-          const [query, params] = capture(mockedPool.query).first();
-          query.should.equal(
+          const [query, params] = mockedPool.query.mock.calls[0]!;
+          expect(query).toBe(
             'SELECT "id","name" FROM "stores" LEFT JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"',
           );
           assert(params);
-          params.should.deep.equal([]);
+          expect(params).toStrictEqual([]);
         });
 
         it('should support sorting by subquery column', async () => {
           const stores = [generator.store()];
 
-          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+          mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
           const productCounts = subquery(ProductRepository)
             .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
@@ -2578,20 +2619,20 @@ describe('ReadonlyRepository', () => {
             .sort('productStats.productCount desc' as Sort<Store>);
 
           assert(result);
-          result.should.deep.equal(stores);
+          expect(result).toStrictEqual(stores);
 
-          const [query, params] = capture(mockedPool.query).first();
-          query.should.equal(
+          const [query, params] = mockedPool.query.mock.calls[0]!;
+          expect(query).toBe(
             'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."productCount" DESC',
           );
           assert(params);
-          params.should.deep.equal([]);
+          expect(params).toStrictEqual([]);
         });
 
         it('should support subquery join with WHERE in subquery', async () => {
           const stores = [generator.store()];
 
-          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+          mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
           const widgetCounts = subquery(ProductRepository)
             .select(['store', (sb): SelectAggregateExpression => sb.count().as('widgetCount')])
@@ -2601,20 +2642,20 @@ describe('ReadonlyRepository', () => {
           const result = await StoreRepository.find().join(widgetCounts, 'widgetStats', { on: { id: 'store' } });
 
           assert(result);
-          result.should.deep.equal(stores);
+          expect(result).toStrictEqual(stores);
 
-          const [query, params] = capture(mockedPool.query).first();
-          query.should.equal(
+          const [query, params] = mockedPool.query.mock.calls[0]!;
+          expect(query).toBe(
             'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "widgetCount" FROM "products" WHERE "name"=$1 GROUP BY "store_id") AS "widgetStats" ON "stores"."id"="widgetStats"."store"',
           );
           assert(params);
-          params.should.deep.equal(['Widget']);
+          expect(params).toStrictEqual(['Widget']);
         });
 
         it('should support COUNT DISTINCT in subquery join', async () => {
           const stores = [generator.store()];
 
-          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+          mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
           const uniqueProductCounts = subquery(ProductRepository)
             .select(['store', (sb): SelectAggregateExpression => sb.count('name').distinct().as('uniqueNames')])
@@ -2623,20 +2664,20 @@ describe('ReadonlyRepository', () => {
           const result = await StoreRepository.find().join(uniqueProductCounts, 'stats', { on: { id: 'store' } });
 
           assert(result);
-          result.should.deep.equal(stores);
+          expect(result).toStrictEqual(stores);
 
-          const [query, params] = capture(mockedPool.query).first();
-          query.should.equal(
+          const [query, params] = mockedPool.query.mock.calls[0]!;
+          expect(query).toBe(
             'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(DISTINCT "name") AS "uniqueNames" FROM "products" GROUP BY "store_id") AS "stats" ON "stores"."id"="stats"."store"',
           );
           assert(params);
-          params.should.deep.equal([]);
+          expect(params).toStrictEqual([]);
         });
 
         it('should support subquery join with HAVING clause', async () => {
           const stores = [generator.store()];
 
-          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+          mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
           const productCounts = subquery(ProductRepository)
             .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
@@ -2646,20 +2687,20 @@ describe('ReadonlyRepository', () => {
           const result = await StoreRepository.find().join(productCounts, 'productStats', { on: { id: 'store' } });
 
           assert(result);
-          result.should.deep.equal(stores);
+          expect(result).toStrictEqual(stores);
 
-          const [query, params] = capture(mockedPool.query).first();
-          query.should.equal(
+          const [query, params] = mockedPool.query.mock.calls[0]!;
+          expect(query).toBe(
             'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id" HAVING COUNT(*)>5) AS "productStats" ON "stores"."id"="productStats"."store"',
           );
           assert(params);
-          params.should.deep.equal([]);
+          expect(params).toStrictEqual([]);
         });
 
         it('should support subquery join with HAVING and WHERE', async () => {
           const stores = [generator.store()];
 
-          when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+          mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
           const productCounts = subquery(ProductRepository)
             .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
@@ -2670,14 +2711,14 @@ describe('ReadonlyRepository', () => {
           const result = await StoreRepository.find().join(productCounts, 'productStats', { on: { id: 'store' } });
 
           assert(result);
-          result.should.deep.equal(stores);
+          expect(result).toStrictEqual(stores);
 
-          const [query, params] = capture(mockedPool.query).first();
-          query.should.equal(
+          const [query, params] = mockedPool.query.mock.calls[0]!;
+          expect(query).toBe(
             'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" WHERE "name" IS NOT NULL GROUP BY "store_id" HAVING COUNT(*)>=3) AS "productStats" ON "stores"."id"="productStats"."store"',
           );
           assert(params);
-          params.should.deep.equal([]);
+          expect(params).toStrictEqual([]);
         });
 
         it('should throw error when joining subquery without alias', async () => {
@@ -2694,15 +2735,15 @@ describe('ReadonlyRepository', () => {
             thrownError = ex as Error;
           }
 
-          should.exist(thrownError);
-          thrownError!.message.should.equal('Alias is required when joining to a subquery');
+          expect(thrownError).toBeDefined();
+          expect(thrownError!.message).toBe('Alias is required when joining to a subquery');
         });
 
         describe('type-safe subquery column sorting', () => {
           it('should support sorting by subquery column without type cast', async () => {
             const stores = [generator.store()];
 
-            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+            mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
             const productCounts = subquery(ProductRepository)
               .select(['store', (sb): TypedAggregateExpression<'productCount'> => sb.count().as('productCount')])
@@ -2713,20 +2754,20 @@ describe('ReadonlyRepository', () => {
               .sort('productStats.productCount desc');
 
             assert(result);
-            result.should.deep.equal(stores);
+            expect(result).toStrictEqual(stores);
 
-            const [query, params] = capture(mockedPool.query).first();
-            query.should.equal(
+            const [query, params] = mockedPool.query.mock.calls[0]!;
+            expect(query).toBe(
               'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."productCount" DESC',
             );
             assert(params);
-            params.should.deep.equal([]);
+            expect(params).toStrictEqual([]);
           });
 
           it('should support sorting by subquery property column without type cast', async () => {
             const stores = [generator.store()];
 
-            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+            mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
             const productCounts = subquery(ProductRepository)
               .select(['store', (sb): TypedAggregateExpression<'productCount'> => sb.count().as('productCount')])
@@ -2737,14 +2778,14 @@ describe('ReadonlyRepository', () => {
               .sort('productStats.store asc');
 
             assert(result);
-            result.should.deep.equal(stores);
+            expect(result).toStrictEqual(stores);
 
-            const [query, params] = capture(mockedPool.query).first();
-            query.should.equal(
+            const [query, params] = mockedPool.query.mock.calls[0]!;
+            expect(query).toBe(
               'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."store"',
             );
             assert(params);
-            params.should.deep.equal([]);
+            expect(params).toStrictEqual([]);
           });
 
           it('should reject invalid subquery column names at compile time', () => {
@@ -2768,7 +2809,7 @@ describe('ReadonlyRepository', () => {
             const testStore = generator.store();
             const products = [generator.product({ store: testStore.id })];
 
-            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+            mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
             const categoryCounts = subquery(ProductRepository)
               .select(['store', (sb): TypedAggregateExpression<'categoryProductCount'> => sb.count().as('categoryProductCount')])
@@ -2781,13 +2822,13 @@ describe('ReadonlyRepository', () => {
               .sort('stats.categoryProductCount desc');
 
             assert(result);
-            result.should.deep.equal(products);
+            expect(result).toStrictEqual(products);
           });
 
           it('should support multiple subquery joins with type-safe sorting', async () => {
             const stores = [generator.store()];
 
-            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+            mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
             const productCounts = subquery(ProductRepository)
               .select(['store', (sb): TypedAggregateExpression<'productCount'> => sb.count().as('productCount')])
@@ -2804,13 +2845,13 @@ describe('ReadonlyRepository', () => {
               .sort('prices.avgPrice asc');
 
             assert(result);
-            result.should.deep.equal(stores);
+            expect(result).toStrictEqual(stores);
           });
 
           it('should support left join with type-safe subquery sorting', async () => {
             const stores = [generator.store()];
 
-            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+            mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
             const productCounts = subquery(ProductRepository)
               .select(['store', (sb): TypedAggregateExpression<'productCount'> => sb.count().as('productCount')])
@@ -2821,14 +2862,14 @@ describe('ReadonlyRepository', () => {
               .sort('productStats.productCount desc');
 
             assert(result);
-            result.should.deep.equal(stores);
+            expect(result).toStrictEqual(stores);
 
-            const [query, params] = capture(mockedPool.query).first();
-            query.should.equal(
+            const [query, params] = mockedPool.query.mock.calls[0]!;
+            expect(query).toBe(
               'SELECT "id","name" FROM "stores" LEFT JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."productCount" DESC',
             );
             assert(params);
-            params.should.deep.equal([]);
+            expect(params).toStrictEqual([]);
           });
         });
 
@@ -2836,27 +2877,27 @@ describe('ReadonlyRepository', () => {
           it('should support distinctOn in subquery join', async () => {
             const stores = [generator.store()];
 
-            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+            mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
             const latestProducts = subquery(ProductRepository).select(['store', 'name']).distinctOn(['store']).sort('store');
 
             const result = await StoreRepository.find().join(latestProducts, 'latestProduct', { on: { id: 'store' } });
 
             assert(result);
-            result.should.deep.equal(stores);
+            expect(result).toStrictEqual(stores);
 
-            const [query, params] = capture(mockedPool.query).first();
-            query.should.equal(
+            const [query, params] = mockedPool.query.mock.calls[0]!;
+            expect(query).toBe(
               'SELECT "id","name" FROM "stores" INNER JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" ORDER BY "store_id") AS "latestProduct" ON "stores"."id"="latestProduct"."store"',
             );
             assert(params);
-            params.should.deep.equal([]);
+            expect(params).toStrictEqual([]);
           });
 
           it('should support distinctOn with where clause in subquery join', async () => {
             const stores = [generator.store()];
 
-            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+            mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
             const latestProducts = subquery(ProductRepository)
               .select(['store', 'name'])
@@ -2867,20 +2908,20 @@ describe('ReadonlyRepository', () => {
             const result = await StoreRepository.find().leftJoin(latestProducts, 'latestProduct', { on: { id: 'store' } });
 
             assert(result);
-            result.should.deep.equal(stores);
+            expect(result).toStrictEqual(stores);
 
-            const [query, params] = capture(mockedPool.query).first();
-            query.should.equal(
+            const [query, params] = mockedPool.query.mock.calls[0]!;
+            expect(query).toBe(
               'SELECT "id","name" FROM "stores" LEFT JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" WHERE "name" IS NOT NULL ORDER BY "store_id") AS "latestProduct" ON "stores"."id"="latestProduct"."store"',
             );
             assert(params);
-            params.should.deep.equal([]);
+            expect(params).toStrictEqual([]);
           });
 
           it('should support distinctOn with secondary sort in subquery', async () => {
             const stores = [generator.store()];
 
-            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+            mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
             // Get the latest product per store (sorted by name desc as secondary sort)
             const latestProducts = subquery(ProductRepository)
@@ -2891,21 +2932,21 @@ describe('ReadonlyRepository', () => {
             const result = await StoreRepository.find().join(latestProducts, 'latestProduct', { on: { id: 'store' } });
 
             assert(result);
-            result.should.deep.equal(stores);
+            expect(result).toStrictEqual(stores);
 
-            const [query, params] = capture(mockedPool.query).first();
-            query.should.equal(
+            const [query, params] = mockedPool.query.mock.calls[0]!;
+            expect(query).toBe(
               'SELECT "id","name" FROM "stores" INNER JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" ORDER BY "store_id","name" DESC) AS "latestProduct" ON "stores"."id"="latestProduct"."store"',
             );
             assert(params);
-            params.should.deep.equal([]);
+            expect(params).toStrictEqual([]);
           });
 
           it('should support distinctOn in WHERE IN subquery', async () => {
             const testStore = generator.store();
             const products = [generator.product({ store: testStore.id })];
 
-            when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+            mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
             const distinctStores = subquery(ProductRepository).select(['store']).distinctOn(['store']).sort('store');
 
@@ -2914,14 +2955,14 @@ describe('ReadonlyRepository', () => {
             });
 
             assert(result);
-            result.should.deep.equal(products);
+            expect(result).toStrictEqual(products);
 
-            const [query, params] = capture(mockedPool.query).first();
-            query.should.equal(
+            const [query, params] = mockedPool.query.mock.calls[0]!;
+            expect(query).toBe(
               'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id" IN (SELECT DISTINCT ON ("store_id") "store_id" FROM "products" ORDER BY "store_id")',
             );
             assert(params);
-            params.should.deep.equal([]);
+            expect(params).toStrictEqual([]);
           });
         });
       });
@@ -2956,7 +2997,7 @@ describe('ReadonlyRepository', () => {
       let levelTwoItem: QueryResult<LevelTwo>;
       let levelThreeItem: QueryResult<LevelThree>;
 
-      before(() => {
+      beforeAll(() => {
         store1 = generator.store();
         store2 = generator.store();
 
@@ -3012,11 +3053,12 @@ describe('ReadonlyRepository', () => {
       });
 
       it('should support populating a single relation - same/shared', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product3]), getQueryResult([store1]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([product1, product3])).mockResolvedValueOnce(getQueryResult([store1]));
 
         const results = await ProductRepository.find().populate('store');
-        verify(mockedPool.query(anyString(), anything())).twice();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledTimes(2);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...product1,
             store: store1,
@@ -3027,19 +3069,18 @@ describe('ReadonlyRepository', () => {
           },
         ]);
 
-        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-        productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
-        storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1');
+        expect(productQueryParams).toStrictEqual([]);
+        const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(storeQuery).toBe('SELECT "id","name" FROM "stores" WHERE "id"=$1');
         assert(storeQueryParams);
-        storeQueryParams.should.deep.equal([store1.id]);
+        expect(storeQueryParams).toStrictEqual([store1.id]);
       });
 
       it('should support populating a single relation - different', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(
-          getQueryResult([product1, product2]),
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([product1, product2])).mockResolvedValueOnce(
           getQueryResult([
             // NOTE: Swapping the order to make sure that order doesn't matter
             store2,
@@ -3048,8 +3089,9 @@ describe('ReadonlyRepository', () => {
         );
 
         const results = await ProductRepository.find().populate('store');
-        verify(mockedPool.query(anyString(), anything())).twice();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledTimes(2);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...product1,
             store: store1,
@@ -3060,28 +3102,29 @@ describe('ReadonlyRepository', () => {
           },
         ]);
 
-        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-        productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
-        storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=ANY($1::INTEGER[])');
+        expect(productQueryParams).toStrictEqual([]);
+        const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(storeQuery).toBe('SELECT "id","name" FROM "stores" WHERE "id"=ANY($1::INTEGER[])');
         assert(storeQueryParams);
-        storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
+        expect(storeQueryParams).toStrictEqual([[store1.id, store2.id]]);
       });
 
       it('should support populating a single relation with implicit inherited pool override', async () => {
-        const poolOverride = mock(Pool);
+        const poolOverride = createMockPool();
 
-        when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([product1, product3]), getQueryResult([store1]));
+        poolOverride.query.mockResolvedValueOnce(getQueryResult([product1, product3])).mockResolvedValueOnce(getQueryResult([store1]));
 
         const results = await ProductRepository.find({
-          pool: instance(poolOverride),
+          pool: poolOverride,
         }).populate('store');
 
-        verify(mockedPool.query(anyString(), anything())).never();
-        verify(poolOverride.query(anyString(), anything())).twice();
-        results.should.deep.equal([
+        expect(mockedPool.query).not.toHaveBeenCalled();
+        expect(poolOverride.query).toHaveBeenCalledTimes(2);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...product1,
             store: store1,
@@ -3092,29 +3135,30 @@ describe('ReadonlyRepository', () => {
           },
         ]);
 
-        const [productQuery, productQueryParams] = capture(poolOverride.query).first();
-        productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        const [productQuery, productQueryParams] = poolOverride.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [storeQuery, storeQueryParams] = capture(poolOverride.query).second();
-        storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1');
+        expect(productQueryParams).toStrictEqual([]);
+        const [storeQuery, storeQueryParams] = poolOverride.query.mock.calls[1]!;
+        expect(storeQuery).toBe('SELECT "id","name" FROM "stores" WHERE "id"=$1');
         assert(storeQueryParams);
-        storeQueryParams.should.deep.equal([store1.id]);
+        expect(storeQueryParams).toStrictEqual([store1.id]);
       });
 
       it('should support populating a single relation with explicit pool override', async () => {
-        const storePool = mock(Pool);
+        const storePool = createMockPool();
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product3]));
-        when(storePool.query(anyString(), anything())).thenResolve(getQueryResult([store1]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([product1, product3]));
+        storePool.query.mockResolvedValueOnce(getQueryResult([store1]));
 
         const results = await ProductRepository.find().populate('store', {
-          pool: instance(storePool),
+          pool: storePool,
         });
 
-        verify(mockedPool.query(anyString(), anything())).once();
-        verify(storePool.query(anyString(), anything())).once();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledOnce();
+        expect(storePool.query).toHaveBeenCalledOnce();
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...product1,
             store: store1,
@@ -3125,74 +3169,77 @@ describe('ReadonlyRepository', () => {
           },
         ]);
 
-        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-        productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [storeQuery, storeQueryParams] = capture(storePool.query).first();
-        storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=$1');
+        expect(productQueryParams).toStrictEqual([]);
+        const [storeQuery, storeQueryParams] = storePool.query.mock.calls[0]!;
+        expect(storeQuery).toBe('SELECT "id","name" FROM "stores" WHERE "id"=$1');
         assert(storeQueryParams);
-        storeQueryParams.should.deep.equal([store1.id]);
+        expect(storeQueryParams).toStrictEqual([store1.id]);
       });
 
       it('should support populating a single relation as QueryResult with partial select', async () => {
         const levelOneResult = pick(levelOneItem, 'id', 'one', 'levelTwo');
         const levelTwoResult = pick(levelTwoItem, 'id', 'two', 'levelThree');
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([levelOneResult]), getQueryResult([levelTwoResult]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([levelOneResult])).mockResolvedValueOnce(getQueryResult([levelTwoResult]));
 
         const results = await LevelOneRepository.find({
           select: ['one', 'levelTwo'],
         }).populate('levelTwo', {
           select: ['two', 'levelThree'],
         });
-        verify(mockedPool.query(anyString(), anything())).twice();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledTimes(2);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...levelOneResult,
             levelTwo: levelTwoResult,
           },
         ]);
 
-        results[0]!.levelTwo.levelThree.should.equal(levelThreeItem.id);
-        results[0]!.levelTwo.levelThree.toUpperCase().should.equal(levelThreeItem.id.toUpperCase());
+        expect(results[0]!.levelTwo.levelThree).toBe(levelThreeItem.id);
+        expect(results[0]!.levelTwo.levelThree.toUpperCase()).toBe(levelThreeItem.id.toUpperCase());
       });
 
       it('should support populating a single relation as QueryResult with partial select from chained select', async () => {
         const levelOneResult = pick(levelOneItem, 'id', 'one', 'levelTwo');
         const levelTwoResult = pick(levelTwoItem, 'id', 'two', 'levelThree');
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([levelOneResult]), getQueryResult([levelTwoResult]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([levelOneResult])).mockResolvedValueOnce(getQueryResult([levelTwoResult]));
 
         const results = await LevelOneRepository.find()
           .select(['one', 'levelTwo'])
           .populate('levelTwo', {
             select: ['two', 'levelThree'],
           });
-        verify(mockedPool.query(anyString(), anything())).twice();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledTimes(2);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...levelOneResult,
             levelTwo: levelTwoResult,
           },
         ]);
 
-        results[0]!.levelTwo.levelThree.should.equal(levelThreeItem.id);
-        results[0]!.levelTwo.levelThree.toUpperCase().should.equal(levelThreeItem.id.toUpperCase());
+        expect(results[0]!.levelTwo.levelThree).toBe(levelThreeItem.id);
+        expect(results[0]!.levelTwo.levelThree.toUpperCase()).toBe(levelThreeItem.id.toUpperCase());
       });
 
       it('should support populating a single relation with partial select and sort', async () => {
         const store1Result = pick(store1, 'id');
         const store2Result = pick(store2, 'id');
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product2]), getQueryResult([store1Result, store2Result]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([product1, product2])).mockResolvedValueOnce(getQueryResult([store1Result, store2Result]));
 
         const results = await ProductRepository.find().populate('store', {
           select: ['id'],
           sort: 'name',
         });
-        verify(mockedPool.query(anyString(), anything())).twice();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledTimes(2);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...product1,
             store: store1Result,
@@ -3203,14 +3250,14 @@ describe('ReadonlyRepository', () => {
           },
         ]);
 
-        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-        productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
-        storeQuery.should.equal('SELECT "id" FROM "stores" WHERE "id"=ANY($1::INTEGER[]) ORDER BY "name"');
+        expect(productQueryParams).toStrictEqual([]);
+        const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(storeQuery).toBe('SELECT "id" FROM "stores" WHERE "id"=ANY($1::INTEGER[]) ORDER BY "name"');
         assert(storeQueryParams);
-        storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
+        expect(storeQueryParams).toStrictEqual([[store1.id, store2.id]]);
       });
 
       it('should support populating a single relation when column is missing from partial select', async () => {
@@ -3219,15 +3266,16 @@ describe('ReadonlyRepository', () => {
         const store1Result = pick(store1, 'id');
         const store2Result = pick(store2, 'id');
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1Result, product2Result]), getQueryResult([store1Result, store2Result]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([product1Result, product2Result])).mockResolvedValueOnce(getQueryResult([store1Result, store2Result]));
 
         const results = await ProductRepository.find({
           select: ['name'],
         }).populate('store', {
           select: ['id'],
         });
-        verify(mockedPool.query(anyString(), anything())).twice();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledTimes(2);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...product1Result,
             store: store1Result,
@@ -3238,22 +3286,23 @@ describe('ReadonlyRepository', () => {
           },
         ]);
 
-        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-        productQuery.should.equal('SELECT "name","store_id" AS "store","id" FROM "products"');
+        const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "name","store_id" AS "store","id" FROM "products"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
-        storeQuery.should.equal('SELECT "id" FROM "stores" WHERE "id"=ANY($1::INTEGER[])');
+        expect(productQueryParams).toStrictEqual([]);
+        const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(storeQuery).toBe('SELECT "id" FROM "stores" WHERE "id"=ANY($1::INTEGER[])');
         assert(storeQueryParams);
-        storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
+        expect(storeQueryParams).toStrictEqual([[store1.id, store2.id]]);
       });
 
       it('should support populating one-to-many collection', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store1, store2]), getQueryResult([product1, product3, product2]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([store1, store2])).mockResolvedValueOnce(getQueryResult([product1, product3, product2]));
 
         const results = await StoreRepository.find().populate('products');
-        verify(mockedPool.query(anyString(), anything())).twice();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledTimes(2);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...store1,
             products: [product1, product3],
@@ -3263,31 +3312,32 @@ describe('ReadonlyRepository', () => {
             products: [product2],
           },
         ]);
-        results[0]!.products.length.should.equal(2);
-        results[0]!.products[0]!.id.should.equal(product1.id);
+        expect(results[0]!.products.length).toBe(2);
+        expect(results[0]!.products[0]!.id).toBe(product1.id);
 
-        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-        productQuery.should.equal('SELECT "id","name" FROM "stores"');
+        const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name" FROM "stores"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
-        storeQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=ANY($1::INTEGER[])');
+        expect(productQueryParams).toStrictEqual([]);
+        const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(storeQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=ANY($1::INTEGER[])');
         assert(storeQueryParams);
-        storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
+        expect(storeQueryParams).toStrictEqual([[store1.id, store2.id]]);
       });
 
       it('should support populating one-to-many collection with implicit inherited pool override', async () => {
-        const poolOverride = mock(Pool);
+        const poolOverride = createMockPool();
 
-        when(poolOverride.query(anyString(), anything())).thenResolve(getQueryResult([store1, store2]), getQueryResult([product1, product3, product2]));
+        poolOverride.query.mockResolvedValueOnce(getQueryResult([store1, store2])).mockResolvedValueOnce(getQueryResult([product1, product3, product2]));
 
         const results = await StoreRepository.find({
-          pool: instance(poolOverride),
+          pool: poolOverride,
         }).populate('products');
 
-        verify(mockedPool.query(anyString(), anything())).never();
-        verify(poolOverride.query(anyString(), anything())).twice();
-        results.should.deep.equal([
+        expect(mockedPool.query).not.toHaveBeenCalled();
+        expect(poolOverride.query).toHaveBeenCalledTimes(2);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...store1,
             products: [product1, product3],
@@ -3297,31 +3347,32 @@ describe('ReadonlyRepository', () => {
             products: [product2],
           },
         ]);
-        results[0]!.products.length.should.equal(2);
-        results[0]!.products[0]!.id.should.equal(product1.id);
+        expect(results[0]!.products.length).toBe(2);
+        expect(results[0]!.products[0]!.id).toBe(product1.id);
 
-        const [productQuery, productQueryParams] = capture(poolOverride.query).first();
-        productQuery.should.equal('SELECT "id","name" FROM "stores"');
+        const [productQuery, productQueryParams] = poolOverride.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name" FROM "stores"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [storeQuery, storeQueryParams] = capture(poolOverride.query).second();
-        storeQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=ANY($1::INTEGER[])');
+        expect(productQueryParams).toStrictEqual([]);
+        const [storeQuery, storeQueryParams] = poolOverride.query.mock.calls[1]!;
+        expect(storeQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=ANY($1::INTEGER[])');
         assert(storeQueryParams);
-        storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
+        expect(storeQueryParams).toStrictEqual([[store1.id, store2.id]]);
       });
 
       it('should support populating one-to-many collection with explicit pool override', async () => {
-        const productPool = mock(Pool);
+        const productPool = createMockPool();
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store1, store2]));
-        when(productPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product3, product2]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([store1, store2]));
+        productPool.query.mockResolvedValueOnce(getQueryResult([product1, product3, product2]));
 
         const results = await StoreRepository.find().populate('products', {
-          pool: instance(productPool),
+          pool: productPool,
         });
-        verify(mockedPool.query(anyString(), anything())).once();
-        verify(productPool.query(anyString(), anything())).once();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledOnce();
+        expect(productPool.query).toHaveBeenCalledOnce();
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...store1,
             products: [product1, product3],
@@ -3331,17 +3382,17 @@ describe('ReadonlyRepository', () => {
             products: [product2],
           },
         ]);
-        results[0]!.products.length.should.equal(2);
-        results[0]!.products[0]!.id.should.equal(product1.id);
+        expect(results[0]!.products.length).toBe(2);
+        expect(results[0]!.products[0]!.id).toBe(product1.id);
 
-        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-        productQuery.should.equal('SELECT "id","name" FROM "stores"');
+        const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name" FROM "stores"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [storeQuery, storeQueryParams] = capture(productPool.query).first();
-        storeQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=ANY($1::INTEGER[])');
+        expect(productQueryParams).toStrictEqual([]);
+        const [storeQuery, storeQueryParams] = productPool.query.mock.calls[0]!;
+        expect(storeQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "store_id"=ANY($1::INTEGER[])');
         assert(storeQueryParams);
-        storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
+        expect(storeQueryParams).toStrictEqual([[store1.id, store2.id]]);
       });
 
       it('should support populating one-to-many collection with partial select and sort', async () => {
@@ -3349,14 +3400,15 @@ describe('ReadonlyRepository', () => {
         const product2Result = pick(product2, 'id', 'name', 'sku', 'store');
         const product3Result = pick(product3, 'id', 'name', 'sku', 'store');
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store1, store2]), getQueryResult([product1Result, product3Result, product2Result]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([store1, store2])).mockResolvedValueOnce(getQueryResult([product1Result, product3Result, product2Result]));
 
         const results = await StoreRepository.find().populate('products', {
           select: ['name', 'sku', 'store'],
           sort: 'name',
         });
-        verify(mockedPool.query(anyString(), anything())).twice();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledTimes(2);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...store1,
             products: [product1Result, product3Result],
@@ -3366,28 +3418,29 @@ describe('ReadonlyRepository', () => {
             products: [product2Result],
           },
         ]);
-        results[0]!.products.length.should.equal(2);
-        results[0]!.products[0]!.id.should.equal(product1.id);
+        expect(results[0]!.products.length).toBe(2);
+        expect(results[0]!.products[0]!.id).toBe(product1.id);
 
-        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-        productQuery.should.equal('SELECT "id","name" FROM "stores"');
+        const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name" FROM "stores"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
-        storeQuery.should.equal('SELECT "name","sku","store_id" AS "store","id" FROM "products" WHERE "store_id"=ANY($1::INTEGER[]) ORDER BY "name"');
+        expect(productQueryParams).toStrictEqual([]);
+        const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(storeQuery).toBe('SELECT "name","sku","store_id" AS "store","id" FROM "products" WHERE "store_id"=ANY($1::INTEGER[]) ORDER BY "name"');
         assert(storeQueryParams);
-        storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
+        expect(storeQueryParams).toStrictEqual([[store1.id, store2.id]]);
       });
 
       it('should support populating multi-multi collection', async () => {
-        when(mockedPool.query(anyString(), anything()))
-          .thenResolve(getQueryResult([product1, product3, product2]))
-          .thenResolve(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
-          .thenResolve(getQueryResult([category1, category2]));
+        mockedPool.query
+          .mockResolvedValueOnce(getQueryResult([product1, product3, product2]))
+          .mockResolvedValueOnce(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
+          .mockResolvedValueOnce(getQueryResult([category1, category2]));
 
         const results = await ProductRepository.find().populate('categories');
-        verify(mockedPool.query(anyString(), anything())).thrice();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledTimes(3);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...product1,
             categories: [category1, category2],
@@ -3401,37 +3454,38 @@ describe('ReadonlyRepository', () => {
             categories: [category1],
           },
         ]);
-        results[0]!.categories.length.should.equal(2);
-        results[0]!.categories[0]!.id.should.equal(category1.id);
+        expect(results[0]!.categories.length).toBe(2);
+        expect(results[0]!.categories[0]!.id).toBe(category1.id);
 
-        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-        productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [productCategoryQuery, productCategoryQueryParams] = capture(mockedPool.query).second();
-        productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
+        expect(productQueryParams).toStrictEqual([]);
+        const [productCategoryQuery, productCategoryQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(productCategoryQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
         assert(productCategoryQueryParams);
-        productCategoryQueryParams.should.deep.equal([[product1.id, product3.id, product2.id]]);
-        const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
-        categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
+        expect(productCategoryQueryParams).toStrictEqual([[product1.id, product3.id, product2.id]]);
+        const [categoryQuery, categoryQueryParams] = mockedPool.query.mock.calls[2]!;
+        expect(categoryQuery).toBe('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
         assert(categoryQueryParams);
-        categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
+        expect(categoryQueryParams).toStrictEqual([[category1.id, category2.id]]);
       });
 
       it('should support populating multi-multi collection with implicit inherited pool override', async () => {
-        const poolOverride = mock(Pool);
-        when(poolOverride.query(anyString(), anything()))
-          .thenResolve(getQueryResult([product1, product3, product2]))
-          .thenResolve(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
-          .thenResolve(getQueryResult([category1, category2]));
+        const poolOverride = createMockPool();
+        poolOverride.query
+          .mockResolvedValueOnce(getQueryResult([product1, product3, product2]))
+          .mockResolvedValueOnce(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
+          .mockResolvedValueOnce(getQueryResult([category1, category2]));
 
         const results = await ProductRepository.find({
-          pool: instance(poolOverride),
+          pool: poolOverride,
         }).populate('categories');
 
-        verify(mockedPool.query(anyString(), anything())).never();
-        verify(poolOverride.query(anyString(), anything())).thrice();
-        results.should.deep.equal([
+        expect(mockedPool.query).not.toHaveBeenCalled();
+        expect(poolOverride.query).toHaveBeenCalledTimes(3);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...product1,
             categories: [category1, category2],
@@ -3445,37 +3499,38 @@ describe('ReadonlyRepository', () => {
             categories: [category1],
           },
         ]);
-        results[0]!.categories.length.should.equal(2);
-        results[0]!.categories[0]!.id.should.equal(category1.id);
+        expect(results[0]!.categories.length).toBe(2);
+        expect(results[0]!.categories[0]!.id).toBe(category1.id);
 
-        const [productQuery, productQueryParams] = capture(poolOverride.query).first();
-        productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        const [productQuery, productQueryParams] = poolOverride.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [productCategoryQuery, productCategoryQueryParams] = capture(poolOverride.query).second();
-        productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
+        expect(productQueryParams).toStrictEqual([]);
+        const [productCategoryQuery, productCategoryQueryParams] = poolOverride.query.mock.calls[1]!;
+        expect(productCategoryQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
         assert(productCategoryQueryParams);
-        productCategoryQueryParams.should.deep.equal([[product1.id, product3.id, product2.id]]);
-        const [categoryQuery, categoryQueryParams] = capture(poolOverride.query).third();
-        categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
+        expect(productCategoryQueryParams).toStrictEqual([[product1.id, product3.id, product2.id]]);
+        const [categoryQuery, categoryQueryParams] = poolOverride.query.mock.calls[2]!;
+        expect(categoryQuery).toBe('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
         assert(categoryQueryParams);
-        categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
+        expect(categoryQueryParams).toStrictEqual([[category1.id, category2.id]]);
       });
 
       it('should support populating multi-multi collection with explicit pool override', async () => {
-        const productPool = mock(Pool);
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product1, product3, product2]));
-        when(productPool.query(anyString(), anything()))
-          .thenResolve(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
-          .thenResolve(getQueryResult([category1, category2]));
+        const productPool = createMockPool();
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([product1, product3, product2]));
+        productPool.query
+          .mockResolvedValueOnce(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
+          .mockResolvedValueOnce(getQueryResult([category1, category2]));
 
         const results = await ProductRepository.find().populate('categories', {
-          pool: instance(productPool),
+          pool: productPool,
         });
 
-        verify(mockedPool.query(anyString(), anything())).once();
-        verify(productPool.query(anyString(), anything())).twice();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledOnce();
+        expect(productPool.query).toHaveBeenCalledTimes(2);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...product1,
             categories: [category1, category2],
@@ -3489,38 +3544,39 @@ describe('ReadonlyRepository', () => {
             categories: [category1],
           },
         ]);
-        results[0]!.categories.length.should.equal(2);
-        results[0]!.categories[0]!.id.should.equal(category1.id);
+        expect(results[0]!.categories.length).toBe(2);
+        expect(results[0]!.categories[0]!.id).toBe(category1.id);
 
-        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-        productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [productCategoryQuery, productCategoryQueryParams] = capture(productPool.query).first();
-        productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
+        expect(productQueryParams).toStrictEqual([]);
+        const [productCategoryQuery, productCategoryQueryParams] = productPool.query.mock.calls[0]!;
+        expect(productCategoryQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
         assert(productCategoryQueryParams);
-        productCategoryQueryParams.should.deep.equal([[product1.id, product3.id, product2.id]]);
-        const [categoryQuery, categoryQueryParams] = capture(productPool.query).second();
-        categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
+        expect(productCategoryQueryParams).toStrictEqual([[product1.id, product3.id, product2.id]]);
+        const [categoryQuery, categoryQueryParams] = productPool.query.mock.calls[1]!;
+        expect(categoryQuery).toBe('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
         assert(categoryQueryParams);
-        categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
+        expect(categoryQueryParams).toStrictEqual([[category1.id, category2.id]]);
       });
 
       it('should support populating multi-multi collection with partial select and sort', async () => {
         const category1Result = pick(category1, 'id');
         const category2Result = pick(category2, 'id');
 
-        when(mockedPool.query(anyString(), anything()))
-          .thenResolve(getQueryResult([product1, product3, product2]))
-          .thenResolve(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
-          .thenResolve(getQueryResult([category1Result, category2Result]));
+        mockedPool.query
+          .mockResolvedValueOnce(getQueryResult([product1, product3, product2]))
+          .mockResolvedValueOnce(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
+          .mockResolvedValueOnce(getQueryResult([category1Result, category2Result]));
 
         const results = await ProductRepository.find().populate('categories', {
           select: ['id'],
           sort: 'name',
         });
-        verify(mockedPool.query(anyString(), anything())).thrice();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledTimes(3);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...product1,
             categories: [category1Result, category2Result],
@@ -3534,38 +3590,39 @@ describe('ReadonlyRepository', () => {
             categories: [category1Result],
           },
         ]);
-        results[0]!.categories.length.should.equal(2);
-        results[0]!.categories[0]!.id.should.equal(category1.id);
+        expect(results[0]!.categories.length).toBe(2);
+        expect(results[0]!.categories[0]!.id).toBe(category1.id);
 
-        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-        productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [productCategoryQuery, productCategoryQueryParams] = capture(mockedPool.query).second();
-        productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
+        expect(productQueryParams).toStrictEqual([]);
+        const [productCategoryQuery, productCategoryQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(productCategoryQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
         assert(productCategoryQueryParams);
-        productCategoryQueryParams.should.deep.equal([[product1.id, product3.id, product2.id]]);
-        const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).third();
-        categoryQuery.should.equal('SELECT "id" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) ORDER BY "name"');
+        expect(productCategoryQueryParams).toStrictEqual([[product1.id, product3.id, product2.id]]);
+        const [categoryQuery, categoryQueryParams] = mockedPool.query.mock.calls[2]!;
+        expect(categoryQuery).toBe('SELECT "id" FROM "categories" WHERE "id"=ANY($1::INTEGER[]) ORDER BY "name"');
         assert(categoryQueryParams);
-        categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
+        expect(categoryQueryParams).toStrictEqual([[category1.id, category2.id]]);
       });
 
       it('should support populating multiple properties', async () => {
-        when(mockedPool.query(anyString(), anything()))
-          .thenResolve(getQueryResult([product1, product3, product2]))
-          .thenResolve(
+        mockedPool.query
+          .mockResolvedValueOnce(getQueryResult([product1, product3, product2]))
+          .mockResolvedValueOnce(
             getQueryResult([
               // NOTE: Swapping the order to make sure that order doesn't matter
               store2,
               store1,
             ]),
           )
-          .thenResolve(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
-          .thenResolve(getQueryResult([category1, category2]));
+          .mockResolvedValueOnce(getQueryResult([product1Category1, product1Category2, product2Category1, product3Category1]))
+          .mockResolvedValueOnce(getQueryResult([category1, category2]));
 
         const results = await ProductRepository.find().populate('store').populate('categories');
-        results.should.deep.equal([
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...product1,
             store: store1,
@@ -3582,40 +3639,40 @@ describe('ReadonlyRepository', () => {
             categories: [category1],
           },
         ]);
-        verify(mockedPool.query(anyString(), anything())).times(4);
-        results[0]!.store.id.should.equal(store1.id);
-        results[0]!.categories.length.should.equal(2);
-        results[0]!.categories[0]!.id.should.equal(category1.id);
+        expect(mockedPool.query).toHaveBeenCalledTimes(4);
+        expect(results[0]!.store.id).toBe(store1.id);
+        expect(results[0]!.categories.length).toBe(2);
+        expect(results[0]!.categories[0]!.id).toBe(category1.id);
 
-        const [productQuery, productQueryParams] = capture(mockedPool.query).first();
-        productQuery.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
+        const [productQuery, productQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(productQuery).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products"');
         assert(productQueryParams);
-        productQueryParams.should.deep.equal([]);
-        const [storeQuery, storeQueryParams] = capture(mockedPool.query).second();
-        storeQuery.should.equal('SELECT "id","name" FROM "stores" WHERE "id"=ANY($1::INTEGER[])');
+        expect(productQueryParams).toStrictEqual([]);
+        const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(storeQuery).toBe('SELECT "id","name" FROM "stores" WHERE "id"=ANY($1::INTEGER[])');
         assert(storeQueryParams);
-        storeQueryParams.should.deep.equal([[store1.id, store2.id]]);
-        const [productCategoryQuery, productCategoryQueryParams] = capture(mockedPool.query).third();
-        productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
+        expect(storeQueryParams).toStrictEqual([[store1.id, store2.id]]);
+        const [productCategoryQuery, productCategoryQueryParams] = mockedPool.query.mock.calls[2]!;
+        expect(productCategoryQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[])');
         assert(productCategoryQueryParams);
-        productCategoryQueryParams.should.deep.equal([[product1.id, product3.id, product2.id]]);
-        const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).last();
-        categoryQuery.should.equal('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
+        expect(productCategoryQueryParams).toStrictEqual([[product1.id, product3.id, product2.id]]);
+        const [categoryQuery, categoryQueryParams] = mockedPool.query.mock.lastCall!;
+        expect(categoryQuery).toBe('SELECT "id","name" FROM "categories" WHERE "id"=ANY($1::INTEGER[])');
         assert(categoryQueryParams);
-        categoryQueryParams.should.deep.equal([[category1.id, category2.id]]);
+        expect(categoryQueryParams).toStrictEqual([[category1.id, category2.id]]);
 
-        results[0]!.store.id.should.equal(store1.id);
+        expect(results[0]!.store.id).toBe(store1.id);
       });
 
       it('should support populating multiple properties with partial select and sort', async () => {
         const parkingSpaceResult = pick(parkingSpace, 'id', 'name');
         const classroomResult = pick(classroom, 'id', 'name');
 
-        when(mockedPool.query(anyString(), anything()))
-          .thenResolve(getQueryResult([teacher1, teacher2]))
-          .thenResolve(getQueryResult([parkingSpaceResult]))
-          .thenResolve(getQueryResult([teacher1Classroom]))
-          .thenResolve(getQueryResult([classroomResult]));
+        mockedPool.query
+          .mockResolvedValueOnce(getQueryResult([teacher1, teacher2]))
+          .mockResolvedValueOnce(getQueryResult([parkingSpaceResult]))
+          .mockResolvedValueOnce(getQueryResult([teacher1Classroom]))
+          .mockResolvedValueOnce(getQueryResult([classroomResult]));
 
         async function getTeachers(): Promise<
           (Omit<QueryResult<Teacher>, 'parkingSpace'> & {
@@ -3642,7 +3699,8 @@ describe('ReadonlyRepository', () => {
         }
 
         const results = await getTeachers();
-        results.should.deep.equal([
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...teacher1,
             parkingSpace: parkingSpaceResult,
@@ -3654,36 +3712,36 @@ describe('ReadonlyRepository', () => {
             classrooms: [],
           },
         ]);
-        verify(mockedPool.query(anyString(), anything())).times(4);
-        results[0]!.parkingSpace?.id.should.equal(parkingSpace.id);
-        results[0]!.classrooms.length.should.equal(1);
-        results[0]!.classrooms[0]!.id.should.equal(classroom.id);
+        expect(mockedPool.query).toHaveBeenCalledTimes(4);
+        expect(results[0]!.parkingSpace?.id).toBe(parkingSpace.id);
+        expect(results[0]!.classrooms.length).toBe(1);
+        expect(results[0]!.classrooms[0]!.id).toBe(classroom.id);
 
-        const [teacherQuery, teacherQueryParams] = capture(mockedPool.query).first();
-        teacherQuery.should.equal(
+        const [teacherQuery, teacherQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(teacherQuery).toBe(
           'SELECT "id","first_name" AS "firstName","last_name" AS "lastName","parking_space_id" AS "parkingSpace","is_active" AS "isActive" FROM "teacher" WHERE "is_active"=$1 ORDER BY "last_name"',
         );
         assert(teacherQueryParams);
-        teacherQueryParams.should.deep.equal([true]);
-        const [parkingSpaceQuery, parkingSpaceQueryParams] = capture(mockedPool.query).second();
-        parkingSpaceQuery.should.equal('SELECT "name","id" FROM "parking_space" WHERE "id"=$1');
+        expect(teacherQueryParams).toStrictEqual([true]);
+        const [parkingSpaceQuery, parkingSpaceQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(parkingSpaceQuery).toBe('SELECT "name","id" FROM "parking_space" WHERE "id"=$1');
         assert(parkingSpaceQueryParams);
-        parkingSpaceQueryParams.should.deep.equal([parkingSpace.id]);
-        const [teacherClassroomQuery, teacherClassroomQueryParams] = capture(mockedPool.query).third();
-        teacherClassroomQuery.should.equal('SELECT "teacher_id" AS "teacher","classroom_id" AS "classroom","id" FROM "teacher__classroom" WHERE "teacher_id"=ANY($1::TEXT[])');
+        expect(parkingSpaceQueryParams).toStrictEqual([parkingSpace.id]);
+        const [teacherClassroomQuery, teacherClassroomQueryParams] = mockedPool.query.mock.calls[2]!;
+        expect(teacherClassroomQuery).toBe('SELECT "teacher_id" AS "teacher","classroom_id" AS "classroom","id" FROM "teacher__classroom" WHERE "teacher_id"=ANY($1::TEXT[])');
         assert(teacherClassroomQueryParams);
-        teacherClassroomQueryParams.should.deep.equal([[teacher1.id, teacher2.id]]);
-        const [categoryQuery, categoryQueryParams] = capture(mockedPool.query).last();
-        categoryQuery.should.equal('SELECT "name","id" FROM "classroom" WHERE "id"=$1 AND "name" ILIKE $2');
+        expect(teacherClassroomQueryParams).toStrictEqual([[teacher1.id, teacher2.id]]);
+        const [categoryQuery, categoryQueryParams] = mockedPool.query.mock.lastCall!;
+        expect(categoryQuery).toBe('SELECT "name","id" FROM "classroom" WHERE "id"=$1 AND "name" ILIKE $2');
         assert(categoryQueryParams);
-        categoryQueryParams.should.deep.equal([classroom.id, 'classroom%']);
+        expect(categoryQueryParams).toStrictEqual([classroom.id, 'classroom%']);
       });
 
       it('should support populating self reference', async () => {
         const source1Result = pick(source1, 'id', 'name');
         const source2Result = pick(source2, 'id', 'name');
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([source1Result, source2Result]), getQueryResult([translation1, translation2]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([source1Result, source2Result])).mockResolvedValueOnce(getQueryResult([translation1, translation2]));
 
         const results = await SimpleWithSelfReferenceRepository.find({
           select: ['name'],
@@ -3692,8 +3750,9 @@ describe('ReadonlyRepository', () => {
             source: null,
           })
           .populate('translations');
-        verify(mockedPool.query(anyString(), anything())).twice();
-        results.should.deep.equal([
+        expect(mockedPool.query).toHaveBeenCalledTimes(2);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual([
           {
             ...source1Result,
             translations: [translation1, translation2],
@@ -3703,17 +3762,17 @@ describe('ReadonlyRepository', () => {
             translations: [],
           },
         ]);
-        results[0]!.translations.length.should.equal(2);
-        results[0]!.translations[0]!.id.should.equal(translation1.id);
+        expect(results[0]!.translations.length).toBe(2);
+        expect(results[0]!.translations[0]!.id).toBe(translation1.id);
 
-        const [sourceQuery, sourceQueryParams] = capture(mockedPool.query).first();
-        sourceQuery.should.equal('SELECT "name","id" FROM "simple" WHERE "source_id" IS NULL');
+        const [sourceQuery, sourceQueryParams] = mockedPool.query.mock.calls[0]!;
+        expect(sourceQuery).toBe('SELECT "name","id" FROM "simple" WHERE "source_id" IS NULL');
         assert(sourceQueryParams);
-        sourceQueryParams.should.deep.equal([]);
-        const [translationsQuery, translationsQueryParams] = capture(mockedPool.query).second();
-        translationsQuery.should.equal('SELECT "id","name","source_id" AS "source" FROM "simple" WHERE "source_id"=ANY($1::TEXT[])');
+        expect(sourceQueryParams).toStrictEqual([]);
+        const [translationsQuery, translationsQueryParams] = mockedPool.query.mock.calls[1]!;
+        expect(translationsQuery).toBe('SELECT "id","name","source_id" AS "source" FROM "simple" WHERE "source_id"=ANY($1::TEXT[])');
         assert(translationsQueryParams);
-        translationsQueryParams.should.deep.equal([[source1.id, source2.id]]);
+        expect(translationsQueryParams).toStrictEqual([[source1.id, source2.id]]);
       });
 
       describe('through options', () => {
@@ -3728,10 +3787,10 @@ describe('ReadonlyRepository', () => {
             isPrimary: true,
           };
 
-          when(mockedPool.query(anyString(), anything()))
-            .thenResolve(getQueryResult([product1, product2]))
-            .thenResolve(getQueryResult([product1Category1MapPrimary, product2Category1MapPrimary])) // Only primary mappings
-            .thenResolve(getQueryResult([category1]));
+          mockedPool.query
+            .mockResolvedValueOnce(getQueryResult([product1, product2]))
+            .mockResolvedValueOnce(getQueryResult([product1Category1MapPrimary, product2Category1MapPrimary])) // Only primary mappings
+            .mockResolvedValueOnce(getQueryResult([category1]));
 
           const results = await ProductRepository.find().populate('categories', {
             through: {
@@ -3739,8 +3798,9 @@ describe('ReadonlyRepository', () => {
             },
           });
 
-          verify(mockedPool.query(anyString(), anything())).thrice();
-          results.should.deep.equal([
+          expect(mockedPool.query).toHaveBeenCalledTimes(3);
+          // eslint-disable-next-line vitest/prefer-strict-equal
+          expect(results).toEqual([
             {
               ...product1,
               categories: [category1],
@@ -3751,10 +3811,10 @@ describe('ReadonlyRepository', () => {
             },
           ]);
 
-          const [productCategoryQuery, productCategoryQueryParams] = capture(mockedPool.query).second();
-          productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[]) AND "is_primary"=$2');
+          const [productCategoryQuery, productCategoryQueryParams] = mockedPool.query.mock.calls[1]!;
+          expect(productCategoryQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=ANY($1::INTEGER[]) AND "is_primary"=$2');
           assert(productCategoryQueryParams);
-          productCategoryQueryParams.should.deep.equal([[product1.id, product2.id], true]);
+          expect(productCategoryQueryParams).toStrictEqual([[product1.id, product2.id], true]);
         });
 
         it('should order by junction table columns with through.sort for multiple entities', async () => {
@@ -3768,10 +3828,10 @@ describe('ReadonlyRepository', () => {
           };
 
           // Junction query returns in ordering order
-          when(mockedPool.query(anyString(), anything()))
-            .thenResolve(getQueryResult([product1]))
-            .thenResolve(getQueryResult([product1Category2MapOrdering1, product1Category1MapOrdering2]))
-            .thenResolve(getQueryResult([category1, category2]));
+          mockedPool.query
+            .mockResolvedValueOnce(getQueryResult([product1]))
+            .mockResolvedValueOnce(getQueryResult([product1Category2MapOrdering1, product1Category1MapOrdering2]))
+            .mockResolvedValueOnce(getQueryResult([category1, category2]));
 
           const results = await ProductRepository.find()
             .where({ id: product1.id })
@@ -3781,15 +3841,15 @@ describe('ReadonlyRepository', () => {
               },
             });
 
-          verify(mockedPool.query(anyString(), anything())).thrice();
+          expect(mockedPool.query).toHaveBeenCalledTimes(3);
           // Categories should be in junction order: category2 (ordering=1) before category1 (ordering=2)
-          results[0]!.categories[0]!.id.should.equal(category2.id);
-          results[0]!.categories[1]!.id.should.equal(category1.id);
+          expect(results[0]!.categories[0]!.id).toBe(category2.id);
+          expect(results[0]!.categories[1]!.id).toBe(category1.id);
 
-          const [productCategoryQuery, productCategoryQueryParams] = capture(mockedPool.query).second();
-          productCategoryQuery.should.equal('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 ORDER BY "ordering"');
+          const [productCategoryQuery, productCategoryQueryParams] = mockedPool.query.mock.calls[1]!;
+          expect(productCategoryQuery).toBe('SELECT "product_id" AS "product","category_id" AS "category","id" FROM "product__category" WHERE "product_id"=$1 ORDER BY "ordering"');
           assert(productCategoryQueryParams);
-          productCategoryQueryParams.should.deep.equal([product1.id]);
+          expect(productCategoryQueryParams).toStrictEqual([product1.id]);
         });
 
         it('should preserve per-entity ordering when using through.sort with multiple entities', async () => {
@@ -3808,10 +3868,10 @@ describe('ReadonlyRepository', () => {
             ordering: 1,
           };
 
-          when(mockedPool.query(anyString(), anything()))
-            .thenResolve(getQueryResult([product1, product2]))
-            .thenResolve(getQueryResult([product1Category2MapOrdering1, product1Category1MapOrdering2, product2Category1MapOrdering1]))
-            .thenResolve(getQueryResult([category1, category2]));
+          mockedPool.query
+            .mockResolvedValueOnce(getQueryResult([product1, product2]))
+            .mockResolvedValueOnce(getQueryResult([product1Category2MapOrdering1, product1Category1MapOrdering2, product2Category1MapOrdering1]))
+            .mockResolvedValueOnce(getQueryResult([category1, category2]));
 
           const results = await ProductRepository.find()
             .where({ id: [product1.id, product2.id] })
@@ -3821,12 +3881,12 @@ describe('ReadonlyRepository', () => {
               },
             });
 
-          verify(mockedPool.query(anyString(), anything())).thrice();
+          expect(mockedPool.query).toHaveBeenCalledTimes(3);
           // Product1: category2 first (ordering=1), then category1 (ordering=2)
-          results[0]!.categories[0]!.id.should.equal(category2.id);
-          results[0]!.categories[1]!.id.should.equal(category1.id);
+          expect(results[0]!.categories[0]!.id).toBe(category2.id);
+          expect(results[0]!.categories[1]!.id).toBe(category1.id);
           // Product2: only category1
-          results[1]!.categories[0]!.id.should.equal(category1.id);
+          expect(results[1]!.categories[0]!.id).toBe(category1.id);
         });
       });
 
@@ -3836,10 +3896,10 @@ describe('ReadonlyRepository', () => {
         const translation1Result = pick(translation1, 'id', 'name', 'source');
         const translation2Result = pick(translation2, 'id', 'name', 'source');
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([source1Result, source2Result]), getQueryResult([translation1Result, translation2Result]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([source1Result, source2Result])).mockResolvedValueOnce(getQueryResult([translation1Result, translation2Result]));
 
-        try {
-          await SimpleWithSelfReferenceRepository.find({
+        await expect(
+          SimpleWithSelfReferenceRepository.find({
             select: ['name'],
           })
             .where({
@@ -3847,15 +3907,8 @@ describe('ReadonlyRepository', () => {
             })
             .populate('translations', {
               select: ['id', 'name'],
-            });
-          assert.fail('Should not get here');
-        } catch (ex) {
-          if (ex instanceof Error) {
-            ex.message.should.equal('Unable to populate "translations" on SimpleWithSelfReference. "source" is not included in select array.');
-          } else {
-            assert.fail('Exception was not of type Error');
-          }
-        }
+            }),
+        ).rejects.toThrow('Unable to populate "translations" on SimpleWithSelfReference. "source" is not included in select array.');
       });
     });
 
@@ -3866,44 +3919,44 @@ describe('ReadonlyRepository', () => {
           { ...generator.product({ store: store.id }), __total_count__: '42' },
         ];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.find().withCount();
 
-        result.should.have.property('results');
-        result.should.have.property('totalCount');
-        result.results.should.have.length(2);
-        result.totalCount.should.equal(42);
-        result.results[0]!.should.not.have.property('__total_count__');
+        expect(result).toHaveProperty('results');
+        expect(result).toHaveProperty('totalCount');
+        expect(result.results).toHaveLength(2);
+        expect(result.totalCount).toBe(42);
+        expect(result.results[0]!).not.toHaveProperty('__total_count__');
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products"');
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products"');
         assert(params);
-        params.should.deep.equal([]);
+        expect(params).toStrictEqual([]);
       });
 
       it('should work with where clause and pagination', async () => {
         const products = [{ ...generator.product({ store: store.id }), __total_count__: '100' }];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.find().where({ store: store.id }).skip(10).limit(20).withCount();
 
-        result.results.should.have.length(1);
-        result.totalCount.should.equal(100);
+        expect(result.results).toHaveLength(1);
+        expect(result.totalCount).toBe(100);
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" WHERE "store_id"=$1 LIMIT 20 OFFSET 10',
         );
         assert(params);
-        params.should.deep.equal([store.id]);
+        expect(params).toStrictEqual([store.id]);
       });
 
       it('should work with joins', async () => {
         const products = [{ ...generator.product({ store: store.id }), __total_count__: '5' }];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.find()
           .join('store')
@@ -3914,35 +3967,35 @@ describe('ReadonlyRepository', () => {
           })
           .withCount();
 
-        result.results.should.have.length(1);
-        result.totalCount.should.equal(5);
+        expect(result.results).toHaveLength(1);
+        expect(result.totalCount).toBe(5);
 
-        const [query] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name"=$1',
         );
       });
 
       it('should return 0 totalCount when no results', async () => {
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
 
         const result = await ProductRepository.find().where({ store: store.id }).withCount();
 
-        result.results.should.have.length(0);
-        result.totalCount.should.equal(0);
+        expect(result.results).toHaveLength(0);
+        expect(result.totalCount).toBe(0);
       });
 
       it('should support chaining withCount before other methods', async () => {
         const products = [{ ...generator.product({ store: store.id }), __total_count__: '50' }];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.find().withCount().where({ store: store.id }).sort('name').limit(10);
 
-        result.totalCount.should.equal(50);
+        expect(result.totalCount).toBe(50);
 
-        const [query] = capture(mockedPool.query).first();
-        query.should.equal(
+        const [query] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe(
           'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" WHERE "store_id"=$1 ORDER BY "name" LIMIT 10',
         );
       });
@@ -3950,38 +4003,38 @@ describe('ReadonlyRepository', () => {
       it('should work with select', async () => {
         const products = [{ id: 1, name: 'Test', __total_count__: '25' }];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.find().select(['name']).withCount();
 
-        result.totalCount.should.equal(25);
+        expect(result.totalCount).toBe(25);
 
-        const [query] = capture(mockedPool.query).first();
-        query.should.equal('SELECT "name","id",count(*) OVER() AS "__total_count__" FROM "products"');
+        const [query] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe('SELECT "name","id",count(*) OVER() AS "__total_count__" FROM "products"');
       });
 
       it('should work with populate', async () => {
         const product = { ...generator.product({ store: store.id }), __total_count__: '10' };
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([store]));
 
         const result = await ProductRepository.find().populate('store').withCount();
 
-        result.totalCount.should.equal(10);
-        result.results[0]!.store.should.deep.equal(store);
+        expect(result.totalCount).toBe(10);
+        expect(result.results[0]!.store).toStrictEqual(store);
       });
 
       it('should work with paginate helper', async () => {
         const products = [{ ...generator.product({ store: store.id }), __total_count__: '200' }];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.find().withCount().paginate({ page: 3, limit: 25 });
 
-        result.totalCount.should.equal(200);
+        expect(result.totalCount).toBe(200);
 
-        const [query] = capture(mockedPool.query).first();
-        query.should.equal('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" LIMIT 25 OFFSET 50');
+        const [query] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" LIMIT 25 OFFSET 50');
       });
     });
 
@@ -3989,69 +4042,69 @@ describe('ReadonlyRepository', () => {
       it('should return plain objects without prototype chain', async () => {
         const products = [generator.product({ store: store.id }), generator.product({ store: store.id })];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.find().toJSON();
 
-        result.should.have.length(2);
+        expect(result).toHaveLength(2);
         // Verify results are plain objects (no prototype chain from Product class)
-        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
-        Object.getPrototypeOf(result[1]!).should.equal(Object.prototype);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
+        expect(Object.getPrototypeOf(result[1]!)).toBe(Object.prototype);
       });
 
       it('should work with where clause', async () => {
         const products = [generator.product({ store: store.id })];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.find().where({ store: store.id }).toJSON();
 
-        result.should.have.length(1);
-        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+        expect(result).toHaveLength(1);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
       });
 
       it('should work with select', async () => {
         const products = [{ id: 1, name: 'Test' }];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.find().select(['name']).toJSON();
 
-        result.should.have.length(1);
-        result[0]!.should.have.property('name', 'Test');
-        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+        expect(result).toHaveLength(1);
+        expect(result[0]!).toHaveProperty('name', 'Test');
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
       });
 
       it('should cascade to populated entities', async () => {
         const product = generator.product({ store: store.id });
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]), getQueryResult([store]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([store]));
 
         const result = await ProductRepository.find().populate('store').toJSON();
 
-        result.should.have.length(1);
+        expect(result).toHaveLength(1);
         // Both the product and the populated store should be plain objects
-        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
-        Object.getPrototypeOf(result[0]!.store).should.equal(Object.prototype);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
+        expect(Object.getPrototypeOf(result[0]!.store)).toBe(Object.prototype);
       });
 
       it('should work with withCount', async () => {
         const products = [{ ...generator.product({ store: store.id }), __total_count__: '42' }];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.find().withCount().toJSON();
 
-        result.should.have.property('results');
-        result.should.have.property('totalCount');
-        result.totalCount.should.equal(42);
-        Object.getPrototypeOf(result.results[0]!).should.equal(Object.prototype);
+        expect(result).toHaveProperty('results');
+        expect(result).toHaveProperty('totalCount');
+        expect(result.totalCount).toBe(42);
+        expect(Object.getPrototypeOf(result.results[0]!)).toBe(Object.prototype);
       });
 
       it('should return array (not paginated object) with subquery join', async () => {
         const stores = [generator.store(), generator.store()];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
         const productCounts = subquery(ProductRepository)
           .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
@@ -4061,15 +4114,16 @@ describe('ReadonlyRepository', () => {
           .join(productCounts, 'stats', { on: { id: 'store' } })
           .toJSON();
 
-        result.should.deep.equal(stores);
-        Array.isArray(result).should.equal(true);
-        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(result).toEqual(stores);
+        expect(Array.isArray(result)).toBe(true);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
       });
 
       it('should return array with left join to subquery', async () => {
         const stores = [generator.store()];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(stores));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
 
         const productCounts = subquery(ProductRepository)
           .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
@@ -4079,80 +4133,82 @@ describe('ReadonlyRepository', () => {
           .leftJoin(productCounts, 'stats', { on: { id: 'store' } })
           .toJSON();
 
-        result.should.deep.equal(stores);
-        Array.isArray(result).should.equal(true);
-        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(result).toEqual(stores);
+        expect(Array.isArray(result)).toBe(true);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
       });
     });
 
     describe('distinctOn()', () => {
       it('should support distinctOn with sort', async () => {
         const products = [generator.product({ store: store.id })];
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.find().distinctOn(['store']).sort('store');
 
-        result.should.deep.equal(products);
+        expect(result).toStrictEqual(products);
 
-        const [query] = capture(mockedPool.query).first();
-        query.should.equal('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id"');
+        const [query] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id"');
       });
 
       it('should support distinctOn with multiple columns', async () => {
         const products = [generator.product({ store: store.id })];
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.find().distinctOn(['store', 'name']).sort({ store: 'asc', name: 'desc' });
 
-        result.should.deep.equal(products);
+        expect(result).toStrictEqual(products);
 
-        const [query] = capture(mockedPool.query).first();
-        query.should.equal('SELECT DISTINCT ON ("store_id","name") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id","name" DESC');
+        const [query] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe('SELECT DISTINCT ON ("store_id","name") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id","name" DESC');
       });
 
       it('should work with where clause', async () => {
         const products = [generator.product({ store: store.id })];
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         await ProductRepository.find()
           .where({ name: { startsWith: 'Test' } })
           .distinctOn(['store'])
           .sort('store');
 
-        const [query, params] = capture(mockedPool.query).first();
-        query.should.equal('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "name" ILIKE $1 ORDER BY "store_id"');
+        const [query, params] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "name" ILIKE $1 ORDER BY "store_id"');
         assert(params);
-        params.should.deep.equal(['Test%']);
+        expect(params).toStrictEqual(['Test%']);
       });
 
       it('should work with select', async () => {
         const products = [{ id: 1, name: 'Test', store: store.id }];
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         await ProductRepository.find().select(['name', 'store']).distinctOn(['store']).sort('store');
 
-        const [query] = capture(mockedPool.query).first();
-        query.should.equal('SELECT DISTINCT ON ("store_id") "name","store_id" AS "store","id" FROM "products" ORDER BY "store_id"');
+        const [query] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe('SELECT DISTINCT ON ("store_id") "name","store_id" AS "store","id" FROM "products" ORDER BY "store_id"');
       });
 
       it('should work with limit', async () => {
         const products = [generator.product({ store: store.id })];
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         await ProductRepository.find().distinctOn(['store']).sort('store').limit(10);
 
-        const [query] = capture(mockedPool.query).first();
-        query.should.equal('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id" LIMIT 10');
+        const [query] = mockedPool.query.mock.calls[0]!;
+        expect(query).toBe('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id" LIMIT 10');
       });
 
       it('should work with toJSON', async () => {
         const products = [generator.product({ store: store.id })];
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const results = await ProductRepository.find().distinctOn(['store']).sort('store').toJSON();
 
-        results.should.deep.equal(products);
-        Object.getPrototypeOf(results[0]!).should.equal(Object.prototype);
+        // eslint-disable-next-line vitest/prefer-strict-equal
+        expect(results).toEqual(products);
+        expect(Object.getPrototypeOf(results[0]!)).toBe(Object.prototype);
       });
 
       it('should throw if distinctOn is used with withCount', async () => {
@@ -4165,7 +4221,7 @@ describe('ReadonlyRepository', () => {
         }
 
         assert(thrownError);
-        thrownError.message.should.include('distinctOn cannot be used with withCount');
+        expect(thrownError.message).toContain('distinctOn cannot be used with withCount');
       });
 
       it('should throw if ORDER BY is missing', async () => {
@@ -4178,7 +4234,7 @@ describe('ReadonlyRepository', () => {
         }
 
         assert(thrownError);
-        thrownError.message.should.include('DISTINCT ON requires ORDER BY');
+        expect(thrownError.message).toContain('DISTINCT ON requires ORDER BY');
       });
 
       it('should throw if ORDER BY columns do not match DISTINCT ON columns', async () => {
@@ -4191,7 +4247,7 @@ describe('ReadonlyRepository', () => {
         }
 
         assert(thrownError);
-        thrownError.message.should.include('DISTINCT ON columns must match');
+        expect(thrownError.message).toContain('DISTINCT ON columns must match');
       });
     });
   });
@@ -4213,7 +4269,7 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
+      mockedPool.query.mockResolvedValueOnce(
         getQueryResult([
           {
             count: products.length,
@@ -4223,12 +4279,12 @@ describe('ReadonlyRepository', () => {
 
       const result = await ProductRepository.count();
       assert(result);
-      result.should.equal(products.length);
+      expect(result).toBe(products.length);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT count(*) AS "count" FROM "products"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT count(*) AS "count" FROM "products"');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should support call with explicit pool override', async () => {
@@ -4241,9 +4297,9 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      const poolOverride = mock(Pool);
+      const poolOverride = createMockPool();
 
-      when(poolOverride.query(anyString(), anything())).thenResolve(
+      poolOverride.query.mockResolvedValueOnce(
         getQueryResult([
           {
             count: products.length,
@@ -4252,16 +4308,16 @@ describe('ReadonlyRepository', () => {
       );
 
       const result = await ProductRepository.count({
-        pool: instance(poolOverride),
+        pool: poolOverride,
       });
       assert(result);
-      result.should.deep.equal(products.length);
+      expect(result).toStrictEqual(products.length);
 
-      verify(mockedPool.query(anyString(), anything())).never();
-      const [query, params] = capture(poolOverride.query).first();
-      query.should.equal('SELECT count(*) AS "count" FROM "products"');
+      expect(mockedPool.query).not.toHaveBeenCalled();
+      const [query, params] = poolOverride.query.mock.calls[0]!;
+      expect(query).toBe('SELECT count(*) AS "count" FROM "products"');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should support call constraints as a parameter', async () => {
@@ -4274,7 +4330,7 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
+      mockedPool.query.mockResolvedValueOnce(
         getQueryResult([
           {
             count: products.length,
@@ -4287,12 +4343,12 @@ describe('ReadonlyRepository', () => {
         store,
       });
       assert(result);
-      result.should.equal(products.length);
+      expect(result).toBe(products.length);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT count(*) AS "count" FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
       assert(params);
-      params.should.deep.equal([products.map((item) => item.id), store.id]);
+      expect(params).toStrictEqual([products.map((item) => item.id), store.id]);
     });
 
     it('should support call with chained where constraints', async () => {
@@ -4305,7 +4361,7 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
+      mockedPool.query.mockResolvedValueOnce(
         getQueryResult([
           {
             count: products.length,
@@ -4317,12 +4373,12 @@ describe('ReadonlyRepository', () => {
         store: store.id,
       });
       assert(result);
-      result.should.equal(products.length);
+      expect(result).toBe(products.length);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
       assert(params);
-      params.should.deep.equal([store.id]);
+      expect(params).toStrictEqual([store.id]);
     });
 
     it('should support call with explicit pool override and chained where constraints', async () => {
@@ -4335,9 +4391,9 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      const poolOverride = mock(Pool);
+      const poolOverride = createMockPool();
 
-      when(poolOverride.query(anyString(), anything())).thenResolve(
+      poolOverride.query.mockResolvedValueOnce(
         getQueryResult([
           {
             count: products.length,
@@ -4346,18 +4402,18 @@ describe('ReadonlyRepository', () => {
       );
 
       const result = await ProductRepository.count({
-        pool: instance(poolOverride),
+        pool: poolOverride,
       }).where({
         store: store.id,
       });
       assert(result);
-      result.should.equal(products.length);
+      expect(result).toBe(products.length);
 
-      verify(mockedPool.query(anyString(), anything())).never();
-      const [query, params] = capture(poolOverride.query).first();
-      query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
+      expect(mockedPool.query).not.toHaveBeenCalled();
+      const [query, params] = poolOverride.query.mock.calls[0]!;
+      expect(query).toBe('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
       assert(params);
-      params.should.deep.equal([store.id]);
+      expect(params).toStrictEqual([store.id]);
     });
 
     it('should support call with chained where constraints - Promise.all', async () => {
@@ -4370,7 +4426,7 @@ describe('ReadonlyRepository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(
+      mockedPool.query.mockResolvedValueOnce(
         getQueryResult([
           {
             count: products.length,
@@ -4384,12 +4440,12 @@ describe('ReadonlyRepository', () => {
         }),
       ]);
       assert(result);
-      result.should.equal(products.length);
+      expect(result).toBe(products.length);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('SELECT count(*) AS "count" FROM "products" WHERE "store_id"=$1');
       assert(params);
-      params.should.deep.equal([store.id]);
+      expect(params).toStrictEqual([store.id]);
     });
   });
 });

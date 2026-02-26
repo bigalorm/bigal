@@ -1,17 +1,21 @@
 import assert from 'node:assert';
 
 import { faker } from '@faker-js/faker';
-import * as chai from 'chai';
-import 'chai/register-should.js';
-import { Pool } from 'postgres-pool';
-import { anyString, anything, capture, instance, mock, reset, verify, when } from 'ts-mockito';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { CreateUpdateParams, PoolQueryResult, QueryResult, QueryResultRow, Repository } from '../src/index.js';
+import { type CreateUpdateParams, type PoolLike, type PoolQueryResult, type QueryResult, type QueryResultRow, type Repository } from '../src/index.js';
 import { initialize } from '../src/index.js';
 
 import { Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store } from './models/index.js';
 import * as generator from './utils/generator.js';
 import { pick } from './utils/pick.js';
+
+type PoolQueryFn = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
+
+function createMockPool() {
+  const pool = { query: vi.fn<PoolQueryFn>() };
+  return pool as PoolLike & typeof pool;
+}
 
 function getQueryResult<T extends QueryResultRow>(rows: T[] = []): PoolQueryResult<T> & { command: string; oid: number; fields: never[] } {
   return {
@@ -24,8 +28,7 @@ function getQueryResult<T extends QueryResultRow>(rows: T[] = []): PoolQueryResu
 }
 
 describe('Repository', () => {
-  let should: Chai.Should;
-  let mockedPool: Pool;
+  const mockedPool = createMockPool();
 
   let ProductRepository: Repository<Product>;
   let ProductCategoryRepository: Repository<ProductCategory>;
@@ -33,13 +36,10 @@ describe('Repository', () => {
   let StoreRepository: Repository<Store>;
   let ProductWithCreateUpdateDateTrackingRepository: Repository<ProductWithCreateUpdateDateTracking>;
 
-  before(() => {
-    should = chai.should();
-    mockedPool = mock(Pool);
-
+  beforeAll(() => {
     const repositoriesByModelName = initialize({
       models: [Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store],
-      pool: instance(mockedPool),
+      pool: mockedPool,
     });
 
     ProductRepository = repositoriesByModelName.Product as Repository<Product>;
@@ -50,7 +50,7 @@ describe('Repository', () => {
   });
 
   beforeEach(() => {
-    reset(mockedPool);
+    mockedPool.query.mockReset();
   });
 
   describe('#create()', () => {
@@ -61,7 +61,7 @@ describe('Repository', () => {
     });
 
     it('should execute beforeCreate if defined as a schema method', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(
+      mockedPool.query.mockResolvedValueOnce(
         getQueryResult([
           {
             id: 42,
@@ -73,11 +73,11 @@ describe('Repository', () => {
         name: 'foo',
       });
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      const [, params] = capture(mockedPool.query).first();
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      const [, params] = mockedPool.query.mock.calls[0]!;
 
       assert(params);
-      params.should.deep.equal(['beforeCreate - foo', []]);
+      expect(params).toStrictEqual(['beforeCreate - foo', []]);
     });
 
     it('should return single object result if single value is specified', async () => {
@@ -85,21 +85,21 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.create({
         name: product.name,
         store: product.store,
       });
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.deep.equal(product);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([product.name, [], product.store]);
+      expect(params).toStrictEqual([product.name, [], product.store]);
     });
 
     it('should return single object result if single value is specified - Promise.all', async () => {
@@ -107,7 +107,7 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const [result] = await Promise.all([
         ProductRepository.create({
@@ -116,14 +116,14 @@ describe('Repository', () => {
         }),
       ]);
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.deep.equal(product);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([product.name, [], product.store]);
+      expect(params).toStrictEqual([product.name, [], product.store]);
     });
 
     it('should return void if single value is specified and returnRecords=false', async () => {
@@ -131,7 +131,7 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.create(
         {
@@ -143,13 +143,13 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.not.exist(result);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeUndefined();
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3)');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3)');
       assert(params);
-      params.should.deep.equal([product.name, [], product.store]);
+      expect(params).toStrictEqual([product.name, [], product.store]);
     });
 
     it('should support ignoring on conflict', async () => {
@@ -157,7 +157,7 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.create(
         {
@@ -172,16 +172,16 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.deep.equal(product);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal(
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe(
         'INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO NOTHING RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"',
       );
       assert(params);
-      params.should.deep.equal([product.name, [], product.store]);
+      expect(params).toStrictEqual([product.name, [], product.store]);
     });
 
     it('should support ignoring on conflict with returnRecords=false', async () => {
@@ -189,7 +189,7 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       await ProductRepository.create(
         {
@@ -205,12 +205,12 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
+      expect(mockedPool.query).toHaveBeenCalledOnce();
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO NOTHING');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO NOTHING');
       assert(params);
-      params.should.deep.equal([product.name, [], product.store]);
+      expect(params).toStrictEqual([product.name, [], product.store]);
     });
 
     it('should support ignoring on conflict with specified returnSelect', async () => {
@@ -220,7 +220,7 @@ describe('Repository', () => {
 
       const returnValue = pick(product, ['id', 'name']);
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([returnValue]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([returnValue]));
 
       const result = await ProductRepository.create(
         {
@@ -236,14 +236,15 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.deep.equal(returnValue);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual(returnValue);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO NOTHING RETURNING "id","name"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO NOTHING RETURNING "id","name"');
       assert(params);
-      params.should.deep.equal([product.name, [], product.store]);
+      expect(params).toStrictEqual([product.name, [], product.store]);
     });
 
     it('should support merge on conflict', async () => {
@@ -251,7 +252,7 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.create(
         {
@@ -267,16 +268,16 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.deep.equal(product);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal(
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe(
         'INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name" RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"',
       );
       assert(params);
-      params.should.deep.equal([product.name, [], product.store]);
+      expect(params).toStrictEqual([product.name, [], product.store]);
     });
 
     it('should support merging on conflict with returnRecords=false', async () => {
@@ -284,7 +285,7 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       await ProductRepository.create(
         {
@@ -301,14 +302,14 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
+      expect(mockedPool.query).toHaveBeenCalledOnce();
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal(
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe(
         'INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name","store_id") DO UPDATE SET "name"=EXCLUDED."name","sku"=EXCLUDED."sku","alias_names"=EXCLUDED."alias_names"',
       );
       assert(params);
-      params.should.deep.equal([product.name, [], product.store]);
+      expect(params).toStrictEqual([product.name, [], product.store]);
     });
 
     it('should support merging on conflict with specified returnSelect', async () => {
@@ -318,7 +319,7 @@ describe('Repository', () => {
 
       const returnValue = pick(product, ['id', 'name']);
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([returnValue]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([returnValue]));
 
       const result = await ProductRepository.create(
         {
@@ -335,24 +336,25 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.deep.equal(returnValue);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual(returnValue);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name" RETURNING "id","name"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name" RETURNING "id","name"');
       assert(params);
-      params.should.deep.equal([product.name, [], product.store]);
+      expect(params).toStrictEqual([product.name, [], product.store]);
     });
 
     it('should return empty array results if empty value array is specified', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
 
       const result = await ProductRepository.create([]);
 
-      verify(mockedPool.query(anyString(), anything())).never();
-      should.exist(result);
-      result.should.deep.equal([]);
+      expect(mockedPool.query).not.toHaveBeenCalled();
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual([]);
     });
 
     it('should return object array results if multiple values are specified', async () => {
@@ -365,7 +367,7 @@ describe('Repository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
       const result = await ProductRepository.create(
         products.map((product) => {
@@ -376,15 +378,15 @@ describe('Repository', () => {
         }),
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      result.should.deep.equal(products);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal(
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe(
         'INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"',
       );
       assert(params);
-      params.should.deep.equal([products[0]!.name, products[1]!.name, [], [], products[0]!.store, products[1]!.store]);
+      expect(params).toStrictEqual([products[0]!.name, products[1]!.name, [], [], products[0]!.store, products[1]!.store]);
     });
 
     it('should return void if multiple values are specified and returnRecords=false', async () => {
@@ -397,7 +399,7 @@ describe('Repository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
       const result = await ProductRepository.create(
         products.map((product) => {
@@ -411,13 +413,13 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.not.exist(result);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeUndefined();
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)');
       assert(params);
-      params.should.deep.equal([products[0]!.name, products[1]!.name, [], [], products[0]!.store, products[1]!.store]);
+      expect(params).toStrictEqual([products[0]!.name, products[1]!.name, [], [], products[0]!.store, products[1]!.store]);
     });
 
     it('should allow populated value parameters', async () => {
@@ -425,21 +427,21 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.create({
         name: product.name,
         store,
       });
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.deep.equal(product);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([product.name, [], store.id]);
+      expect(params).toStrictEqual([product.name, [], store.id]);
     });
 
     it('should allow populated (QueryResult) value parameters', async () => {
@@ -451,21 +453,21 @@ describe('Repository', () => {
         ...store,
       };
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.create({
         name: product.name,
         store: storeAsQueryResult,
       });
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.deep.equal(product);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([product.name, [], store.id]);
+      expect(params).toStrictEqual([product.name, [], store.id]);
     });
 
     it('should allow partial Entity (omitting some required fields) as a value parameter', async () => {
@@ -475,23 +477,24 @@ describe('Repository', () => {
       });
       const productCategory = generator.productCategory(product, category);
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([productCategory]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([productCategory]));
 
       const result = await ProductCategoryRepository.create({
         product,
         category,
       });
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.deep.equal(productCategory);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(result).toEqual(productCategory);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal(
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe(
         'INSERT INTO "product__category" ("product_id","category_id") VALUES ($1,$2) RETURNING "id","product_id" AS "product","category_id" AS "category","ordering","is_primary" AS "isPrimary"',
       );
       assert(params);
-      params.should.deep.equal([product.id, category.id]);
+      expect(params).toStrictEqual([product.id, category.id]);
     });
 
     it(`should allow populated (Pick<T, 'id'>) value parameters`, async () => {
@@ -503,27 +506,27 @@ describe('Repository', () => {
         id: store.id,
       };
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.create({
         name: product.name,
         store: storeAsPickId,
       });
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.deep.equal(product);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([product.name, [], store.id]);
+      expect(params).toStrictEqual([product.name, [], store.id]);
     });
 
     it('should insert with string array value parameter', async () => {
       const item = generator.simpleWithStringCollection();
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([item]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([item]));
 
       const createParams: CreateUpdateParams<SimpleWithStringCollection> = {
         name: item.name,
@@ -532,14 +535,14 @@ describe('Repository', () => {
 
       const result = await SimpleWithStringCollectionRepository.create(createParams);
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.deep.equal(item);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(item);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "simple" ("name","other_ids") VALUES ($1,$2) RETURNING "id","name","other_ids" AS "otherIds"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('INSERT INTO "simple" ("name","other_ids") VALUES ($1,$2) RETURNING "id","name","other_ids" AS "otherIds"');
       assert(params);
-      params.should.deep.equal([item.name, item.otherIds]);
+      expect(params).toStrictEqual([item.name, item.otherIds]);
     });
 
     it('should ignore one-to-many collection values', async () => {
@@ -548,21 +551,21 @@ describe('Repository', () => {
       });
       product.categories = [];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([store]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([store]));
       // @ts-expect-error - Collections are excluded from values type
       const result = await StoreRepository.create({
         name: store.name,
         products: [product],
       });
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.deep.equal(store);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(store);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "stores" ("name") VALUES ($1) RETURNING "id","name"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('INSERT INTO "stores" ("name") VALUES ($1) RETURNING "id","name"');
       assert(params);
-      params.should.deep.equal([store.name]);
+      expect(params).toStrictEqual([store.name]);
     });
 
     it('should ignore many-to-many collection values', async () => {
@@ -571,7 +574,7 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       // @ts-expect-error - Collections are excluded from values type
       const result = await ProductRepository.create({
@@ -580,14 +583,14 @@ describe('Repository', () => {
         categories: [category],
       });
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.exist(result);
-      result.should.deep.equal(product);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(product);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([product.name, [], product.store]);
+      expect(params).toStrictEqual([product.name, [], product.store]);
     });
 
     describe('toJSON()', () => {
@@ -596,31 +599,31 @@ describe('Repository', () => {
           store: store.id,
         });
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
         const result = await ProductRepository.create({
           name: product.name,
           store: store.id,
         }).toJSON();
 
-        should.exist(result);
-        Object.getPrototypeOf(result).should.equal(Object.prototype);
-        result.name.should.equal(product.name);
+        expect(result).toBeDefined();
+        expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+        expect(result.name).toBe(product.name);
       });
 
       it('should return plain objects without prototype chain for array create', async () => {
         const products = [generator.product({ store: store.id }), generator.product({ store: store.id })];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.create([
           { name: products[0]!.name, store: store.id },
           { name: products[1]!.name, store: store.id },
         ]).toJSON();
 
-        result.should.have.length(2);
-        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
-        Object.getPrototypeOf(result[1]!).should.equal(Object.prototype);
+        expect(result).toHaveLength(2);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
+        expect(Object.getPrototypeOf(result[1]!)).toBe(Object.prototype);
       });
 
       it('should work with returnSelect option', async () => {
@@ -628,7 +631,7 @@ describe('Repository', () => {
           store: store.id,
         });
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([{ id: product.id, name: product.name }]));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult([{ id: product.id, name: product.name }]));
 
         const result = await ProductRepository.create(
           {
@@ -638,8 +641,8 @@ describe('Repository', () => {
           { returnSelect: ['name'] },
         ).toJSON();
 
-        should.exist(result);
-        Object.getPrototypeOf(result).should.equal(Object.prototype);
+        expect(result).toBeDefined();
+        expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
       });
     });
   });
@@ -652,7 +655,7 @@ describe('Repository', () => {
     });
 
     it('should execute beforeUpdate if defined as a schema method', async () => {
-      when(mockedPool.query(anyString(), anything())).thenResolve(
+      mockedPool.query.mockResolvedValueOnce(
         getQueryResult([
           {
             id: 42,
@@ -671,11 +674,11 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      const [, params] = capture(mockedPool.query).first();
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      const [, params] = mockedPool.query.mock.calls[0]!;
 
       assert(params);
-      params.should.deep.equal(['beforeUpdate - foo', id]);
+      expect(params).toStrictEqual(['beforeUpdate - foo', id]);
     });
 
     it('should return array of updated objects if second parameter is not defined', async () => {
@@ -683,7 +686,7 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.update(
         {
@@ -695,13 +698,13 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      result.should.deep.equal([product]);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toStrictEqual([product]);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([product.name, product.store, product.id]);
+      expect(params).toStrictEqual([product.name, product.store, product.id]);
     });
 
     it('should return array of updated objects if second parameter is not defined - Promise.all', async () => {
@@ -709,7 +712,7 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const [results] = await Promise.all([
         ProductRepository.update(
@@ -723,13 +726,13 @@ describe('Repository', () => {
         ),
       ]);
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      results.should.deep.equal([product]);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(results).toStrictEqual([product]);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([product.name, product.store, product.id]);
+      expect(params).toStrictEqual([product.name, product.store, product.id]);
     });
 
     it('should return void if returnRecords=false', async () => {
@@ -737,7 +740,7 @@ describe('Repository', () => {
         store: store.id,
       });
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.update(
         {
@@ -752,13 +755,13 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      should.not.exist(result);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(result).toBeUndefined();
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3');
       assert(params);
-      params.should.deep.equal([product.name, product.store, product.id]);
+      expect(params).toStrictEqual([product.name, product.store, product.id]);
     });
 
     it('should allow populated (QueryResult) value parameters', async () => {
@@ -770,7 +773,7 @@ describe('Repository', () => {
         ...store,
       };
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const results = await ProductRepository.update(
         {
@@ -782,13 +785,13 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      results.should.deep.equal([product]);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(results).toStrictEqual([product]);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([product.name, store.id, product.id]);
+      expect(params).toStrictEqual([product.name, store.id, product.id]);
     });
 
     it(`should allow populated (Pick<T, 'id'>) value parameters`, async () => {
@@ -800,7 +803,7 @@ describe('Repository', () => {
         id: store.id,
       };
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([product]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const results = await ProductRepository.update(
         {
@@ -812,13 +815,13 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      results.should.deep.equal([product]);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      expect(results).toStrictEqual([product]);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([product.name, store.id, product.id]);
+      expect(params).toStrictEqual([product.name, store.id, product.id]);
     });
 
     it('should allow partial Entity (omitting some required fields) as a value parameter', async () => {
@@ -828,7 +831,7 @@ describe('Repository', () => {
       });
       const productCategory = generator.productCategory(product, category);
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult([productCategory]));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([productCategory]));
 
       const results = await ProductCategoryRepository.update(
         {
@@ -840,39 +843,40 @@ describe('Repository', () => {
         },
       );
 
-      verify(mockedPool.query(anyString(), anything())).once();
-      results.should.deep.equal([productCategory]);
+      expect(mockedPool.query).toHaveBeenCalledOnce();
+      // eslint-disable-next-line vitest/prefer-strict-equal
+      expect(results).toEqual([productCategory]);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal(
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe(
         'UPDATE "product__category" SET "product_id"=$1,"category_id"=$2 WHERE "id"=$3 RETURNING "id","product_id" AS "product","category_id" AS "category","ordering","is_primary" AS "isPrimary"',
       );
       assert(params);
-      params.should.deep.equal([product.id, category.id, productCategory.id]);
+      expect(params).toStrictEqual([product.id, category.id, productCategory.id]);
     });
 
     describe('toJSON()', () => {
       it('should return plain objects without prototype chain', async () => {
         const products = [generator.product({ store: store.id }), generator.product({ store: store.id })];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.update({ store: store.id }, { name: 'updated' }).toJSON();
 
-        result.should.have.length(2);
-        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
-        Object.getPrototypeOf(result[1]!).should.equal(Object.prototype);
+        expect(result).toHaveLength(2);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
+        expect(Object.getPrototypeOf(result[1]!)).toBe(Object.prototype);
       });
 
       it('should work with returnSelect option', async () => {
         const products = [{ id: 1, name: 'updated' }];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.update({ id: 1 }, { name: 'updated' }, { returnSelect: ['name'] }).toJSON();
 
-        result.should.have.length(1);
-        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+        expect(result).toHaveLength(1);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
       });
     });
   });
@@ -894,15 +898,15 @@ describe('Repository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
       const result = await ProductRepository.destroy();
-      should.not.exist(result);
+      expect(result).toBeUndefined();
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('DELETE FROM "products"');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should delete all records if empty constraint and return all data if returnRecords=true', async () => {
@@ -915,16 +919,16 @@ describe('Repository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
       const result = await ProductRepository.destroy({}, { returnRecords: true });
-      should.exist(result);
-      result.should.deep.equal(products);
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('DELETE FROM "products" RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should delete all records if empty constraint and return specific columns if returnSelect is specified', async () => {
@@ -937,16 +941,16 @@ describe('Repository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
       const result = await ProductRepository.destroy({}, { returnSelect: ['name'] });
-      should.exist(result);
-      result.should.deep.equal(products);
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" RETURNING "name","id"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('DELETE FROM "products" RETURNING "name","id"');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should delete all records if empty constraint and return id column if returnSelect is empty', async () => {
@@ -959,16 +963,16 @@ describe('Repository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
       const result = await ProductRepository.destroy({}, { returnSelect: [] });
-      should.exist(result);
-      result.should.deep.equal(products);
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" RETURNING "id"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('DELETE FROM "products" RETURNING "id"');
       assert(params);
-      params.should.deep.equal([]);
+      expect(params).toStrictEqual([]);
     });
 
     it('should support call constraints as a parameter', async () => {
@@ -981,18 +985,18 @@ describe('Repository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
       const result = await ProductRepository.destroy({
         id: products.map((item) => item.id),
         store,
       });
-      should.not.exist(result);
+      expect(result).toBeUndefined();
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('DELETE FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2');
       assert(params);
-      params.should.deep.equal([products.map((item) => item.id), store.id]);
+      expect(params).toStrictEqual([products.map((item) => item.id), store.id]);
     });
 
     it('should support call constraints as a parameter if returnRecords=true', async () => {
@@ -1005,7 +1009,7 @@ describe('Repository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
       const result = await ProductRepository.destroy(
         {
@@ -1014,13 +1018,13 @@ describe('Repository', () => {
         },
         { returnRecords: true },
       );
-      should.exist(result);
-      result.should.deep.equal(products);
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('DELETE FROM "products" WHERE "id"=ANY($1::INTEGER[]) AND "store_id"=$2 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([products.map((item) => item.id), store.id]);
+      expect(params).toStrictEqual([products.map((item) => item.id), store.id]);
     });
 
     it('should support call with chained where constraints', async () => {
@@ -1033,17 +1037,17 @@ describe('Repository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
       const result = await ProductRepository.destroy().where({
         store: store.id,
       });
-      should.not.exist(result);
+      expect(result).toBeUndefined();
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" WHERE "store_id"=$1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('DELETE FROM "products" WHERE "store_id"=$1');
       assert(params);
-      params.should.deep.equal([store.id]);
+      expect(params).toStrictEqual([store.id]);
     });
 
     it('should support call with chained where constraints if returnRecords=true', async () => {
@@ -1056,17 +1060,17 @@ describe('Repository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const result = await ProductRepository.destroy({}, { returnRecords: true }).where({
         store: store.id,
       });
-      should.exist(result);
-      result.should.deep.equal(products);
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" WHERE "store_id"=$1 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('DELETE FROM "products" WHERE "store_id"=$1 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([store.id]);
+      expect(params).toStrictEqual([store.id]);
     });
 
     it('should support call with chained where constraints - Promise.all', async () => {
@@ -1079,18 +1083,18 @@ describe('Repository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const [result] = await Promise.all([
         ProductRepository.destroy().where({
           store: store.id,
         }),
       ]);
-      should.not.exist(result);
+      expect(result).toBeUndefined();
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" WHERE "store_id"=$1');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('DELETE FROM "products" WHERE "store_id"=$1');
       assert(params);
-      params.should.deep.equal([store.id]);
+      expect(params).toStrictEqual([store.id]);
     });
 
     it('should support call with chained where constraints if returnRecords=true - Promise.all', async () => {
@@ -1103,65 +1107,65 @@ describe('Repository', () => {
         }),
       ];
 
-      when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
       const [result] = await Promise.all([
         ProductRepository.destroy({}, { returnRecords: true }).where({
           store: store.id,
         }),
       ]);
-      should.exist(result);
-      result.should.deep.equal(products);
+      expect(result).toBeDefined();
+      expect(result).toStrictEqual(products);
 
-      const [query, params] = capture(mockedPool.query).first();
-      query.should.equal('DELETE FROM "products" WHERE "store_id"=$1 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      expect(query).toBe('DELETE FROM "products" WHERE "store_id"=$1 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
-      params.should.deep.equal([store.id]);
+      expect(params).toStrictEqual([store.id]);
     });
 
     describe('toJSON()', () => {
       it('should return plain objects without prototype chain when returnRecords is true', async () => {
         const products = [generator.product({ store: store.id }), generator.product({ store: store.id })];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.destroy({}, { returnRecords: true }).toJSON();
 
-        result.should.have.length(2);
-        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
-        Object.getPrototypeOf(result[1]!).should.equal(Object.prototype);
+        expect(result).toHaveLength(2);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
+        expect(Object.getPrototypeOf(result[1]!)).toBe(Object.prototype);
       });
 
       it('should work with where clause', async () => {
         const products = [generator.product({ store: store.id })];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.destroy({ store: store.id }, { returnRecords: true }).toJSON();
 
-        result.should.have.length(1);
-        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+        expect(result).toHaveLength(1);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
       });
 
       it('should work with chained where', async () => {
         const products = [generator.product({ store: store.id })];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.destroy({}, { returnRecords: true }).where({ store: store.id }).toJSON();
 
-        result.should.have.length(1);
-        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+        expect(result).toHaveLength(1);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
       });
 
       it('should work with returnSelect option', async () => {
         const products = [{ id: 1, name: 'deleted' }];
 
-        when(mockedPool.query(anyString(), anything())).thenResolve(getQueryResult(products));
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.destroy({}, { returnSelect: ['name'] }).toJSON();
 
-        result.should.have.length(1);
-        Object.getPrototypeOf(result[0]!).should.equal(Object.prototype);
+        expect(result).toHaveLength(1);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
       });
     });
   });
