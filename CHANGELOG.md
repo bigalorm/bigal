@@ -1,3 +1,5 @@
+## [15.10.2](https://github.com/bigalorm/bigal/compare/v15.10.1...v15.10.2) (2026-02-27)
+
 ## [15.10.1](https://github.com/bigalorm/bigal/compare/v15.10.0...v15.10.1) (2026-02-07)
 
 ### Bug Fixes
