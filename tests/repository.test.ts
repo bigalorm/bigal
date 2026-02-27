@@ -552,11 +552,9 @@ describe('Repository', () => {
       product.categories = [];
 
       mockedPool.query.mockResolvedValueOnce(getQueryResult([store]));
-      // @ts-expect-error - Collections are excluded from values type
-      const result = await StoreRepository.create({
-        name: store.name,
-        products: [product],
-      });
+      // Excess property check is bypassed via variable to test that collection values are ignored at runtime
+      const valuesWithCollection = { name: store.name, products: [product] };
+      const result = await StoreRepository.create(valuesWithCollection);
 
       expect(mockedPool.query).toHaveBeenCalledOnce();
       expect(result).toBeDefined();
@@ -576,12 +574,9 @@ describe('Repository', () => {
 
       mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
-      // @ts-expect-error - Collections are excluded from values type
-      const result = await ProductRepository.create({
-        name: product.name,
-        store: product.store,
-        categories: [category],
-      });
+      // Excess property check is bypassed via variable to test that collection values are ignored at runtime
+      const valuesWithCollection = { name: product.name, store: product.store, categories: [category] };
+      const result = await ProductRepository.create(valuesWithCollection);
 
       expect(mockedPool.query).toHaveBeenCalledOnce();
       expect(result).toBeDefined();
