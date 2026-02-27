@@ -1,4 +1,4 @@
-import { column, NotEntity, table } from '../../src/index.js';
+import { column, type NotEntity, table } from '../../src/index.js';
 
 import { ModelBase } from './ModelBase.js';
 import { Store } from './Store.js';
