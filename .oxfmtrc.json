@@ -1,0 +1,38 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicolo-ribaudo/oxc/oxfmt-config-schema/npm/oxfmt/configuration_schema.json",
+  "printWidth": 200,
+  "semi": true,
+  "singleQuote": true,
+  "bracketSpacing": true,
+  "arrowParens": "always",
+  "quoteProps": "as-needed",
+  "trailingComma": "all",
+  "useTabs": false,
+  "tabWidth": 2,
+  "endOfLine": "lf",
+  "arrayWrap": { "minElementsToWrap": 3 },
+  "sortImports": {
+    "newlinesBetween": true,
+    "customGroups": [
+      {
+        "groupName": "path-alias",
+        "elementNamePattern": ["@/**"]
+      }
+    ],
+    "groups": [
+      ["value-builtin", "type-builtin"],
+      { "newlinesBetween": true },
+      ["value-external", "type-external"],
+      { "newlinesBetween": true },
+      ["value-internal", "type-internal"],
+      { "newlinesBetween": true },
+      ["value-parent", "type-parent"],
+      { "newlinesBetween": true },
+      ["value-sibling", "type-sibling", "value-index", "type-index"],
+      { "newlinesBetween": true },
+      "path-alias"
+    ]
+  },
+  "sortPackageJson": false,
+  "ignorePatterns": ["**/node_modules/**", "**/dist/**"]
+}

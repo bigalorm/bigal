@@ -2,11 +2,10 @@ import type { Entity } from '../Entity.js';
 import type { IReadonlyRepository } from '../IReadonlyRepository.js';
 import type { IRepository } from '../IRepository.js';
 
+import type { Sort, SortObject, WhereQuery } from './index.js';
 import { ScalarSubquery } from './ScalarSubquery.js';
 import { SelectBuilder } from './SelectBuilder.js';
 import type { AggregateBuilder, SelectAggregateExpression } from './SelectBuilder.js';
-
-import type { Sort, SortObject, WhereQuery } from './index.js';
 
 /**
  * An aggregate expression with a typed alias from `.as()`.
@@ -140,6 +139,7 @@ export class SubqueryBuilder<T extends Entity, TColumns extends string = never> 
 
   /**
    * Group the subquery results by one or more columns.
+   * @param {(string & keyof T)[]} columns - Columns to group by
    * @returns New SubqueryBuilder with the groupBy applied
    * @example
    * subquery(ProductRepository)
@@ -154,6 +154,7 @@ export class SubqueryBuilder<T extends Entity, TColumns extends string = never> 
 
   /**
    * Filter groups based on aggregate values (used with groupBy).
+   * @param {HavingCondition} condition - Having condition to apply
    * @returns New SubqueryBuilder with the having condition applied
    * @example
    * subquery(ProductRepository)
