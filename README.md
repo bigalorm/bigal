@@ -432,6 +432,117 @@ const items = await ProductRepository.find().where({
 // SQL: SELECT ... FROM product WHERE deleted_at IS NOT NULL
 ```
 
+#### JSON/JSONB column queries
+
+BigAl supports querying individual properties within JSON/JSONB columns using PostgreSQL's `->>`
+(text extraction) operator. Numeric and boolean values are automatically cast using `::numeric` and
+`::boolean`.
+
+**Property equality:**
+
+```ts
+const items = await SimpleWithJsonRepository.find().where({
+  bar: { theme: 'dark' },
+});
+// SQL: WHERE "bar"->>'theme'=$1
+```
+
+**Comparison operators on JSON properties:**
+
+```ts
+const items = await SimpleWithJsonRepository.find().where({
+  bar: { retryCount: { '>=': 3 } },
+});
+// SQL: WHERE ("bar"->>'retryCount')::numeric>=$1
+```
+
+**Boolean values:**
+
+```ts
+const items = await SimpleWithJsonRepository.find().where({
+  bar: { active: true },
+});
+// SQL: WHERE ("bar"->>'active')::boolean=$1
+```
+
+**Null checks** — a missing JSON property returns `NULL` from `->>`, so this matches both explicit
+`null` values and absent properties:
+
+```ts
+const items = await SimpleWithJsonRepository.find().where({
+  bar: { deletedAt: null },
+});
+// SQL: WHERE "bar"->>'deletedAt' IS NULL
+
+const items = await SimpleWithJsonRepository.find().where({
+  bar: { deletedAt: { '!': null } },
+});
+// SQL: WHERE "bar"->>'deletedAt' IS NOT NULL
+```
+
+**Negation:**
+
+```ts
+// Inline negation
+const items = await SimpleWithJsonRepository.find().where({
+  bar: { status: { '!': 'archived' } },
+});
+// SQL: WHERE "bar"->>'status'<>$1
+
+// Outer negation wrapping multiple properties
+const items = await SimpleWithJsonRepository.find().where({
+  bar: { '!': { retryCount: { '>=': 5 } } },
+});
+// SQL: WHERE ("bar"->>'retryCount')::numeric<$1
+```
+
+**Array values (IN):**
+
+```ts
+const items = await SimpleWithJsonRepository.find().where({
+  bar: { stage: ['transcription', 'summarization'] },
+});
+// SQL: WHERE "bar"->>'stage'=ANY($1)
+```
+
+**Multiple properties (AND):**
+
+```ts
+const items = await SimpleWithJsonRepository.find().where({
+  bar: { retryCount: { '<': 3 }, stage: 'transcription' },
+});
+// SQL: WHERE ("bar"->>'retryCount')::numeric<$1 AND "bar"->>'stage'=$2
+```
+
+**Nested objects for deep path access** — intermediate segments use `->` and the final segment uses
+`->>`:
+
+```ts
+const items = await SimpleWithJsonRepository.find().where({
+  bar: { failure: { stage: 'transcription' } },
+});
+// SQL: WHERE "bar"->'failure'->>'stage'=$1
+
+const items = await SimpleWithJsonRepository.find().where({
+  bar: { a: { b: { c: 'value' } } },
+});
+// SQL: WHERE "bar"->'a'->'b'->>'c'=$1
+
+const items = await SimpleWithJsonRepository.find().where({
+  bar: { stats: { retryCount: { '>=': 3 } } },
+});
+// SQL: WHERE ("bar"->'stats'->>'retryCount')::numeric>=$1
+```
+
+**Combined `contains` and property access:**
+
+```ts
+const items = await SimpleWithJsonRepository.find().where({
+  bar: { contains: { type: 'recovery' }, retryCount: { '<': 3 } },
+});
+// SQL: WHERE "bar"@>$1::jsonb AND ("bar"->>'retryCount')::numeric<$2
+```
+
 #### Example of an AND statement
 
 ```ts

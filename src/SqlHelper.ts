@@ -1632,6 +1632,23 @@ function buildWhere<T extends Entity>({
           let subQueryComparer: Comparer | string | undefined;
           if (isComparer(key)) {
             subQueryComparer = key;
+          } else if (propertyName) {
+            const parentColumn = model.columnsByPropertyName[propertyName] as ColumnTypeMetadata;
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            if (parentColumn?.type?.toLowerCase() === 'json') {
+              andValues.push(
+                buildJsonPropertyClause({
+                  columnName: parentColumn.name,
+                  path: [key],
+                  isNegated,
+                  constraint: where,
+                  params,
+                }),
+              );
+              continue;
+            }
+
+            propertyName = key;
           } else {
             propertyName = key;
           }
@@ -2133,6 +2150,116 @@ function buildJsonContainmentStatement<T extends Entity>({ repositoriesByModelNa
       return `${isNegated ? 'NOT ' : ''}${tablePrefix}"${column.name}"@>$${paramsList.length}::jsonb`;
     },
   });
+}
+
+function getTypeCastSuffix(value: unknown): string {
+  if (typeof value === 'number') {
+    return '::numeric';
+  }
+
+  if (typeof value === 'boolean') {
+    return '::boolean';
+  }
+
+  return '';
+}
+
+function buildJsonAccessor(columnName: string, path: readonly string[]): string {
+  let result = `"${columnName}"`;
+  for (let i = 0; i < path.length; i++) {
+    const arrow = i === path.length - 1 ? '->>' : '->';
+    result += `${arrow}'${path[i]}'`;
+  }
+
+  return result;
+}
+
+function isJsonConstraintOperator(key: string): boolean {
+  return key === '!' || key === '<' || key === '<=' || key === '>' || key === '>=';
+}
+
+function buildJsonPropertyClause({
+  columnName,
+  path,
+  isNegated,
+  constraint,
+  params,
+}: {
+  columnName: string;
+  path: readonly string[];
+  isNegated: boolean;
+  constraint: unknown;
+  params: unknown[];
+}): string {
+  for (const segment of path) {
+    assertValidSqlIdentifier(segment, `JSON property name "${segment}"`);
+  }
+
+  if (constraint === null) {
+    return `${buildJsonAccessor(columnName, path)} ${isNegated ? 'IS NOT' : 'IS'} NULL`;
+  }
+
+  if (Array.isArray(constraint)) {
+    const accessor = buildJsonAccessor(columnName, path);
+    params.push(constraint);
+    return `${accessor}${isNegated ? '<>ALL' : '=ANY'}($${params.length})`;
+  }
+
+  if (typeof constraint === 'object') {
+    const entries = Object.entries(constraint as Record<string, unknown>);
+    const firstKey = entries[0]?.[0];
+
+    // If first key is an operator, treat entire object as constraint operators
+    if (firstKey && isJsonConstraintOperator(firstKey)) {
+      const accessor = buildJsonAccessor(columnName, path);
+      const negatedComparisonOperators: Record<string, string> = { '<': '>=', '<=': '>', '>': '<=', '>=': '<' };
+      const clauses: string[] = [];
+
+      for (const [operator, operatorValue] of entries) {
+        if (operator === '!') {
+          if (operatorValue === null) {
+            clauses.push(`${accessor} ${isNegated ? 'IS' : 'IS NOT'} NULL`);
+          } else {
+            params.push(operatorValue);
+            const castSuffix = getTypeCastSuffix(operatorValue);
+            const castAccessor = castSuffix ? `(${accessor})${castSuffix}` : accessor;
+            clauses.push(`${castAccessor}${isNegated ? '=' : '<>'}$${params.length}`);
+          }
+        } else if (operator === '<' || operator === '<=' || operator === '>' || operator === '>=') {
+          params.push(operatorValue);
+          const castSuffix = getTypeCastSuffix(operatorValue);
+          const castAccessor = castSuffix ? `(${accessor})${castSuffix}` : accessor;
+          const effectiveOperator = isNegated ? negatedComparisonOperators[operator] : operator;
+          clauses.push(`${castAccessor}${effectiveOperator}$${params.length}`);
+        }
+      }
+
+      return clauses.join(' AND ');
+    }
+
+    // Otherwise, keys are nested JSON properties — recurse deeper
+    const clauses: string[] = [];
+    for (const [nestedKey, nestedValue] of entries) {
+      clauses.push(
+        buildJsonPropertyClause({
+          columnName,
+          path: [...path, nestedKey],
+          isNegated,
+          constraint: nestedValue,
+          params,
+        }),
+      );
+    }
+
+    return clauses.join(' AND ');
+  }
+
+  // Primitive value (string, number, boolean)
+  const accessor = buildJsonAccessor(columnName, path);
+  params.push(constraint);
+  const castSuffix = getTypeCastSuffix(constraint);
+  const castAccessor = castSuffix ? `(${accessor})${castSuffix}` : accessor;
+  return `${castAccessor}${isNegated ? '<>' : '='}$${params.length}`;
 }
 
 function buildLikeOperatorStatement<T extends Entity>({ repositoriesByModelNameLowered, model, propertyName, isNegated, value, params, joins }: LikeOperatorStatementParams<T>): string {

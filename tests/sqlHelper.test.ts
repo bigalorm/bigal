@@ -2412,6 +2412,299 @@ describe('sqlHelper', () => {
       });
     });
 
+    describe('JSON property querying', () => {
+      it('should handle equality on a JSONB property', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              theme: 'dark',
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->>'theme'=$1`);
+        expect(params).toStrictEqual(['dark']);
+      });
+
+      it('should handle numeric comparison on a JSONB property', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              retryCount: { '>=': 3 },
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE ("bar"->>'retryCount')::numeric>=$1`);
+        expect(params).toStrictEqual([3]);
+      });
+
+      it('should handle boolean comparison on a JSONB property', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              active: true,
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE ("bar"->>'active')::boolean=$1`);
+        expect(params).toStrictEqual([true]);
+      });
+
+      it('should handle negation on a JSONB property', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              status: { '!': 'archived' },
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->>'status'<>$1`);
+        expect(params).toStrictEqual(['archived']);
+      });
+
+      it('should handle multiple properties (AND)', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              retryCount: { '<': 3 },
+              stage: 'transcription',
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE ("bar"->>'retryCount')::numeric<$1 AND "bar"->>'stage'=$2`);
+        expect(params).toStrictEqual([3, 'transcription']);
+      });
+
+      it('should handle null check on a JSONB property', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              deletedAt: null,
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->>'deletedAt' IS NULL`);
+        expect(params).toStrictEqual([]);
+      });
+
+      it('should handle combined contains and property access on same column', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              contains: { type: 'recovery' },
+              retryCount: { '<': 3 },
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"@>$1::jsonb AND ("bar"->>'retryCount')::numeric<$2`);
+        expect(params).toStrictEqual([{ type: 'recovery' }, 3]);
+      });
+
+      it('should handle array value (IN) on a JSONB property', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              stage: ['transcription', 'summarization'],
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->>'stage'=ANY($1)`);
+        expect(params).toStrictEqual([['transcription', 'summarization']]);
+      });
+
+      it('should handle negated numeric comparison on a JSONB property via outer negation', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              '!': {
+                retryCount: { '>=': 5 },
+              },
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE ("bar"->>'retryCount')::numeric<$1`);
+        expect(params).toStrictEqual([5]);
+      });
+
+      it('should handle negated equality on a JSONB property via outer negation', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              '!': {
+                theme: 'dark',
+              },
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->>'theme'<>$1`);
+        expect(params).toStrictEqual(['dark']);
+      });
+
+      it('should handle negated null check on a JSONB property', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              deletedAt: { '!': null },
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->>'deletedAt' IS NOT NULL`);
+        expect(params).toStrictEqual([]);
+      });
+
+      it('should handle all comparison operators on JSONB properties', () => {
+        const operators = ['<', '<=', '>', '>='] as const;
+        const negatedOperators = ['>=', '>', '<=', '<'] as const;
+
+        for (const [index, op] of operators.entries()) {
+          const { whereStatement, params } = sqlHelper.buildWhereStatement({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+            where: {
+              bar: {
+                count: { [op]: 10 },
+              },
+            } as WhereQuery<SimpleWithJson>,
+          });
+
+          assert(whereStatement);
+          expect(whereStatement).toBe(`WHERE ("bar"->>'count')::numeric${op}$1`);
+          expect(params).toStrictEqual([10]);
+
+          // Also test negated version
+          const { whereStatement: negatedWhere, params: negatedParams } = sqlHelper.buildWhereStatement({
+            repositoriesByModelNameLowered,
+            model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+            where: {
+              bar: {
+                '!': {
+                  count: { [op]: 10 },
+                },
+              },
+            } as WhereQuery<SimpleWithJson>,
+          });
+
+          assert(negatedWhere);
+          expect(negatedWhere).toBe(`WHERE ("bar"->>'count')::numeric${negatedOperators[index]}$1`);
+          expect(negatedParams).toStrictEqual([10]);
+        }
+      });
+
+      it('should handle nested object for deep JSON path', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              failure: {
+                stage: 'transcription',
+              },
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->'failure'->>'stage'=$1`);
+        expect(params).toStrictEqual(['transcription']);
+      });
+
+      it('should handle deeply nested JSON path', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              a: { b: { c: 'value' } },
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->'a'->'b'->>'c'=$1`);
+        expect(params).toStrictEqual(['value']);
+      });
+
+      it('should handle nested JSON path with comparison operator', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              stats: {
+                retryCount: { '>=': 3 },
+              },
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE ("bar"->'stats'->>'retryCount')::numeric>=$1`);
+        expect(params).toStrictEqual([3]);
+      });
+
+      it('should handle nested JSON path with multiple sibling properties', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              failure: {
+                stage: 'transcription',
+                code: { '>=': 400 },
+              },
+            },
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->'failure'->>'stage'=$1 AND ("bar"->'failure'->>'code')::numeric>=$2`);
+        expect(params).toStrictEqual(['transcription', 400]);
+      });
+    });
+
     it('should handle date value', () => {
       const now = new Date();
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
