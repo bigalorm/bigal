@@ -1,3 +1,9 @@
+## [15.11.1](https://github.com/bigalorm/bigal/compare/v15.11.0...v15.11.1) (2026-03-11)
+
+### Bug Fixes
+
+- Restore type variance for WhereQuery, IReadonlyRepository, and IRepository ([#336](https://github.com/bigalorm/bigal/issues/336)) ([ee346b1](https://github.com/bigalorm/bigal/commit/ee346b15be3841c19cb6abed7a4b8f1a0babaa15))
+
 # [15.11.0](https://github.com/bigalorm/bigal/compare/v15.10.2...v15.11.0) (2026-03-10)
 
 ### Features
