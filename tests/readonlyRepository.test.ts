@@ -128,7 +128,7 @@ describe('ReadonlyRepository', () => {
       mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
       const result = await ReadonlyProductRepository.findOne();
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual(product);
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
@@ -149,7 +149,7 @@ describe('ReadonlyRepository', () => {
         sort: 'name asc',
       });
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual(productResult);
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
@@ -165,7 +165,7 @@ describe('ReadonlyRepository', () => {
         sort: 'name',
       });
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual(product);
       expect(result.name).toBe(product.name);
 
@@ -316,7 +316,7 @@ describe('ReadonlyRepository', () => {
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
 
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(result).toEqual({
           id,
           name,
@@ -347,7 +347,7 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(result).toEqual({
           id,
           name,
@@ -378,7 +378,7 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(result).toEqual({
           id,
           name,
@@ -409,7 +409,7 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(result).toEqual({
           id,
           name,
@@ -440,7 +440,7 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(result).toEqual({
           id,
           name,
@@ -471,7 +471,7 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(result).toEqual({
           id,
           name,
@@ -502,7 +502,7 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(result).toEqual({
           id,
           name,
@@ -532,7 +532,7 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(result).toEqual({
           id,
           name,
@@ -555,7 +555,7 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(result).toEqual({
           id,
           name,
@@ -579,7 +579,7 @@ describe('ReadonlyRepository', () => {
 
         const result = await ReadonlyKitchenSinkRepository.findOne();
         assert(result);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(result).toEqual({
           id,
           name,
@@ -594,7 +594,7 @@ describe('ReadonlyRepository', () => {
       const result = await ProductRepository.findOne().populate('store');
       expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...product,
         store,
@@ -622,7 +622,7 @@ describe('ReadonlyRepository', () => {
       expect(mockedPool.query).not.toHaveBeenCalled();
       expect(poolOverride.query).toHaveBeenCalledTimes(2);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...product,
         store,
@@ -650,7 +650,7 @@ describe('ReadonlyRepository', () => {
       expect(mockedPool.query).toHaveBeenCalledOnce();
       expect(storePool.query).toHaveBeenCalledOnce();
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...product,
         store,
@@ -678,7 +678,7 @@ describe('ReadonlyRepository', () => {
       });
       expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...productResult,
         store: storeResult,
@@ -711,7 +711,7 @@ describe('ReadonlyRepository', () => {
       });
       expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...levelOneResult,
         levelTwo: levelTwoResult,
@@ -732,7 +732,7 @@ describe('ReadonlyRepository', () => {
       });
       expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...product,
         store: storeResult,
@@ -766,7 +766,7 @@ describe('ReadonlyRepository', () => {
       const result = await StoreRepository.findOne().populate('products');
       expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual(storeWithProducts);
       expect(result.products.length).toBe(2);
       expect(result.products[0]!.id).toBe(product1.id);
@@ -805,7 +805,7 @@ describe('ReadonlyRepository', () => {
       expect(mockedPool.query).not.toHaveBeenCalled();
       expect(poolOverride.query).toHaveBeenCalledTimes(2);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...store,
         products: [product1, product2],
@@ -839,7 +839,7 @@ describe('ReadonlyRepository', () => {
       });
       expect(mockedPool.query).toHaveBeenCalledOnce();
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...store,
         products: [product1, product2],
@@ -874,7 +874,7 @@ describe('ReadonlyRepository', () => {
       });
       expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...store,
         products: [product1Result, product2Result],
@@ -904,7 +904,7 @@ describe('ReadonlyRepository', () => {
       const result = await ProductRepository.findOne().populate('categories');
       expect(mockedPool.query).toHaveBeenCalledTimes(3);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...product,
         categories: [category1, category2],
@@ -943,7 +943,7 @@ describe('ReadonlyRepository', () => {
       expect(mockedPool.query).not.toHaveBeenCalled();
       expect(poolOverride.query).toHaveBeenCalledTimes(3);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...product,
         categories: [category1, category2],
@@ -981,7 +981,7 @@ describe('ReadonlyRepository', () => {
       expect(mockedPool.query).toHaveBeenCalledOnce();
       expect(categoryPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...product,
         categories: [category1, category2],
@@ -1021,7 +1021,7 @@ describe('ReadonlyRepository', () => {
       });
       expect(mockedPool.query).toHaveBeenCalledTimes(3);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...product,
         categories: [category1Result, category2Result],
@@ -1065,7 +1065,7 @@ describe('ReadonlyRepository', () => {
         .populate('translations');
       expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...source1Result,
         translations: [translation1, translation2],
@@ -1111,7 +1111,7 @@ describe('ReadonlyRepository', () => {
         });
       expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...source1Result,
         translations: [translation1Result, translation2Result],
@@ -1164,7 +1164,7 @@ describe('ReadonlyRepository', () => {
         .sort('store desc');
       expect(mockedPool.query).toHaveBeenCalledTimes(4);
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...product,
         store,
@@ -1214,7 +1214,7 @@ describe('ReadonlyRepository', () => {
 
         expect(mockedPool.query).toHaveBeenCalledTimes(3);
         assert(result);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(result).toEqual({
           ...product,
           categories: [category1],
@@ -1586,7 +1586,7 @@ describe('ReadonlyRepository', () => {
         id: 42,
       });
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual(simple);
       assert(result.message);
       expect(result.message.id).toBe(simple.message.id);
@@ -1609,7 +1609,7 @@ describe('ReadonlyRepository', () => {
         select: ['name'],
       });
       assert(result);
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual({
         ...simple,
         store: storeResult,
@@ -3057,7 +3057,7 @@ describe('ReadonlyRepository', () => {
 
         const results = await ProductRepository.find().populate('store');
         expect(mockedPool.query).toHaveBeenCalledTimes(2);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...product1,
@@ -3090,7 +3090,7 @@ describe('ReadonlyRepository', () => {
 
         const results = await ProductRepository.find().populate('store');
         expect(mockedPool.query).toHaveBeenCalledTimes(2);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...product1,
@@ -3123,7 +3123,7 @@ describe('ReadonlyRepository', () => {
 
         expect(mockedPool.query).not.toHaveBeenCalled();
         expect(poolOverride.query).toHaveBeenCalledTimes(2);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...product1,
@@ -3157,7 +3157,7 @@ describe('ReadonlyRepository', () => {
 
         expect(mockedPool.query).toHaveBeenCalledOnce();
         expect(storePool.query).toHaveBeenCalledOnce();
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...product1,
@@ -3191,7 +3191,7 @@ describe('ReadonlyRepository', () => {
           select: ['two', 'levelThree'],
         });
         expect(mockedPool.query).toHaveBeenCalledTimes(2);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...levelOneResult,
@@ -3215,7 +3215,7 @@ describe('ReadonlyRepository', () => {
             select: ['two', 'levelThree'],
           });
         expect(mockedPool.query).toHaveBeenCalledTimes(2);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...levelOneResult,
@@ -3238,7 +3238,7 @@ describe('ReadonlyRepository', () => {
           sort: 'name',
         });
         expect(mockedPool.query).toHaveBeenCalledTimes(2);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...product1,
@@ -3274,7 +3274,7 @@ describe('ReadonlyRepository', () => {
           select: ['id'],
         });
         expect(mockedPool.query).toHaveBeenCalledTimes(2);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...product1Result,
@@ -3301,7 +3301,7 @@ describe('ReadonlyRepository', () => {
 
         const results = await StoreRepository.find().populate('products');
         expect(mockedPool.query).toHaveBeenCalledTimes(2);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...store1,
@@ -3336,7 +3336,7 @@ describe('ReadonlyRepository', () => {
 
         expect(mockedPool.query).not.toHaveBeenCalled();
         expect(poolOverride.query).toHaveBeenCalledTimes(2);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...store1,
@@ -3371,7 +3371,7 @@ describe('ReadonlyRepository', () => {
         });
         expect(mockedPool.query).toHaveBeenCalledOnce();
         expect(productPool.query).toHaveBeenCalledOnce();
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...store1,
@@ -3407,7 +3407,7 @@ describe('ReadonlyRepository', () => {
           sort: 'name',
         });
         expect(mockedPool.query).toHaveBeenCalledTimes(2);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...store1,
@@ -3439,7 +3439,7 @@ describe('ReadonlyRepository', () => {
 
         const results = await ProductRepository.find().populate('categories');
         expect(mockedPool.query).toHaveBeenCalledTimes(3);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...product1,
@@ -3484,7 +3484,7 @@ describe('ReadonlyRepository', () => {
 
         expect(mockedPool.query).not.toHaveBeenCalled();
         expect(poolOverride.query).toHaveBeenCalledTimes(3);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...product1,
@@ -3529,7 +3529,7 @@ describe('ReadonlyRepository', () => {
 
         expect(mockedPool.query).toHaveBeenCalledOnce();
         expect(productPool.query).toHaveBeenCalledTimes(2);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...product1,
@@ -3575,7 +3575,7 @@ describe('ReadonlyRepository', () => {
           sort: 'name',
         });
         expect(mockedPool.query).toHaveBeenCalledTimes(3);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...product1,
@@ -3621,7 +3621,7 @@ describe('ReadonlyRepository', () => {
           .mockResolvedValueOnce(getQueryResult([category1, category2]));
 
         const results = await ProductRepository.find().populate('store').populate('categories');
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...product1,
@@ -3699,7 +3699,7 @@ describe('ReadonlyRepository', () => {
         }
 
         const results = await getTeachers();
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...teacher1,
@@ -3751,7 +3751,7 @@ describe('ReadonlyRepository', () => {
           })
           .populate('translations');
         expect(mockedPool.query).toHaveBeenCalledTimes(2);
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual([
           {
             ...source1Result,
@@ -3799,7 +3799,7 @@ describe('ReadonlyRepository', () => {
           });
 
           expect(mockedPool.query).toHaveBeenCalledTimes(3);
-          // eslint-disable-next-line vitest/prefer-strict-equal
+          // eslint-disable-next-line vitest-js/prefer-strict-equal
           expect(results).toEqual([
             {
               ...product1,
@@ -4114,7 +4114,7 @@ describe('ReadonlyRepository', () => {
           .join(productCounts, 'stats', { on: { id: 'store' } })
           .toJSON();
 
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(result).toEqual(stores);
         expect(Array.isArray(result)).toBe(true);
         expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
@@ -4133,7 +4133,7 @@ describe('ReadonlyRepository', () => {
           .leftJoin(productCounts, 'stats', { on: { id: 'store' } })
           .toJSON();
 
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(result).toEqual(stores);
         expect(Array.isArray(result)).toBe(true);
         expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
@@ -4206,7 +4206,7 @@ describe('ReadonlyRepository', () => {
 
         const results = await ProductRepository.find().distinctOn(['store']).sort('store').toJSON();
 
-        // eslint-disable-next-line vitest/prefer-strict-equal
+        // eslint-disable-next-line vitest-js/prefer-strict-equal
         expect(results).toEqual(products);
         expect(Object.getPrototypeOf(results[0]!)).toBe(Object.prototype);
       });
@@ -4248,6 +4248,44 @@ describe('ReadonlyRepository', () => {
 
         assert(thrownError);
         expect(thrownError.message).toContain('DISTINCT ON columns must match');
+      });
+
+      it('should return array (not paginated object) with subquery join', async () => {
+        const stores = [generator.store(), generator.store()];
+
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
+
+        const productCounts = subquery(ProductRepository)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store']);
+
+        const result = await StoreRepository.find()
+          .join(productCounts, 'stats', { on: { id: 'store' } })
+          .toJSON();
+
+        // eslint-disable-next-line vitest-js/prefer-strict-equal -- comparing across prototype boundaries
+        expect(result).toEqual(stores);
+        expect(Array.isArray(result)).toBe(true);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
+      });
+
+      it('should return array with left join to subquery', async () => {
+        const stores = [generator.store()];
+
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
+
+        const productCounts = subquery(ProductRepository)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store']);
+
+        const result = await StoreRepository.find()
+          .leftJoin(productCounts, 'stats', { on: { id: 'store' } })
+          .toJSON();
+
+        // eslint-disable-next-line vitest-js/prefer-strict-equal -- comparing across prototype boundaries
+        expect(result).toEqual(stores);
+        expect(Array.isArray(result)).toBe(true);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
       });
     });
   });

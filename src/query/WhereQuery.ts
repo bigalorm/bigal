@@ -21,9 +21,11 @@ export type StringConstraint<TValue extends string> = Partial<Record<'contains' 
 
 export type JsonPropertyValue = boolean | number | string | null;
 
-export type JsonConstraint<TValue> = Partial<Record<'contains', ExcludeUndefined<TValue> | LiteralValues<ExcludeUndefined<TValue>>>> & {
-  [key: string]: JsonPropertyValue | JsonPropertyValue[] | Partial<Record<'!' | '<' | '<=' | '>' | '>=', JsonPropertyValue>> | undefined;
+export type JsonPropertyConstraint = {
+  [key: string]: JsonPropertyConstraint | JsonPropertyValue | JsonPropertyValue[] | Partial<Record<'!' | '<' | '<=' | '>' | '>=', JsonPropertyValue>> | undefined;
 };
+
+export type JsonConstraint<TValue> = Partial<Record<'contains', ExcludeUndefined<TValue> | LiteralValues<ExcludeUndefined<TValue>>>>;
 
 export type NumberOrDateConstraint<TValue extends Date | number> = Partial<Record<'<' | '<=' | '>' | '>=', LiteralValues<ExcludeUndefined<TValue>>>>;
 
@@ -47,12 +49,12 @@ export type WhereQueryStatement<TValue> = [TValue] extends [string] // Avoid dis
     ? NegatableConstraint<StringConstraint<TValue> | SubqueryInConstraint | WhereClauseValue<TValue>>
     : TValue extends Date | number
       ? NegatableConstraint<NumberOrDateConstraintWithSubquery<TValue> | SubqueryInConstraint | WhereClauseValue<TValue>>
-      : NegatableConstraint<JsonConstraint<TValue> | SubqueryInConstraint | WhereClauseValue<TValue>>;
+      : NegatableConstraint<JsonConstraint<TValue> | JsonPropertyConstraint | SubqueryInConstraint | WhereClauseValue<TValue>>;
 
 export type WhereQuery<T extends Entity> = {
   // Exclude entity collections and functions. Make the rest of the properties optional
   [K in keyof T as ExcludeEntityCollections<T[K], ExcludeFunctions<T[K], K>>]?: K extends 'id'
-    ? WhereQueryStatement<T | T[K]> // Allow nested where query statements
+    ? NegatableConstraint<WhereClauseValue<T>> | WhereQueryStatement<T[K]> // Allow entity objects (via Pick<T,'id'>) and literal id values
     : T[K] extends (infer U)[] | undefined // If property type is an array, allow where query statements for the array type
       ? WhereQueryStatement<ExcludeUndefined<U>>
       :

@@ -238,7 +238,7 @@ describe('Repository', () => {
 
       expect(mockedPool.query).toHaveBeenCalledOnce();
       expect(result).toBeDefined();
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual(returnValue);
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
@@ -338,7 +338,7 @@ describe('Repository', () => {
 
       expect(mockedPool.query).toHaveBeenCalledOnce();
       expect(result).toBeDefined();
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual(returnValue);
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
@@ -486,7 +486,7 @@ describe('Repository', () => {
 
       expect(mockedPool.query).toHaveBeenCalledOnce();
       expect(result).toBeDefined();
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(result).toEqual(productCategory);
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
@@ -839,7 +839,7 @@ describe('Repository', () => {
       );
 
       expect(mockedPool.query).toHaveBeenCalledOnce();
-      // eslint-disable-next-line vitest/prefer-strict-equal
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
       expect(results).toEqual([productCategory]);
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
