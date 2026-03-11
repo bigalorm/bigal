@@ -4,6 +4,7 @@
     "typeAware": true
   },
   "plugins": ["node", "jsx-a11y", "jsdoc", "vitest", "import", "promise"],
+  "jsPlugins": [{ "name": "vitest-js", "specifier": "eslint-plugin-vitest" }],
   "categories": {
     "correctness": "error",
     "suspicious": "error",
@@ -187,20 +188,24 @@
     "jsdoc/require-param-type": "error",
 
     "vitest/warn-todo": "off",
-    "vitest/consistent-test-it": ["error", { "fn": "it" }],
-    "vitest/no-duplicate-hooks": "error",
-    "vitest/no-identical-title": "error",
     "vitest/no-import-node-test": "error",
-    "vitest/no-test-prefixes": "error",
-    "vitest/prefer-comparison-matcher": "error",
-    "vitest/prefer-equality-matcher": "error",
-    "vitest/prefer-hooks-in-order": "error",
-    "vitest/prefer-hooks-on-top": "error",
-    "vitest/prefer-lowercase-title": ["error", { "ignore": ["describe"] }],
-    "vitest/prefer-mock-promise-shorthand": "error",
-    "vitest/prefer-spy-on": "error",
-    "vitest/prefer-strict-equal": "error",
-    "vitest/require-top-level-describe": "error"
+    "vitest/no-conditional-tests": "error",
+    "vitest/prefer-called-once": "error",
+    "vitest/prefer-expect-type-of": "error",
+    "vitest/prefer-to-be-object": "error",
+    "vitest-js/consistent-test-it": ["error", { "fn": "it" }],
+    "vitest-js/no-duplicate-hooks": "error",
+    "vitest-js/no-identical-title": "error",
+    "vitest-js/no-test-prefixes": "error",
+    "vitest-js/prefer-comparison-matcher": "error",
+    "vitest-js/prefer-equality-matcher": "error",
+    "vitest-js/prefer-hooks-in-order": "error",
+    "vitest-js/prefer-hooks-on-top": "error",
+    "vitest-js/prefer-lowercase-title": ["error", { "ignore": ["describe"] }],
+    "vitest-js/prefer-mock-promise-shorthand": "error",
+    "vitest-js/prefer-spy-on": "error",
+    "vitest-js/prefer-strict-equal": "error",
+    "vitest-js/require-top-level-describe": "error"
   },
   "overrides": [
     {
