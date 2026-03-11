@@ -4249,6 +4249,42 @@ describe('ReadonlyRepository', () => {
         assert(thrownError);
         expect(thrownError.message).toContain('DISTINCT ON columns must match');
       });
+
+      it('should return array (not paginated object) with subquery join', async () => {
+        const stores = [generator.store(), generator.store()];
+
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
+
+        const productCounts = subquery(ProductRepository)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store']);
+
+        const result = await StoreRepository.find()
+          .join(productCounts, 'stats', { on: { id: 'store' } })
+          .toJSON();
+
+        expect(result).toEqual(stores);
+        expect(Array.isArray(result)).toBe(true);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
+      });
+
+      it('should return array with left join to subquery', async () => {
+        const stores = [generator.store()];
+
+        mockedPool.query.mockResolvedValueOnce(getQueryResult(stores));
+
+        const productCounts = subquery(ProductRepository)
+          .select(['store', (sb): SelectAggregateExpression => sb.count().as('productCount')])
+          .groupBy(['store']);
+
+        const result = await StoreRepository.find()
+          .leftJoin(productCounts, 'stats', { on: { id: 'store' } })
+          .toJSON();
+
+        expect(result).toEqual(stores);
+        expect(Array.isArray(result)).toBe(true);
+        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
+      });
     });
   });
 
