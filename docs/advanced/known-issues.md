@@ -1,3 +1,7 @@
+---
+description: Known issues and workarounds — optional collections, NotEntity for JSON objects with id fields, and DEBUG_BIGAL logging.
+---
+
 # Known Issues
 
 ## Entity collections must be optional

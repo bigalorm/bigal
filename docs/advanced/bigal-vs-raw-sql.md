@@ -1,3 +1,7 @@
+---
+description: When to use BigAl vs raw SQL, with a side-by-side translation table mapping common SQL queries to BigAl's fluent API.
+---
+
 # BigAl vs Raw SQL
 
 ## When to use BigAl

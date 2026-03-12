@@ -1,3 +1,7 @@
+---
+description: Create, update, and destroy records with RETURNING support, query projection, and ON CONFLICT upserts.
+---
+
 # CRUD Operations
 
 BigAl repositories provide `create()`, `update()`, and `destroy()` methods. All three return affected records

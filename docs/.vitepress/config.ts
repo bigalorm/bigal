@@ -1,11 +1,17 @@
 import { defineConfig } from 'vitepress';
 import llmstxt from 'vitepress-plugin-llms';
 
+const SITE_URL = 'https://bigalorm.github.io/bigal';
+const SITE_DESCRIPTION = 'A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js';
+
 export default defineConfig({
   title: 'BigAl',
-  description: 'A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js',
+  description: SITE_DESCRIPTION,
   base: '/bigal/',
   appearance: 'force-dark',
+  sitemap: {
+    hostname: SITE_URL,
+  },
   head: [
     ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
     ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
@@ -17,7 +23,25 @@ export default defineConfig({
       },
     ],
     ['link', { rel: 'llms-txt', href: '/bigal/llms.txt' }],
+    ['meta', { property: 'og:site_name', content: 'BigAl' }],
+    ['meta', { property: 'og:type', content: 'website' }],
+    ['meta', { name: 'twitter:card', content: 'summary' }],
   ],
+  transformPageData(pageData) {
+    const isHome = pageData.frontmatter.layout === 'home';
+    const title = isHome ? 'BigAl — PostgreSQL-optimized TypeScript ORM' : `${pageData.title} | BigAl`;
+    const description = pageData.frontmatter.description || SITE_DESCRIPTION;
+    const canonicalUrl = `${SITE_URL}/${pageData.relativePath}`.replace(/index\.md$/, '').replace(/\.md$/, '');
+
+    pageData.frontmatter.head ??= [];
+    pageData.frontmatter.head.push(
+      ['meta', { property: 'og:title', content: title }],
+      ['meta', { property: 'og:description', content: description }],
+      ['meta', { property: 'og:url', content: canonicalUrl }],
+      ['meta', { name: 'twitter:title', content: title }],
+      ['meta', { name: 'twitter:description', content: description }],
+    );
+  },
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/getting-started' },

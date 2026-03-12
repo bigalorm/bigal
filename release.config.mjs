@@ -12,7 +12,7 @@ export default {
       {
         preset: 'angular',
         releaseRules: [
-          { type: 'docs', release: 'patch' },
+          { type: 'docs', release: false },
           { type: 'feat', release: 'minor' },
           { type: 'fix', release: 'patch' },
           { type: 'test', release: 'patch' },

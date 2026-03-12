@@ -1,3 +1,7 @@
+---
+description: Install BigAl, define your first model with decorators, initialize a repository, and run type-safe PostgreSQL queries.
+---
+
 # Getting Started
 
 ## Install

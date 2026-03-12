@@ -1,3 +1,7 @@
+---
+description: Configure connection pools (postgres-pool, pg, Neon), read replicas, multiple databases, and debug logging.
+---
+
 # Configuration
 
 ## Connection pools

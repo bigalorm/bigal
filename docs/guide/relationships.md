@@ -1,3 +1,7 @@
+---
+description: Many-to-one, one-to-many, and many-to-many relationships with decorators, QueryResult type narrowing, and populate options.
+---
+
 # Relationships
 
 BigAl supports three relationship patterns via the `@column` decorator: many-to-one, one-to-many, and many-to-many.

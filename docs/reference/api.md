@@ -1,3 +1,7 @@
+---
+description: Complete API reference for BigAl — initialize(), Repository, ReadonlyRepository, query builder methods, subquery(), decorators, and types.
+---
+
 # API Reference
 
 All public exports from `bigal`.

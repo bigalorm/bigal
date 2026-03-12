@@ -1,3 +1,7 @@
+---
+description: Define PostgreSQL tables as TypeScript classes with decorators for columns, primary keys, relationships, and automatic timestamps.
+---
+
 # Models
 
 Models map TypeScript classes to PostgreSQL tables. Every model extends `Entity` and uses decorators for table and column configuration.

@@ -1,3 +1,7 @@
+---
+description: Map PostgreSQL views to readonly models with ReadonlyRepository. Supports inheritance, schema options, and all query features.
+---
+
 # Views and Readonly Repositories
 
 BigAl does not distinguish between tables and views. Both use the `@table()` decorator. Setting `readonly: true` causes

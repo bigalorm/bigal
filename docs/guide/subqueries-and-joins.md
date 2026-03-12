@@ -1,3 +1,7 @@
+---
+description: Type-safe subqueries for WHERE IN, EXISTS, and scalar comparisons. Model joins, subquery joins, aggregates, GROUP BY, and HAVING.
+---
+
 # Subqueries and Joins
 
 BigAl supports subqueries for WHERE clauses, scalar comparisons, and joins. All subqueries are type-safe and composable.

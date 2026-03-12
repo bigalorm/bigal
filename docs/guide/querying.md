@@ -1,3 +1,7 @@
+---
+description: Fluent query builder for find, findOne, and count with WHERE operators, JSONB querying, pagination, sorting, DISTINCT ON, and populate.
+---
+
 # Querying
 
 BigAl provides `findOne()`, `find()`, and `count()` methods on repositories. Queries use a fluent builder pattern —
