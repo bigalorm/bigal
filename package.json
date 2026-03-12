@@ -1,7 +1,7 @@
 {
   "name": "bigal",
   "version": "15.11.1",
-  "description": "A fast and lightweight orm for postgres and node.js, written in typescript.",
+  "description": "A type-safe PostgreSQL ORM for Node.js, written in TypeScript. Features a fluent query builder, decorator-based models, and immutable query state.",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -21,7 +21,14 @@
   "keywords": [
     "orm",
     "postgres",
-    "postgresql"
+    "postgresql",
+    "typescript",
+    "type-safe",
+    "query-builder",
+    "node",
+    "fluent-api",
+    "decorator",
+    "repository-pattern"
   ],
   "author": "Jim Geurts <jim@biacreations.com>",
   "license": "MIT",

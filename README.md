@@ -148,38 +148,19 @@ For detailed information about defining relationships and understanding the `Que
 ### Initialize repositories
 
 ```ts
-import {
-  initialize,
-  Repository,
-} from 'bigal';
+import { initialize, Repository } from 'bigal';
 import { Pool } from 'postgres-pool';
-import {
-  Category,
-  Product,
-  ProductCategory,
-  Store,
-} from './models';
+import { Category, Product, ProductCategory, Store } from './models';
 
 let pool: Pool;
 let readonlyPool: Pool;
 
-export function startup({
-  connectionString,
-  readonlyConnectionString,
-}: {
-  connectionString: string,
-  readonlyConnectionString: string,
-}) {
+export function startup({ connectionString, readonlyConnectionString }: { connectionString: string; readonlyConnectionString: string }) {
   pool = new Pool(connectionString);
   readonlyPool = new Pool(readonlyConnectionString);
 
   const repositoriesByName = initialize({
-    models: [
-      Category,
-      Product,
-      ProductCategory,
-      Store,
-    ],
+    models: [Category, Product, ProductCategory, Store],
     pool,
     readonlyPool,
   });
@@ -187,7 +168,7 @@ export function startup({
   let categoryRepository: Repository<Category>;
   let productRepository: Repository<Product>;
   let storeRepository: Repository<Store>;
-  for (const [modelName, repository] = Object.entries(repositoriesByName)) {
+  for (const [modelName, repository] of Object.entries(repositoriesByName)) {
     switch (modelName) {
       case 'Category':
         categoryRepository = repository;
@@ -205,7 +186,7 @@ export function startup({
     categoryRepository,
     productRepository,
     storeRepository,
-  }
+  };
 }
 
 export function shutdown() {
