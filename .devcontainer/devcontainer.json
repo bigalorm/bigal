@@ -7,9 +7,7 @@
   },
   "customizations": {
     "vscode": {
-      "extensions": [
-        "EditorConfig.EditorConfig"
-      ]
+      "extensions": ["EditorConfig.EditorConfig"]
     }
   },
   "postCreateCommand": "npm install"
