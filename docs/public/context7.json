@@ -3,5 +3,7 @@
   "description": "Type-safe PostgreSQL ORM for Node.js/TypeScript with fluent query builder, decorator-based models, and immutable query state.",
   "folders": ["docs/", "src/", "README.md"],
   "excludeFolders": ["internal/", "tests/", "node_modules/"],
-  "excludeFiles": ["*.test.ts", "*.spec.ts"]
+  "excludeFiles": ["*.test.ts", "*.spec.ts"],
+  "url": "https://context7.com/websites/bigalorm_github_io_bigal",
+  "public_key": "pk_zVEcoyB1XDzPT2mrbBDG3"
 }
