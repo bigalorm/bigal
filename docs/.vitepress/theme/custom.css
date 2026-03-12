@@ -1,0 +1,135 @@
+:root {
+  /* Core surfaces — hue 260 (blue-slate) */
+  --bigal-bg-deep: oklch(0.14 0.012 260); /* #1a1c2e */
+  --bigal-bg: oklch(0.17 0.012 260); /* #212336 */
+  --bigal-surface: oklch(0.21 0.015 260); /* #2a2d42 */
+  --bigal-surface-raised: oklch(0.25 0.015 260); /* #33364e */
+  --bigal-border: oklch(0.3 0.015 260); /* #3d4059 */
+
+  /* Text hierarchy */
+  --bigal-text: oklch(0.92 0.008 260); /* #e8e9f0 */
+  --bigal-text-muted: oklch(0.7 0.012 260); /* #a3a6b8 */
+  --bigal-text-faint: oklch(0.55 0.012 260); /* #7d8094 */
+
+  /* Accent — muted blue-slate */
+  --bigal-accent: oklch(0.62 0.14 250); /* #5b7ec9 */
+  --bigal-accent-hover: oklch(0.68 0.16 250); /* #7094e0 */
+  --bigal-accent-text: oklch(0.72 0.12 250); /* #8aa8e8 */
+
+  /* Warm counterpoint — amber/sand for warnings */
+  --bigal-warm: oklch(0.68 0.12 55); /* #c9a050 */
+
+  /* Code blocks */
+  --bigal-code-bg: oklch(0.12 0.014 260); /* #151728 */
+  --bigal-code-border: oklch(0.24 0.015 260); /* #2f3248 */
+
+  /* Typography */
+  --bigal-font-display: 'DM Sans', sans-serif;
+  --bigal-font-body: 'Source Sans 3', sans-serif;
+  --bigal-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Map to VitePress theme variables */
+.dark,
+:root {
+  --vp-c-bg: var(--bigal-bg);
+  --vp-c-bg-alt: var(--bigal-bg-deep);
+  --vp-c-bg-elv: var(--bigal-surface);
+  --vp-c-bg-soft: var(--bigal-surface);
+
+  --vp-c-text-1: var(--bigal-text);
+  --vp-c-text-2: var(--bigal-text-muted);
+  --vp-c-text-3: var(--bigal-text-faint);
+
+  --vp-c-brand-1: var(--bigal-accent);
+  --vp-c-brand-2: var(--bigal-accent-hover);
+  --vp-c-brand-3: var(--bigal-accent);
+  --vp-c-brand-soft: oklch(0.62 0.14 250 / 0.14);
+
+  --vp-c-border: var(--bigal-border);
+  --vp-c-divider: var(--bigal-border);
+  --vp-c-gutter: var(--bigal-bg-deep);
+
+  --vp-c-tip-1: var(--bigal-accent-text);
+  --vp-c-tip-soft: oklch(0.62 0.14 250 / 0.14);
+  --vp-c-warning-1: var(--bigal-warm);
+  --vp-c-warning-soft: oklch(0.68 0.12 55 / 0.14);
+
+  --vp-font-family-base: var(--bigal-font-body);
+  --vp-font-family-mono: var(--bigal-font-mono);
+
+  --vp-code-bg: var(--bigal-code-bg);
+  --vp-code-color: var(--bigal-text);
+
+  --vp-sidebar-bg-color: var(--bigal-bg-deep);
+  --vp-nav-bg-color: var(--bigal-bg);
+}
+
+/* Headings use display font */
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3,
+.vp-doc h4 {
+  font-family: var(--bigal-font-display);
+  font-weight: 600;
+}
+
+.vp-doc h1 {
+  font-weight: 700;
+}
+
+/* Code blocks — recessed dark wells */
+.vp-doc div[class*='language-'] {
+  background: var(--bigal-code-bg);
+  border: 1px solid var(--bigal-code-border);
+  border-radius: 8px;
+}
+
+.vp-doc div[class*='language-'] code {
+  font-family: var(--bigal-font-mono);
+  font-size: 0.875rem;
+  line-height: 1.7;
+}
+
+/* Hero section */
+.VPHero .name {
+  font-family: var(--bigal-font-display);
+}
+
+.VPHero .tagline {
+  font-family: var(--bigal-font-body);
+  color: var(--bigal-text-muted);
+}
+
+/* Move search from left side to right, just before the nav menu items */
+.VPNavBarSearch {
+  flex-grow: 1;
+  justify-content: flex-end;
+}
+
+/* Sidebar refinements */
+.VPSidebar {
+  font-family: var(--bigal-font-body);
+}
+
+/* Table styling */
+.vp-doc table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.vp-doc table th {
+  background: var(--bigal-surface);
+  font-family: var(--bigal-font-display);
+  font-weight: 600;
+}
+
+.vp-doc table td,
+.vp-doc table th {
+  border: 1px solid var(--bigal-border);
+  padding: 8px 12px;
+}
+
+.vp-doc table tr:nth-child(even) {
+  background: var(--bigal-bg-deep);
+}

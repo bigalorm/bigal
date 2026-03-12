@@ -69,7 +69,7 @@
     "build": "unbuild",
     "check:types": "tsgo --noEmit --skipLibCheck",
     "test": "npm run check:types && vitest run",
-    "lint:markdown": "markdownlint '**/*.md' --ignore '**/node_modules/**' --ignore '**/dist/**' --config=.github/linters/.markdown-lint.yml --fix",
+    "lint:markdown": "markdownlint '**/*.md' --ignore '**/node_modules/**' --ignore '**/dist/**' --ignore 'internal/**' --config=.github/linters/.markdown-lint.yml --fix",
     "lint:code": "oxlint --fix --fix-suggestions --deny-warnings",
     "lint": "npm run format && run-p lint:*",
     "format": "oxfmt --write .",
