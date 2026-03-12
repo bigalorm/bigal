@@ -2,6 +2,11 @@
 
 This file provides guidance for Claude Code when working on the BigAl project.
 
+## For Library Consumers
+
+If you are using BigAl in a project (not contributing to BigAl itself),
+install the agent skill: `npx skills add bigalorm/bigal`
+
 ## Project Overview
 
 BigAl is a type-safe PostgreSQL ORM for Node.js/TypeScript. It uses a fluent builder pattern for queries and provides strongly-typed results.

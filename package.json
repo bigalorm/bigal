@@ -35,7 +35,7 @@
   "bugs": {
     "url": "https://github.com/bigalorm/bigal/issues"
   },
-  "homepage": "https://github.com/bigalorm/bigal#readme",
+  "homepage": "https://bigalorm.github.io/bigal/",
   "engines": {
     "node": ">=20.11.0"
   },

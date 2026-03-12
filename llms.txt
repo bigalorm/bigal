@@ -8,24 +8,27 @@ Built exclusively for Postgres. Type-safe fluent query builder, decorator-based 
 
 ### Introduction
 
-- [Getting Started](/bigal/getting-started.md)
+- [Getting Started](https://bigalorm.github.io/bigal/getting-started)
 
 ### Guide
 
-- [Models](/bigal/guide/models.md)
-- [Querying](/bigal/guide/querying.md)
-- [CRUD Operations](/bigal/guide/crud-operations.md)
-- [Relationships](/bigal/guide/relationships.md)
-- [Subqueries and Joins](/bigal/guide/subqueries-and-joins.md)
-- [Views and Readonly Repositories](/bigal/guide/views.md)
+- [Models](https://bigalorm.github.io/bigal/guide/models)
+- [Querying](https://bigalorm.github.io/bigal/guide/querying)
+- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations)
+- [Relationships](https://bigalorm.github.io/bigal/guide/relationships)
+- [Subqueries and Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins)
+- [Views and Readonly Repositories](https://bigalorm.github.io/bigal/guide/views)
 
 ### Reference
 
-- [API Reference](/bigal/reference/api.md)
-- [Configuration](/bigal/reference/configuration.md)
+- [API Reference](https://bigalorm.github.io/bigal/reference/api)
+- [Configuration](https://bigalorm.github.io/bigal/reference/configuration)
 
 ### Advanced
 
-- [BigAl vs Raw SQL](/bigal/advanced/bigal-vs-raw-sql.md)
-- [Known Issues](/bigal/advanced/known-issues.md)
+- [BigAl vs Raw SQL](https://bigalorm.github.io/bigal/advanced/bigal-vs-raw-sql)
+- [Known Issues](https://bigalorm.github.io/bigal/advanced/known-issues)
 
+## Optional
+
+- [llms-full.txt](https://bigalorm.github.io/bigal/llms-full.txt): Complete documentation in a single file

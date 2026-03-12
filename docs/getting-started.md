@@ -80,6 +80,20 @@ const product = await productRepository.findOne().where({ id: 42 });
 const count = await productRepository.count().where({ sku: { '!': null } });
 ```
 
+## Using with AI assistants
+
+BigAl provides an agent skill for AI-powered development tools. Install it in your project to give
+your AI assistant BigAl-specific guidance:
+
+```sh
+npx skills add bigalorm/bigal
+```
+
+Machine-readable documentation is also available:
+
+- [llms.txt](/llms.txt) — structured overview
+- [llms-full.txt](/llms-full.txt) — complete documentation in a single file
+
 ## Next steps
 
 - [Models](/guide/models) — decorators, relationships, and Entity types

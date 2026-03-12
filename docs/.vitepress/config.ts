@@ -6,7 +6,6 @@ export default defineConfig({
   description: 'A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js',
   base: '/bigal/',
   appearance: 'force-dark',
-  srcExclude: ['relationships.md', 'subqueries-and-joins.md', 'views-and-readonly-repositories.md'],
   head: [
     ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
     ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
