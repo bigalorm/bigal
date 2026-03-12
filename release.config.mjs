@@ -18,6 +18,7 @@ export default {
           { type: 'test', release: 'patch' },
           { type: 'chore', release: 'patch' },
           { type: 'chore', scope: 'deps', release: false },
+          { type: 'chore', scope: 'docs', release: false },
         ],
         parserOpts: {
           // eslint-disable-next-line security/detect-unsafe-regex
