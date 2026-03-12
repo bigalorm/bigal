@@ -1,3 +1,5 @@
+## [15.11.3](https://github.com/bigalorm/bigal/compare/v15.11.2...v15.11.3) (2026-03-12)
+
 ## [15.11.2](https://github.com/bigalorm/bigal/compare/v15.11.1...v15.11.2) (2026-03-12)
 
 ## [15.11.1](https://github.com/bigalorm/bigal/compare/v15.11.0...v15.11.1) (2026-03-11)
