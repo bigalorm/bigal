@@ -22,3 +22,6 @@ nbproject
 typings
 .eslintcache
 coverage
+
+.claude/skills
+skills-lock.json
