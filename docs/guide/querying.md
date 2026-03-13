@@ -168,6 +168,24 @@ await repo.find().where({ bar: { a: { b: { c: 'value' } } } });
 // SQL: WHERE "bar"->'a'->'b'->>'c'=$1
 ```
 
+### Null checks
+
+Check if a JSONB property is null or not null:
+
+```ts
+await repo.find().where({ bar: { theme: null } });
+// SQL: WHERE "bar"->>'theme' IS NULL
+
+await repo.find().where({ bar: { theme: { '!': null } } });
+// SQL: WHERE "bar"->>'theme' IS NOT NULL
+```
+
+Note that `IS NULL` on a JSONB property is true both when the key is missing from the object and when it is
+explicitly set to `null`. This matches PostgreSQL's behavior — the `->>` operator returns `NULL` in both cases.
+
+Properties set to `undefined` in a where clause are silently ignored (standard JavaScript — `undefined` values are
+dropped by `Object.entries`). To query for missing or null properties, always use `null` explicitly.
+
 ### JSONB containment
 
 Combine `contains` with property access:
