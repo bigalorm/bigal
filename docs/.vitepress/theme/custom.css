@@ -101,10 +101,55 @@
   color: var(--bigal-text-muted);
 }
 
-/* Move search from left side to right, just before the nav menu items */
+/* Vite-style nav: title + links left, search + social right */
+.VPNavBarTitle .title {
+  color: var(--bigal-accent-text);
+  font-family: var(--bigal-font-display);
+  font-size: 1.375rem;
+  font-weight: 700;
+}
+
+.VPNavBarMenu {
+  order: -1;
+  padding-left: 16px;
+  font-size: 1.1rem;
+}
+
 .VPNavBarSearch {
   flex-grow: 1;
   justify-content: flex-end;
+}
+
+/* Full-width nav above sidebar (vite.dev style) —
+   !important needed to override VitePress scoped [data-v-*] selectors */
+@media (min-width: 960px) {
+  /* Target the wrapper div (not the <a> link which also has class .title) */
+  .VPNavBar.has-sidebar div.title {
+    position: static !important;
+    width: auto !important;
+    padding: 0 0 0 32px !important;
+    height: auto !important;
+    border-bottom: none !important;
+    background-color: var(--bigal-bg) !important;
+  }
+
+  /* Remove the sidebar-width divider border that VitePress puts
+     under the title link on has-sidebar pages, and restore full height
+     so the title text is vertically centered in the nav bar */
+  .VPNavBarTitle.has-sidebar a.title {
+    border-bottom: none !important;
+    padding-left: 0 !important;
+    height: var(--vp-nav-height, 64px) !important;
+  }
+
+  .VPNavBar.has-sidebar .content {
+    padding-left: 0 !important;
+    padding-right: 32px !important;
+  }
+
+  .VPNavBar.has-sidebar .divider {
+    padding-left: 0 !important;
+  }
 }
 
 /* Sidebar refinements */
@@ -132,4 +177,28 @@
 
 .vp-doc table tr:nth-child(even) {
   background: var(--bigal-bg-deep);
+}
+
+/* Thin scrollbars (vite.dev style) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bigal-border) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--bigal-border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--bigal-text-faint);
 }

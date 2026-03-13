@@ -1,7 +1,6 @@
 ---
 layout: home
 hero:
-  name: BigAl
   text: PostgreSQL-optimized TypeScript ORM
   tagline: Built exclusively for Postgres. Type-safe fluent query builder, decorator-based models, and queries tuned for Postgres performance.
   actions:
