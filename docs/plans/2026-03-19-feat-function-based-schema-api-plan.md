@@ -1,10 +1,10 @@
 ---
-title: "feat: Function-Based Schema API"
+title: 'feat: Function-Based Schema API'
 type: feat
 date: 2026-03-19
 ---
 
-# Function-Based Schema API
+## Function-Based Schema API
 
 ## Enhancement Summary
 
@@ -24,13 +24,17 @@ The plan went through three design iterations:
 
 ## Overview
 
-Replace BigAl's decorator-based model definition system with a function-based schema API using PostgreSQL-native column builder functions. Types are inferred directly from the schema definition — no separate interfaces, no `extends Entity`, no decorator flags required.
+Replace BigAl's decorator-based model definition system with a function-based schema API using PostgreSQL-native column builder functions.
+Types are inferred directly from the schema definition — no separate interfaces, no `extends Entity`, no decorator flags required.
 
 ## Problem Statement
 
-BigAl's decorators use the legacy TypeScript `experimentalDecorators` signature `(target, propertyName)`. Modern build tools (esbuild, SWC, Vite) increasingly apply TC39 decorator transforms by default, which pass `(value, DecoratorContext)` instead. This causes BigAl to crash at class load time.
+BigAl's decorators use the legacy TypeScript `experimentalDecorators` signature `(target, propertyName)`. Modern build tools (esbuild, SWC, Vite)
+increasingly apply TC39 decorator transforms by default, which pass `(value, DecoratorContext)` instead.
+This causes BigAl to crash at class load time.
 
 **Confirmed failures in production:**
+
 - Playwright e2e tests (transpiler applies TC39 transforms regardless of tsconfig)
 - Serverless Framework / Lambda (esbuild applies TC39 transforms)
 
@@ -43,11 +47,7 @@ A function-based `table()` API with PostgreSQL-native column builders that infer
 ### Consumer API
 
 ```typescript
-import {
-  table, serial, text, varchar, integer, real, boolean,
-  jsonb, uuid, textArray, timestamptz,
-  belongsTo, hasMany, createdAt, updatedAt,
-} from 'bigal';
+import { table, serial, text, varchar, integer, real, boolean, jsonb, uuid, textArray, timestamptz, belongsTo, hasMany, createdAt, updatedAt } from 'bigal';
 
 // Shared base columns — plain objects, spread them in
 const modelBase = {
@@ -111,32 +111,33 @@ export const ProductCategory = table('product__category', {
 
 Lean into Postgres. Each builder maps 1:1 to a PostgreSQL column type:
 
-| Builder | PostgreSQL Type | TypeScript Type |
-|---------|----------------|-----------------|
-| `serial(name)` | SERIAL | `number` (notNull + hasDefault implied) |
-| `bigserial(name)` | BIGSERIAL | `number` |
-| `text(name)` | TEXT | `string \| null` |
-| `varchar(name, { length })` | VARCHAR(n) | `string \| null` |
-| `integer(name)` | INTEGER | `number \| null` |
-| `bigint(name)` | BIGINT | `number \| null` |
-| `smallint(name)` | SMALLINT | `number \| null` |
-| `real(name)` | REAL | `number \| null` |
-| `doublePrecision(name)` | DOUBLE PRECISION | `number \| null` |
-| `boolean(name)` | BOOLEAN | `boolean \| null` |
-| `timestamp(name)` | TIMESTAMP | `Date \| null` |
-| `timestamptz(name)` | TIMESTAMPTZ | `Date \| null` |
-| `date(name)` | DATE | `Date \| null` |
-| `json<T>(name)` | JSON | `T \| null` |
-| `jsonb<T>(name)` | JSONB | `T \| null` |
-| `uuid(name)` | UUID | `string \| null` |
-| `bytea(name)` | BYTEA | `Buffer \| null` |
-| `textArray(name)` | TEXT[] | `string[] \| null` |
-| `integerArray(name)` | INTEGER[] | `number[] \| null` |
-| `booleanArray(name)` | BOOLEAN[] | `boolean[] \| null` |
-| `createdAt(name?)` | TIMESTAMPTZ | `Date` (notNull, auto-set on insert) |
-| `updatedAt(name?)` | TIMESTAMPTZ | `Date` (notNull, auto-set on insert/update) |
+| Builder                     | PostgreSQL Type  | TypeScript Type                             |
+| --------------------------- | ---------------- | ------------------------------------------- |
+| `serial(name)`              | SERIAL           | `number` (notNull + hasDefault implied)     |
+| `bigserial(name)`           | BIGSERIAL        | `number`                                    |
+| `text(name)`                | TEXT             | `string \| null`                            |
+| `varchar(name, { length })` | VARCHAR(n)       | `string \| null`                            |
+| `integer(name)`             | INTEGER          | `number \| null`                            |
+| `bigint(name)`              | BIGINT           | `number \| null`                            |
+| `smallint(name)`            | SMALLINT         | `number \| null`                            |
+| `real(name)`                | REAL             | `number \| null`                            |
+| `doublePrecision(name)`     | DOUBLE PRECISION | `number \| null`                            |
+| `boolean(name)`             | BOOLEAN          | `boolean \| null`                           |
+| `timestamp(name)`           | TIMESTAMP        | `Date \| null`                              |
+| `timestamptz(name)`         | TIMESTAMPTZ      | `Date \| null`                              |
+| `date(name)`                | DATE             | `Date \| null`                              |
+| `json<T>(name)`             | JSON             | `T \| null`                                 |
+| `jsonb<T>(name)`            | JSONB            | `T \| null`                                 |
+| `uuid(name)`                | UUID             | `string \| null`                            |
+| `bytea(name)`               | BYTEA            | `Buffer \| null`                            |
+| `textArray(name)`           | TEXT[]           | `string[] \| null`                          |
+| `integerArray(name)`        | INTEGER[]        | `number[] \| null`                          |
+| `booleanArray(name)`        | BOOLEAN[]        | `boolean[] \| null`                         |
+| `createdAt(name?)`          | TIMESTAMPTZ      | `Date` (notNull, auto-set on insert)        |
+| `updatedAt(name?)`          | TIMESTAMPTZ      | `Date` (notNull, auto-set on insert/update) |
 
 **Chain methods on all builders:**
+
 - `.notNull()` — removes `null` from the type
 - `.default(value)` — makes column optional on insert
 - `.primaryKey()` — implies `.notNull()`, makes column optional on insert
@@ -150,23 +151,25 @@ Using the universal vocabulary from Rails/Eloquent/Ecto:
 
 ```typescript
 // Many-to-one: this table has the FK column
-belongsTo(() => Store, 'store_id')
+belongsTo(() => Store, 'store_id');
 // $inferSelect type: number (the FK value)
 // $inferInsert type: number (required by default)
 // Carries Store phantom type for Populated<T>
 
 // One-to-many: other table has the FK
-hasMany(() => Product).via('store')
+hasMany(() => Product).via('store');
 // Excluded from $inferSelect and $inferInsert
 // Populated via .populate()
 
 // Many-to-many: via junction table
-hasMany(() => Category).through(() => ProductCategory).via('product')
+hasMany(() => Category)
+  .through(() => ProductCategory)
+  .via('product');
 // Excluded from $inferSelect and $inferInsert
 // Populated via .populate()
 
 // Circular references: arrow functions defer evaluation
-belongsTo(() => Store, 'store_id')  // () => Store resolves lazily
+belongsTo(() => Store, 'store_id'); // () => Store resolves lazily
 ```
 
 ### Type Inference Engine (Drizzle-Inspired)
@@ -194,11 +197,13 @@ interface ColumnBuilder<TType, TNullability, TDefault, TPrimaryKey, TAutoSet> {
 ```
 
 **`$inferSelect`** maps each column:
+
 - Scalar: `notNull === true ? TType : TType | null`
 - `belongsTo`: the FK type (`number`)
 - `hasMany`: excluded (not a database column)
 
 **`$inferInsert`** splits columns into required and optional:
+
 - **Required:** `notNull === true && hasDefault === false && !isPrimaryKey && !autoSet`
 - **Optional:** everything else (nullable, has default, primary key, auto-set)
 
@@ -229,9 +234,7 @@ const product = await ProductRepo.create({ name: 'Widget', priceCents: 999, stor
 // product: ProductSelect
 
 // populate — changes store from number to QueryResult<StoreSelect>
-const populated = await ProductRepo.findOne()
-  .where({ id: 42 })
-  .populate('store');
+const populated = await ProductRepo.findOne().where({ id: 42 }).populate('store');
 // populated.store is QueryResult<StoreSelect> (not number)
 
 // populate with select
@@ -242,6 +245,7 @@ const populated = await ProductRepo.findOne()
 ```
 
 **Key type flow:**
+
 - `WhereQuery<T>` works on `T = typeof Product.$inferSelect`
 - `Populated<T, 'store', StoreSelect>` changes `store` from `number` to `QueryResult<StoreSelect>`
 - `CreateUpdateParams<T>` works on `typeof Product.$inferInsert`, FKs accept `number | { id: number }`
@@ -251,18 +255,20 @@ const populated = await ProductRepo.findOne()
 ```typescript
 const bigal = createBigAl({
   pool,
-  readonlyPool,                    // optional, defaults to pool
+  readonlyPool, // optional, defaults to pool
   models: [Product, Store, Category, ProductCategory],
-  connections: {                   // optional named connections
+  connections: {
+    // optional named connections
     audit: { pool: auditPool },
   },
-  onQuery({ sql, params, duration, error, model, operation }) {  // optional
+  onQuery({ sql, params, duration, error, model, operation }) {
+    // optional
     logger.debug({ sql, params, duration, model, operation });
   },
 });
 
-const ProductRepo = bigal.getRepository(Product);  // IRepository<ProductSelect>
-const StoreRepo = bigal.getRepository(Store);       // IRepository<StoreSelect>
+const ProductRepo = bigal.getRepository(Product); // IRepository<ProductSelect>
+const StoreRepo = bigal.getRepository(Store); // IRepository<StoreSelect>
 ```
 
 **Batch registration with eager validation.** All models passed upfront. Relationship references validated at construction time. No lazy resolution, no `validate()` method — just fail fast.
@@ -278,7 +284,8 @@ const StoreRepo = bigal.getRepository(Store);       // IRepository<StoreSelect>
 **Column builders:**
 
 - [ ] Implement `ColumnBuilder` base with phantom `_` type and chain methods (`.notNull()`, `.default()`, `.primaryKey()`, `.unique()`)
-- [ ] Implement PostgreSQL-native builders: `serial`, `bigserial`, `text`, `varchar`, `integer`, `bigint`, `smallint`, `real`, `doublePrecision`, `boolean`, `timestamp`, `timestamptz`, `date`, `json`, `jsonb`, `uuid`, `bytea`, `textArray`, `integerArray`, `booleanArray`
+- [ ] Implement PostgreSQL-native builders: `serial`, `bigserial`, `text`, `varchar`, `integer`, `bigint`, `smallint`, `real`,
+      `doublePrecision`, `boolean`, `timestamp`, `timestamptz`, `date`, `json`, `jsonb`, `uuid`, `bytea`, `textArray`, `integerArray`, `booleanArray`
 - [ ] Implement convenience builders: `createdAt`, `updatedAt` (auto-set, notNull)
 - [ ] `serial` / `bigserial` imply notNull + hasDefault
 - [ ] `primaryKey()` implies notNull + hasDefault
@@ -351,6 +358,7 @@ const StoreRepo = bigal.getRepository(Store);       // IRepository<StoreSelect>
 - [ ] `src/metadata/MetadataStorage.ts`, `src/metadata/index.ts`
 
 **Success criteria:**
+
 - `table('products', {...})` compiles and produces correct metadata + phantom types
 - `$inferSelect` and `$inferInsert` match expected types for all test models
 - `createBigAl({ pool, models: [...] })` registers all models with eager validation
@@ -396,6 +404,7 @@ if (onQuery) {
 ```
 
 **Tasks:**
+
 - [ ] Add `onQuery` to `createBigAl` options
 - [ ] Read `DEBUG_BIGAL` once at startup — use as default `onQuery` if none provided
 - [ ] Instrument all query paths (find, findOne, count, create, update, destroy)
@@ -404,6 +413,7 @@ if (onQuery) {
 - [ ] Document that `params` may contain sensitive data
 
 **Success criteria:**
+
 - Every query fires `onQuery` with accurate data
 - Zero overhead when `onQuery` not provided
 - `DEBUG_BIGAL=true` still works
@@ -413,6 +423,7 @@ if (onQuery) {
 ### Phase 3: Documentation and Migration Tooling
 
 **Tasks:**
+
 - [ ] Migration guide (`docs/guide/migration-v16.md`) with before/after for every pattern
 - [ ] Migration skill (Claude Code) that converts decorator models to `table()` calls
 - [ ] Complete docs rewrite (see Documentation Plan below)
@@ -428,23 +439,28 @@ if (onQuery) {
 These exist today and consumers depend on them. Defined inline in the table definition:
 
 ```typescript
-export const Product = table('products', {
-  ...modelBase,
-  name: text('name').notNull(),
-  // ...columns
-}, {
-  hooks: {
-    beforeCreate(values) {
-      return { ...values, slug: slugify(values.name) };
-    },
-    beforeUpdate(values) {
-      return { ...values, updatedBy: getCurrentUserId() };
+export const Product = table(
+  'products',
+  {
+    ...modelBase,
+    name: text('name').notNull(),
+    // ...columns
+  },
+  {
+    hooks: {
+      beforeCreate(values) {
+        return { ...values, slug: slugify(values.name) };
+      },
+      beforeUpdate(values) {
+        return { ...values, updatedBy: getCurrentUserId() };
+      },
     },
   },
-});
+);
 ```
 
-The `ModelHooks<T>` interface defines all 7 slots for forward compatibility, but only `beforeCreate` and `beforeUpdate` are wired in v16.0. Remaining hooks (`afterCreate`, `afterUpdate`, `beforeDestroy`, `afterDestroy`, `afterFind`) ship in v16.1+.
+The `ModelHooks<T>` interface defines all 7 slots for forward compatibility, but only `beforeCreate` and `beforeUpdate` are wired in v16.0.
+Remaining hooks (`afterCreate`, `afterUpdate`, `beforeDestroy`, `afterDestroy`, `afterFind`) ship in v16.1+.
 
 ---
 
@@ -512,19 +528,19 @@ Per performance oracle review (net positive):
 
 ## Documentation Plan
 
-| Document | Action | Priority |
-|----------|--------|----------|
-| `docs/guide/models.md` | Complete rewrite — `table()` API with Postgres-native builders | P0 |
-| `docs/guide/migration-v16.md` | New — step-by-step upgrade guide | P0 |
-| `docs/reference/api.md` | Complete rewrite — new public API surface | P0 |
-| `docs/reference/configuration.md` | Update — `createBigAl` options, `onQuery` | P0 |
-| `README.md` | Update — quick start, examples | P0 |
-| `docs/guide/crud-operations.md` | Update — remove .toJSON(), update init | P1 |
-| `docs/guide/relationships.md` | Update — `belongsTo`/`hasMany` syntax | P1 |
-| `docs/guide/querying.md` | Update — model references | P1 |
-| `docs/advanced/known-issues.md` | Update — remove NotEntity, update DEBUG_BIGAL | P1 |
-| context7 documentation | Update | P1 |
-| BigAl agent skill | Update | P1 |
+| Document                          | Action                                                         | Priority |
+| --------------------------------- | -------------------------------------------------------------- | -------- |
+| `docs/guide/models.md`            | Complete rewrite — `table()` API with Postgres-native builders | P0       |
+| `docs/guide/migration-v16.md`     | New — step-by-step upgrade guide                               | P0       |
+| `docs/reference/api.md`           | Complete rewrite — new public API surface                      | P0       |
+| `docs/reference/configuration.md` | Update — `createBigAl` options, `onQuery`                      | P0       |
+| `README.md`                       | Update — quick start, examples                                 | P0       |
+| `docs/guide/crud-operations.md`   | Update — remove .toJSON(), update init                         | P1       |
+| `docs/guide/relationships.md`     | Update — `belongsTo`/`hasMany` syntax                          | P1       |
+| `docs/guide/querying.md`          | Update — model references                                      | P1       |
+| `docs/advanced/known-issues.md`   | Update — remove NotEntity, update DEBUG_BIGAL                  | P1       |
+| context7 documentation            | Update                                                         | P1       |
+| BigAl agent skill                 | Update                                                         | P1       |
 
 ---
 

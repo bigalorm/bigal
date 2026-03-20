@@ -10,15 +10,7 @@ import type { SelectAggregateExpression } from './query/SelectBuilder.js';
 import type { HavingCondition, SubqueryBuilderLike } from './query/Subquery.js';
 import { ScalarSubquery, SubqueryBuilder } from './query/Subquery.js';
 import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types/index.js';
-
-// Valid PostgreSQL identifier: starts with letter or underscore, contains letters, digits, underscores, or dots (for alias.column notation)
-const VALID_SQL_IDENTIFIER = /^[A-Z_a-z][\w.]*$/;
-
-function assertValidSqlIdentifier(value: string, context: string): void {
-  if (!VALID_SQL_IDENTIFIER.test(value)) {
-    throw new Error(`Invalid SQL identifier for ${context}: "${value}". Identifiers must start with a letter or underscore and contain only letters, numbers, underscores, and dots.`);
-  }
-}
+import { assertValidSqlIdentifier } from './utils/index.js';
 
 interface QueryAndParams {
   query: string;

@@ -5,15 +5,20 @@
 
 ## What We're Building
 
-A major version of BigAl that replaces the decorator-based model definition system with a function-based schema API. This eliminates the dependency on TypeScript's `experimentalDecorators` compiler flag, which breaks under TC39 decorator transforms used by modern build tools (Playwright, serverless framework/esbuild, Vite, SWC).
+A major version of BigAl that replaces the decorator-based model definition system with a function-based schema API.
+This eliminates the dependency on TypeScript's `experimentalDecorators` compiler flag, which breaks under TC39 decorator transforms
+used by modern build tools (Playwright, serverless framework/esbuild, Vite, SWC).
 
-This is a breaking change that also bundles several other modernizations: dropping the Entity base class, always returning plain objects, expanding lifecycle hooks, simplifying initialization, and adding logging/observability support.
+This is a breaking change that also bundles several other modernizations: dropping the Entity base class, always returning plain objects,
+expanding lifecycle hooks, simplifying initialization, and adding logging/observability support.
 
 ## Why This Approach
 
 ### The Problem
 
-BigAl's decorators use the legacy TypeScript `experimentalDecorators` signature `(target, propertyName)`. When a consumer's build tool applies TC39 decorator transforms instead (which is increasingly the default), BigAl receives `(undefined, DecoratorContext)` and crashes at class load time. This has been hit in production with:
+BigAl's decorators use the legacy TypeScript `experimentalDecorators` signature `(target, propertyName)`.
+When a consumer's build tool applies TC39 decorator transforms instead (which is increasingly the default),
+BigAl receives `(undefined, DecoratorContext)` and crashes at class load time. This has been hit in production with:
 
 - **Playwright e2e tests** — transpiler applies TC39 transforms regardless of tsconfig
 - **Serverless framework (Lambda)** — esbuild applies TC39 transforms
@@ -29,13 +34,15 @@ The root cause is at `snakeCase()` calling `.match()` on a `DecoratorContext` ob
 
 ### Why Not Dual-Mode
 
-Supporting both decorator styles adds complexity without moving toward the future. If we're going to do a breaking change, we should do it once and land on the right foundation rather than carry two code paths indefinitely.
+Supporting both decorator styles adds complexity without moving toward the future. If we're going to do a breaking change,
+we should do it once and land on the right foundation rather than carry two code paths indefinitely.
 
 ## Key Decisions
 
 ### 1. Function-based schema definitions replace decorators
 
 **Before (decorators):**
+
 ```typescript
 @table({ name: 'products' })
 export class Product extends Entity {
@@ -54,6 +61,7 @@ export class Product extends Entity {
 ```
 
 **After (function-based, conceptual — exact API to be designed in planning):**
+
 ```typescript
 import { defineModel, column, primaryColumn, createDateColumn } from 'bigal';
 
@@ -70,7 +78,8 @@ export const Product = defineModel({
 
 ### 2. Drop the Entity base class entirely
 
-No more `extends Entity`. Models are schema definition objects, not classes. The abstract `id` requirement moves to the type system via the `defineModel` return type. `NotEntity<T>` wrapper for JSON columns with `id` fields also goes away.
+No more `extends Entity`. Models are schema definition objects, not classes. The abstract `id` requirement moves to the type system
+via the `defineModel` return type. `NotEntity<T>` wrapper for JSON columns with `id` fields also goes away.
 
 ### 3. Always return plain objects (drop `.toJSON()`)
 
@@ -94,7 +103,9 @@ Hooks are defined inside the model schema definition. The full set of lifecycle 
 ```typescript
 export const Product = defineModel({
   name: 'products',
-  columns: { /* ... */ },
+  columns: {
+    /* ... */
+  },
   hooks: {
     beforeCreate(values) {
       return { ...values, slug: slugify(values.name) };
@@ -108,9 +119,11 @@ export const Product = defineModel({
 
 ### 5. Simplify initialize()
 
-Rethink the initialization API. The current approach requires passing all model class constructors as an array so decorators are evaluated. With function-based schemas, metadata is captured at definition time — no deferred evaluation needed.
+Rethink the initialization API. The current approach requires passing all model class constructors as an array so decorators are evaluated.
+With function-based schemas, metadata is captured at definition time — no deferred evaluation needed.
 
 **Conceptual direction:**
+
 ```typescript
 import { createBigAl } from 'bigal';
 
@@ -125,6 +138,7 @@ const StoreRepo = bigal.register(Store);
 ```
 
 Or auto-registration by passing schemas directly:
+
 ```typescript
 const { Product: ProductRepo, Store: StoreRepo } = createBigAl({
   pool,
@@ -139,6 +153,7 @@ Exact API to be designed in planning.
 Currently BigAl has zero hooks for logging, tracing, or query observation. The `PoolLike` interface only exposes `query(text, values)`. This major version should add first-class observability:
 
 **Options to explore in planning:**
+
 - **Query event hooks:** `onQuery(sql, params, durationMs)` callback on the BigAl instance
 - **Middleware/interceptor pattern:** Wrap query execution with before/after hooks
 - **OpenTelemetry-compatible spans:** Emit trace spans for each query automatically
@@ -153,6 +168,7 @@ Provide a BigAl migration skill (Claude Code skill or codemod) that automaticall
 ### 8. Documentation updates
 
 All documentation must be updated as part of this effort:
+
 - **Docs site** (VitePress at `/docs`)
 - **context7** documentation for AI consumers
 - **README.md**
@@ -161,11 +177,15 @@ All documentation must be updated as part of this effort:
 
 ## Open Questions
 
-1. **Exact `defineModel` return type** — What does the model definition object look like at the type level? How does it encode column types, relationships, and optionality for `Insertable<T>` / `Selectable<T>` / `Updateable<T>` utility types?
+1. **Exact `defineModel` return type** — What does the model definition object look like at the type level?
+   How does it encode column types, relationships, and optionality for `Insertable<T>` / `Selectable<T>` / `Updateable<T>` utility types?
 
-2. **Relationship syntax** — How do `model` (many-to-one), `collection` (one-to-many), and `through` (many-to-many) relationships work in the function-based API? Circular references need lazy evaluation (functions).
+2. **Relationship syntax** — How do `model` (many-to-one), `collection` (one-to-many), and `through` (many-to-many) relationships work
+   in the function-based API? Circular references need lazy evaluation (functions).
 
-3. **Inheritance / shared columns** — Current pattern uses class inheritance (e.g., `BaseModel` with `id`, `createdAt`, `updatedAt`). Function-based equivalent could be object spread: `columns: { ...baseColumns, name: column(...) }`. Need to validate this works with the type system.
+3. **Inheritance / shared columns** — Current pattern uses class inheritance (e.g., `BaseModel` with `id`, `createdAt`, `updatedAt`).
+   Function-based equivalent could be object spread: `columns: { ...baseColumns, name: column(...) }`.
+   Need to validate this works with the type system.
 
 4. **`afterFind` hook semantics** — Does it receive raw rows or already-typed objects? Can it change the return type? Should it run on `findOne` results too?
 

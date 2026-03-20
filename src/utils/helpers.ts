@@ -1,3 +1,12 @@
+// Valid PostgreSQL identifier: starts with letter or underscore, contains letters, digits, underscores, or dots (for alias.column notation)
+const VALID_SQL_IDENTIFIER = /^[A-Z_a-z][\w.]*$/;
+
+export function assertValidSqlIdentifier(value: string, context: string): void {
+  if (!VALID_SQL_IDENTIFIER.test(value)) {
+    throw new Error(`Invalid SQL identifier for ${context}: "${value}". Identifiers must start with a letter or underscore and contain only letters, numbers, underscores, and dots.`);
+  }
+}
+
 const CASE_SPLIT_PATTERN = /\p{Lu}?\p{Ll}+|[0-9]+|\p{Lu}+(?!\p{Ll})|\p{Emoji_Presentation}|\p{Extended_Pictographic}|\p{L}+/gu;
 
 /**
