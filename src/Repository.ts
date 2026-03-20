@@ -114,7 +114,22 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
             onConflict: options?.onConflict,
           });
 
+          const onQuery = modelInstance._onQuery;
+          let startTime: number | undefined;
+          if (onQuery) {
+            startTime = performance.now();
+          }
+
           const results = await modelInstance._pool.query<Partial<QueryResult<T>>>(query, params);
+
+          if (onQuery) {
+            try {
+              onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance.model.tableName, operation: 'create' });
+            } catch {
+              // Swallow — observability must not crash queries
+            }
+          }
+
           if (returnRecords) {
             if (isArray) {
               const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(results.rows) : modelInstance._buildInstances(results.rows);
@@ -222,7 +237,21 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
             returnSelect,
           });
 
+          const onQuery = modelInstance._onQuery;
+          let startTime: number | undefined;
+          if (onQuery) {
+            startTime = performance.now();
+          }
+
           const results = await modelInstance._pool.query<Partial<QueryResult<T>>>(query, params);
+
+          if (onQuery) {
+            try {
+              onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance.model.tableName, operation: 'update' });
+            } catch {
+              // Swallow — observability must not crash queries
+            }
+          }
 
           if (returnRecords) {
             const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(results.rows) : modelInstance._buildInstances(results.rows);
@@ -309,7 +338,21 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
             returnSelect,
           });
 
+          const onQuery = modelInstance._onQuery;
+          let startTime: number | undefined;
+          if (onQuery) {
+            startTime = performance.now();
+          }
+
           const queryResult = await modelInstance._pool.query<Partial<QueryResult<T>>>(query, params);
+
+          if (onQuery) {
+            try {
+              onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance.model.tableName, operation: 'destroy' });
+            } catch {
+              // Swallow — observability must not crash queries
+            }
+          }
 
           if (returnRecords) {
             const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(queryResult.rows) : modelInstance._buildInstances(queryResult.rows);
