@@ -70,6 +70,16 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
     throw new Error('At least one model must be provided');
   }
 
+  // DEBUG_BIGAL fallback: read once at construction time
+  const resolvedOnQuery: OnQueryCallback | undefined =
+    onQuery ??
+    (process.env.DEBUG_BIGAL?.toLowerCase() === 'true'
+      ? (event) => {
+          // eslint-disable-next-line no-console
+          console.log(`BigAl [${event.operation}] ${event.model}: ${event.sql}`, event.params);
+        }
+      : undefined);
+
   const repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>> = {};
   const repositoriesByTableName = new Map<string, IReadonlyRepository<Entity> | IRepository<Entity>>();
 
@@ -99,6 +109,7 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
         repositoriesByModelNameLowered,
         pool: modelPool,
         readonlyPool: modelReadonlyPool,
+        onQuery: resolvedOnQuery,
       });
     } else {
       repository = new Repository({
@@ -107,6 +118,7 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
         repositoriesByModelNameLowered,
         pool: modelPool,
         readonlyPool: modelReadonlyPool,
+        onQuery: resolvedOnQuery,
       });
     }
 
@@ -118,9 +130,6 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
   for (const tableDef of models) {
     validateRelationships(tableDef, repositoriesByModelNameLowered);
   }
-
-  // Store onQuery for Phase 2 instrumentation
-  void onQuery;
 
   return {
     getRepository<TName extends string, TSchema extends SchemaDefinition>(tableDef: TableDefinition<TName, TSchema>): BigAlRepository<InferSelect<TSchema>> {

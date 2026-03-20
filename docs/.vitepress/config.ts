@@ -68,6 +68,7 @@ export default defineConfig({
           { text: 'Relationships', link: '/guide/relationships' },
           { text: 'Subqueries & Joins', link: '/guide/subqueries-and-joins' },
           { text: 'Views', link: '/guide/views' },
+          { text: 'Migrating to v16', link: '/guide/migration-v16' },
         ],
       },
       {

@@ -1,3 +1,4 @@
+import type { OnQueryCallback } from './createBigAl.js';
 import type { Entity, EntityFieldValue, EntityStatic } from './Entity.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
@@ -34,6 +35,7 @@ export interface IRepositoryOptions<T extends Entity> {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   pool: PoolLike;
   readonlyPool?: PoolLike;
+  onQuery?: OnQueryCallback;
 }
 
 interface Populate {
@@ -64,16 +66,19 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
   protected _repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
 
+  protected _onQuery: OnQueryCallback | undefined;
+
   protected _floatProperties: string[] = [];
 
   protected _intProperties: string[] = [];
 
-  public constructor({ modelMetadata, type, pool, readonlyPool, repositoriesByModelNameLowered }: IRepositoryOptions<T>) {
+  public constructor({ modelMetadata, type, pool, readonlyPool, repositoriesByModelNameLowered, onQuery }: IRepositoryOptions<T>) {
     this._modelMetadata = modelMetadata;
     this._type = type;
     this._pool = pool;
     this._readonlyPool = readonlyPool ?? pool;
     this._repositoriesByModelNameLowered = repositoriesByModelNameLowered;
+    this._onQuery = onQuery;
 
     for (const column of modelMetadata.columns) {
       if ((column as ColumnTypeMetadata).type === 'float') {
@@ -279,8 +284,23 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             joins,
           });
 
+          const onQuery = modelInstance._onQuery;
+          let startTime: number | undefined;
+          if (onQuery) {
+            startTime = performance.now();
+          }
+
           const pool = poolOverride ?? modelInstance._readonlyPool;
           const results = await pool.query<Partial<QueryResult<T>>>(query, params);
+
+          if (onQuery) {
+            try {
+              onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance._modelMetadata.tableName, operation: 'findOne' });
+            } catch {
+              // Swallow — observability must not crash queries
+            }
+          }
+
           const firstResult = results.rows[0];
           if (firstResult) {
             const result = returnAsPlainObjects ? modelInstance._buildPlainObject(firstResult) : modelInstance._buildInstance(firstResult);
@@ -580,8 +600,22 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             distinctOn: distinctOnColumns,
           });
 
+          const onQuery = modelInstance._onQuery;
+          let startTime: number | undefined;
+          if (onQuery) {
+            startTime = performance.now();
+          }
+
           const pool = poolOverride ?? modelInstance._readonlyPool;
           const results = await pool.query<Partial<QueryResult<T>> & { __total_count__?: string }>(query, params);
+
+          if (onQuery) {
+            try {
+              onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance._modelMetadata.tableName, operation: 'find' });
+            } catch {
+              // Swallow — observability must not crash queries
+            }
+          }
 
           let totalCount = 0;
           if (includeCount && results.rows.length > 0 && results.rows[0]?.__total_count__ !== undefined) {
@@ -684,8 +718,22 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             where,
           });
 
+          const onQuery = modelInstance._onQuery;
+          let startTime: number | undefined;
+          if (onQuery) {
+            startTime = performance.now();
+          }
+
           const pool = poolOverride ?? modelInstance._readonlyPool;
           const result = await pool.query<{ count: string }>(query, params);
+
+          if (onQuery) {
+            try {
+              onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance._modelMetadata.tableName, operation: 'count' });
+            } catch {
+              // Swallow — observability must not crash queries
+            }
+          }
 
           const firstResult = result.rows[0];
           const originalValue = firstResult ? firstResult.count : 0;

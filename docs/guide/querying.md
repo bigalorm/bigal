@@ -4,8 +4,9 @@ description: Fluent query builder for find, findOne, and count with WHERE operat
 
 # Querying
 
-BigAl provides `findOne()`, `find()`, and `count()` methods on repositories. Queries use a fluent builder pattern —
-each method returns a new immutable instance, and queries are `PromiseLike` so you can `await` them directly.
+BigAl provides `findOne()`, `find()`, and `count()` methods on repositories. Queries use a fluent
+builder pattern -- each method returns a new immutable instance, and queries are `PromiseLike` so you
+can `await` them directly.
 
 ## findOne
 
@@ -263,14 +264,8 @@ const product = await productRepository
   .where({ id: 42 })
   .populate('store', { select: ['name'] });
 
-// product.store is the full Store entity
+// product.store is the full Store entity (not just the FK number)
 console.log(product.store.name);
 ```
 
-## toJSON
-
-Return plain objects without class prototypes:
-
-```ts
-const product = await productRepository.findOne().where({ id: 42 }).toJSON();
-```
+All query results are plain objects -- no `.toJSON()` conversion needed.

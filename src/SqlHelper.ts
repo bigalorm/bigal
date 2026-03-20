@@ -173,11 +173,6 @@ export function getSelectQueryAndParams<T extends Entity>({
     query += ` OFFSET ${skip}`;
   }
 
-  if (process.env.DEBUG_BIGAL?.toLowerCase() === 'true') {
-    // eslint-disable-next-line no-console
-    console.log(`BigAl: ${query}`);
-  }
-
   return {
     query,
     params,

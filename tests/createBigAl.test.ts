@@ -1,9 +1,9 @@
 import assert from 'node:assert';
 
 import { faker } from '@faker-js/faker';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
-import type { BigAlRepository, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
+import type { BigAlRepository, OnQueryEvent, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
 import { belongsTo, boolean as booleanColumn, createBigAl, hasMany, integer, serial, text, textArray, defineTable as table, createdAt, updatedAt } from '../src/index.js';
 
 type PoolQueryFn = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
@@ -585,6 +585,252 @@ describe('createBigAl', () => {
 
       expect(result).toBeDefined();
       expect(mockedPool.query).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('onQuery observability', () => {
+    const mockedPool = createMockPool();
+    const events: OnQueryEvent[] = [];
+
+    let ProductRepo: BigAlRepository<typeof ProductDef.$inferSelect>;
+
+    beforeAll(() => {
+      const bigal = createBigAl({
+        pool: mockedPool,
+        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+        onQuery(event) {
+          events.push(event);
+        },
+      });
+
+      ProductRepo = bigal.getRepository(ProductDef);
+    });
+
+    beforeEach(() => {
+      mockedPool.query.mockReset();
+      events.length = 0;
+    });
+
+    it('should fire onQuery for find', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      await ProductRepo.find({});
+
+      expect(events).toHaveLength(1);
+      const event = events[0]!;
+      expect(event.operation).toBe('find');
+      expect(event.model).toBe('products');
+      expect(event.sql).toContain('SELECT');
+      expect(event.params).toBeDefined();
+      expect(event.duration).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should fire onQuery for findOne', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      await ProductRepo.findOne({ where: { id: 1 } });
+
+      expect(events).toHaveLength(1);
+      const event = events[0]!;
+      expect(event.operation).toBe('findOne');
+      expect(event.model).toBe('products');
+      expect(event.sql).toContain('SELECT');
+      expect(event.params).toContain(1);
+      expect(event.duration).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should fire onQuery for count', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([{ count: '7' }]));
+
+      await ProductRepo.count({ where: { name: 'Widget' } });
+
+      expect(events).toHaveLength(1);
+      const event = events[0]!;
+      expect(event.operation).toBe('count');
+      expect(event.model).toBe('products');
+      expect(event.sql).toContain('count');
+      expect(event.params).toContain('Widget');
+      expect(event.duration).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should fire onQuery for create', async () => {
+      const storeId = faker.number.int();
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([{ id: 1, name: 'Widget', sku: null, location: null, aliases: [], store: storeId, createdAt: new Date(), updatedAt: new Date() }]));
+
+      await ProductRepo.create({ name: 'Widget', store: storeId });
+
+      expect(events).toHaveLength(1);
+      const event = events[0]!;
+      expect(event.operation).toBe('create');
+      expect(event.model).toBe('products');
+      expect(event.sql).toContain('INSERT');
+      expect(event.duration).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should fire onQuery for update', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([{ id: 42, name: 'Updated', sku: null, location: null, aliases: [], store: 1, createdAt: new Date(), updatedAt: new Date() }]));
+
+      await ProductRepo.update({ id: 42 }, { name: 'Updated' });
+
+      expect(events).toHaveLength(1);
+      const event = events[0]!;
+      expect(event.operation).toBe('update');
+      expect(event.model).toBe('products');
+      expect(event.sql).toContain('UPDATE');
+      expect(event.duration).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should fire onQuery for destroy', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      await ProductRepo.destroy({ id: 42 });
+
+      expect(events).toHaveLength(1);
+      const event = events[0]!;
+      expect(event.operation).toBe('destroy');
+      expect(event.model).toBe('products');
+      expect(event.sql).toContain('DELETE');
+      expect(event.duration).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should include correct sql, params, duration, model, and operation', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      await ProductRepo.find({ where: { name: 'test' } });
+
+      const event = events[0]!;
+      expect(event).toHaveProperty('sql');
+      expect(event).toHaveProperty('params');
+      expect(event).toHaveProperty('duration');
+      expect(event).toHaveProperty('model');
+      expect(event).toHaveProperty('operation');
+      expectTypeOf(event.sql).toBeString();
+      expect(Array.isArray(event.params)).toBe(true);
+      expectTypeOf(event.duration).toBeNumber();
+      expectTypeOf(event.model).toBeString();
+      expectTypeOf(event.operation).toBeString();
+    });
+
+    it('should swallow errors from onQuery callback', async () => {
+      const throwingPool = createMockPool();
+      throwingPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      const bigal = createBigAl({
+        pool: throwingPool,
+        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+        onQuery() {
+          throw new Error('Callback exploded');
+        },
+      });
+
+      const repo = bigal.getRepository(ProductDef);
+      const results = await repo.find({});
+
+      expect(results).toStrictEqual([]);
+    });
+
+    it('should not fire onQuery when callback is not provided', async () => {
+      const plainPool = createMockPool();
+      plainPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      const bigal = createBigAl({
+        pool: plainPool,
+        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+      });
+
+      const repo = bigal.getRepository(ProductDef);
+
+      // Spy on performance.now to verify it is NOT called when onQuery is absent
+      const performanceSpy = vi.spyOn(performance, 'now');
+
+      await repo.find({});
+
+      expect(performanceSpy).not.toHaveBeenCalled();
+      performanceSpy.mockRestore();
+    });
+  });
+
+  describe('DEBUG_BIGAL fallback', () => {
+    const originalEnv = process.env.DEBUG_BIGAL;
+
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.DEBUG_BIGAL;
+      } else {
+        process.env.DEBUG_BIGAL = originalEnv;
+      }
+    });
+
+    it('should use console.log as default onQuery when DEBUG_BIGAL=true', async () => {
+      process.env.DEBUG_BIGAL = 'true';
+
+      const mockedPool = createMockPool();
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const bigal = createBigAl({
+        pool: mockedPool,
+        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+      });
+
+      const repo = bigal.getRepository(ProductDef);
+      await repo.find({});
+
+      expect(consoleSpy).toHaveBeenCalledOnce();
+      const logMessage = consoleSpy.mock.calls[0]![0] as string;
+      expect(logMessage).toContain('BigAl');
+      expect(logMessage).toContain('find');
+      expect(logMessage).toContain('products');
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should not use console.log when DEBUG_BIGAL is not set', async () => {
+      delete process.env.DEBUG_BIGAL;
+
+      const mockedPool = createMockPool();
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+      const bigal = createBigAl({
+        pool: mockedPool,
+        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+      });
+
+      const repo = bigal.getRepository(ProductDef);
+      await repo.find({});
+
+      expect(consoleSpy).not.toHaveBeenCalled();
+
+      consoleSpy.mockRestore();
+    });
+
+    it('should prefer explicit onQuery over DEBUG_BIGAL', async () => {
+      process.env.DEBUG_BIGAL = 'true';
+
+      const mockedPool = createMockPool();
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const customEvents: OnQueryEvent[] = [];
+
+      const bigal = createBigAl({
+        pool: mockedPool,
+        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+        onQuery(event) {
+          customEvents.push(event);
+        },
+      });
+
+      const repo = bigal.getRepository(ProductDef);
+      await repo.find({});
+
+      expect(consoleSpy).not.toHaveBeenCalled();
+      expect(customEvents).toHaveLength(1);
+
+      consoleSpy.mockRestore();
     });
   });
 });
