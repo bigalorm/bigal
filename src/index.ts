@@ -1,3 +1,4 @@
+import type { IConnection } from './createBigAl.js';
 import type { Entity, EntityStatic } from './Entity.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
@@ -5,8 +6,8 @@ import type { ColumnMetadata, ColumnModifierMetadata } from './metadata/index.js
 import { ColumnModelMetadata, ColumnTypeMetadata, getMetadataStorage, ModelMetadata } from './metadata/index.js';
 import { ReadonlyRepository } from './ReadonlyRepository.js';
 import { Repository } from './Repository.js';
-import type { PoolLike } from './types/index.js';
 
+export * from './createBigAl.js';
 export * from './decorators/index.js';
 export * from './errors/index.js';
 export * from './metadata/index.js';
@@ -18,10 +19,63 @@ export * from './IRepository.js';
 export * from './ReadonlyRepository.js';
 export * from './Repository.js';
 
-export interface IConnection {
-  pool: PoolLike;
-  readonlyPool?: PoolLike;
-}
+// Schema module: selectively export to avoid conflicts with decorator-based API
+// The `table` function and `TableOptions` type conflict with the decorator equivalents.
+// Consumers of the new API can import directly from 'bigal/schema' or use these named exports.
+export {
+  belongsTo,
+  BelongsToBuilder,
+  bigint,
+  bigserial,
+  boolean,
+  booleanArray,
+  booleanColumn,
+  bytea,
+  ColumnBuilder,
+  createdAt,
+  date,
+  dateColumn,
+  doublePrecision,
+  hasMany,
+  HasManyBuilder,
+  integer,
+  integerArray,
+  json,
+  jsonb,
+  real,
+  serial,
+  smallint,
+  text,
+  textArray,
+  timestamp,
+  timestamptz,
+  updatedAt,
+  uuid,
+  varchar,
+  table as defineTable,
+} from './schema/index.js';
+
+export type {
+  BelongsToConfig,
+  BelongsToEntry,
+  ColumnBuilderConfig,
+  ColumnBuilderRuntimeConfig,
+  HasManyConfig,
+  HasManyEntry,
+  HasManyThroughIntermediate,
+  InferInsert,
+  InferSelect,
+  LazyTableReference,
+  ModelHooks,
+  OptionalInsertKeys,
+  RequiredInsertKeys,
+  SchemaDefinition,
+  SchemaEntry,
+  SelectKeys,
+  TableDefinition,
+  TableOptions as SchemaTableOptions,
+  VarcharOptions,
+} from './schema/index.js';
 
 export interface InitializeOptions extends IConnection {
   models: EntityStatic<Entity>[];
