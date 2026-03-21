@@ -1006,6 +1006,54 @@ describe('initialize', () => {
     });
   });
 
+  describe('Object-style model registration', () => {
+    const mockedPool = createMockPool();
+
+    beforeEach(() => {
+      mockedPool.query.mockReset();
+    });
+
+    it('should support destructuring typed repos from initialize result', async () => {
+      const bigal = initialize({
+        pool: mockedPool,
+        models: { Product: ProductDef, Store: StoreDef, Category: CategoryDef, ProductCategory: ProductCategoryDef },
+      });
+
+      // Destructured repos are typed
+      const { Product, Store } = bigal;
+      expect(Product).toBeDefined();
+      expect(Store).toBeDefined();
+
+      // Repos work for queries
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([{ id: 1, name: 'Widget', sku: null, location: null, aliases: [], store: 1 }]));
+      const products = await Product.find().where({ name: 'Widget' });
+      expect(products).toHaveLength(1);
+      expect(products[0]!.name).toBe('Widget');
+    });
+
+    it('should still support getRepository with object-style models', () => {
+      const bigal = initialize({
+        pool: mockedPool,
+        models: { Product: ProductDef, Store: StoreDef, Category: CategoryDef, ProductCategory: ProductCategoryDef },
+      });
+
+      const repo = bigal.getRepository(ProductDef);
+      expect(repo).toBeDefined();
+    });
+
+    it('should support both object and getRepository access on same instance', async () => {
+      const bigal = initialize({
+        pool: mockedPool,
+        models: { Product: ProductDef, Store: StoreDef, Category: CategoryDef, ProductCategory: ProductCategoryDef },
+      });
+
+      // Both access patterns should return the same repository
+      const fromObject = bigal.Product;
+      const fromGetter = bigal.getRepository(ProductDef);
+      expect(fromObject).toBe(fromGetter);
+    });
+  });
+
   describe('Populate', () => {
     const mockedPool = createMockPool();
 
