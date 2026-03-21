@@ -80,13 +80,20 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
       }
     }
 
-    let returnAsPlainObjects = false;
+    const returnAsPlainObjects = false;
 
     type CreateResultType = CreateResult<T> | CreateResultArray<T>;
     const result = {
-      toJSON(): CreateResultType {
-        returnAsPlainObjects = true;
-        return result as unknown as CreateResultType;
+      toSQL(): { params: readonly unknown[]; sql: string } {
+        const { query, params } = getInsertQueryAndParams({
+          repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+          model: modelInstance.model,
+          values: values as CreateUpdateParams<T>,
+          returnRecords,
+          returnSelect,
+        });
+
+        return { sql: query, params };
       },
       async then<TResult = QueryResult<T> | QueryResult<T>[], TErrorResult = never>(
         resolve?: ((value: QueryResult<T> | QueryResult<T>[] | void) => PromiseLike<TResult> | TResult) | null,
@@ -243,12 +250,20 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
       }
     }
 
-    let returnAsPlainObjects = false;
+    const returnAsPlainObjects = false;
 
     const result = {
-      toJSON(): UpdateResult<T> {
-        returnAsPlainObjects = true;
-        return result as unknown as UpdateResult<T>;
+      toSQL(): { params: readonly unknown[]; sql: string } {
+        const { query, params } = getUpdateQueryAndParams({
+          repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+          model: modelInstance.model,
+          where,
+          values: values as CreateUpdateParams<T>,
+          returnRecords,
+          returnSelect,
+        });
+
+        return { sql: query, params };
       },
       async then<TResult = QueryResult<T>[], TErrorResult = never>(
         resolve?: ((value: QueryResult<T>[] | void) => PromiseLike<TResult> | TResult) | null,
@@ -338,7 +353,7 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResultWithRecords<T, QueryResult<T>>;
+  public destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResultWithRecords<T>;
 
   /**
    * Destroys object(s) matching the where query
@@ -348,7 +363,7 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} `void` or records affected if returnRecords=true
    */
-  public destroy(where: WhereQuery<T> = {}, options?: DeleteOptions<T>): DestroyResult<T, void> | DestroyResultWithRecords<T, QueryResult<T>> {
+  public destroy(where: WhereQuery<T> = {}, options?: DeleteOptions<T>): DestroyResult<T, void> | DestroyResultWithRecords<T> {
     if (this.model.readonly) {
       throw new Error(`${this.model.name} is readonly.`);
     }
@@ -359,18 +374,25 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
     const modelInstance = this;
     const returnSelect = options?.returnSelect;
     const returnRecords = options?.returnRecords ?? !!returnSelect;
-    let returnAsPlainObjects = false;
+    const returnAsPlainObjects = false;
 
-    type DestroyResultType = DestroyResult<T, void> | DestroyResultWithRecords<T, QueryResult<T>>;
+    type DestroyResultType = DestroyResult<T, void> | DestroyResultWithRecords<T>;
     const result = {
       where(value: WhereQuery<T>): DestroyResultType {
         where = value;
 
         return result as unknown as DestroyResultType;
       },
-      toJSON(): DestroyResultType {
-        returnAsPlainObjects = true;
-        return result as unknown as DestroyResultType;
+      toSQL(): { params: readonly unknown[]; sql: string } {
+        const { query, params } = getDeleteQueryAndParams({
+          repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+          model: modelInstance.model,
+          where,
+          returnRecords,
+          returnSelect,
+        });
+
+        return { sql: query, params };
       },
       async then<TResult = QueryResult<T>[], TErrorResult = void>(
         resolve: (result: QueryResult<T>[] | void) => PromiseLike<TResult> | TResult,
@@ -439,6 +461,6 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
       },
     };
 
-    return result as DestroyResult<T, void> | DestroyResultWithRecords<T, QueryResult<T>>;
+    return result as DestroyResult<T, void> | DestroyResultWithRecords<T>;
   }
 }

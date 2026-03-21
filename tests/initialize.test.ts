@@ -966,6 +966,44 @@ describe('initialize', () => {
       expect(sql).toContain('"sku"');
       expect(sql).not.toContain('"location"');
     });
+
+    it('should return SQL and params from create() without executing', () => {
+      const bigal = initialize({ pool: mockedPool, models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef] });
+      const repo = bigal.getRepository(ProductDef);
+
+      const { sql, params } = repo.create({ name: 'Widget', store: 1 }).toSQL();
+
+      expect(sql).toContain('INSERT INTO');
+      expect(sql).toContain('"products"');
+      expect(params).toContain('Widget');
+      expect(mockedPool.query).not.toHaveBeenCalled();
+    });
+
+    it('should return SQL and params from update() without executing', () => {
+      const bigal = initialize({ pool: mockedPool, models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef] });
+      const repo = bigal.getRepository(ProductDef);
+
+      const { sql, params } = repo.update({ id: 42 }, { name: 'Updated' }).toSQL();
+
+      expect(sql).toContain('UPDATE');
+      expect(sql).toContain('"products"');
+      expect(sql).toContain('"id"=');
+      expect(params).toContain('Updated');
+      expect(mockedPool.query).not.toHaveBeenCalled();
+    });
+
+    it('should return SQL and params from destroy() without executing', () => {
+      const bigal = initialize({ pool: mockedPool, models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef] });
+      const repo = bigal.getRepository(ProductDef);
+
+      const { sql, params } = repo.destroy({ id: 42 }).toSQL();
+
+      expect(sql).toContain('DELETE FROM');
+      expect(sql).toContain('"products"');
+      expect(sql).toContain('"id"=');
+      expect(params).toStrictEqual([42]);
+      expect(mockedPool.query).not.toHaveBeenCalled();
+    });
   });
 
   describe('Populate', () => {
