@@ -40,7 +40,11 @@ export interface IRepositoryOptions<T extends AnyRecord> {
   onQuery?: OnQueryCallback;
   afterFind?: (results: T[]) => Promise<T[]> | T[];
   beforeCreate?: (values: Partial<T>) => Partial<T> | Promise<Partial<T>>;
+  afterCreate?: (result: T) => Promise<void> | void;
   beforeUpdate?: (values: Partial<T>) => Partial<T> | Promise<Partial<T>>;
+  afterUpdate?: (result: T) => Promise<void> | void;
+  beforeDestroy?: (where: Record<string, unknown>) => Promise<Record<string, unknown>> | Record<string, unknown>;
+  afterDestroy?: (result: { rowCount: number }) => Promise<void> | void;
 }
 
 interface Populate {
@@ -73,15 +77,36 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
 
   protected _afterFind: ((results: T[]) => Promise<T[]> | T[]) | undefined;
 
+  protected _beforeCreate: ((values: Partial<T>) => Partial<T> | Promise<Partial<T>>) | undefined;
+
+  protected _afterCreate: ((result: T) => Promise<void> | void) | undefined;
+
+  protected _beforeUpdate: ((values: Partial<T>) => Partial<T> | Promise<Partial<T>>) | undefined;
+
+  protected _afterUpdate: ((result: T) => Promise<void> | void) | undefined;
+
+  protected _beforeDestroy: ((where: Record<string, unknown>) => Promise<Record<string, unknown>> | Record<string, unknown>) | undefined;
+
+  protected _afterDestroy: ((result: { rowCount: number }) => Promise<void> | void) | undefined;
+
   protected _floatProperties: string[] = [];
 
   protected _intProperties: string[] = [];
 
-  protected _beforeCreate: ((values: Partial<T>) => Partial<T> | Promise<Partial<T>>) | undefined;
-
-  protected _beforeUpdate: ((values: Partial<T>) => Partial<T> | Promise<Partial<T>>) | undefined;
-
-  public constructor({ modelMetadata, pool, readonlyPool, repositoriesByModelNameLowered, onQuery, afterFind, beforeCreate, beforeUpdate }: IRepositoryOptions<T>) {
+  public constructor({
+    modelMetadata,
+    pool,
+    readonlyPool,
+    repositoriesByModelNameLowered,
+    onQuery,
+    afterFind,
+    beforeCreate,
+    afterCreate,
+    beforeUpdate,
+    afterUpdate,
+    beforeDestroy,
+    afterDestroy,
+  }: IRepositoryOptions<T>) {
     this._modelMetadata = modelMetadata;
     this._pool = pool;
     this._readonlyPool = readonlyPool ?? pool;
@@ -89,7 +114,11 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
     this._onQuery = onQuery;
     this._afterFind = afterFind;
     this._beforeCreate = beforeCreate;
+    this._afterCreate = afterCreate;
     this._beforeUpdate = beforeUpdate;
+    this._afterUpdate = afterUpdate;
+    this._beforeDestroy = beforeDestroy;
+    this._afterDestroy = afterDestroy;
 
     for (const column of modelMetadata.columns) {
       if ((column as ColumnTypeMetadata).type === 'float') {

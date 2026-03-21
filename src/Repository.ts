@@ -135,6 +135,17 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
             if (isArray) {
               void returnAsPlainObjects; // Always plain objects now
               const entities = modelInstance._buildPlainObjects(results.rows);
+
+              if (modelInstance._afterCreate) {
+                await Promise.all(
+                  entities.map((entity) =>
+                    Promise.resolve(modelInstance._afterCreate!(entity as T)).catch(() => {
+                      /* side-effect only */
+                    }),
+                  ),
+                );
+              }
+
               return resolve ? await resolve(entities) : (entities as unknown as TResult);
             }
 
@@ -142,10 +153,27 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
             if (firstResult) {
               void returnAsPlainObjects; // Always plain objects now
               const entity = modelInstance._buildPlainObject(firstResult);
+
+              if (modelInstance._afterCreate) {
+                try {
+                  await modelInstance._afterCreate(entity as T);
+                } catch {
+                  /* side-effect only */
+                }
+              }
+
               return resolve ? await resolve(entity) : (entity as unknown as TResult);
             }
 
             throw new Error('Unknown error getting created rows back from the database');
+          }
+
+          if (modelInstance._afterCreate) {
+            try {
+              await modelInstance._afterCreate({} as T);
+            } catch {
+              /* side-effect only */
+            }
           }
 
           return resolve ? await resolve(undefined) : (undefined as unknown as TResult);
@@ -259,7 +287,26 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
           if (returnRecords) {
             void returnAsPlainObjects; // Always plain objects now
             const entities = modelInstance._buildPlainObjects(results.rows);
+
+            if (modelInstance._afterUpdate) {
+              await Promise.all(
+                entities.map((entity) =>
+                  Promise.resolve(modelInstance._afterUpdate!(entity as T)).catch(() => {
+                    /* side-effect only */
+                  }),
+                ),
+              );
+            }
+
             return resolve ? await resolve(entities) : (entities as unknown as TResult);
+          }
+
+          if (modelInstance._afterUpdate) {
+            try {
+              await modelInstance._afterUpdate({} as T);
+            } catch {
+              /* side-effect only */
+            }
           }
 
           return resolve ? await resolve(undefined) : (undefined as unknown as TResult);
@@ -334,10 +381,16 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
         }
 
         try {
+          // beforeDestroy can modify the where clause or throw to abort
+          let resolvedWhere = where;
+          if (modelInstance._beforeDestroy) {
+            resolvedWhere = (await modelInstance._beforeDestroy(where as Record<string, unknown>)) as WhereQuery<T>;
+          }
+
           const { query, params } = getDeleteQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
-            where,
+            where: resolvedWhere,
             returnRecords,
             returnSelect,
           });
@@ -355,6 +408,14 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
               onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance.model.tableName, operation: 'destroy' });
             } catch {
               // Swallow -- observability must not crash queries
+            }
+          }
+
+          if (modelInstance._afterDestroy) {
+            try {
+              await modelInstance._afterDestroy({ rowCount: queryResult.rowCount ?? 0 });
+            } catch {
+              /* side-effect only */
             }
           }
 
