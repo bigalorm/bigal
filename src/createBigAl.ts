@@ -172,15 +172,18 @@ export function createBigAl<TModels extends Record<string, AnyModel>>(options: B
   // If models were passed as an object, attach typed repos directly
   if (isObjectModels) {
     const modelsObject = options.models as Record<string, AnyModel>;
+    const repoEntries: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>> = {};
     for (const [key, model] of Object.entries(modelsObject)) {
       const repository = repositoriesByModel.get(model);
       if (repository) {
-        (instance as unknown as Record<string, unknown>)[key] = repository;
+        repoEntries[key] = repository;
       }
     }
+
+    return Object.assign(instance, repoEntries) as BigAlInstanceWithRepos<TModels>;
   }
 
-  return instance as BigAlInstanceWithRepos<TModels>;
+  return instance;
 }
 
 function resolveModelName(ref: AnyModel['belongsToEntries'][number]['builder']['modelRef']): string {

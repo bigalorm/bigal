@@ -221,7 +221,7 @@ export function table<TName extends string, TSchema extends SchemaDefinition>(
     belongsToEntries,
     hasManyEntries,
 
-    // Phantom types -- only used by TypeScript, never at runtime
+    // Phantom types — accessed only via `typeof X.$inferSelect`, never at runtime
     $inferSelect: undefined as unknown as InferSelect<TSchema>,
     $inferInsert: undefined as unknown as InferInsert<TSchema>,
   };
