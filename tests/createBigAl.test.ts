@@ -28,7 +28,7 @@ function getQueryResult<T extends QueryResultRow>(rows: T[] = []): PoolQueryResu
 // ---------------------------------------------------------------------------
 
 const modelBase = {
-  id: serial('id').primaryKey(),
+  id: serial().primaryKey(),
 };
 
 const timestamps = {
@@ -42,7 +42,7 @@ const tables: Record<string, TableDefinition<any, any>> = {};
 const storeSchema = {
   ...modelBase,
   ...timestamps,
-  name: text('name'),
+  name: text(),
   products: hasMany(() => tables.Product!).via('store'),
 };
 const StoreDef = table('stores', storeSchema);
@@ -51,7 +51,7 @@ tables.Store = StoreDef;
 const categorySchema = {
   ...modelBase,
   ...timestamps,
-  name: text('name').notNull(),
+  name: text().notNull(),
   products: hasMany(() => tables.Product!)
     .through(() => tables.ProductCategory!)
     .via('category'),
@@ -62,11 +62,11 @@ tables.Category = CategoryDef;
 const productSchema = {
   ...modelBase,
   ...timestamps,
-  name: text('name').notNull(),
-  sku: text('sku'),
-  location: text('location'),
-  aliases: textArray('alias_names').default([]),
-  store: belongsTo(() => tables.Store!, 'store_id'),
+  name: text().notNull(),
+  sku: text(),
+  location: text(),
+  aliases: textArray({ name: 'alias_names' }).default([]),
+  store: belongsTo(() => tables.Store!),
   categories: hasMany(() => tables.Category!)
     .through(() => tables.ProductCategory!)
     .via('product'),
@@ -76,18 +76,18 @@ tables.Product = ProductDef;
 
 const productCategorySchema = {
   ...modelBase,
-  product: belongsTo(() => tables.Product!, 'product_id'),
-  category: belongsTo(() => tables.Category!, 'category_id'),
-  ordering: integer('ordering'),
-  isPrimary: booleanColumn('is_primary'),
+  product: belongsTo(() => tables.Product!),
+  category: belongsTo(() => tables.Category!),
+  ordering: integer(),
+  isPrimary: booleanColumn(),
 };
 const ProductCategoryDef = table('product__category', productCategorySchema);
 tables.ProductCategory = ProductCategoryDef;
 
 const stringCollectionSchema = {
   ...modelBase,
-  name: text('name').notNull(),
-  otherIds: textArray('other_ids').default([]),
+  name: text().notNull(),
+  otherIds: textArray().default([]),
 };
 const SimpleWithStringCollectionDef = table('simple', stringCollectionSchema);
 
@@ -95,11 +95,11 @@ const SimpleWithStringCollectionDef = table('simple', stringCollectionSchema);
 const hookedProductSchema = {
   ...modelBase,
   ...timestamps,
-  name: text('name').notNull(),
-  sku: text('sku'),
-  location: text('location'),
-  aliases: textArray('alias_names').default([]),
-  store: belongsTo(() => tables.Store!, 'store_id'),
+  name: text().notNull(),
+  sku: text(),
+  location: text(),
+  aliases: textArray({ name: 'alias_names' }).default([]),
+  store: belongsTo(() => tables.Store!),
   categories: hasMany(() => tables.Category!)
     .through(() => tables.ProductCategory!)
     .via('product'),
@@ -125,11 +125,11 @@ const ProductWithHooksDef = table('products', hookedProductSchema, {
 const readonlyProductSchema = {
   ...modelBase,
   ...timestamps,
-  name: text('name').notNull(),
-  sku: text('sku'),
-  location: text('location'),
-  aliases: textArray('alias_names').default([]),
-  store: belongsTo(() => tables.Store!, 'store_id'),
+  name: text().notNull(),
+  sku: text(),
+  location: text(),
+  aliases: textArray({ name: 'alias_names' }).default([]),
+  store: belongsTo(() => tables.Store!),
 };
 const ReadonlyProductDef = table('readonly_products', readonlyProductSchema, { readonly: true });
 
@@ -176,7 +176,7 @@ describe('createBigAl', () => {
     it('should throw when getting repository for unregistered table', () => {
       const pool = createMockPool();
       // Use a standalone table with no relationships for this test
-      const standaloneDef = table('standalone', { ...modelBase, name: text('name').notNull() });
+      const standaloneDef = table('standalone', { ...modelBase, name: text().notNull() });
       const bigal = createBigAl({ pool, models: [standaloneDef] });
       expect(() => bigal.getRepository(ProductDef)).toThrow(/not found/);
     });
@@ -187,7 +187,7 @@ describe('createBigAl', () => {
 
       const analyticsSchema = {
         ...modelBase,
-        name: text('name').notNull(),
+        name: text().notNull(),
       };
       const AnalyticsDef = table('analytics_events', analyticsSchema, { connection: 'analytics' });
 
@@ -206,7 +206,7 @@ describe('createBigAl', () => {
       const pool = createMockPool();
       const schema = {
         ...modelBase,
-        name: text('name').notNull(),
+        name: text().notNull(),
       };
       const def = table('foo_table', schema, { connection: 'nonexistent' });
 

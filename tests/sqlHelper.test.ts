@@ -4,57 +4,138 @@ import { faker } from '@faker-js/faker';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { QueryError } from '../src/errors/index.js';
-import { initialize, subquery } from '../src/index.js';
-import { type AggregateBuilder, type Entity, type IReadonlyRepository, type IRepository, type ModelMetadata, type PoolLike, type SelectAggregateExpression, type WhereQuery } from '../src/index.js';
+import type { AggregateBuilder, IReadonlyRepository, IRepository, ModelMetadata, PoolLike, SelectAggregateExpression, TableDefinition, WhereQuery } from '../src/index.js';
+import { subquery } from '../src/index.js';
+import { ModelMetadata as ModelMetadataClass } from '../src/metadata/ModelMetadata.js';
+import { ReadonlyRepository } from '../src/ReadonlyRepository.js';
+import { Repository } from '../src/Repository.js';
 import * as sqlHelper from '../src/SqlHelper.js';
 
 import {
-  Category,
-  ImportedItem,
-  KitchenSink,
-  Product,
-  ProductCategory,
-  ProductWithCreatedAt,
-  ProductWithCreateUpdateDateTracking,
-  ReadonlyProduct,
-  RequiredPropertyWithDefaultValue,
-  RequiredPropertyWithDefaultValueFunction,
-  SimpleWithCollections,
-  SimpleWithCreatedAt,
-  SimpleWithCreatedAtAndUpdatedAt,
-  SimpleWithJson,
-  SimpleWithSchema,
-  SimpleWithStringId,
-  SimpleWithUpdatedAt,
-  SimpleWithUUID,
-  SimpleWithVersion,
-  Store,
-} from './models/index.js';
+  CategoryDef,
+  ImportedItemDef,
+  KitchenSinkDef,
+  ProductCategoryDef,
+  ProductDef,
+  ProductWithCreatedAtDef,
+  ProductWithHooksDef,
+  ReadonlyProductDef,
+  RequiredPropertyWithDefaultValueDef,
+  RequiredPropertyWithDefaultValueFunctionDef,
+  SimpleWithCollectionsDef,
+  SimpleWithCreatedAtAndUpdatedAtDef,
+  SimpleWithCreatedAtDef,
+  SimpleWithJsonDef,
+  SimpleWithSchemaDef,
+  SimpleWithStringIdDef,
+  SimpleWithUpdatedAtDef,
+  SimpleWithUUIDDef,
+  SimpleWithVersionDef,
+  StoreDef,
+} from './utils/testModels.js';
+import type {
+  ImportedItemSelect,
+  KitchenSinkSelect,
+  ProductSelect,
+  ProductWithCreatedAtSelect,
+  RequiredPropertyWithDefaultValueSelect,
+  RequiredPropertyWithDefaultValueFunctionSelect,
+  SimpleWithCollectionsSelect,
+  SimpleWithCreatedAtAndUpdatedAtSelect,
+  SimpleWithCreatedAtSelect,
+  SimpleWithJsonSelect,
+  SimpleWithSchemaSelect,
+  SimpleWithStringIdSelect,
+  SimpleWithUpdatedAtSelect,
+  SimpleWithUUIDSelect,
+  SimpleWithVersionSelect,
+  StoreSelect,
+} from './utils/testModels.js';
+
+type AnyRecord = Record<string, unknown>;
+type TestEntity<T> = AnyRecord & T;
+type Product = TestEntity<ProductSelect>;
+type ProductWithCreatedAt = TestEntity<ProductWithCreatedAtSelect>;
+type Store = TestEntity<StoreSelect>;
+type SimpleWithSchema = TestEntity<SimpleWithSchemaSelect>;
+type SimpleWithJson = TestEntity<SimpleWithJsonSelect>;
+type SimpleWithCreatedAt = TestEntity<SimpleWithCreatedAtSelect>;
+type SimpleWithUpdatedAt = TestEntity<SimpleWithUpdatedAtSelect>;
+type SimpleWithCollections = TestEntity<SimpleWithCollectionsSelect>;
+type RequiredPropertyWithDefaultValue = TestEntity<RequiredPropertyWithDefaultValueSelect>;
+type RequiredPropertyWithDefaultValueFunction = TestEntity<RequiredPropertyWithDefaultValueFunctionSelect>;
+type ImportedItem = TestEntity<ImportedItemSelect>;
+type SimpleWithStringId = TestEntity<SimpleWithStringIdSelect>;
+type SimpleWithVersion = TestEntity<SimpleWithVersionSelect>;
+type SimpleWithCreatedAtAndUpdatedAt = TestEntity<SimpleWithCreatedAtAndUpdatedAtSelect>;
+type SimpleWithUUID = TestEntity<SimpleWithUUIDSelect>;
+type KitchenSink = TestEntity<KitchenSinkSelect>;
 
 interface RepositoriesByModelName {
-  Category: IRepository<Entity>;
-  ImportedItem: IRepository<Entity>;
-  KitchenSink: IRepository<Entity>;
-  Product: IRepository<Entity>;
-  ProductCategory: IRepository<Entity>;
-  ProductWithCreatedAt: IRepository<Entity>;
-  ProductWithCreateUpdateDateTracking: IRepository<Entity>;
-  ReadonlyProduct: IReadonlyRepository<Entity>;
-  RequiredPropertyWithDefaultValue: IRepository<Entity>;
-  RequiredPropertyWithDefaultValueFunction: IRepository<Entity>;
-  SimpleWithCollections: IRepository<Entity>;
-  SimpleWithCreatedAt: IRepository<Entity>;
-  SimpleWithCreatedAtAndUpdatedAt: IRepository<Entity>;
-  SimpleWithJson: IRepository<Entity>;
-  SimpleWithSchema: IRepository<Entity>;
-  SimpleWithStringId: IRepository<Entity>;
-  SimpleWithUpdatedAt: IRepository<Entity>;
-  SimpleWithUUID: IRepository<Entity>;
-  SimpleWithVersion: IRepository<Entity>;
-  Store: IRepository<Entity>;
+  Category: IRepository<AnyRecord>;
+  ImportedItem: IRepository<AnyRecord>;
+  KitchenSink: IRepository<AnyRecord>;
+  Product: IRepository<AnyRecord>;
+  ProductCategory: IRepository<AnyRecord>;
+  ProductWithCreatedAt: IRepository<AnyRecord>;
+  ProductWithCreateUpdateDateTracking: IRepository<AnyRecord>;
+  ReadonlyProduct: IReadonlyRepository<AnyRecord>;
+  RequiredPropertyWithDefaultValue: IRepository<AnyRecord>;
+  RequiredPropertyWithDefaultValueFunction: IRepository<AnyRecord>;
+  SimpleWithCollections: IRepository<AnyRecord>;
+  SimpleWithCreatedAt: IRepository<AnyRecord>;
+  SimpleWithCreatedAtAndUpdatedAt: IRepository<AnyRecord>;
+  SimpleWithJson: IRepository<AnyRecord>;
+  SimpleWithSchema: IRepository<AnyRecord>;
+  SimpleWithStringId: IRepository<AnyRecord>;
+  SimpleWithUpdatedAt: IRepository<AnyRecord>;
+  SimpleWithUUID: IRepository<AnyRecord>;
+  SimpleWithVersion: IRepository<AnyRecord>;
+  Store: IRepository<AnyRecord>;
 }
 
 type LowerCaseKeys<T, K extends string & keyof T = string & keyof T> = Record<Lowercase<K>, T[K]>;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildModelMetadata(name: string, tableDef: TableDefinition<any, any>): ModelMetadata<AnyRecord> {
+  const metadata = new ModelMetadataClass<AnyRecord>({
+    name,
+    connection: tableDef.connection,
+    schema: tableDef.dbSchema,
+    tableName: tableDef.tableName,
+    readonly: tableDef.isReadonly,
+  });
+
+  metadata.columns = tableDef.columns;
+
+  return metadata;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildRepository(
+  name: string,
+  tableDef: TableDefinition<any, any>,
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>,
+  pool: PoolLike,
+): IReadonlyRepository<AnyRecord> | IRepository<AnyRecord> {
+  const modelMetadata = buildModelMetadata(name, tableDef);
+
+  if (tableDef.isReadonly) {
+    return new ReadonlyRepository({
+      modelMetadata,
+      repositoriesByModelNameLowered,
+      pool,
+      readonlyPool: pool,
+    });
+  }
+
+  return new Repository({
+    modelMetadata,
+    repositoriesByModelNameLowered,
+    pool,
+    readonlyPool: pool,
+  });
+}
 
 describe('sqlHelper', () => {
   let repositoriesByModelName: RepositoriesByModelName;
@@ -62,40 +143,48 @@ describe('sqlHelper', () => {
 
   beforeAll(() => {
     const mockedPool: PoolLike = { query: vi.fn() };
-    repositoriesByModelName = initialize({
-      models: [
-        Category,
-        ImportedItem,
-        KitchenSink,
-        Product,
-        ProductCategory,
-        ProductWithCreatedAt,
-        ProductWithCreateUpdateDateTracking,
-        ReadonlyProduct,
-        RequiredPropertyWithDefaultValue,
-        RequiredPropertyWithDefaultValueFunction,
-        SimpleWithCollections,
-        SimpleWithCreatedAt,
-        SimpleWithCreatedAtAndUpdatedAt,
-        SimpleWithJson,
-        SimpleWithSchema,
-        SimpleWithStringId,
-        SimpleWithUpdatedAt,
-        SimpleWithUUID,
-        SimpleWithVersion,
-        Store,
-      ],
-      pool: mockedPool,
-    }) as unknown as RepositoriesByModelName;
 
-    for (const [modelName, repository] of Object.entries(repositoriesByModelName)) {
-      // @ts-expect-error - Expect model names to match up
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      repositoriesByModelName[modelName] = repository;
-      // @ts-expect-error - Expect lower case model names to match up
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      repositoriesByModelNameLowered[modelName.toLowerCase()] = repository;
+    // Build repos with custom name keys (matching old class-name convention)
+    // plus table-name keys for relationship resolution
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- opaque registry to break circular type inference
+    const modelDefs: { name: string; tableDef: TableDefinition<any, any> }[] = [
+      { name: 'Category', tableDef: CategoryDef },
+      { name: 'ImportedItem', tableDef: ImportedItemDef },
+      { name: 'KitchenSink', tableDef: KitchenSinkDef },
+      { name: 'Product', tableDef: ProductDef },
+      { name: 'ProductCategory', tableDef: ProductCategoryDef },
+      { name: 'ProductWithCreatedAt', tableDef: ProductWithCreatedAtDef },
+      { name: 'ProductWithCreateUpdateDateTracking', tableDef: ProductWithHooksDef },
+      { name: 'ReadonlyProduct', tableDef: ReadonlyProductDef },
+      { name: 'RequiredPropertyWithDefaultValue', tableDef: RequiredPropertyWithDefaultValueDef },
+      { name: 'RequiredPropertyWithDefaultValueFunction', tableDef: RequiredPropertyWithDefaultValueFunctionDef },
+      { name: 'SimpleWithCollections', tableDef: SimpleWithCollectionsDef },
+      { name: 'SimpleWithCreatedAt', tableDef: SimpleWithCreatedAtDef },
+      { name: 'SimpleWithCreatedAtAndUpdatedAt', tableDef: SimpleWithCreatedAtAndUpdatedAtDef },
+      { name: 'SimpleWithJson', tableDef: SimpleWithJsonDef },
+      { name: 'SimpleWithSchema', tableDef: SimpleWithSchemaDef },
+      { name: 'SimpleWithStringId', tableDef: SimpleWithStringIdDef },
+      { name: 'SimpleWithUpdatedAt', tableDef: SimpleWithUpdatedAtDef },
+      { name: 'SimpleWithUUID', tableDef: SimpleWithUUIDDef },
+      { name: 'SimpleWithVersion', tableDef: SimpleWithVersionDef },
+      { name: 'Store', tableDef: StoreDef },
+    ];
+
+    const byName = {} as Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
+
+    for (const { name, tableDef } of modelDefs) {
+      const repo = buildRepository(name, tableDef, repositoriesByModelNameLowered, mockedPool);
+      byName[name] = repo;
+      // Key by custom name (lowered) for test access
+      repositoriesByModelNameLowered[name.toLowerCase() as keyof typeof repositoriesByModelNameLowered] = repo as IRepository<AnyRecord>;
+      // Also key by table name (lowered) for relationship resolution
+      const tableKey = tableDef.tableName.toLowerCase();
+      if (!repositoriesByModelNameLowered[tableKey as keyof typeof repositoriesByModelNameLowered]) {
+        repositoriesByModelNameLowered[tableKey as keyof typeof repositoriesByModelNameLowered] = repo as IRepository<AnyRecord>;
+      }
     }
+
+    repositoriesByModelName = byName as unknown as RepositoriesByModelName;
   });
 
   describe('#getSelectQueryAndParams()', () => {
@@ -132,7 +221,7 @@ describe('sqlHelper', () => {
       });
 
       it('should include primaryKey column if select does not include it', () => {
-        const { query, params } = sqlHelper.getSelectQueryAndParams<Product>({
+        const { query, params } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           select: ['name'],
@@ -147,7 +236,7 @@ describe('sqlHelper', () => {
       });
 
       it('should include schema if specified for model', () => {
-        const { query, params } = sqlHelper.getSelectQueryAndParams<SimpleWithSchema>({
+        const { query, params } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.simplewithschema.model as ModelMetadata<SimpleWithSchema>,
           select: ['name'],
@@ -165,7 +254,7 @@ describe('sqlHelper', () => {
     describe('where', () => {
       it('should include where statement if defined', () => {
         const name = faker.string.uuid();
-        const { query, params } = sqlHelper.getSelectQueryAndParams<ProductWithCreatedAt>({
+        const { query, params } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
           where: {
@@ -185,7 +274,7 @@ describe('sqlHelper', () => {
 
     describe('sorts', () => {
       it('should include order by statement if defined', () => {
-        const { query, params } = sqlHelper.getSelectQueryAndParams<ProductWithCreatedAt>({
+        const { query, params } = sqlHelper.getSelectQueryAndParams({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
           sorts: [
@@ -396,12 +485,11 @@ describe('sqlHelper', () => {
         name: `store - ${faker.string.uuid()}`,
       };
 
-      const { query, params } = sqlHelper.getCountQueryAndParams<Product>({
+      const { query, params } = sqlHelper.getCountQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
-        where: {
-          store,
-        },
+        // Runtime test: sqlHelper extracts .id from hydrated objects
+        where: { store } as Record<string, unknown>,
       });
 
       expect(query).toBe(`SELECT count(*) AS "count" FROM "${repositoriesByModelNameLowered.product.model.tableName}" WHERE "store_id"=$1`);
@@ -557,10 +645,8 @@ describe('sqlHelper', () => {
     });
 
     it('should ignore collection properties', () => {
-      const product = new Product();
-      product.id = faker.number.int();
-      const category = new Category();
-      category.id = faker.number.int();
+      const product = { id: faker.number.int() };
+      const category = { id: faker.number.int() };
 
       const name = faker.string.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
@@ -568,10 +654,9 @@ describe('sqlHelper', () => {
         model: repositoriesByModelName.SimpleWithCollections.model as ModelMetadata<SimpleWithCollections>,
         values: {
           name,
-          // @ts-expect-error - Collections are excluded from values type
           products: [product],
           categories: [category],
-        },
+        } as Record<string, unknown>,
       });
 
       expect(query).toBe(`INSERT INTO "${repositoriesByModelName.SimpleWithCollections.model.tableName}" ("name") VALUES ($1) RETURNING "id","name"`);
@@ -579,18 +664,13 @@ describe('sqlHelper', () => {
     });
 
     it('should use primaryKey value if hydrated object is passed as a value', () => {
-      const store = new Store();
-      store.id = faker.number.int();
-      store.name = `store - ${faker.string.uuid()}`;
+      const store = { id: faker.number.int(), name: `store - ${faker.string.uuid()}` };
 
       const name = faker.string.uuid();
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
-        values: {
-          name,
-          store,
-        },
+        values: { name, store } as Record<string, unknown>,
       });
 
       expect(query).toBe(
@@ -626,10 +706,7 @@ describe('sqlHelper', () => {
       const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelName.SimpleWithJson.model as ModelMetadata<SimpleWithJson>,
-        values: {
-          name,
-          bar,
-        },
+        values: { name, bar } as Record<string, unknown>,
       });
 
       expect(query).toBe(`INSERT INTO "${repositoriesByModelName.SimpleWithJson.model.tableName}" ("name","bar") VALUES ($1,$2::jsonb) RETURNING "id","name","bar","key_value" AS "keyValue"`);
@@ -658,7 +735,7 @@ describe('sqlHelper', () => {
     it('should support inserting a single record and return specific columns for records, if returnRecords=true and returnSelect is defined', () => {
       const storeId = faker.number.int();
       const name = faker.string.uuid();
-      const { query, params } = sqlHelper.getInsertQueryAndParams<Product>({
+      const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         values: {
@@ -695,7 +772,7 @@ describe('sqlHelper', () => {
       const name1 = faker.string.uuid();
       const storeId2 = faker.number.int();
       const name2 = faker.string.uuid();
-      const { query, params } = sqlHelper.getInsertQueryAndParams<Product>({
+      const { query, params } = sqlHelper.getInsertQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         values: [
@@ -771,7 +848,7 @@ describe('sqlHelper', () => {
       describe('ignore', () => {
         it('should ignore conflicts for specified targets', () => {
           const name = faker.string.uuid();
-          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithStringId>({
+          const { query, params } = sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithstringid.model as ModelMetadata<SimpleWithStringId>,
             values: {
@@ -793,7 +870,7 @@ describe('sqlHelper', () => {
       describe('merge', () => {
         it('should increment version columns', () => {
           const name = faker.string.uuid();
-          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithVersion>({
+          const { query, params } = sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithversion.model as ModelMetadata<SimpleWithVersion>,
             values: {
@@ -814,7 +891,7 @@ describe('sqlHelper', () => {
         it('should update non-primary and non-createDate columns if merge is undefined', () => {
           const beforeTime = new Date();
           const name = faker.string.uuid();
-          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithCreatedAtAndUpdatedAt>({
+          const { query, params } = sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithcreatedatandupdatedat.model as ModelMetadata<SimpleWithCreatedAtAndUpdatedAt>,
             values: {
@@ -842,7 +919,7 @@ describe('sqlHelper', () => {
         it('should update primaryColumn if explicitly specified', () => {
           const id = faker.string.uuid();
           const name = faker.string.uuid();
-          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithStringId>({
+          const { query, params } = sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithstringid.model as ModelMetadata<SimpleWithStringId>,
             values: {
@@ -865,7 +942,7 @@ describe('sqlHelper', () => {
         it('should update createDateColumn if explicitly specified', () => {
           const beforeTime = new Date();
           const name = faker.string.uuid();
-          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithCreatedAt>({
+          const { query, params } = sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithcreatedat.model as ModelMetadata<SimpleWithCreatedAt>,
             values: {
@@ -894,7 +971,7 @@ describe('sqlHelper', () => {
           const name = faker.string.uuid();
           const sku = faker.string.uuid();
 
-          const { query, params } = sqlHelper.getInsertQueryAndParams<Product>({
+          const { query, params } = sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
             values: {
@@ -918,7 +995,7 @@ describe('sqlHelper', () => {
         it('should ignore if merge is empty', () => {
           const beforeTime = new Date();
           const name = faker.string.uuid();
-          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithCreatedAt>({
+          const { query, params } = sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithcreatedat.model as ModelMetadata<SimpleWithCreatedAt>,
             values: {
@@ -945,7 +1022,7 @@ describe('sqlHelper', () => {
           const id = faker.string.uuid();
           const name = faker.string.uuid();
           const otherId = faker.string.uuid();
-          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithStringId>({
+          const { query, params } = sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithstringid.model as ModelMetadata<SimpleWithStringId>,
             values: {
@@ -974,7 +1051,7 @@ describe('sqlHelper', () => {
           const id = faker.string.uuid();
           const name = faker.string.uuid();
           const otherId = faker.string.uuid();
-          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithStringId>({
+          const { query, params } = sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithstringid.model as ModelMetadata<SimpleWithStringId>,
             values: {
@@ -1003,7 +1080,7 @@ describe('sqlHelper', () => {
         it('should use a where clause on the index specification if provided on the targets', () => {
           const beforeTime = new Date();
           const name = faker.string.uuid();
-          const { query, params } = sqlHelper.getInsertQueryAndParams<SimpleWithCreatedAt>({
+          const { query, params } = sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithcreatedat.model as ModelMetadata<SimpleWithCreatedAt>,
             values: {
@@ -1282,10 +1359,8 @@ describe('sqlHelper', () => {
     });
 
     it('should ignore collection properties', () => {
-      const product = new Product();
-      product.id = faker.number.int();
-      const category = new Category();
-      category.id = faker.number.int();
+      const product = { id: faker.number.int() };
+      const category = { id: faker.number.int() };
 
       const name = faker.string.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
@@ -1294,10 +1369,9 @@ describe('sqlHelper', () => {
         where: {},
         values: {
           name,
-          // @ts-expect-error - Collections are excluded from values type
           products: [product],
           categories: [category],
-        },
+        } as Record<string, unknown>,
       });
 
       expect(query).toBe(`UPDATE "${repositoriesByModelName.SimpleWithCollections.model.tableName}" SET "name"=$1 RETURNING "id","name"`);
@@ -1305,19 +1379,14 @@ describe('sqlHelper', () => {
     });
 
     it('should use primaryKey value if hydrated object is passed as a value', () => {
-      const store = new Store();
-      store.id = faker.number.int();
-      store.name = `store - ${faker.string.uuid()}`;
+      const store = { id: faker.number.int(), name: `store - ${faker.string.uuid()}` };
 
       const name = faker.string.uuid();
       const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
         where: {},
-        values: {
-          name,
-          store,
-        },
+        values: { name, store } as Record<string, unknown>,
       });
 
       expect(query).toBe(
@@ -1355,10 +1424,7 @@ describe('sqlHelper', () => {
         repositoriesByModelNameLowered,
         model: repositoriesByModelName.SimpleWithJson.model as ModelMetadata<SimpleWithJson>,
         where: {},
-        values: {
-          name,
-          bar,
-        },
+        values: { name, bar } as Record<string, unknown>,
       });
 
       expect(query).toBe(`UPDATE "${repositoriesByModelName.SimpleWithJson.model.tableName}" SET "name"=$1,"bar"=$2::jsonb RETURNING "id","name","bar","key_value" AS "keyValue"`);
@@ -1372,15 +1438,11 @@ describe('sqlHelper', () => {
       };
 
       const name = faker.string.uuid();
-      const { query, params } = sqlHelper.getUpdateQueryAndParams<ProductWithCreatedAt>({
+      const { query, params } = sqlHelper.getUpdateQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
-        where: {
-          store,
-        },
-        values: {
-          name,
-        },
+        where: { store } as Record<string, unknown>,
+        values: { name },
       });
 
       expect(query).toBe(
@@ -1660,9 +1722,7 @@ describe('sqlHelper', () => {
       const { query, params } = sqlHelper.getDeleteQueryAndParams({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.productwithcreatedat.model as ModelMetadata<ProductWithCreatedAt>,
-        where: {
-          store,
-        },
+        where: { store } as Record<string, unknown>,
       });
 
       expect(query).toBe(
@@ -2790,20 +2850,11 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           or: [
-            {
-              store,
-              aliases: alias1,
-            },
-            {
-              store,
-              aliases: alias2,
-            },
-            {
-              store: store2,
-              aliases: alias3,
-            },
+            { store, aliases: alias1 },
+            { store, aliases: alias2 },
+            { store: store2, aliases: alias3 },
           ],
-        },
+        } as Record<string, unknown>,
       });
 
       assert(whereStatement);
@@ -2866,6 +2917,71 @@ describe('sqlHelper', () => {
       assert(whereStatement);
       expect(whereStatement).toBe('WHERE "id"=$1 AND (("name"=$2) OR ("name"<>$3 AND "store_id"=$4)) AND "sku"=$5');
       expect(params).toStrictEqual([id, name, name, store, sku]);
+    });
+
+    it('should handle nested or groups (or inside or)', () => {
+      const name1 = faker.string.uuid();
+      const sku1 = faker.string.uuid();
+      const name2 = faker.string.uuid();
+      const sku2 = faker.string.uuid();
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          or: [
+            { or: [{ name: name1 }, { sku: sku1 }] },
+            { or: [{ name: name2 }, { sku: sku2 }] },
+          ],
+        },
+      });
+
+      assert(whereStatement);
+      expect(whereStatement).toBe('WHERE (((("name"=$1) OR ("sku"=$2))) OR ((("name"=$3) OR ("sku"=$4))))');
+      expect(params).toStrictEqual([name1, sku1, name2, sku2]);
+    });
+
+    it('should handle nested or groups combined with top-level AND constraint', () => {
+      const id = faker.number.int();
+      const name1 = faker.string.uuid();
+      const store1 = faker.number.int();
+      const name2 = faker.string.uuid();
+      const store2 = faker.number.int();
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          id,
+          or: [
+            { or: [{ name: name1 }, { store: store1 }] },
+            { or: [{ name: name2 }, { store: store2 }] },
+          ],
+        },
+      });
+
+      assert(whereStatement);
+      expect(whereStatement).toBe('WHERE "id"=$1 AND (((("name"=$2) OR ("store_id"=$3))) OR ((("name"=$4) OR ("store_id"=$5))))');
+      expect(params).toStrictEqual([id, name1, store1, name2, store2]);
+    });
+
+    it('should handle and inside or', () => {
+      const name = faker.string.uuid();
+      const store = faker.number.int();
+      const sku = faker.string.uuid();
+      const location = faker.string.uuid();
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          or: [
+            { name, store },
+            { sku, location },
+          ],
+        },
+      });
+
+      assert(whereStatement);
+      expect(whereStatement).toBe('WHERE (("name"=$1 AND "store_id"=$2) OR ("sku"=$3 AND "location"=$4))');
+      expect(params).toStrictEqual([name, store, sku, location]);
     });
 
     it('should handle and', () => {
@@ -3092,9 +3208,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
-          where: {
-            arrayColumn: [null, []] as (string | null)[],
-          },
+          where: { arrayColumn: [null, []] as (string | null)[] } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -3107,9 +3221,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
-          where: {
-            arrayColumn: value,
-          },
+          where: { arrayColumn: value } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -3122,9 +3234,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
-          where: {
-            arrayColumn: [value],
-          },
+          where: { arrayColumn: [value] } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -3137,11 +3247,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
-          where: {
-            arrayColumn: {
-              '!': value,
-            },
-          },
+          where: { arrayColumn: { '!': value } } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -3219,9 +3325,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
-          where: {
-            stringArrayColumn: [null, empty] as (string | null)[],
-          },
+          where: { stringArrayColumn: [null, empty] as (string | null)[] } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -3234,9 +3338,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
-          where: {
-            stringArrayColumn: value,
-          },
+          where: { stringArrayColumn: value } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -3249,9 +3351,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
-          where: {
-            stringArrayColumn: [value],
-          },
+          where: { stringArrayColumn: [value] } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -3264,11 +3364,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
-          where: {
-            stringArrayColumn: {
-              '!': value,
-            },
-          },
+          where: { stringArrayColumn: { '!': value } } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -3442,9 +3538,7 @@ describe('sqlHelper', () => {
       const { whereStatement, params } = sqlHelper.buildWhereStatement({
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
-        where: {
-          store,
-        },
+        where: { store } as Record<string, unknown>,
       });
 
       assert(whereStatement);
@@ -3750,7 +3844,7 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           'store.name': 'Acme',
-        } as WhereQuery<Product>,
+        } as WhereQuery<SimpleWithJson>,
         joins: [
           {
             propertyName: 'store',
@@ -3770,7 +3864,7 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           'store.name': { like: '%mart%' },
-        } as WhereQuery<Product>,
+        } as WhereQuery<SimpleWithJson>,
         joins: [
           {
             propertyName: 'store',
@@ -3790,7 +3884,7 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           'primaryStore.name': 'Acme',
-        } as WhereQuery<Product>,
+        } as WhereQuery<SimpleWithJson>,
         joins: [
           {
             propertyName: 'store',
@@ -3811,7 +3905,7 @@ describe('sqlHelper', () => {
         where: {
           name: 'Widget',
           'store.name': 'Acme',
-        } as WhereQuery<Product>,
+        } as WhereQuery<SimpleWithJson>,
         joins: [
           {
             propertyName: 'store',
@@ -3831,7 +3925,7 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           'store.id': { '>': 5 },
-        } as WhereQuery<Product>,
+        } as WhereQuery<SimpleWithJson>,
         joins: [
           {
             propertyName: 'store',
@@ -3851,7 +3945,7 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           'store.name': null,
-        } as WhereQuery<Product>,
+        } as WhereQuery<SimpleWithJson>,
         joins: [
           {
             propertyName: 'store',
@@ -3874,7 +3968,7 @@ describe('sqlHelper', () => {
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           where: {
             'store.name': 'Acme',
-          } as WhereQuery<Product>,
+          } as WhereQuery<SimpleWithJson>,
         });
       } catch (ex) {
         thrownError = ex as Error;
@@ -3893,7 +3987,7 @@ describe('sqlHelper', () => {
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           where: {
             'nonExistentAlias.name': 'Acme',
-          } as WhereQuery<Product>,
+          } as WhereQuery<SimpleWithJson>,
           joins: [
             {
               propertyName: 'store',
@@ -3919,7 +4013,7 @@ describe('sqlHelper', () => {
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           where: {
             'store.nonExistentProperty': 'Acme',
-          } as WhereQuery<Product>,
+          } as WhereQuery<SimpleWithJson>,
           joins: [
             {
               propertyName: 'store',
@@ -4085,9 +4179,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
-          where: {
-            intColumn: { '<=': maxSubquery },
-          },
+          where: { intColumn: { '<=': maxSubquery } } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -4101,9 +4193,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
-          where: {
-            intColumn: { '>': minSubquery },
-          },
+          where: { intColumn: { '>': minSubquery } } as Record<string, unknown>,
         });
 
         assert(whereStatement);

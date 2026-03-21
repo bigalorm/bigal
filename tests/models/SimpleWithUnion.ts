@@ -1,21 +1,13 @@
-import { column, table } from '../../src/index.js';
+import { text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithUnion extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
+export const simpleWithUnionSchema = {
+  ...modelBase,
+  name: text().notNull(),
+  status: text().notNull().default('Foo'),
+};
 
-  @column({
-    enum: ['Foo', 'Bar', 'Foobar'],
-    defaultsTo: 'Foo',
-    type: 'string',
-  })
-  public status!: 'Bar' | 'Foo' | 'Foobar';
-}
+export type SimpleWithUnionSelect = InferSelect<typeof simpleWithUnionSchema>;
+export type SimpleWithUnionInsert = InferInsert<typeof simpleWithUnionSchema>;

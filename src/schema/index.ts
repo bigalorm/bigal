@@ -30,12 +30,12 @@ export {
   uuid,
   varchar,
 } from './columns.js';
-export type { VarcharOptions } from './columns.js';
+export type { ColumnOptions, VarcharOptions } from './columns.js';
 
 export { hasMany, HasManyBuilder } from './HasManyBuilder.js';
 export type { HasManyConfig, HasManyThroughIntermediate } from './HasManyBuilder.js';
 
 export type { InferInsert, InferSelect, OptionalInsertKeys, RequiredInsertKeys, SchemaDefinition, SchemaEntry, SelectKeys } from './InferTypes.js';
 
-export { table } from './TableDefinition.js';
+export { table, view } from './TableDefinition.js';
 export type { BelongsToEntry, HasManyEntry, ModelHooks, TableDefinition, TableOptions } from './TableDefinition.js';

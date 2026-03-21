@@ -1,20 +1,14 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { belongsTo, text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithStringId extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
+import { stringIdBase } from './base.js';
+import { tables } from './index.js';
 
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
+export const simpleWithStringIdSchema = {
+  ...stringIdBase,
+  name: text().notNull(),
+  otherId: belongsTo<string>(() => tables.SimpleWithStringId!, 'other_id'),
+};
 
-  @column({
-    model: () => SimpleWithStringId.name,
-  })
-  public otherId?: SimpleWithStringId | string;
-}
+export type SimpleWithStringIdSelect = InferSelect<typeof simpleWithStringIdSchema>;
+export type SimpleWithStringIdInsert = InferInsert<typeof simpleWithStringIdSchema>;

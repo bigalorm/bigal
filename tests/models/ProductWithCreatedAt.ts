@@ -1,8 +1,12 @@
-import { createDateColumn } from '../../src/index.js';
+import { createdAt } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { Product } from './Product.js';
+import { productSchema } from './Product.js';
 
-export class ProductWithCreatedAt extends Product {
-  @createDateColumn()
-  public createdAt!: Date;
-}
+export const productWithCreatedAtSchema = {
+  ...productSchema,
+  createdAt: createdAt(),
+};
+
+export type ProductWithCreatedAtSelect = InferSelect<typeof productWithCreatedAtSchema>;
+export type ProductWithCreatedAtInsert = InferInsert<typeof productWithCreatedAtSchema>;

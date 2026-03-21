@@ -36,10 +36,13 @@ export class ColumnBuilder<TConfig extends ColumnBuilderConfig = ColumnBuilderCo
 
   public readonly config: ColumnBuilderRuntimeConfig;
 
-  public constructor(dbColumnName: string, columnType: string) {
-    assertValidSqlIdentifier(dbColumnName, 'column name');
+  public constructor(columnType: string, dbColumnName?: string) {
+    if (dbColumnName) {
+      assertValidSqlIdentifier(dbColumnName, 'column name');
+    }
+
     this.config = {
-      dbColumnName,
+      dbColumnName: dbColumnName ?? '',
       columnType,
       isNotNull: false,
       hasDefaultValue: false,

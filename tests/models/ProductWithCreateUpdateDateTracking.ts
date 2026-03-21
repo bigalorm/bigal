@@ -1,23 +1,10 @@
-import { type CreateUpdateParams } from '../../src/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { Product } from './Product.js';
+import { productSchema } from './Product.js';
 
-export class ProductWithCreateUpdateDateTracking extends Product {
-  public static override async beforeCreate(values: CreateUpdateParams<ProductWithCreateUpdateDateTracking>): Promise<CreateUpdateParams<ProductWithCreateUpdateDateTracking>> {
-    await Promise.resolve();
+export const productWithCreateUpdateDateTrackingSchema = {
+  ...productSchema,
+};
 
-    return {
-      ...values,
-
-      name: `beforeCreate - ${values.name}`,
-    };
-  }
-
-  public static override beforeUpdate(values: CreateUpdateParams<ProductWithCreateUpdateDateTracking>): CreateUpdateParams<ProductWithCreateUpdateDateTracking> {
-    return {
-      ...values,
-
-      name: `beforeUpdate - ${values.name}`,
-    };
-  }
-}
+export type ProductWithCreateUpdateDateTrackingSelect = InferSelect<typeof productWithCreateUpdateDateTrackingSchema>;
+export type ProductWithCreateUpdateDateTrackingInsert = InferInsert<typeof productWithCreateUpdateDateTrackingSchema>;

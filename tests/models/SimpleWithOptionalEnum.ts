@@ -1,20 +1,13 @@
-import { column, table } from '../../src/index.js';
+import { text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithOptionalEnum extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
+export const simpleWithOptionalEnumSchema = {
+  ...modelBase,
+  name: text().notNull(),
+  status: text(),
+};
 
-  @column({
-    enum: ['Foo', 'Bar', 'Foobar'],
-    type: 'string',
-  })
-  public status?: 'Bar' | 'Foo' | 'Foobar';
-}
+export type SimpleWithOptionalEnumSelect = InferSelect<typeof simpleWithOptionalEnumSchema>;
+export type SimpleWithOptionalEnumInsert = InferInsert<typeof simpleWithOptionalEnumSchema>;

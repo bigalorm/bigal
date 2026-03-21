@@ -1,9 +1,9 @@
-import { table } from '../../src/index.js';
+import type { InferSelect } from '../../src/schema/index.js';
 
-import { Product } from './Product.js';
+import { productSchema } from './Product.js';
 
-@table({
-  name: 'readonly_products',
-  readonly: true,
-})
-export class ReadonlyProduct extends Product {}
+export const readonlyProductSchema = {
+  ...productSchema,
+};
+
+export type ReadonlyProductSelect = InferSelect<typeof readonlyProductSchema>;

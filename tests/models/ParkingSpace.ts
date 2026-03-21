@@ -1,28 +1,14 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { belongsTo, text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { ParkingLot } from './ParkingLot.js';
+import { stringIdBase } from './base.js';
+import { tables } from './index.js';
 
-@table({
-  name: 'parking_space',
-})
-export class ParkingSpace extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
+export const parkingSpaceSchema = {
+  ...stringIdBase,
+  parkingLot: belongsTo<string>(() => tables.ParkingLot!),
+  name: text().notNull(),
+};
 
-  @column({
-    model: () => ParkingLot.name,
-    name: 'parking_lot_id',
-    required: true,
-  })
-  public parkingLot!: ParkingLot | string;
-
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-
-  public getLotAndName(): string {
-    return `${typeof this.parkingLot === 'string' ? this.parkingLot : this.parkingLot.id} - ${this.name}`;
-  }
-}
+export type ParkingSpaceSelect = InferSelect<typeof parkingSpaceSchema>;
+export type ParkingSpaceInsert = InferInsert<typeof parkingSpaceSchema>;

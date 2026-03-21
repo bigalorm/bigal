@@ -1,15 +1,12 @@
-import { column, table } from '../../src/index.js';
+import { text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  schema: 'foo',
-  name: 'simple',
-})
-export class SimpleWithSchema extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-}
+export const simpleWithSchemaSchema = {
+  ...modelBase,
+  name: text().notNull(),
+};
+
+export type SimpleWithSchemaSelect = InferSelect<typeof simpleWithSchemaSchema>;
+export type SimpleWithSchemaInsert = InferInsert<typeof simpleWithSchemaSchema>;

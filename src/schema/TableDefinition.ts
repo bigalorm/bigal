@@ -1,7 +1,7 @@
 import { ColumnCollectionMetadata } from '../metadata/ColumnCollectionMetadata.js';
 import { ColumnModelMetadata } from '../metadata/ColumnModelMetadata.js';
 import { ColumnTypeMetadata } from '../metadata/ColumnTypeMetadata.js';
-import { assertValidSqlIdentifier } from '../utils/index.js';
+import { assertValidSqlIdentifier, snakeCase } from '../utils/index.js';
 
 import { BelongsToBuilder } from './BelongsToBuilder.js';
 import { ColumnBuilder } from './ColumnBuilder.js';
@@ -85,7 +85,6 @@ function buildColumnModelMetadata(entry: BelongsToBuilder<unknown>, propertyName
     target: tableName,
     name: entry.dbColumnName,
     propertyName,
-    required: true,
     model: () => {
       const referencedTable = entry.modelFn();
       return referencedTable.tableName;
@@ -142,6 +141,13 @@ export function table<TName extends string, TSchema extends SchemaDefinition>(
 
   for (const [propertyName, entry] of Object.entries(schemaDefinition)) {
     if (entry instanceof ColumnBuilder) {
+      // Auto-derive db column name from property key if not explicitly set
+      if (!entry.config.dbColumnName) {
+        const derived = snakeCase(propertyName);
+        assertValidSqlIdentifier(derived, `derived column name for "${propertyName}"`);
+        entry.config.dbColumnName = derived;
+      }
+
       const metadata = buildColumnTypeMetadata(entry, propertyName, tableName);
 
       columnsByPropertyName[propertyName] = metadata;
@@ -164,6 +170,13 @@ export function table<TName extends string, TSchema extends SchemaDefinition>(
         versionColumns.push(metadata);
       }
     } else if (entry instanceof BelongsToBuilder) {
+      // Auto-derive FK column name as snakeCase(propertyName) + '_id'
+      if (!entry.dbColumnName) {
+        const derived = `${snakeCase(propertyName)}_id`;
+        assertValidSqlIdentifier(derived, `derived FK column name for "${propertyName}"`);
+        entry.dbColumnName = derived;
+      }
+
       belongsToEntries.push({ propertyName, builder: entry });
 
       const metadata = buildColumnModelMetadata(entry, propertyName, tableName);
@@ -207,4 +220,17 @@ export function table<TName extends string, TSchema extends SchemaDefinition>(
   };
 
   return Object.freeze(definition);
+}
+
+/**
+ * Defines a read-only table definition backed by a PostgreSQL view.
+ * Equivalent to `table(name, schema, { readonly: true, ...options })`.
+ * Returns a `ReadonlyRepository` when registered with `createBigAl`.
+ */
+export function view<TName extends string, TSchema extends SchemaDefinition>(
+  viewName: TName,
+  schemaDefinition: TSchema,
+  options?: Omit<TableOptions<InferInsert<TSchema>>, 'readonly'>,
+): TableDefinition<TName, TSchema> {
+  return table(viewName, schemaDefinition, { ...options, readonly: true });
 }

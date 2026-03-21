@@ -1,20 +1,14 @@
-import { column, table } from '../../src/index.js';
+import { hasMany, text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
-import { Product } from './Product.js';
+import { modelBase } from './base.js';
+import { tables } from './index.js';
 
-@table({
-  name: 'stores',
-})
-export class Store extends ModelBase {
-  @column({
-    type: 'string',
-  })
-  public name?: string;
+export const storeSchema = {
+  ...modelBase,
+  name: text(),
+  products: hasMany(() => tables.Product!).via('store'),
+};
 
-  @column({
-    collection: () => Product.name,
-    via: 'store',
-  })
-  public products?: Product[];
-}
+export type StoreSelect = InferSelect<typeof storeSchema>;
+export type StoreInsert = InferInsert<typeof storeSchema>;

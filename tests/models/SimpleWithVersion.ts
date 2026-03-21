@@ -1,20 +1,16 @@
-import { column, table, versionColumn } from '../../src/index.js';
+import { integer, text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple_with_version',
-})
-export class SimpleWithVersion extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
+const versionColumn = integer().notNull();
+versionColumn.config.isVersion = true;
 
-  @versionColumn({
-    type: 'integer',
-    required: true,
-  })
-  public version!: number;
-}
+export const simpleWithVersionSchema = {
+  ...modelBase,
+  name: text().notNull(),
+  version: versionColumn,
+};
+
+export type SimpleWithVersionSelect = InferSelect<typeof simpleWithVersionSchema>;
+export type SimpleWithVersionInsert = InferInsert<typeof simpleWithVersionSchema>;

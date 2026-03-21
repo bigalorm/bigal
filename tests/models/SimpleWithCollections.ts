@@ -1,30 +1,17 @@
-import { column, table } from '../../src/index.js';
+import { hasMany, text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { Category } from './Category.js';
-import { ModelBase } from './ModelBase.js';
-import { Product } from './Product.js';
-import { ProductCategory } from './ProductCategory.js';
+import { modelBase } from './base.js';
+import { tables } from './index.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithCollections extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
+export const simpleWithCollectionsSchema = {
+  ...modelBase,
+  name: text().notNull(),
+  products: hasMany(() => tables.Product!).via('store'),
+  categories: hasMany(() => tables.Category!)
+    .through(() => tables.ProductCategory!)
+    .via('product'),
+};
 
-  @column({
-    collection: () => Product.name,
-    via: 'store',
-  })
-  public products?: Product[];
-
-  @column({
-    collection: () => Category.name,
-    through: () => ProductCategory.name,
-    via: 'product',
-  })
-  public categories!: Category[];
-}
+export type SimpleWithCollectionsSelect = InferSelect<typeof simpleWithCollectionsSchema>;
+export type SimpleWithCollectionsInsert = InferInsert<typeof simpleWithCollectionsSchema>;

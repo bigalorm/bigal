@@ -35,7 +35,7 @@ import {
 // ---------------------------------------------------------------------------
 
 const modelBase = {
-  id: serial('id').primaryKey(),
+  id: serial().primaryKey(),
 };
 
 const timestamps = {
@@ -55,14 +55,14 @@ const tables: Record<string, TableDefinition<any, any>> = {};
 const productSchema = {
   ...modelBase,
   ...timestamps,
-  name: text('name').notNull(),
-  sku: varchar('sku', { length: 100 }),
-  location: text('location'),
-  aliases: textArray('alias_names').default([]),
-  priceCents: integer('price_cents').notNull(),
-  isActive: boolean('is_active').notNull().default(true),
-  metadata: jsonb<{ color?: string }>('metadata'),
-  store: belongsTo(() => tables.Store!, 'store_id'),
+  name: text().notNull(),
+  sku: varchar({ length: 100 }),
+  location: text(),
+  aliases: textArray({ name: 'alias_names' }).default([]),
+  priceCents: integer().notNull(),
+  isActive: boolean().notNull().default(true),
+  metadata: jsonb<{ color?: string }>(),
+  store: belongsTo(() => tables.Store!),
   categories: hasMany(() => tables.Category!)
     .through(() => tables.ProductCategory!)
     .via('product'),
@@ -76,7 +76,7 @@ type ProductInsert = InferInsert<typeof productSchema>;
 const storeSchema = {
   ...modelBase,
   ...timestamps,
-  name: text('name'),
+  name: text(),
   products: hasMany(() => tables.Product!).via('store'),
 };
 const Store = table('stores', storeSchema);
@@ -88,7 +88,7 @@ type StoreInsert = InferInsert<typeof storeSchema>;
 const categorySchema = {
   ...modelBase,
   ...timestamps,
-  name: text('name').notNull(),
+  name: text().notNull(),
   products: hasMany(() => tables.Product!)
     .through(() => tables.ProductCategory!)
     .via('category'),
@@ -100,10 +100,10 @@ type CategorySelect = InferSelect<typeof categorySchema>;
 
 const productCategorySchema = {
   ...modelBase,
-  product: belongsTo(() => tables.Product!, 'product_id'),
-  category: belongsTo(() => tables.Category!, 'category_id'),
-  ordering: integer('ordering'),
-  isPrimary: booleanColumn('is_primary'),
+  product: belongsTo(() => tables.Product!),
+  category: belongsTo(() => tables.Category!),
+  ordering: integer(),
+  isPrimary: booleanColumn(),
 };
 const ProductCategory = table('product__category', productCategorySchema);
 tables.ProductCategory = ProductCategory;
@@ -113,8 +113,8 @@ type ProductCategoryInsert = InferInsert<typeof productCategorySchema>;
 
 // String primary key model
 const stringIdSchema = {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
+  id: text().primaryKey(),
+  name: text().notNull(),
 };
 const SimpleWithStringId = table('simple_with_string_id', stringIdSchema);
 
@@ -124,8 +124,8 @@ type StringIdInsert = typeof SimpleWithStringId.$inferInsert;
 // Self-referential model
 const selfRefSchema = {
   ...modelBase,
-  name: text('name').notNull(),
-  parent: belongsTo(() => tables.SelfRef!, 'parent_id'),
+  name: text().notNull(),
+  parent: belongsTo(() => tables.SelfRef!),
   children: hasMany(() => tables.SelfRef!).via('parent'),
 };
 const SelfRef = table('self_ref', selfRefSchema);
@@ -141,8 +141,8 @@ interface IJsonPayload {
 
 const jsonWithIdSchema = {
   ...modelBase,
-  name: text('name').notNull(),
-  payload: jsonb<IJsonPayload>('payload'),
+  name: text().notNull(),
+  payload: jsonb<IJsonPayload>(),
 };
 const JsonWithId = table('json_with_id', jsonWithIdSchema);
 
@@ -151,24 +151,24 @@ type JsonWithIdSelect = typeof JsonWithId.$inferSelect;
 // Every column type
 const kitchenSinkSchema = {
   ...modelBase,
-  textCol: text('text_col').notNull(),
-  varcharCol: varchar('varchar_col', { length: 255 }),
-  intCol: integer('int_col'),
-  bigintCol: bigserial('bigint_col'),
-  smallintCol: smallint('smallint_col'),
-  realCol: real('real_col'),
-  doubleCol: doublePrecision('double_col'),
-  boolCol: booleanColumn('bool_col').notNull().default(false),
-  timestampCol: timestamp('timestamp_col'),
-  timestamptzCol: timestamptz('timestamptz_col'),
-  dateCol: dateColumn('date_col'),
-  jsonbCol: jsonb<{ nested: string }>('jsonb_col'),
-  jsonCol: json<string[]>('json_col'),
-  uuidCol: uuid('uuid_col').unique(),
-  byteaCol: bytea('bytea_col'),
-  textArrayCol: textArray('text_array_col').default([]),
-  intArrayCol: integerArray('int_array_col'),
-  boolArrayCol: booleanArray('bool_array_col'),
+  textCol: text().notNull(),
+  varcharCol: varchar({ length: 255 }),
+  intCol: integer(),
+  bigintCol: bigserial(),
+  smallintCol: smallint(),
+  realCol: real(),
+  doubleCol: doublePrecision(),
+  boolCol: booleanColumn().notNull().default(false),
+  timestampCol: timestamp(),
+  timestamptzCol: timestamptz(),
+  dateCol: dateColumn(),
+  jsonbCol: jsonb<{ nested: string }>(),
+  jsonCol: json<string[]>(),
+  uuidCol: uuid().unique(),
+  byteaCol: bytea(),
+  textArrayCol: textArray().default([]),
+  intArrayCol: integerArray(),
+  boolArrayCol: booleanArray(),
   createdAt: createdAt(),
 };
 const KitchenSink = table('kitchen_sink', kitchenSinkSchema);
@@ -179,15 +179,15 @@ type KitchenSinkInsert = typeof KitchenSink.$inferInsert;
 // Readonly model (view)
 const readonlyViewSchema = {
   ...modelBase,
-  name: text('name'),
-  totalProducts: integer('total_products'),
+  name: text(),
+  totalProducts: integer(),
 };
 const ReadonlyView = table('store_summary', readonlyViewSchema, { readonly: true });
 
 // Model with hooks
 const hookedSchema = {
   ...modelBase,
-  name: text('name').notNull(),
+  name: text().notNull(),
 };
 const HookedModel = table('hooked', hookedSchema, {
   hooks: {
@@ -512,7 +512,7 @@ describe('Schema builder runtime behavior', () => {
     });
 
     it('rejects invalid table names', () => {
-      expect(() => table('', { id: serial('id') })).toThrow();
+      expect(() => table('', { id: serial() })).toThrow();
     });
 
     it('freezes the returned definition', () => {
@@ -525,12 +525,12 @@ describe('Schema builder runtime behavior', () => {
     });
 
     it('sets schema from options', () => {
-      const withSchema = table('foo', { id: serial('id') }, { schema: 'audit' });
+      const withSchema = table('foo', { id: serial() }, { schema: 'audit' });
       expect(withSchema.dbSchema).toBe('audit');
     });
 
     it('sets connection from options', () => {
-      const withConn = table('foo', { id: serial('id') }, { connection: 'analytics' });
+      const withConn = table('foo', { id: serial() }, { connection: 'analytics' });
       expect(withConn.connection).toBe('analytics');
     });
   });
@@ -581,30 +581,30 @@ describe('Schema builder runtime behavior', () => {
 
   describe('ColumnBuilder chain methods', () => {
     it('notNull sets isNotNull on config', () => {
-      const builder = text('foo').notNull();
+      const builder = text().notNull();
       expect(builder.config.isNotNull).toBe(true);
     });
 
     it('default sets hasDefaultValue and defaultValue', () => {
-      const builder = text('foo').default('bar');
+      const builder = text().default('bar');
       expect(builder.config.hasDefaultValue).toBe(true);
       expect(builder.config.defaultValue).toBe('bar');
     });
 
     it('primaryKey sets isPrimaryKey, isNotNull, and hasDefaultValue', () => {
-      const builder = integer('id').primaryKey();
+      const builder = integer().primaryKey();
       expect(builder.config.isPrimaryKey).toBe(true);
       expect(builder.config.isNotNull).toBe(true);
       expect(builder.config.hasDefaultValue).toBe(true);
     });
 
     it('unique sets isUnique', () => {
-      const builder = uuid('external_id').unique();
+      const builder = uuid().unique();
       expect(builder.config.isUnique).toBe(true);
     });
 
     it('chains are composable', () => {
-      const builder = text('email').notNull().unique();
+      const builder = text().notNull().unique();
       expect(builder.config.isNotNull).toBe(true);
       expect(builder.config.isUnique).toBe(true);
     });
@@ -612,7 +612,7 @@ describe('Schema builder runtime behavior', () => {
 
   describe('Column builder factories', () => {
     it('serial sets correct defaults', () => {
-      const builder = serial('id');
+      const builder = serial();
       expect(builder.config.columnType).toBe('SERIAL');
       expect(builder.config.isNotNull).toBe(true);
       expect(builder.config.hasDefaultValue).toBe(true);
@@ -636,12 +636,12 @@ describe('Schema builder runtime behavior', () => {
     });
 
     it('varchar stores max length', () => {
-      const builder = varchar('name', { length: 255 });
+      const builder = varchar({ length: 255 });
       expect(builder.config.maxLength).toBe(255);
     });
 
     it('createdAt accepts custom column name', () => {
-      const builder = createdAt('created');
+      const builder = createdAt({ name: 'created' });
       expect(builder.config.dbColumnName).toBe('created');
     });
   });
@@ -652,8 +652,14 @@ describe('Schema builder runtime behavior', () => {
       expect(builder.dbColumnName).toBe('store_id');
     });
 
-    it('belongsTo rejects invalid FK column names', () => {
-      expect(() => belongsTo(() => Store, '')).toThrow();
+    it('belongsTo accepts options object for FK column name', () => {
+      const builder = belongsTo(() => Store, { name: 'shop_id' });
+      expect(builder.dbColumnName).toBe('shop_id');
+    });
+
+    it('belongsTo auto-derives FK column name when omitted', () => {
+      const builder = belongsTo(() => Store);
+      expect(builder.dbColumnName).toBe('');
     });
 
     it('hasMany stores via property name', () => {
@@ -690,15 +696,14 @@ describe('Schema builder runtime behavior', () => {
 
   describe('Column name aliasing', () => {
     it('boolean and booleanColumn are the same function', () => {
-      // Both should produce identical builders
-      const fromAlias = boolean('is_active');
-      const fromFull = booleanColumn('is_active');
+      const fromAlias = boolean();
+      const fromFull = booleanColumn();
       expect(fromAlias.config.columnType).toBe(fromFull.config.columnType);
     });
 
     it('date and dateColumn are the same function', () => {
-      const fromAlias = date('birth_date');
-      const fromFull = dateColumn('birth_date');
+      const fromAlias = date();
+      const fromFull = dateColumn();
       expect(fromAlias.config.columnType).toBe(fromFull.config.columnType);
     });
   });

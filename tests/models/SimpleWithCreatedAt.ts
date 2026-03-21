@@ -1,17 +1,13 @@
-import { column, createDateColumn, table } from '../../src/index.js';
+import { createdAt, text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithCreatedAt extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
+export const simpleWithCreatedAtSchema = {
+  ...modelBase,
+  name: text().notNull(),
+  createdAt: createdAt(),
+};
 
-  @createDateColumn()
-  public createdAt!: Date;
-}
+export type SimpleWithCreatedAtSelect = InferSelect<typeof simpleWithCreatedAtSchema>;
+export type SimpleWithCreatedAtInsert = InferInsert<typeof simpleWithCreatedAtSchema>;

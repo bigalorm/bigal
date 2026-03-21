@@ -1,17 +1,10 @@
-import { type CreateUpdateParams } from '../../src/index.js';
-import { table } from '../../src/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { Product } from './Product.js';
+import { productSchema } from './Product.js';
 
-@table({
-  name: 'products',
-})
-export class ProductWithLifecycleMethods extends Product {
-  public static override beforeCreate(values: CreateUpdateParams<ProductWithLifecycleMethods>): CreateUpdateParams<ProductWithLifecycleMethods> {
-    return values;
-  }
+export const productWithLifecycleMethodsSchema = {
+  ...productSchema,
+};
 
-  public static override beforeUpdate(values: CreateUpdateParams<ProductWithLifecycleMethods>): Promise<CreateUpdateParams<ProductWithLifecycleMethods>> {
-    return Promise.resolve(values);
-  }
-}
+export type ProductWithLifecycleMethodsSelect = InferSelect<typeof productWithLifecycleMethodsSchema>;
+export type ProductWithLifecycleMethodsInsert = InferInsert<typeof productWithLifecycleMethodsSchema>;

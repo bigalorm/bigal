@@ -22,32 +22,36 @@ type BooleanArrayConfig = ColumnBuilderConfig<boolean[]>;
 type CreatedAtConfig = ColumnBuilderConfig<Date, true, true, false, true>;
 type UpdatedAtConfig = ColumnBuilderConfig<Date, true, true, false, true>;
 
-export interface VarcharOptions {
+export interface ColumnOptions {
+  name?: string;
+}
+
+export interface VarcharOptions extends ColumnOptions {
   length?: number;
 }
 
-export function serial(dbName: string): ColumnBuilder<SerialConfig> {
-  const builder = new ColumnBuilder(dbName, 'SERIAL');
+export function serial(options?: ColumnOptions): ColumnBuilder<SerialConfig> {
+  const builder = new ColumnBuilder('SERIAL', options?.name);
   builder.config.isNotNull = true;
   builder.config.hasDefaultValue = true;
   builder.config.isPrimaryKey = true;
   return builder as unknown as ColumnBuilder<SerialConfig>;
 }
 
-export function bigserial(dbName: string): ColumnBuilder<BigSerialConfig> {
-  const builder = new ColumnBuilder(dbName, 'BIGSERIAL');
+export function bigserial(options?: ColumnOptions): ColumnBuilder<BigSerialConfig> {
+  const builder = new ColumnBuilder('BIGSERIAL', options?.name);
   builder.config.isNotNull = true;
   builder.config.hasDefaultValue = true;
   builder.config.isPrimaryKey = true;
   return builder as unknown as ColumnBuilder<BigSerialConfig>;
 }
 
-export function text(dbName: string): ColumnBuilder<TextConfig> {
-  return new ColumnBuilder(dbName, 'TEXT') as unknown as ColumnBuilder<TextConfig>;
+export function text(options?: ColumnOptions): ColumnBuilder<TextConfig> {
+  return new ColumnBuilder('TEXT', options?.name) as unknown as ColumnBuilder<TextConfig>;
 }
 
-export function varchar(dbName: string, options?: VarcharOptions): ColumnBuilder<VarcharConfig> {
-  const builder = new ColumnBuilder(dbName, 'VARCHAR') as unknown as ColumnBuilder<VarcharConfig>;
+export function varchar(options?: VarcharOptions): ColumnBuilder<VarcharConfig> {
+  const builder = new ColumnBuilder('VARCHAR', options?.name) as unknown as ColumnBuilder<VarcharConfig>;
   if (options?.length) {
     builder.config.maxLength = options.length;
   }
@@ -55,72 +59,72 @@ export function varchar(dbName: string, options?: VarcharOptions): ColumnBuilder
   return builder;
 }
 
-export function integer(dbName: string): ColumnBuilder<IntegerConfig> {
-  return new ColumnBuilder(dbName, 'INTEGER') as unknown as ColumnBuilder<IntegerConfig>;
+export function integer(options?: ColumnOptions): ColumnBuilder<IntegerConfig> {
+  return new ColumnBuilder('INTEGER', options?.name) as unknown as ColumnBuilder<IntegerConfig>;
 }
 
-export function bigint(dbName: string): ColumnBuilder<BigIntConfig> {
-  return new ColumnBuilder(dbName, 'BIGINT') as unknown as ColumnBuilder<BigIntConfig>;
+export function bigint(options?: ColumnOptions): ColumnBuilder<BigIntConfig> {
+  return new ColumnBuilder('BIGINT', options?.name) as unknown as ColumnBuilder<BigIntConfig>;
 }
 
-export function smallint(dbName: string): ColumnBuilder<SmallIntConfig> {
-  return new ColumnBuilder(dbName, 'SMALLINT') as unknown as ColumnBuilder<SmallIntConfig>;
+export function smallint(options?: ColumnOptions): ColumnBuilder<SmallIntConfig> {
+  return new ColumnBuilder('SMALLINT', options?.name) as unknown as ColumnBuilder<SmallIntConfig>;
 }
 
-export function real(dbName: string): ColumnBuilder<RealConfig> {
-  return new ColumnBuilder(dbName, 'REAL') as unknown as ColumnBuilder<RealConfig>;
+export function real(options?: ColumnOptions): ColumnBuilder<RealConfig> {
+  return new ColumnBuilder('REAL', options?.name) as unknown as ColumnBuilder<RealConfig>;
 }
 
-export function doublePrecision(dbName: string): ColumnBuilder<DoublePrecisionConfig> {
-  return new ColumnBuilder(dbName, 'DOUBLE PRECISION') as unknown as ColumnBuilder<DoublePrecisionConfig>;
+export function doublePrecision(options?: ColumnOptions): ColumnBuilder<DoublePrecisionConfig> {
+  return new ColumnBuilder('DOUBLE PRECISION', options?.name) as unknown as ColumnBuilder<DoublePrecisionConfig>;
 }
 
-export function booleanColumn(dbName: string): ColumnBuilder<BooleanColumnConfig> {
-  return new ColumnBuilder(dbName, 'BOOLEAN') as unknown as ColumnBuilder<BooleanColumnConfig>;
+export function booleanColumn(options?: ColumnOptions): ColumnBuilder<BooleanColumnConfig> {
+  return new ColumnBuilder('BOOLEAN', options?.name) as unknown as ColumnBuilder<BooleanColumnConfig>;
 }
 
-export function timestamp(dbName: string): ColumnBuilder<TimestampConfig> {
-  return new ColumnBuilder(dbName, 'TIMESTAMP') as unknown as ColumnBuilder<TimestampConfig>;
+export function timestamp(options?: ColumnOptions): ColumnBuilder<TimestampConfig> {
+  return new ColumnBuilder('TIMESTAMP', options?.name) as unknown as ColumnBuilder<TimestampConfig>;
 }
 
-export function timestamptz(dbName: string): ColumnBuilder<TimestampTzConfig> {
-  return new ColumnBuilder(dbName, 'TIMESTAMPTZ') as unknown as ColumnBuilder<TimestampTzConfig>;
+export function timestamptz(options?: ColumnOptions): ColumnBuilder<TimestampTzConfig> {
+  return new ColumnBuilder('TIMESTAMPTZ', options?.name) as unknown as ColumnBuilder<TimestampTzConfig>;
 }
 
-export function dateColumn(dbName: string): ColumnBuilder<DateColumnConfig> {
-  return new ColumnBuilder(dbName, 'DATE') as unknown as ColumnBuilder<DateColumnConfig>;
+export function dateColumn(options?: ColumnOptions): ColumnBuilder<DateColumnConfig> {
+  return new ColumnBuilder('DATE', options?.name) as unknown as ColumnBuilder<DateColumnConfig>;
 }
 
-export function json<T = Record<string, unknown>>(dbName: string): ColumnBuilder<ColumnBuilderConfig<T>> {
-  return new ColumnBuilder(dbName, 'JSON') as unknown as ColumnBuilder<ColumnBuilderConfig<T>>;
+export function json<T = Record<string, unknown>>(options?: ColumnOptions): ColumnBuilder<ColumnBuilderConfig<T>> {
+  return new ColumnBuilder('JSON', options?.name) as unknown as ColumnBuilder<ColumnBuilderConfig<T>>;
 }
 
-export function jsonb<T = Record<string, unknown>>(dbName: string): ColumnBuilder<ColumnBuilderConfig<T>> {
-  return new ColumnBuilder(dbName, 'JSONB') as unknown as ColumnBuilder<ColumnBuilderConfig<T>>;
+export function jsonb<T = Record<string, unknown>>(options?: ColumnOptions): ColumnBuilder<ColumnBuilderConfig<T>> {
+  return new ColumnBuilder('JSONB', options?.name) as unknown as ColumnBuilder<ColumnBuilderConfig<T>>;
 }
 
-export function uuid(dbName: string): ColumnBuilder<UuidConfig> {
-  return new ColumnBuilder(dbName, 'UUID') as unknown as ColumnBuilder<UuidConfig>;
+export function uuid(options?: ColumnOptions): ColumnBuilder<UuidConfig> {
+  return new ColumnBuilder('UUID', options?.name) as unknown as ColumnBuilder<UuidConfig>;
 }
 
-export function bytea(dbName: string): ColumnBuilder<ByteaConfig> {
-  return new ColumnBuilder(dbName, 'BYTEA') as unknown as ColumnBuilder<ByteaConfig>;
+export function bytea(options?: ColumnOptions): ColumnBuilder<ByteaConfig> {
+  return new ColumnBuilder('BYTEA', options?.name) as unknown as ColumnBuilder<ByteaConfig>;
 }
 
-export function textArray(dbName: string): ColumnBuilder<TextArrayConfig> {
-  return new ColumnBuilder(dbName, 'TEXT[]') as unknown as ColumnBuilder<TextArrayConfig>;
+export function textArray(options?: ColumnOptions): ColumnBuilder<TextArrayConfig> {
+  return new ColumnBuilder('TEXT[]', options?.name) as unknown as ColumnBuilder<TextArrayConfig>;
 }
 
-export function integerArray(dbName: string): ColumnBuilder<IntegerArrayConfig> {
-  return new ColumnBuilder(dbName, 'INTEGER[]') as unknown as ColumnBuilder<IntegerArrayConfig>;
+export function integerArray(options?: ColumnOptions): ColumnBuilder<IntegerArrayConfig> {
+  return new ColumnBuilder('INTEGER[]', options?.name) as unknown as ColumnBuilder<IntegerArrayConfig>;
 }
 
-export function booleanArray(dbName: string): ColumnBuilder<BooleanArrayConfig> {
-  return new ColumnBuilder(dbName, 'BOOLEAN[]') as unknown as ColumnBuilder<BooleanArrayConfig>;
+export function booleanArray(options?: ColumnOptions): ColumnBuilder<BooleanArrayConfig> {
+  return new ColumnBuilder('BOOLEAN[]', options?.name) as unknown as ColumnBuilder<BooleanArrayConfig>;
 }
 
-export function createdAt(dbName = 'created_at'): ColumnBuilder<CreatedAtConfig> {
-  const builder = new ColumnBuilder(dbName, 'TIMESTAMPTZ');
+export function createdAt(options?: ColumnOptions): ColumnBuilder<CreatedAtConfig> {
+  const builder = new ColumnBuilder('TIMESTAMPTZ', options?.name ?? 'created_at');
   builder.config.isNotNull = true;
   builder.config.hasDefaultValue = true;
   builder.config.isAutoSet = true;
@@ -128,8 +132,8 @@ export function createdAt(dbName = 'created_at'): ColumnBuilder<CreatedAtConfig>
   return builder as unknown as ColumnBuilder<CreatedAtConfig>;
 }
 
-export function updatedAt(dbName = 'updated_at'): ColumnBuilder<UpdatedAtConfig> {
-  const builder = new ColumnBuilder(dbName, 'TIMESTAMPTZ');
+export function updatedAt(options?: ColumnOptions): ColumnBuilder<UpdatedAtConfig> {
+  const builder = new ColumnBuilder('TIMESTAMPTZ', options?.name ?? 'updated_at');
   builder.config.isNotNull = true;
   builder.config.hasDefaultValue = true;
   builder.config.isAutoSet = true;
@@ -137,8 +141,4 @@ export function updatedAt(dbName = 'updated_at'): ColumnBuilder<UpdatedAtConfig>
   return builder as unknown as ColumnBuilder<UpdatedAtConfig>;
 }
 
-// Re-export with aliases that match the plan's consumer API names.
-// The plan calls them `boolean` and `date`, but those shadow global types.
-// Consumers import `boolean` (the function) from 'bigal', which works because
-// ES module named exports don't collide with global type names.
 export { booleanColumn as boolean, dateColumn as date };
