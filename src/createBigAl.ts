@@ -25,35 +25,68 @@ export interface OnQueryEvent {
 
 export type OnQueryCallback = (event: OnQueryEvent) => void;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- variance: hooks use contravariant function params that prevent SchemaDefinition from working
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- variance: hooks use contravariant function params
 type AnyModel = TableDefinition<string, any>;
 
-export interface BigAlOptions extends IConnection {
+/** Infers the repository type for a model — readonly or read-write based on the model's isReadonly flag */
+type InferRepository<T extends AnyModel> =
+  T extends TableDefinition<string, infer TSchema> ? (T['isReadonly'] extends true ? IReadonlyRepository<InferSelect<TSchema>> : IRepository<InferSelect<TSchema>>) : never;
+
+/** Maps a named models object to a typed repositories object */
+type RepositoryMap<TModels extends Record<string, AnyModel>> = {
+  [K in keyof TModels]: InferRepository<TModels[K]>;
+};
+
+// --- Options: array-style ---
+
+export interface BigAlOptionsWithArray extends IConnection {
   models: AnyModel[];
   connections?: Record<string, IConnection>;
   onQuery?: OnQueryCallback;
 }
 
-/**
- * A BigAl instance created by `createBigAl()`.
- * Use `getRepository()` to obtain typed repositories for each table definition.
- */
+// --- Options: object-style (enables typed repos) ---
+
+export interface BigAlOptionsWithObject<TModels extends Record<string, AnyModel>> extends IConnection {
+  models: TModels;
+  connections?: Record<string, IConnection>;
+  onQuery?: OnQueryCallback;
+}
+
+// --- Return types ---
+
 export interface BigAlInstance {
-  /**
-   * Returns a read-write repository for the given table definition.
-   * The repository type is inferred from the table's schema definition.
-   */
   getRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IRepository<InferSelect<TSchema>>;
 
-  /**
-   * Returns a read-only repository for the given table definition.
-   * The repository type is inferred from the table's schema definition.
-   */
   getReadonlyRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IReadonlyRepository<InferSelect<TSchema>>;
 }
 
-export function createBigAl({ pool, readonlyPool = pool, models, connections = {}, onQuery }: BigAlOptions): BigAlInstance {
-  if (!models.length) {
+export type BigAlInstanceWithRepos<TModels extends Record<string, AnyModel>> = BigAlInstance & RepositoryMap<TModels>;
+
+// --- Overloads ---
+
+/**
+ * Creates a BigAl instance with a named models object.
+ * Returns typed repositories directly: `const { Product, Store } = createBigAl({ models: { Product, Store }, pool })`.
+ *
+ * @param {BigAlOptionsWithObject} options - Pool, models object, and optional config
+ */
+export function createBigAl<TModels extends Record<string, AnyModel>>(options: BigAlOptionsWithObject<TModels>): BigAlInstanceWithRepos<TModels>;
+
+/**
+ * Creates a BigAl instance with a models array.
+ * Use `getRepository(model)` to obtain typed repositories.
+ *
+ * @param {BigAlOptionsWithArray} options - Pool, models array, and optional config
+ */
+export function createBigAl(options: BigAlOptionsWithArray): BigAlInstance;
+
+export function createBigAl<TModels extends Record<string, AnyModel>>(options: BigAlOptionsWithArray | BigAlOptionsWithObject<TModels>): BigAlInstance | BigAlInstanceWithRepos<TModels> {
+  const { pool, readonlyPool = pool, connections = {}, onQuery } = options;
+  const isObjectModels = !Array.isArray(options.models);
+  const modelsArray: AnyModel[] = isObjectModels ? Object.values(options.models) : (options.models as AnyModel[]);
+
+  if (!modelsArray.length) {
     throw new Error('At least one model must be provided');
   }
 
@@ -62,7 +95,7 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
     onQuery ??
     (process.env.DEBUG_BIGAL?.toLowerCase() === 'true'
       ? (event) => {
-          // eslint-disable-next-line no-console
+          // eslint-disable-next-line no-console -- DEBUG_BIGAL is an intentional console logging feature
           console.log(`BigAl [${event.operation}] ${event.model}: ${event.sql}`, event.params);
         }
       : undefined);
@@ -70,7 +103,7 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
   const repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>> = {};
   const repositoriesByModel = new Map<AnyModel, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>();
 
-  for (const model of models) {
+  for (const model of modelsArray) {
     const modelMetadata = buildModelMetadata(model);
 
     let modelPool = pool;
@@ -112,11 +145,11 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
   }
 
   // Validate all relationships resolve to registered models
-  for (const model of models) {
+  for (const model of modelsArray) {
     validateRelationships(model, repositoriesByModelNameLowered);
   }
 
-  return {
+  const instance: BigAlInstance = {
     getRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IRepository<InferSelect<TSchema>> {
       const repository = repositoriesByModel.get(model);
       if (!repository) {
@@ -135,6 +168,19 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
       return repository as unknown as IReadonlyRepository<InferSelect<TSchema>>;
     },
   };
+
+  // If models were passed as an object, attach typed repos directly
+  if (isObjectModels) {
+    const modelsObject = options.models as Record<string, AnyModel>;
+    for (const [key, model] of Object.entries(modelsObject)) {
+      const repository = repositoriesByModel.get(model);
+      if (repository) {
+        (instance as unknown as Record<string, unknown>)[key] = repository;
+      }
+    }
+  }
+
+  return instance as BigAlInstanceWithRepos<TModels>;
 }
 
 function resolveModelName(ref: AnyModel['belongsToEntries'][number]['builder']['modelRef']): string {
