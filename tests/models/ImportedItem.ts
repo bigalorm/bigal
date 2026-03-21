@@ -1,5 +1,4 @@
-import { integer, text, textArray, varchar } from '../../src/schema/index.js';
-import type { InferInsert, InferSelect } from '../../src/schema/index.js';
+import { integer, table, text, textArray, varchar } from '../../src/schema/index.js';
 
 import { stringIdBase } from './base.js';
 
@@ -9,14 +8,11 @@ externalIdStringArray.config.maxLength = 10;
 const unrelatedColumn = integer();
 unrelatedColumn.config.maxLength = 2;
 
-export const importedItemSchema = {
+export const ImportedItem = table('imported_item', {
   ...stringIdBase,
   name: text().notNull(),
   externalIdNoMaxLength: text(),
   externalIdString: varchar({ length: 5 }),
   externalIdStringArray,
   unrelated: unrelatedColumn,
-};
-
-export type ImportedItemSelect = InferSelect<typeof importedItemSchema>;
-export type ImportedItemInsert = InferInsert<typeof importedItemSchema>;
+});

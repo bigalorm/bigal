@@ -1,10 +1,6 @@
-import { text, uuid } from '../../src/schema/index.js';
-import type { InferInsert, InferSelect } from '../../src/schema/index.js';
+import { table, text, uuid } from '../../src/schema/index.js';
 
-export const simpleWithUUIDSchema = {
+export const SimpleWithUUID = table('simple_with_uuid', {
   id: uuid().primaryKey(),
   name: text().notNull(),
-};
-
-export type SimpleWithUUIDSelect = InferSelect<typeof simpleWithUUIDSchema>;
-export type SimpleWithUUIDInsert = InferInsert<typeof simpleWithUUIDSchema>;
+}, { modelName: 'SimpleWithUUID' });

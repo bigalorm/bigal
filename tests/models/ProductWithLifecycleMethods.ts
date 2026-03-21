@@ -1,10 +1,20 @@
-import type { InferInsert, InferSelect } from '../../src/schema/index.js';
+import { belongsTo, hasMany, table, text, textArray } from '../../src/schema/index.js';
 
-import { productSchema } from './Product.js';
+import { modelBase } from './base.js';
 
-export const productWithLifecycleMethodsSchema = {
-  ...productSchema,
-};
-
-export type ProductWithLifecycleMethodsSelect = InferSelect<typeof productWithLifecycleMethodsSchema>;
-export type ProductWithLifecycleMethodsInsert = InferInsert<typeof productWithLifecycleMethodsSchema>;
+export const ProductWithLifecycleMethods = table('products', {
+  ...modelBase,
+  name: text().notNull(),
+  sku: text(),
+  location: text(),
+  aliases: textArray({ name: 'alias_names' }).default([]),
+  store: belongsTo('Store'),
+  categories: hasMany('Category').through('ProductCategory').via('product'),
+}, {
+  modelName: 'ProductWithLifecycleMethods',
+  hooks: {
+    beforeCreate(values) {
+      return values;
+    },
+  },
+});

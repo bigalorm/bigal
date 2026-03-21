@@ -1,13 +1,9 @@
-import { text } from '../../src/schema/index.js';
-import type { InferInsert, InferSelect } from '../../src/schema/index.js';
+import { table, text } from '../../src/schema/index.js';
 
 import { modelBase } from './base.js';
 
-export const simpleWithOptionalEnumSchema = {
+export const SimpleWithOptionalEnum = table('simple', {
   ...modelBase,
   name: text().notNull(),
   status: text(),
-};
-
-export type SimpleWithOptionalEnumSelect = InferSelect<typeof simpleWithOptionalEnumSchema>;
-export type SimpleWithOptionalEnumInsert = InferInsert<typeof simpleWithOptionalEnumSchema>;
+}, { modelName: 'SimpleWithOptionalEnum' });

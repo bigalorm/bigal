@@ -1,13 +1,9 @@
-import { createdAt, text } from '../../src/schema/index.js';
-import type { InferInsert, InferSelect } from '../../src/schema/index.js';
+import { createdAt, table, text } from '../../src/schema/index.js';
 
 import { modelBase } from './base.js';
 
-export const simpleWithCreatedAtSchema = {
+export const SimpleWithCreatedAt = table('simple', {
   ...modelBase,
   name: text().notNull(),
   createdAt: createdAt(),
-};
-
-export type SimpleWithCreatedAtSelect = InferSelect<typeof simpleWithCreatedAtSchema>;
-export type SimpleWithCreatedAtInsert = InferInsert<typeof simpleWithCreatedAtSchema>;
+}, { modelName: 'SimpleWithCreatedAt' });

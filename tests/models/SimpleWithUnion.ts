@@ -1,13 +1,9 @@
-import { text } from '../../src/schema/index.js';
-import type { InferInsert, InferSelect } from '../../src/schema/index.js';
+import { table, text } from '../../src/schema/index.js';
 
 import { modelBase } from './base.js';
 
-export const simpleWithUnionSchema = {
+export const SimpleWithUnion = table('simple', {
   ...modelBase,
   name: text().notNull(),
   status: text().notNull().default('Foo'),
-};
-
-export type SimpleWithUnionSelect = InferSelect<typeof simpleWithUnionSchema>;
-export type SimpleWithUnionInsert = InferInsert<typeof simpleWithUnionSchema>;
+}, { modelName: 'SimpleWithUnion' });
