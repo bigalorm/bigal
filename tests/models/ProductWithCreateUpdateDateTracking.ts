@@ -1,10 +1,30 @@
-import type { InferInsert, InferSelect } from '../../src/schema/index.js';
+import { belongsTo, hasMany, table, text, textArray } from '../../src/schema/index.js';
 
-import { productSchema } from './Product.js';
+import { modelBase } from './base.js';
 
-export const productWithCreateUpdateDateTrackingSchema = {
-  ...productSchema,
-};
-
-export type ProductWithCreateUpdateDateTrackingSelect = InferSelect<typeof productWithCreateUpdateDateTrackingSchema>;
-export type ProductWithCreateUpdateDateTrackingInsert = InferInsert<typeof productWithCreateUpdateDateTrackingSchema>;
+export const ProductWithCreateUpdateDateTracking = table('products', {
+  ...modelBase,
+  name: text().notNull(),
+  sku: text(),
+  location: text(),
+  aliases: textArray({ name: 'alias_names' }).default([]),
+  store: belongsTo('Store'),
+  categories: hasMany('Category').through('ProductCategory').via('product'),
+}, {
+  modelName: 'ProductWithCreateUpdateDateTracking',
+  hooks: {
+    async beforeCreate(values) {
+      await Promise.resolve();
+      return {
+        ...values,
+        name: `beforeCreate - ${values.name}`,
+      };
+    },
+    beforeUpdate(values) {
+      return {
+        ...values,
+        name: `beforeUpdate - ${values.name}`,
+      };
+    },
+  },
+});

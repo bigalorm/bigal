@@ -1,13 +1,9 @@
-import { text } from '../../src/schema/index.js';
-import type { InferInsert, InferSelect } from '../../src/schema/index.js';
+import { table, text } from '../../src/schema/index.js';
 
 import { modelBase } from './base.js';
 
-export const requiredPropertyWithDefaultValueSchema = {
+export const RequiredPropertyWithDefaultValue = table('some_table', {
   ...modelBase,
   foo: text().notNull().default('foobar'),
   bar: text(),
-};
-
-export type RequiredPropertyWithDefaultValueSelect = InferSelect<typeof requiredPropertyWithDefaultValueSchema>;
-export type RequiredPropertyWithDefaultValueInsert = InferInsert<typeof requiredPropertyWithDefaultValueSchema>;
+}, { modelName: 'RequiredPropertyWithDefaultValue' });

@@ -1,140 +1,123 @@
 import { faker } from '@faker-js/faker';
 
-import type {
-  CategorySelect,
-  ClassroomSelect,
-  LevelOneSelect,
-  LevelThreeSelect,
-  LevelTwoSelect,
-  ParkingLotSelect,
-  ParkingSpaceSelect,
-  ProductCategorySelect,
-  ProductSelect,
-  SimpleWithJsonSelect,
-  SimpleWithOptionalEnumSelect,
-  SimpleWithRelationAndJsonSelect,
-  SimpleWithSelfReferenceSelect,
-  SimpleWithStringCollectionSelect,
-  SimpleWithStringIdSelect,
-  SimpleWithUnionSelect,
-  StoreSelect,
-  TeacherClassroomSelect,
-  TeacherSelect,
+import {
+  Category,
+  Classroom,
+  ImportedItem,
+  KitchenSink,
+  LevelOne,
+  LevelThree,
+  LevelTwo,
+  ParkingLot,
+  ParkingSpace,
+  Product,
+  ProductCategory,
+  ProductWithCreatedAt,
+  ProductWithCreateUpdateDateTracking,
+  ProductWithLifecycleMethods,
+  ReadonlyProduct,
+  RequiredPropertyWithDefaultValue,
+  RequiredPropertyWithDefaultValueFunction,
+  SimpleWithCollections,
+  SimpleWithCreatedAt,
+  SimpleWithCreatedAtAndUpdatedAt,
+  SimpleWithJson,
+  SimpleWithOptionalEnum,
+  SimpleWithRelationAndJson,
+  SimpleWithSchema,
+  SimpleWithSelfReference,
+  SimpleWithStringCollection,
+  SimpleWithStringId,
+  SimpleWithUUID,
+  SimpleWithUnion,
+  SimpleWithUpdatedAt,
+  SimpleWithVersion,
+  Store,
+  Student,
+  StudentClassroom,
+  Teacher,
+  TeacherClassroom,
 } from '../models/index.js';
 
 // ---------------------------------------------------------------------------
-// Re-export table definitions with Def suffix
+// Re-export table definitions with Def suffix (used by test files)
 // ---------------------------------------------------------------------------
 
-export { Category as CategoryDef } from '../models/index.js';
-export { Classroom as ClassroomDef } from '../models/index.js';
-export { ImportedItem as ImportedItemDef } from '../models/index.js';
-export { KitchenSink as KitchenSinkDef } from '../models/index.js';
-export { LevelOne as LevelOneDef } from '../models/index.js';
-export { LevelTwo as LevelTwoDef } from '../models/index.js';
-export { LevelThree as LevelThreeDef } from '../models/index.js';
-export { ParkingLot as ParkingLotDef } from '../models/index.js';
-export { ParkingSpace as ParkingSpaceDef } from '../models/index.js';
-export { Product as ProductDef } from '../models/index.js';
-export { ProductCategory as ProductCategoryDef } from '../models/index.js';
-export { ProductWithCreatedAt as ProductWithCreatedAtDef } from '../models/index.js';
-export { ProductWithLifecycleMethods as ProductWithHooksDef } from '../models/index.js';
-export { ReadonlyProduct as ReadonlyProductDef } from '../models/index.js';
-export { RequiredPropertyWithDefaultValue as RequiredPropertyWithDefaultValueDef } from '../models/index.js';
-export { RequiredPropertyWithDefaultValueFunction as RequiredPropertyWithDefaultValueFunctionDef } from '../models/index.js';
-export { SimpleWithCollections as SimpleWithCollectionsDef } from '../models/index.js';
-export { SimpleWithCreatedAt as SimpleWithCreatedAtDef } from '../models/index.js';
-export { SimpleWithCreatedAtAndUpdatedAt as SimpleWithCreatedAtAndUpdatedAtDef } from '../models/index.js';
-export { SimpleWithJson as SimpleWithJsonDef } from '../models/index.js';
-export { SimpleWithOptionalEnum as SimpleWithOptionalEnumDef } from '../models/index.js';
-export { SimpleWithRelationAndJson as SimpleWithRelationAndJsonDef } from '../models/index.js';
-export { SimpleWithSchema as SimpleWithSchemaDef } from '../models/index.js';
-export { SimpleWithSelfReference as SimpleWithSelfReferenceDef } from '../models/index.js';
-export { SimpleWithStringCollection as SimpleWithStringCollectionDef } from '../models/index.js';
-export { SimpleWithStringId as SimpleWithStringIdDef } from '../models/index.js';
-export { SimpleWithUnion as SimpleWithUnionDef } from '../models/index.js';
-export { SimpleWithUpdatedAt as SimpleWithUpdatedAtDef } from '../models/index.js';
-export { SimpleWithUUID as SimpleWithUUIDDef } from '../models/index.js';
-export { SimpleWithVersion as SimpleWithVersionDef } from '../models/index.js';
-export { Store as StoreDef } from '../models/index.js';
-export { Student as StudentDef } from '../models/index.js';
-export { StudentClassroom as StudentClassroomDef } from '../models/index.js';
-export { Teacher as TeacherDef } from '../models/index.js';
-export { TeacherClassroom as TeacherClassroomDef } from '../models/index.js';
+export {
+  Category as CategoryDef,
+  Classroom as ClassroomDef,
+  ImportedItem as ImportedItemDef,
+  KitchenSink as KitchenSinkDef,
+  LevelOne as LevelOneDef,
+  LevelTwo as LevelTwoDef,
+  LevelThree as LevelThreeDef,
+  ParkingLot as ParkingLotDef,
+  ParkingSpace as ParkingSpaceDef,
+  Product as ProductDef,
+  ProductCategory as ProductCategoryDef,
+  ProductWithCreatedAt as ProductWithCreatedAtDef,
+  ProductWithCreateUpdateDateTracking as ProductWithCreateUpdateDateTrackingDef,
+  ProductWithLifecycleMethods as ProductWithHooksDef,
+  ReadonlyProduct as ReadonlyProductDef,
+  RequiredPropertyWithDefaultValue as RequiredPropertyWithDefaultValueDef,
+  RequiredPropertyWithDefaultValueFunction as RequiredPropertyWithDefaultValueFunctionDef,
+  SimpleWithCollections as SimpleWithCollectionsDef,
+  SimpleWithCreatedAt as SimpleWithCreatedAtDef,
+  SimpleWithCreatedAtAndUpdatedAt as SimpleWithCreatedAtAndUpdatedAtDef,
+  SimpleWithJson as SimpleWithJsonDef,
+  SimpleWithOptionalEnum as SimpleWithOptionalEnumDef,
+  SimpleWithRelationAndJson as SimpleWithRelationAndJsonDef,
+  SimpleWithSchema as SimpleWithSchemaDef,
+  SimpleWithSelfReference as SimpleWithSelfReferenceDef,
+  SimpleWithStringCollection as SimpleWithStringCollectionDef,
+  SimpleWithStringId as SimpleWithStringIdDef,
+  SimpleWithUUID as SimpleWithUUIDDef,
+  SimpleWithUnion as SimpleWithUnionDef,
+  SimpleWithUpdatedAt as SimpleWithUpdatedAtDef,
+  SimpleWithVersion as SimpleWithVersionDef,
+  Store as StoreDef,
+  Student as StudentDef,
+  StudentClassroom as StudentClassroomDef,
+  Teacher as TeacherDef,
+  TeacherClassroom as TeacherClassroomDef,
+};
 
 // ---------------------------------------------------------------------------
-// Re-export select/insert types
+// Select types derived from table definitions
 // ---------------------------------------------------------------------------
 
-export type {
-  CategoryInsert,
-  CategorySelect,
-  ClassroomInsert,
-  ClassroomSelect,
-  ImportedItemInsert,
-  ImportedItemSelect,
-  KitchenSinkInsert,
-  KitchenSinkSelect,
-  LevelOneInsert,
-  LevelOneSelect,
-  LevelThreeInsert,
-  LevelThreeSelect,
-  LevelTwoInsert,
-  LevelTwoSelect,
-  ParkingLotInsert,
-  ParkingLotSelect,
-  ParkingSpaceInsert,
-  ParkingSpaceSelect,
-  ProductCategoryInsert,
-  ProductCategorySelect,
-  ProductInsert,
-  ProductSelect,
-  ProductWithCreatedAtInsert,
-  ProductWithCreatedAtSelect,
-  ReadonlyProductSelect,
-  RequiredPropertyWithDefaultValueFunctionInsert,
-  RequiredPropertyWithDefaultValueFunctionSelect,
-  RequiredPropertyWithDefaultValueInsert,
-  RequiredPropertyWithDefaultValueSelect,
-  SimpleWithCollectionsInsert,
-  SimpleWithCollectionsSelect,
-  SimpleWithCreatedAtAndUpdatedAtInsert,
-  SimpleWithCreatedAtAndUpdatedAtSelect,
-  SimpleWithCreatedAtInsert,
-  SimpleWithCreatedAtSelect,
-  SimpleWithJsonInsert,
-  SimpleWithJsonSelect,
-  SimpleWithOptionalEnumInsert,
-  SimpleWithOptionalEnumSelect,
-  SimpleWithRelationAndJsonInsert,
-  SimpleWithRelationAndJsonSelect,
-  SimpleWithSchemaInsert,
-  SimpleWithSchemaSelect,
-  SimpleWithSelfReferenceInsert,
-  SimpleWithSelfReferenceSelect,
-  SimpleWithStringCollectionInsert,
-  SimpleWithStringCollectionSelect,
-  SimpleWithStringIdInsert,
-  SimpleWithStringIdSelect,
-  SimpleWithUnionInsert,
-  SimpleWithUnionSelect,
-  SimpleWithUpdatedAtInsert,
-  SimpleWithUpdatedAtSelect,
-  SimpleWithUUIDInsert,
-  SimpleWithUUIDSelect,
-  SimpleWithVersionInsert,
-  SimpleWithVersionSelect,
-  StoreInsert,
-  StoreSelect,
-  StudentClassroomInsert,
-  StudentClassroomSelect,
-  StudentInsert,
-  StudentSelect,
-  TeacherClassroomInsert,
-  TeacherClassroomSelect,
-  TeacherInsert,
-  TeacherSelect,
-} from '../models/index.js';
+export type CategorySelect = typeof Category.$inferSelect;
+export type ClassroomSelect = typeof Classroom.$inferSelect;
+export type ImportedItemSelect = typeof ImportedItem.$inferSelect;
+export type KitchenSinkSelect = typeof KitchenSink.$inferSelect;
+export type LevelOneSelect = typeof LevelOne.$inferSelect;
+export type LevelTwoSelect = typeof LevelTwo.$inferSelect;
+export type LevelThreeSelect = typeof LevelThree.$inferSelect;
+export type ParkingLotSelect = typeof ParkingLot.$inferSelect;
+export type ParkingSpaceSelect = typeof ParkingSpace.$inferSelect;
+export type ProductSelect = typeof Product.$inferSelect;
+export type ProductCategorySelect = typeof ProductCategory.$inferSelect;
+export type ProductWithCreatedAtSelect = typeof ProductWithCreatedAt.$inferSelect;
+export type ReadonlyProductSelect = typeof ReadonlyProduct.$inferSelect;
+export type RequiredPropertyWithDefaultValueSelect = typeof RequiredPropertyWithDefaultValue.$inferSelect;
+export type RequiredPropertyWithDefaultValueFunctionSelect = typeof RequiredPropertyWithDefaultValueFunction.$inferSelect;
+export type SimpleWithCollectionsSelect = typeof SimpleWithCollections.$inferSelect;
+export type SimpleWithCreatedAtSelect = typeof SimpleWithCreatedAt.$inferSelect;
+export type SimpleWithCreatedAtAndUpdatedAtSelect = typeof SimpleWithCreatedAtAndUpdatedAt.$inferSelect;
+export type SimpleWithJsonSelect = typeof SimpleWithJson.$inferSelect;
+export type SimpleWithOptionalEnumSelect = typeof SimpleWithOptionalEnum.$inferSelect;
+export type SimpleWithRelationAndJsonSelect = typeof SimpleWithRelationAndJson.$inferSelect;
+export type SimpleWithSchemaSelect = typeof SimpleWithSchema.$inferSelect;
+export type SimpleWithSelfReferenceSelect = typeof SimpleWithSelfReference.$inferSelect;
+export type SimpleWithStringCollectionSelect = typeof SimpleWithStringCollection.$inferSelect;
+export type SimpleWithStringIdSelect = typeof SimpleWithStringId.$inferSelect;
+export type SimpleWithUUIDSelect = typeof SimpleWithUUID.$inferSelect;
+export type SimpleWithUnionSelect = typeof SimpleWithUnion.$inferSelect;
+export type SimpleWithUpdatedAtSelect = typeof SimpleWithUpdatedAt.$inferSelect;
+export type SimpleWithVersionSelect = typeof SimpleWithVersion.$inferSelect;
+export type StoreSelect = typeof Store.$inferSelect;
+export type TeacherSelect = typeof Teacher.$inferSelect;
+export type TeacherClassroomSelect = typeof TeacherClassroom.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Factory functions for test data
@@ -214,7 +197,10 @@ export function generateProduct(overrides: Partial<ProductSelect> = {}): Product
   };
 }
 
-export function generateProductCategory(productInput: { id: number } | number, categoryInput: { id: number } | number): ProductCategorySelect {
+export function generateProductCategory(
+  productInput: { id: number } | number,
+  categoryInput: { id: number } | number,
+): ProductCategorySelect {
   return {
     id: faker.number.int(),
     product: typeof productInput === 'number' ? productInput : productInput.id,
@@ -234,7 +220,9 @@ export function generateSimpleWithJson(overrides: Partial<SimpleWithJsonSelect> 
   };
 }
 
-export function generateSimpleWithOptionalEnum(overrides: Partial<SimpleWithOptionalEnumSelect> = {}): SimpleWithOptionalEnumSelect {
+export function generateSimpleWithOptionalEnum(
+  overrides: Partial<SimpleWithOptionalEnumSelect> = {},
+): SimpleWithOptionalEnumSelect {
   return {
     id: faker.number.int(),
     name: faker.lorem.word(),
@@ -243,7 +231,9 @@ export function generateSimpleWithOptionalEnum(overrides: Partial<SimpleWithOpti
   };
 }
 
-export function generateSimpleWithRelationAndJson(overrides: Partial<SimpleWithRelationAndJsonSelect> = {}): SimpleWithRelationAndJsonSelect {
+export function generateSimpleWithRelationAndJson(
+  overrides: Partial<SimpleWithRelationAndJsonSelect> = {},
+): SimpleWithRelationAndJsonSelect {
   return {
     id: faker.number.int(),
     name: faker.lorem.word(),
@@ -253,7 +243,9 @@ export function generateSimpleWithRelationAndJson(overrides: Partial<SimpleWithR
   };
 }
 
-export function generateSimpleWithSelfReference(overrides: Partial<SimpleWithSelfReferenceSelect> = {}): SimpleWithSelfReferenceSelect {
+export function generateSimpleWithSelfReference(
+  overrides: Partial<SimpleWithSelfReferenceSelect> = {},
+): SimpleWithSelfReferenceSelect {
   return {
     id: faker.string.uuid(),
     name: faker.lorem.word(),
@@ -262,7 +254,9 @@ export function generateSimpleWithSelfReference(overrides: Partial<SimpleWithSel
   };
 }
 
-export function generateSimpleWithStringCollection(overrides: Partial<SimpleWithStringCollectionSelect> = {}): SimpleWithStringCollectionSelect {
+export function generateSimpleWithStringCollection(
+  overrides: Partial<SimpleWithStringCollectionSelect> = {},
+): SimpleWithStringCollectionSelect {
   return {
     id: faker.number.int(),
     name: faker.lorem.word(),
@@ -271,7 +265,9 @@ export function generateSimpleWithStringCollection(overrides: Partial<SimpleWith
   };
 }
 
-export function generateSimpleWithStringId(overrides: Partial<SimpleWithStringIdSelect> = {}): SimpleWithStringIdSelect {
+export function generateSimpleWithStringId(
+  overrides: Partial<SimpleWithStringIdSelect> = {},
+): SimpleWithStringIdSelect {
   return {
     id: faker.string.uuid(),
     name: faker.lorem.word(),
@@ -308,7 +304,10 @@ export function generateTeacher(overrides: Partial<TeacherSelect> = {}): Teacher
   };
 }
 
-export function generateTeacherClassroom(teacherInput: { id: string } | string, classroomInput: { id: string } | string): TeacherClassroomSelect {
+export function generateTeacherClassroom(
+  teacherInput: { id: string } | string,
+  classroomInput: { id: string } | string,
+): TeacherClassroomSelect {
   return {
     id: faker.string.uuid(),
     teacher: typeof teacherInput === 'string' ? teacherInput : teacherInput.id,

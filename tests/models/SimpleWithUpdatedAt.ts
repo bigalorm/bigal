@@ -1,13 +1,9 @@
-import { text, updatedAt } from '../../src/schema/index.js';
-import type { InferInsert, InferSelect } from '../../src/schema/index.js';
+import { table, text, updatedAt } from '../../src/schema/index.js';
 
 import { modelBase } from './base.js';
 
-export const simpleWithUpdatedAtSchema = {
+export const SimpleWithUpdatedAt = table('simple', {
   ...modelBase,
   name: text().notNull(),
   updatedAt: updatedAt(),
-};
-
-export type SimpleWithUpdatedAtSelect = InferSelect<typeof simpleWithUpdatedAtSchema>;
-export type SimpleWithUpdatedAtInsert = InferInsert<typeof simpleWithUpdatedAtSchema>;
+}, { modelName: 'SimpleWithUpdatedAt' });

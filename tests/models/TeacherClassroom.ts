@@ -1,13 +1,9 @@
-import { belongsTo } from '../../src/schema/index.js';
-import type { InferInsert, InferSelect } from '../../src/schema/index.js';
+import { belongsTo, table } from '../../src/schema/index.js';
 
 import { stringIdBase } from './base.js';
 
-export const teacherClassroomSchema = {
+export const TeacherClassroom = table('teacher__classroom', {
   ...stringIdBase,
   teacher: belongsTo<string>('Teacher'),
   classroom: belongsTo<string>('Classroom'),
-};
-
-export type TeacherClassroomSelect = InferSelect<typeof teacherClassroomSchema>;
-export type TeacherClassroomInsert = InferInsert<typeof teacherClassroomSchema>;
+});
