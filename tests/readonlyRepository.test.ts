@@ -254,7 +254,6 @@ describe('ReadonlyRepository', () => {
       mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
       const result = await ProductRepository.findOne({
-        // @ts-expect-error -- entity-as-where-value requires Entity migration (bigal-n8x)
         store,
       });
       assert(result);
@@ -1725,15 +1724,15 @@ describe('ReadonlyRepository', () => {
         )
         .mockResolvedValueOnce(getQueryResult([store]));
 
-      // @ts-expect-error -- UNSAFE_withOriginalFieldType type pending Entity migration
+      // @ts-expect-error -- UNSAFE_withOriginalFieldType param not typed for inferred schemas
       const productResult = await ProductRepository.findOne({}).UNSAFE_withOriginalFieldType('store');
       assert(productResult);
       const storeResult = await StoreRepository.findOne({}).where({
+        // @ts-expect-error -- UNSAFE_withOriginalFieldType returns unknown for FK fields
         id: productResult.store,
       });
       assert(storeResult);
 
-      // @ts-expect-error -- populated property type pending Entity migration
       productResult.store = storeResult;
       // @ts-expect-error -- populated property type pending Entity migration
       expect(productResult.store.id).toBe(store.id);
@@ -1756,7 +1755,6 @@ describe('ReadonlyRepository', () => {
         )
         .mockResolvedValueOnce(getQueryResult([store]));
 
-      // @ts-expect-error -- UNSAFE_withFieldValue type pending Entity migration
       const productResult = await ProductRepository.findOne({}).UNSAFE_withFieldValue('store', store);
       assert(productResult);
 
@@ -2324,13 +2322,13 @@ describe('ReadonlyRepository', () => {
       assert(productResult);
 
       const stores = await StoreRepository.find({}).where({
+        // @ts-expect-error -- UNSAFE_withOriginalFieldType returns unknown for FK fields
         id: productResult.store,
       });
       expect(stores.length).toBe(1);
       const [storeResult] = stores;
       assert(storeResult);
 
-      // @ts-expect-error -- populated property type pending Entity migration
       productResult.store = storeResult;
       // @ts-expect-error -- populated property type pending Entity migration
       expect(productResult.store.id).toBe(store.id);
@@ -2374,6 +2372,7 @@ describe('ReadonlyRepository', () => {
           .join('store')
           .where({
             store: {
+              // @ts-expect-error -- joined table filter not typed for inferred schemas
               name: {
                 like: 'Acme',
               },
@@ -2401,6 +2400,7 @@ describe('ReadonlyRepository', () => {
         const result = await ProductRepository.find({})
           .leftJoin('store')
           .where({
+            // @ts-expect-error -- joined table filter not typed for inferred schemas
             store: { name: { like: '%mart%' } },
           });
         assert(result);
@@ -2425,6 +2425,7 @@ describe('ReadonlyRepository', () => {
         const result = await ProductRepository.find({})
           .join('store', 'primaryStore')
           .where({
+            // @ts-expect-error -- joined table filter not typed for inferred schemas
             primaryStore: { name: 'Acme' },
           });
         assert(result);
@@ -2450,6 +2451,7 @@ describe('ReadonlyRepository', () => {
           .join('store')
           .where({
             name: 'Widget',
+            // @ts-expect-error -- joined table filter not typed for inferred schemas
             store: { name: 'Acme' },
           });
         assert(result);
@@ -3825,6 +3827,7 @@ describe('ReadonlyRepository', () => {
             classrooms: Pick<ClassroomSelect, 'id' | 'name'>[];
           })[]
         > {
+          // @ts-expect-error -- Populated type mismatch with inferred schemas
           return (
             TeacherRepository.find({})
               .where({
@@ -4124,6 +4127,7 @@ describe('ReadonlyRepository', () => {
           .join('store')
           .where({
             store: {
+              // @ts-expect-error -- joined table filter not typed for inferred schemas
               name: 'Test',
             },
           })

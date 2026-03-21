@@ -2438,7 +2438,7 @@ describe('sqlHelper', () => {
               bar: {
                 like: 'foo',
               },
-            } as WhereQuery<SimpleWithJson>,
+            } as Record<string, unknown>,
           });
         }).to.throw(QueryError, '"like" operator is not supported for JSON columns');
       });
@@ -2452,7 +2452,7 @@ describe('sqlHelper', () => {
               bar: {
                 startsWith: 'foo',
               },
-            } as WhereQuery<SimpleWithJson>,
+            } as Record<string, unknown>,
           });
         }).to.throw(QueryError, '"like" operator is not supported for JSON columns');
       });
@@ -2466,7 +2466,7 @@ describe('sqlHelper', () => {
               bar: {
                 endsWith: 'foo',
               },
-            } as WhereQuery<SimpleWithJson>,
+            } as Record<string, unknown>,
           });
         }).to.throw(QueryError, '"like" operator is not supported for JSON columns');
       });
@@ -2481,7 +2481,7 @@ describe('sqlHelper', () => {
             bar: {
               theme: 'dark',
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2497,7 +2497,7 @@ describe('sqlHelper', () => {
             bar: {
               retryCount: { '>=': 3 },
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2513,7 +2513,7 @@ describe('sqlHelper', () => {
             bar: {
               active: true,
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2529,7 +2529,7 @@ describe('sqlHelper', () => {
             bar: {
               status: { '!': 'archived' },
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2546,7 +2546,7 @@ describe('sqlHelper', () => {
               retryCount: { '<': 3 },
               stage: 'transcription',
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2562,7 +2562,7 @@ describe('sqlHelper', () => {
             bar: {
               deletedAt: null,
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2579,7 +2579,7 @@ describe('sqlHelper', () => {
               contains: { type: 'recovery' },
               retryCount: { '<': 3 },
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2595,7 +2595,7 @@ describe('sqlHelper', () => {
             bar: {
               stage: ['transcription', 'summarization'],
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2613,7 +2613,7 @@ describe('sqlHelper', () => {
                 retryCount: { '>=': 5 },
               },
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2631,7 +2631,7 @@ describe('sqlHelper', () => {
                 theme: 'dark',
               },
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2647,7 +2647,7 @@ describe('sqlHelper', () => {
             bar: {
               deletedAt: { '!': null },
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2667,7 +2667,7 @@ describe('sqlHelper', () => {
               bar: {
                 count: { [op]: 10 },
               },
-            } as WhereQuery<SimpleWithJson>,
+            } as Record<string, unknown>,
           });
 
           assert(whereStatement);
@@ -2684,7 +2684,7 @@ describe('sqlHelper', () => {
                   count: { [op]: 10 },
                 },
               },
-            } as WhereQuery<SimpleWithJson>,
+            } as Record<string, unknown>,
           });
 
           assert(negatedWhere);
@@ -2703,7 +2703,7 @@ describe('sqlHelper', () => {
                 stage: 'transcription',
               },
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2719,7 +2719,7 @@ describe('sqlHelper', () => {
             bar: {
               a: { b: { c: 'value' } },
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2737,7 +2737,7 @@ describe('sqlHelper', () => {
                 retryCount: { '>=': 3 },
               },
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -2756,7 +2756,7 @@ describe('sqlHelper', () => {
                 code: { '>=': 400 },
               },
             },
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
 
         assert(whereStatement);
@@ -3856,7 +3856,7 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           'store.name': 'Acme',
-        } as WhereQuery<SimpleWithJson>,
+        } as Record<string, unknown>,
         joins: [
           {
             propertyName: 'store',
@@ -3876,7 +3876,7 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           'store.name': { like: '%mart%' },
-        } as WhereQuery<SimpleWithJson>,
+        } as Record<string, unknown>,
         joins: [
           {
             propertyName: 'store',
@@ -3896,7 +3896,7 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           'primaryStore.name': 'Acme',
-        } as WhereQuery<SimpleWithJson>,
+        } as Record<string, unknown>,
         joins: [
           {
             propertyName: 'store',
@@ -3917,7 +3917,7 @@ describe('sqlHelper', () => {
         where: {
           name: 'Widget',
           'store.name': 'Acme',
-        } as WhereQuery<SimpleWithJson>,
+        } as Record<string, unknown>,
         joins: [
           {
             propertyName: 'store',
@@ -3937,7 +3937,7 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           'store.id': { '>': 5 },
-        } as WhereQuery<SimpleWithJson>,
+        } as Record<string, unknown>,
         joins: [
           {
             propertyName: 'store',
@@ -3957,7 +3957,7 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           'store.name': null,
-        } as WhereQuery<SimpleWithJson>,
+        } as Record<string, unknown>,
         joins: [
           {
             propertyName: 'store',
@@ -3980,7 +3980,7 @@ describe('sqlHelper', () => {
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           where: {
             'store.name': 'Acme',
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
         });
       } catch (ex) {
         thrownError = ex as Error;
@@ -3999,7 +3999,7 @@ describe('sqlHelper', () => {
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           where: {
             'nonExistentAlias.name': 'Acme',
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
           joins: [
             {
               propertyName: 'store',
@@ -4025,7 +4025,7 @@ describe('sqlHelper', () => {
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           where: {
             'store.nonExistentProperty': 'Acme',
-          } as WhereQuery<SimpleWithJson>,
+          } as Record<string, unknown>,
           joins: [
             {
               propertyName: 'store',
