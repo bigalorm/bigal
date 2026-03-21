@@ -667,12 +667,30 @@ describe('Schema builder runtime behavior', () => {
       expect(builder.viaPropertyName).toBe('store');
     });
 
-    it('hasMany with through stores through function', () => {
+    it('hasMany with through stores through reference', () => {
       const builder = hasMany(() => Category)
         .through(() => ProductCategory)
         .via('product');
       expect(builder.viaPropertyName).toBe('product');
-      expect(builder.throughFn).toBeDefined();
+      expect(builder.throughRef).toBeDefined();
+    });
+
+    it('hasMany accepts string model name', () => {
+      const builder = hasMany('Category').via('store');
+      expect(builder.modelRef).toBe('Category');
+      expect(builder.viaPropertyName).toBe('store');
+    });
+
+    it('belongsTo accepts string model name', () => {
+      const builder = belongsTo('Store');
+      expect(builder.modelRef).toBe('Store');
+    });
+
+    it('hasMany with through accepts string model names', () => {
+      const builder = hasMany('Category').through('ProductCategory').via('product');
+      expect(builder.modelRef).toBe('Category');
+      expect(builder.throughRef).toBe('ProductCategory');
+      expect(builder.viaPropertyName).toBe('product');
     });
   });
 

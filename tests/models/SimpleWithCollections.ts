@@ -2,15 +2,12 @@ import { hasMany, text } from '../../src/schema/index.js';
 import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
 import { modelBase } from './base.js';
-import { tables } from './index.js';
 
 export const simpleWithCollectionsSchema = {
   ...modelBase,
   name: text().notNull(),
-  products: hasMany(() => tables.Product!).via('store'),
-  categories: hasMany(() => tables.Category!)
-    .through(() => tables.ProductCategory!)
-    .via('product'),
+  products: hasMany('Product').via('store'),
+  categories: hasMany('Category').through('ProductCategory').via('product'),
 };
 
 export type SimpleWithCollectionsSelect = InferSelect<typeof simpleWithCollectionsSchema>;

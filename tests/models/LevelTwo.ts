@@ -2,13 +2,12 @@ import { belongsTo, text } from '../../src/schema/index.js';
 import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
 import { stringIdBase } from './base.js';
-import { tables } from './index.js';
 
 export const levelTwoSchema = {
   ...stringIdBase,
   two: text().notNull(),
   foo: text(),
-  levelThree: belongsTo<string>(() => tables.LevelThree!),
+  levelThree: belongsTo<string>('LevelThree'),
 };
 
 export type LevelTwoSelect = InferSelect<typeof levelTwoSchema>;

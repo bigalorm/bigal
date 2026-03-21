@@ -2,13 +2,12 @@ import { belongsTo, hasMany, text } from '../../src/schema/index.js';
 import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
 import { stringIdBase } from './base.js';
-import { tables } from './index.js';
 
 export const simpleWithSelfReferenceSchema = {
   ...stringIdBase,
   name: text().notNull(),
-  source: belongsTo<string>(() => tables.SimpleWithSelfReference!),
-  translations: hasMany(() => tables.SimpleWithSelfReference!).via('source'),
+  source: belongsTo<string>('SimpleWithSelfReference'),
+  translations: hasMany('SimpleWithSelfReference').via('source'),
 };
 
 export type SimpleWithSelfReferenceSelect = InferSelect<typeof simpleWithSelfReferenceSchema>;

@@ -2,11 +2,10 @@ import { belongsTo, text } from '../../src/schema/index.js';
 import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
 import { stringIdBase } from './base.js';
-import { tables } from './index.js';
 
 export const parkingSpaceSchema = {
   ...stringIdBase,
-  parkingLot: belongsTo<string>(() => tables.ParkingLot!),
+  parkingLot: belongsTo<string>('ParkingLot'),
   name: text().notNull(),
 };
 

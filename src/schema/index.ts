@@ -1,5 +1,5 @@
 export { belongsTo, BelongsToBuilder } from './BelongsToBuilder.js';
-export type { BelongsToConfig, LazyTableReference } from './BelongsToBuilder.js';
+export type { BelongsToConfig, ModelReference } from './BelongsToBuilder.js';
 
 export { ColumnBuilder } from './ColumnBuilder.js';
 export type { ColumnBuilderConfig, ColumnBuilderRuntimeConfig } from './ColumnBuilder.js';

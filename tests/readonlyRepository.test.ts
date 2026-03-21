@@ -2371,9 +2371,7 @@ describe('ReadonlyRepository', () => {
 
         mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
         const result = await ProductRepository.find({})
-          // @ts-expect-error -- join type constraint pending Entity migration
           .join('store')
-          // @ts-expect-error -- joined where constraint pending Entity migration
           .where({
             store: {
               name: {
@@ -2401,9 +2399,7 @@ describe('ReadonlyRepository', () => {
 
         mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
         const result = await ProductRepository.find({})
-          // @ts-expect-error -- join type constraint pending Entity migration
           .leftJoin('store')
-          // @ts-expect-error -- joined where constraint pending Entity migration
           .where({
             store: { name: { like: '%mart%' } },
           });
@@ -2427,9 +2423,7 @@ describe('ReadonlyRepository', () => {
 
         mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
         const result = await ProductRepository.find({})
-          // @ts-expect-error -- join type constraint pending Entity migration
           .join('store', 'primaryStore')
-          // @ts-expect-error -- joined where constraint pending Entity migration
           .where({
             primaryStore: { name: 'Acme' },
           });
@@ -2453,9 +2447,7 @@ describe('ReadonlyRepository', () => {
 
         mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
         const result = await ProductRepository.find({})
-          // @ts-expect-error -- join type constraint pending Entity migration
           .join('store')
-          // @ts-expect-error -- joined where constraint pending Entity migration
           .where({
             name: 'Widget',
             store: { name: 'Acme' },
@@ -2479,7 +2471,6 @@ describe('ReadonlyRepository', () => {
         ];
 
         mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
-        // @ts-expect-error -- join type constraint pending Entity migration
         const result = await ProductRepository.find({}).join('store').sort('store.name asc');
         assert(result);
         expect(result).toStrictEqual(products);
@@ -2500,7 +2491,6 @@ describe('ReadonlyRepository', () => {
         ];
 
         mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
-        // @ts-expect-error -- join type constraint pending Entity migration
         const result = await ProductRepository.find({}).join('store', 'primaryStore').sort('primaryStore.name desc');
         assert(result);
         expect(result).toStrictEqual(products);
@@ -2930,12 +2920,9 @@ describe('ReadonlyRepository', () => {
               .groupBy(['store']);
 
             const result = await ProductRepository.find({})
-              // @ts-expect-error -- join type constraint pending Entity migration
               .join('store')
               .join(categoryCounts, 'stats', { on: { store: 'store' } })
-              // @ts-expect-error -- joined sort type pending Entity migration
               .sort('store.name asc')
-              // @ts-expect-error -- joined sort type pending Entity migration
               .sort('stats.categoryProductCount desc');
 
             assert(result);
@@ -3832,7 +3819,6 @@ describe('ReadonlyRepository', () => {
           .mockResolvedValueOnce(getQueryResult([teacher1Classroom]))
           .mockResolvedValueOnce(getQueryResult([classroomResult]));
 
-        // @ts-expect-error -- return type pending Entity migration for populated properties
         async function getTeachers(): Promise<
           (Omit<TeacherSelect, 'parkingSpace'> & {
             parkingSpace: Pick<ParkingSpaceSelect, 'id' | 'name'> | null;
@@ -4135,9 +4121,7 @@ describe('ReadonlyRepository', () => {
         mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 
         const result = await ProductRepository.find({})
-          // @ts-expect-error -- join type constraint pending Entity migration
           .join('store')
-          // @ts-expect-error -- joined where constraint pending Entity migration
           .where({
             store: {
               name: 'Test',
