@@ -788,6 +788,143 @@ describe('initialize', () => {
     });
   });
 
+  describe('Global filters', () => {
+    const mockedPool = createMockPool();
+
+    const SoftDeleteProduct = table(
+      'products',
+      {
+        id: serial().primaryKey(),
+        name: text().notNull(),
+        isDeleted: booleanColumn().notNull().default(false),
+        tenantId: text().notNull(),
+      },
+      {
+        modelName: 'SoftDeleteProduct',
+        filters: {
+          notDeleted: { isDeleted: false },
+          tenant: () => ({ tenantId: 'tenant-123' }),
+        },
+      },
+    );
+
+    let repo: IRepository<typeof SoftDeleteProduct.$inferSelect>;
+
+    beforeAll(() => {
+      const bigal = initialize({ pool: mockedPool, models: [SoftDeleteProduct] });
+      repo = bigal.getRepository(SoftDeleteProduct);
+    });
+
+    beforeEach(() => {
+      mockedPool.query.mockReset();
+    });
+
+    it('should automatically apply all filters to find()', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+      await repo.find().where({ name: 'Widget' });
+
+      const [query] = mockedPool.query.mock.calls[0]!;
+      expect(query).toContain('"is_deleted"=');
+      expect(query).toContain('"tenant_id"=');
+      expect(query).toContain('"name"=');
+    });
+
+    it('should automatically apply all filters to findOne()', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+      await repo.findOne().where({ id: 1 });
+
+      const [query] = mockedPool.query.mock.calls[0]!;
+      expect(query).toContain('"is_deleted"=');
+      expect(query).toContain('"tenant_id"=');
+    });
+
+    it('should disable all filters with filters: false in args', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+      await repo.find({ filters: false }).where({ name: 'Widget' });
+
+      const [query] = mockedPool.query.mock.calls[0]!;
+      expect(query).not.toContain('"is_deleted"=');
+      expect(query).not.toContain('"tenant_id"=');
+      expect(query).toContain('"name"=');
+    });
+
+    it('should disable specific filter with filters: { filterName: false }', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+      await repo.find({ filters: { notDeleted: false } }).where({ name: 'Widget' });
+
+      const [query] = mockedPool.query.mock.calls[0]!;
+      expect(query).not.toContain('"is_deleted"=');
+      expect(query).toContain('"tenant_id"=');
+      expect(query).toContain('"name"=');
+    });
+
+    it('should disable all filters with .filters(false) chain', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+      await repo.find().filters(false).where({ name: 'Widget' });
+
+      const [query] = mockedPool.query.mock.calls[0]!;
+      expect(query).not.toContain('"is_deleted"=');
+      expect(query).not.toContain('"tenant_id"=');
+    });
+
+    it('should disable specific filter with .filters({ name: false }) chain', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+      await repo.find().filters({ tenant: false }).where({ name: 'Widget' });
+
+      const [query] = mockedPool.query.mock.calls[0]!;
+      expect(query).toContain('"is_deleted"=');
+      expect(query).not.toContain('"tenant_id"=');
+    });
+
+    it('should allow where clause to override a filter value', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+      await repo.find().where({ isDeleted: [true, false] });
+
+      const [query, params] = mockedPool.query.mock.calls[0]!;
+      // The where value [true, false] should override the filter value false
+      expect(query).toContain('"is_deleted"=ANY');
+      expect(params).toStrictEqual([[true, false], 'tenant-123']);
+    });
+
+    it('should evaluate dynamic filters at query time', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+      await repo.find().where({ name: 'Widget' });
+
+      const [, params] = mockedPool.query.mock.calls[0]!;
+      // tenant filter returns { tenantId: 'tenant-123' }
+      expect(params).toContain('tenant-123');
+    });
+
+    it('should apply filters in toSQL()', () => {
+      const { sql, params } = repo.find().where({ name: 'Widget' }).toSQL();
+
+      expect(sql).toContain('"is_deleted"=');
+      expect(sql).toContain('"tenant_id"=');
+      expect(params).toContain('tenant-123');
+    });
+
+    it('should not apply filters when model has no filters defined', async () => {
+      const NoFilterProduct = table(
+        'products',
+        {
+          id: serial().primaryKey(),
+          name: text().notNull(),
+        },
+        { modelName: 'NoFilterProduct' },
+      );
+
+      const bigal = initialize({ pool: mockedPool, models: [NoFilterProduct] });
+      const noFilterRepo = bigal.getRepository(NoFilterProduct);
+
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+      await noFilterRepo.find().where({ name: 'Widget' });
+
+      const [query] = mockedPool.query.mock.calls[0]!;
+      expect(query).not.toContain('"is_deleted"=');
+      expect(query).not.toContain('"tenant_id"=');
+    });
+  });
+
   describe('toSQL()', () => {
     const mockedPool = createMockPool();
 

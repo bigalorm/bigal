@@ -34,6 +34,9 @@ export interface ModelHooks<TInsert, TSelect = TInsert> {
 // Table options
 // ---------------------------------------------------------------------------
 
+/** A filter definition: a static where clause or a function that returns one dynamically */
+export type FilterDefinition = (() => Record<string, unknown>) | Record<string, unknown>;
+
 export interface TableOptions<TInsert, TSelect = TInsert> {
   /** Unique model name for relationship lookups. Defaults to the table name. */
   modelName?: string;
@@ -41,6 +44,8 @@ export interface TableOptions<TInsert, TSelect = TInsert> {
   readonly?: boolean;
   connection?: string;
   hooks?: ModelHooks<TInsert, TSelect>;
+  /** Named filters applied automatically to every query. Override per-query via `filters` option. */
+  filters?: Record<string, FilterDefinition>;
 }
 
 // ---------------------------------------------------------------------------
@@ -56,6 +61,7 @@ export interface TableDefinition<TName extends string = string, TSchema extends 
   readonly connection: string | undefined;
   readonly schema: TSchema;
   readonly hooks: ModelHooks<InferInsert<TSchema>, InferSelect<TSchema>> | undefined;
+  readonly filters: Record<string, FilterDefinition> | undefined;
 
   readonly columnsByPropertyName: Readonly<ColumnByStringId>;
   readonly columnsByColumnName: Readonly<ColumnByStringId>;
@@ -214,6 +220,7 @@ export function table<TName extends string, TSchema extends SchemaDefinition>(
     connection: options?.connection,
     schema: schemaDefinition,
     hooks: options?.hooks,
+    filters: options?.filters,
 
     columnsByPropertyName,
     columnsByColumnName,

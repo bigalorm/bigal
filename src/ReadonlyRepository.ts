@@ -45,6 +45,7 @@ export interface IRepositoryOptions<T extends AnyRecord> {
   afterUpdate?: (result: T) => Promise<void> | void;
   beforeDestroy?: (where: Record<string, unknown>) => Promise<Record<string, unknown>> | Record<string, unknown>;
   afterDestroy?: (result: { rowCount: number }) => Promise<void> | void;
+  filters?: Record<string, (() => Record<string, unknown>) | Record<string, unknown>>;
 }
 
 interface Populate {
@@ -89,6 +90,8 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
 
   protected _afterDestroy: ((result: { rowCount: number }) => Promise<void> | void) | undefined;
 
+  protected _filters: Record<string, (() => Record<string, unknown>) | Record<string, unknown>> | undefined;
+
   protected _floatProperties: string[] = [];
 
   protected _intProperties: string[] = [];
@@ -106,6 +109,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
     afterUpdate,
     beforeDestroy,
     afterDestroy,
+    filters,
   }: IRepositoryOptions<T>) {
     this._modelMetadata = modelMetadata;
     this._pool = pool;
@@ -119,6 +123,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
     this._afterUpdate = afterUpdate;
     this._beforeDestroy = beforeDestroy;
     this._afterDestroy = afterDestroy;
+    this._filters = filters;
 
     for (const column of modelMetadata.columns) {
       if ((column as ColumnTypeMetadata).type === 'float') {
@@ -127,6 +132,31 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
         this._intProperties.push(column.propertyName);
       }
     }
+  }
+
+  /**
+   * Resolves global filters and merges with the where clause.
+   * Filters are applied first; the where clause can override filter keys.
+   * @param {Record<string, unknown>} where - The user's where clause
+   * @param {boolean | Record<string, false>} [filterOverrides] - false to disable all, or { filterName: false } to disable specific ones
+   */
+  protected _applyFilters(where: Record<string, unknown>, filterOverrides?: Record<string, false> | false): Record<string, unknown> {
+    if (!this._filters || filterOverrides === false) {
+      return where;
+    }
+
+    let resolved: Record<string, unknown> = {};
+    for (const [filterName, filterDef] of Object.entries(this._filters)) {
+      if (filterOverrides && filterOverrides[filterName] === false) {
+        continue;
+      }
+
+      const filterWhere = typeof filterDef === 'function' ? filterDef() : filterDef;
+      resolved = { ...resolved, ...filterWhere };
+    }
+
+    // Where clause overrides filter values for the same keys
+    return { ...resolved, ...where };
   }
 
   public get model(): ModelMetadata<T> {
@@ -148,7 +178,8 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
     let where: WhereQuery<T> = {};
     let sort: SortObject<T> | string | null = null;
     let poolOverride: PoolLike | undefined;
-    // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
+    let filterOverrides: Record<string, false> | false | undefined;
+    // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, sort, or filters, treat it as a query object
     for (const [name, value] of Object.entries(args)) {
       let isWhereCriteria = false;
 
@@ -167,6 +198,9 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
           break;
         case 'pool':
           poolOverride = value as PoolLike;
+          break;
+        case 'filters':
+          filterOverrides = value as Record<string, false> | false;
           break;
         default:
           select = undefined;
@@ -214,6 +248,11 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
        */
       where(value: WhereQuery<T>): FindOneResult<T, TReturn> {
         where = value;
+
+        return this;
+      },
+      filters(value: Record<string, false> | false): FindOneResult<T, TReturn> {
+        filterOverrides = value;
 
         return this;
       },
@@ -307,11 +346,12 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
         return this as unknown as FindOneResultJSON<T, TReturn>;
       },
       toSQL(): { params: readonly unknown[]; sql: string } {
+        const filteredWhere = modelInstance._applyFilters(where as Record<string, unknown>, filterOverrides) as WhereQuery<T>;
         const result = getSelectQueryAndParams({
           repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
           model: modelInstance.model,
           select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
-          where: where as WhereQuery<T>,
+          where: filteredWhere,
           sorts,
           skip: 0,
           limit: 1,
@@ -328,11 +368,13 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
             return await reject(new Error('The query cannot be a string, it must be an object'));
           }
 
+          const filteredWhere = modelInstance._applyFilters(where as Record<string, unknown>, filterOverrides) as WhereQuery<T>;
+
           const { query, params } = getSelectQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
             select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
-            where,
+            where: filteredWhere,
             sorts,
             limit: 1,
             skip: 0,
@@ -410,7 +452,8 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
     let skip: number | null = null;
     let limit: number | null = null;
     let poolOverride: PoolLike | undefined;
-    // Args can be a FindArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
+    let filterOverrides: Record<string, false> | false | undefined;
+    // Args can be a FindArgs type or a query object. If args has a key other than select, where, sort, or filters, treat it as a query object
     for (const [name, value] of Object.entries(args)) {
       let isWhereCriteria = false;
 
@@ -435,6 +478,9 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
           break;
         case 'pool':
           poolOverride = value as PoolLike;
+          break;
+        case 'filters':
+          filterOverrides = value as Record<string, false> | false;
           break;
         default:
           select = undefined;
@@ -479,6 +525,11 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
        */
       where(value: WhereQuery<T>): FindResult<T, TReturn> {
         where = value;
+
+        return this;
+      },
+      filters(value: Record<string, false> | false): FindResult<T, TReturn> {
+        filterOverrides = value;
 
         return this;
       },
@@ -637,11 +688,12 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
         return this as unknown as FindResultJSON<T, TReturn>;
       },
       toSQL(): { params: readonly unknown[]; sql: string } {
+        const filteredWhere = modelInstance._applyFilters(where as Record<string, unknown>, filterOverrides) as WhereQuery<T>;
         const result = getSelectQueryAndParams({
           repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
           model: modelInstance.model,
           select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
-          where,
+          where: filteredWhere,
           sorts,
           skip: skip ?? 0,
           limit: limit ?? 0,
@@ -661,11 +713,13 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
             return await reject(new Error('The query cannot be a string, it must be an object'));
           }
 
+          const filteredWhere = modelInstance._applyFilters(where as Record<string, unknown>, filterOverrides) as WhereQuery<T>;
+
           const { query, params } = getSelectQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
             select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
-            where,
+            where: filteredWhere,
             sorts,
             skip: skip ?? 0,
             limit: limit ?? 0,

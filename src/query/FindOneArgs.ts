@@ -8,4 +8,6 @@ export interface FindOneArgs<T extends Record<string, unknown>, K extends keyof 
   where?: WhereQuery<T>;
   sort?: Sort<T>;
   pool?: PoolLike;
+  /** Control global filters. false = disable all, { filterName: false } = disable specific filter */
+  filters?: Record<string, false> | false;
 }
