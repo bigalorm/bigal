@@ -20,22 +20,23 @@ type ColumnByStringId = Record<string, ColumnMetadata>;
 // Hooks
 // ---------------------------------------------------------------------------
 
-export interface ModelHooks<TInsert> {
+export interface ModelHooks<TInsert, TSelect = TInsert> {
   beforeCreate?: (values: TInsert) => Promise<TInsert> | TInsert;
   beforeUpdate?: (values: Partial<TInsert>) => Partial<TInsert> | Promise<Partial<TInsert>>;
+  afterFind?: (results: TSelect[]) => Promise<TSelect[]> | TSelect[];
 }
 
 // ---------------------------------------------------------------------------
 // Table options
 // ---------------------------------------------------------------------------
 
-export interface TableOptions<TInsert> {
+export interface TableOptions<TInsert, TSelect = TInsert> {
   /** Unique model name for relationship lookups. Defaults to the table name. */
   modelName?: string;
   schema?: string;
   readonly?: boolean;
   connection?: string;
-  hooks?: ModelHooks<TInsert>;
+  hooks?: ModelHooks<TInsert, TSelect>;
 }
 
 // ---------------------------------------------------------------------------
@@ -50,7 +51,7 @@ export interface TableDefinition<TName extends string = string, TSchema extends 
   readonly isReadonly: boolean;
   readonly connection: string | undefined;
   readonly schema: TSchema;
-  readonly hooks: ModelHooks<InferInsert<TSchema>> | undefined;
+  readonly hooks: ModelHooks<InferInsert<TSchema>, InferSelect<TSchema>> | undefined;
 
   readonly columnsByPropertyName: Readonly<ColumnByStringId>;
   readonly columnsByColumnName: Readonly<ColumnByStringId>;
@@ -127,7 +128,7 @@ function buildColumnCollectionMetadata(entry: HasManyBuilder, propertyName: stri
 export function table<TName extends string, TSchema extends SchemaDefinition>(
   tableName: TName,
   schemaDefinition: TSchema,
-  options?: TableOptions<InferInsert<TSchema>>,
+  options?: TableOptions<InferInsert<TSchema>, InferSelect<TSchema>>,
 ): TableDefinition<TName, TSchema> {
   assertValidSqlIdentifier(tableName, 'table name');
 
@@ -240,7 +241,7 @@ export function table<TName extends string, TSchema extends SchemaDefinition>(
 export function view<TName extends string, TSchema extends SchemaDefinition>(
   viewName: TName,
   schemaDefinition: TSchema,
-  options?: Omit<TableOptions<InferInsert<TSchema>>, 'readonly'>,
+  options?: Omit<TableOptions<InferInsert<TSchema>, InferSelect<TSchema>>, 'readonly'>,
 ): TableDefinition<TName, TSchema> {
   return table(viewName, schemaDefinition, { ...options, readonly: true });
 }

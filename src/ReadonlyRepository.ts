@@ -38,6 +38,7 @@ export interface IRepositoryOptions<T extends AnyRecord> {
   pool: PoolLike;
   readonlyPool?: PoolLike;
   onQuery?: OnQueryCallback;
+  afterFind?: (results: T[]) => Promise<T[]> | T[];
   beforeCreate?: (values: Partial<T>) => Partial<T> | Promise<Partial<T>>;
   beforeUpdate?: (values: Partial<T>) => Partial<T> | Promise<Partial<T>>;
 }
@@ -70,6 +71,8 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
 
   protected _onQuery: OnQueryCallback | undefined;
 
+  protected _afterFind: ((results: T[]) => Promise<T[]> | T[]) | undefined;
+
   protected _floatProperties: string[] = [];
 
   protected _intProperties: string[] = [];
@@ -78,12 +81,13 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
 
   protected _beforeUpdate: ((values: Partial<T>) => Partial<T> | Promise<Partial<T>>) | undefined;
 
-  public constructor({ modelMetadata, pool, readonlyPool, repositoriesByModelNameLowered, onQuery, beforeCreate, beforeUpdate }: IRepositoryOptions<T>) {
+  public constructor({ modelMetadata, pool, readonlyPool, repositoriesByModelNameLowered, onQuery, afterFind, beforeCreate, beforeUpdate }: IRepositoryOptions<T>) {
     this._modelMetadata = modelMetadata;
     this._pool = pool;
     this._readonlyPool = readonlyPool ?? pool;
     this._repositoriesByModelNameLowered = repositoriesByModelNameLowered;
     this._onQuery = onQuery;
+    this._afterFind = afterFind;
     this._beforeCreate = beforeCreate;
     this._beforeUpdate = beforeUpdate;
 
@@ -273,6 +277,19 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
         returnAsPlainObjects = true;
         return this as unknown as FindOneResultJSON<T, TReturn>;
       },
+      toSQL(): { params: readonly unknown[]; sql: string } {
+        const result = getSelectQueryAndParams({
+          repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+          model: modelInstance.model,
+          select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
+          where: where as WhereQuery<T>,
+          sorts,
+          skip: 0,
+          limit: 1,
+        });
+
+        return { sql: result.query, params: result.params };
+      },
       async then<TResult = TReturn | null, TErrorResult = void>(
         resolve: (result: TReturn | null) => PromiseLike<TResult> | TResult,
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
@@ -325,7 +342,9 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
               result[manuallySetField.propertyName as string & keyof T] = manuallySetField.value;
             }
 
-            return await resolve(result as unknown as TReturn);
+            const finalResult = modelInstance._afterFind ? ((await modelInstance._afterFind([result as T]))[0] ?? result) : result;
+
+            return await resolve(finalResult as unknown as TReturn);
           }
 
           return await resolve(null);
@@ -588,6 +607,22 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
         returnAsPlainObjects = true;
         return this as unknown as FindResultJSON<T, TReturn>;
       },
+      toSQL(): { params: readonly unknown[]; sql: string } {
+        const result = getSelectQueryAndParams({
+          repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+          model: modelInstance.model,
+          select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
+          where,
+          sorts,
+          skip: skip ?? 0,
+          limit: limit ?? 0,
+          joins,
+          includeCount,
+          distinctOn: distinctOnColumns,
+        });
+
+        return { sql: result.query, params: result.params };
+      },
       async then<TResult = TReturn[], TErrorResult = void>(
         resolve: (result: TReturn[]) => PromiseLike<TResult> | TResult,
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
@@ -648,14 +683,16 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
             await modelInstance.populateFields(entities, populatesWithFlag);
           }
 
+          const finalEntities = modelInstance._afterFind ? await modelInstance._afterFind(entities as T[]) : entities;
+
           if (includeCount) {
             return await (resolve as unknown as (result: FindWithCountResult<TReturn>) => PromiseLike<TResult> | TResult)({
-              results: entities as unknown as TReturn[],
+              results: finalEntities as unknown as TReturn[],
               totalCount,
             });
           }
 
-          return await resolve(entities as unknown as TReturn[]);
+          return await resolve(finalEntities as unknown as TReturn[]);
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
