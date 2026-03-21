@@ -13,7 +13,7 @@ import type {
   WhereQuery,
 } from './query/index.js';
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
-import type { CreateUpdateParams, QueryResult } from './types/index.js';
+import type { CreateUpdateParams } from './types/index.js';
 
 export interface IRepository<T extends Record<string, unknown>> extends IReadonlyRepository<T> {
   /**
@@ -104,5 +104,5 @@ export interface IRepository<T extends Record<string, unknown>> extends IReadonl
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResultWithRecords<T, QueryResult<T>>;
+  destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResultWithRecords<T>;
 }

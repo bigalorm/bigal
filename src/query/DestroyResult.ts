@@ -1,29 +1,21 @@
-import type { PlainObject } from '../types/index.js';
+import type { QueryResult } from '../types/index.js';
 
 import type { WhereQuery } from './WhereQuery.js';
-
-/**
- * Result of a destroy operation that returns plain objects (after calling toJSON())
- */
-export interface DestroyResultJSON<TEntity extends Record<string, unknown>, TReturn> extends PromiseLike<PlainObject<TReturn>[]> {
-  where(args: WhereQuery<TEntity>): DestroyResultJSON<TEntity, TReturn>;
-}
 
 /**
  * Result of a destroy operation that does not return records
  */
 export interface DestroyResult<TEntity extends Record<string, unknown>, TReturn> extends PromiseLike<TReturn> {
   where(args: WhereQuery<TEntity>): DestroyResult<TEntity, TReturn>;
+  /** Returns the generated SQL and parameters without executing the query. */
+  toSQL(): { params: readonly unknown[]; sql: string };
 }
 
 /**
- * Result of a destroy operation that returns records (includes toJSON method)
+ * Result of a destroy operation that returns records
  */
-export interface DestroyResultWithRecords<TEntity extends Record<string, unknown>, TReturn> extends PromiseLike<TReturn[]> {
-  where(args: WhereQuery<TEntity>): DestroyResultWithRecords<TEntity, TReturn>;
-  /**
-   * Returns results as plain objects instead of entity class instances.
-   * Useful for when data must be serializable.
-   */
-  toJSON(): DestroyResultJSON<TEntity, TReturn>;
+export interface DestroyResultWithRecords<TEntity extends Record<string, unknown>> extends PromiseLike<QueryResult<TEntity>[]> {
+  where(args: WhereQuery<TEntity>): DestroyResultWithRecords<TEntity>;
+  /** Returns the generated SQL and parameters without executing the query. */
+  toSQL(): { params: readonly unknown[]; sql: string };
 }
