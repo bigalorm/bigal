@@ -7,8 +7,8 @@ import type { ColumnTypeMetadata } from './ColumnTypeMetadata.js';
 type Column = ColumnCollectionMetadata | ColumnModelMetadata | ColumnTypeMetadata;
 type ColumnByStringId = Record<string, Column>;
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- T preserved for API compatibility
-export interface ModelMetadataOptions<T extends Record<string, unknown>> {
+// oxlint-disable-next-line no-unused-vars -- T required at call sites for API compatibility
+export interface ModelMetadataOptions<_T extends Record<string, unknown>> {
   name: string;
   type?: { new (): unknown };
   connection?: string;

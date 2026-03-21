@@ -7,9 +7,13 @@ export interface IJsonLikeEntity {
   message: string;
 }
 
-export const SimpleWithRelationAndJson = table('simple', {
-  ...modelBase,
-  name: text().notNull(),
-  store: belongsTo('Store'),
-  message: jsonb<IJsonLikeEntity>(),
-}, { modelName: 'SimpleWithRelationAndJson' });
+export const SimpleWithRelationAndJson = table(
+  'simple',
+  {
+    ...modelBase,
+    name: text().notNull(),
+    store: belongsTo('Store'),
+    message: jsonb<IJsonLikeEntity>(),
+  },
+  { modelName: 'SimpleWithRelationAndJson' },
+);

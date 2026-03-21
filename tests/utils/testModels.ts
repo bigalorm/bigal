@@ -197,10 +197,7 @@ export function generateProduct(overrides: Partial<ProductSelect> = {}): Product
   };
 }
 
-export function generateProductCategory(
-  productInput: { id: number } | number,
-  categoryInput: { id: number } | number,
-): ProductCategorySelect {
+export function generateProductCategory(productInput: { id: number } | number, categoryInput: { id: number } | number): ProductCategorySelect {
   return {
     id: faker.number.int(),
     product: typeof productInput === 'number' ? productInput : productInput.id,
@@ -220,9 +217,7 @@ export function generateSimpleWithJson(overrides: Partial<SimpleWithJsonSelect> 
   };
 }
 
-export function generateSimpleWithOptionalEnum(
-  overrides: Partial<SimpleWithOptionalEnumSelect> = {},
-): SimpleWithOptionalEnumSelect {
+export function generateSimpleWithOptionalEnum(overrides: Partial<SimpleWithOptionalEnumSelect> = {}): SimpleWithOptionalEnumSelect {
   return {
     id: faker.number.int(),
     name: faker.lorem.word(),
@@ -231,9 +226,7 @@ export function generateSimpleWithOptionalEnum(
   };
 }
 
-export function generateSimpleWithRelationAndJson(
-  overrides: Partial<SimpleWithRelationAndJsonSelect> = {},
-): SimpleWithRelationAndJsonSelect {
+export function generateSimpleWithRelationAndJson(overrides: Partial<SimpleWithRelationAndJsonSelect> = {}): SimpleWithRelationAndJsonSelect {
   return {
     id: faker.number.int(),
     name: faker.lorem.word(),
@@ -243,9 +236,7 @@ export function generateSimpleWithRelationAndJson(
   };
 }
 
-export function generateSimpleWithSelfReference(
-  overrides: Partial<SimpleWithSelfReferenceSelect> = {},
-): SimpleWithSelfReferenceSelect {
+export function generateSimpleWithSelfReference(overrides: Partial<SimpleWithSelfReferenceSelect> = {}): SimpleWithSelfReferenceSelect {
   return {
     id: faker.string.uuid(),
     name: faker.lorem.word(),
@@ -254,9 +245,7 @@ export function generateSimpleWithSelfReference(
   };
 }
 
-export function generateSimpleWithStringCollection(
-  overrides: Partial<SimpleWithStringCollectionSelect> = {},
-): SimpleWithStringCollectionSelect {
+export function generateSimpleWithStringCollection(overrides: Partial<SimpleWithStringCollectionSelect> = {}): SimpleWithStringCollectionSelect {
   return {
     id: faker.number.int(),
     name: faker.lorem.word(),
@@ -265,9 +254,7 @@ export function generateSimpleWithStringCollection(
   };
 }
 
-export function generateSimpleWithStringId(
-  overrides: Partial<SimpleWithStringIdSelect> = {},
-): SimpleWithStringIdSelect {
+export function generateSimpleWithStringId(overrides: Partial<SimpleWithStringIdSelect> = {}): SimpleWithStringIdSelect {
   return {
     id: faker.string.uuid(),
     name: faker.lorem.word(),
@@ -304,10 +291,7 @@ export function generateTeacher(overrides: Partial<TeacherSelect> = {}): Teacher
   };
 }
 
-export function generateTeacherClassroom(
-  teacherInput: { id: string } | string,
-  classroomInput: { id: string } | string,
-): TeacherClassroomSelect {
+export function generateTeacherClassroom(teacherInput: { id: string } | string, classroomInput: { id: string } | string): TeacherClassroomSelect {
   return {
     id: faker.string.uuid(),
     teacher: typeof teacherInput === 'string' ? teacherInput : teacherInput.id,

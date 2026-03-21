@@ -35,10 +35,7 @@ export class BelongsToBuilder<TFkType = number> {
  * @param {string | Function} modelRef - Model name string or arrow function returning a TableDefinition
  * @param {string | object} [options] - FK column name string or options object with `name`
  */
-export function belongsTo<TFkType = number>(
-  modelRef: ModelReference,
-  options?: string | { name: string },
-): BelongsToBuilder<TFkType> {
+export function belongsTo<TFkType = number>(modelRef: ModelReference, options?: string | { name: string }): BelongsToBuilder<TFkType> {
   const fkColumnName = typeof options === 'string' ? options : options?.name;
   return new BelongsToBuilder<TFkType>(modelRef, fkColumnName);
 }
