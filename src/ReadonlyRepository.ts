@@ -1,4 +1,4 @@
-import type { OnQueryCallback } from './createBigAl.js';
+import type { OnQueryCallback } from './initialize.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
 import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata/index.js';

@@ -39,7 +39,7 @@ type RepositoryMap<TModels extends Record<string, AnyModel>> = {
 
 // --- Options: array-style ---
 
-export interface BigAlOptionsWithArray extends IConnection {
+export interface InitializeOptionsArray extends IConnection {
   models: AnyModel[];
   connections?: Record<string, IConnection>;
   onQuery?: OnQueryCallback;
@@ -47,7 +47,7 @@ export interface BigAlOptionsWithArray extends IConnection {
 
 // --- Options: object-style (enables typed repos) ---
 
-export interface BigAlOptionsWithObject<TModels extends Record<string, AnyModel>> extends IConnection {
+export interface InitializeOptionsObject<TModels extends Record<string, AnyModel>> extends IConnection {
   models: TModels;
   connections?: Record<string, IConnection>;
   onQuery?: OnQueryCallback;
@@ -55,33 +55,33 @@ export interface BigAlOptionsWithObject<TModels extends Record<string, AnyModel>
 
 // --- Return types ---
 
-export interface BigAlInstance {
+export interface InitializeResult {
   getRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IRepository<InferSelect<TSchema>>;
 
   getReadonlyRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IReadonlyRepository<InferSelect<TSchema>>;
 }
 
-export type BigAlInstanceWithRepos<TModels extends Record<string, AnyModel>> = BigAlInstance & RepositoryMap<TModels>;
+export type InitializeResultWithRepos<TModels extends Record<string, AnyModel>> = InitializeResult & RepositoryMap<TModels>;
 
 // --- Overloads ---
 
 /**
  * Creates a BigAl instance with a named models object.
- * Returns typed repositories directly: `const { Product, Store } = createBigAl({ models: { Product, Store }, pool })`.
+ * Returns typed repositories directly: `const { Product, Store } = initialize({ models: { Product, Store }, pool })`.
  *
- * @param {BigAlOptionsWithObject} options - Pool, models object, and optional config
+ * @param {InitializeOptionsObject} options - Pool, models object, and optional config
  */
-export function createBigAl<TModels extends Record<string, AnyModel>>(options: BigAlOptionsWithObject<TModels>): BigAlInstanceWithRepos<TModels>;
+export function initialize<TModels extends Record<string, AnyModel>>(options: InitializeOptionsObject<TModels>): InitializeResultWithRepos<TModels>;
 
 /**
  * Creates a BigAl instance with a models array.
  * Use `getRepository(model)` to obtain typed repositories.
  *
- * @param {BigAlOptionsWithArray} options - Pool, models array, and optional config
+ * @param {InitializeOptionsArray} options - Pool, models array, and optional config
  */
-export function createBigAl(options: BigAlOptionsWithArray): BigAlInstance;
+export function initialize(options: InitializeOptionsArray): InitializeResult;
 
-export function createBigAl<TModels extends Record<string, AnyModel>>(options: BigAlOptionsWithArray | BigAlOptionsWithObject<TModels>): BigAlInstance | BigAlInstanceWithRepos<TModels> {
+export function initialize<TModels extends Record<string, AnyModel>>(options: InitializeOptionsArray | InitializeOptionsObject<TModels>): InitializeResult | InitializeResultWithRepos<TModels> {
   const { pool, readonlyPool = pool, connections = {}, onQuery } = options;
   const isObjectModels = !Array.isArray(options.models);
   const modelsArray: AnyModel[] = isObjectModels ? Object.values(options.models) : (options.models as AnyModel[]);
@@ -149,7 +149,7 @@ export function createBigAl<TModels extends Record<string, AnyModel>>(options: B
     validateRelationships(model, repositoriesByModelNameLowered);
   }
 
-  const instance: BigAlInstance = {
+  const instance: InitializeResult = {
     getRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IRepository<InferSelect<TSchema>> {
       const repository = repositoriesByModel.get(model);
       if (!repository) {
@@ -180,7 +180,7 @@ export function createBigAl<TModels extends Record<string, AnyModel>>(options: B
       }
     }
 
-    return Object.assign(instance, repoEntries) as BigAlInstanceWithRepos<TModels>;
+    return Object.assign(instance, repoEntries) as InitializeResultWithRepos<TModels>;
   }
 
   return instance;
