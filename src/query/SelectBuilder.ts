@@ -1,5 +1,3 @@
-import type { Entity } from '../Entity.js';
-
 export interface SelectAggregateExpression {
   _type: 'aggregate';
   fn: 'avg' | 'count' | 'max' | 'min' | 'sum';
@@ -14,7 +12,7 @@ export interface AggregateBuilder {
   readonly _expression: SelectAggregateExpression;
 }
 
-export class SelectBuilder<T extends Entity> {
+export class SelectBuilder<T extends Record<string, unknown>> {
   public count(column?: string & keyof T): AggregateBuilder {
     return this._createAggregateBuilder('count', column);
   }

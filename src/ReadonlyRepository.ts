@@ -1,5 +1,4 @@
 import type { OnQueryCallback } from './createBigAl.js';
-import type { Entity, EntityFieldValue, EntityStatic } from './Entity.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
 import type { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata/index.js';
@@ -29,42 +28,45 @@ import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js'
 import type { GetValueType, OmitEntityCollections, OmitFunctions, PickAsType, PickByValueType, PickFunctions, PoolLike, Populated, QueryResult } from './types/index.js';
 import { groupBy, keyBy } from './utils/index.js';
 
-export interface IRepositoryOptions<T extends Entity> {
+type FieldValue = boolean[] | Date | number[] | Record<string, unknown> | string[] | boolean | number | string | unknown | null;
+
+type AnyRecord = Record<string, unknown>;
+
+export interface IRepositoryOptions<T extends AnyRecord> {
   modelMetadata: ModelMetadata<T>;
-  type: EntityStatic<T>;
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   pool: PoolLike;
   readonlyPool?: PoolLike;
   onQuery?: OnQueryCallback;
+  beforeCreate?: (values: Partial<T>) => Partial<T> | Promise<Partial<T>>;
+  beforeUpdate?: (values: Partial<T>) => Partial<T> | Promise<Partial<T>>;
 }
 
 interface Populate {
   propertyName: string;
-  where?: WhereQuery<Entity>;
+  where?: WhereQuery<AnyRecord>;
   select?: string[];
-  sort?: SortObject<Entity> | string;
+  sort?: SortObject<AnyRecord> | string;
   skip?: number;
   limit?: number;
   pool?: PoolLike;
   asPlainObjects?: boolean;
   through?: {
     where?: Record<string, unknown>;
-    sort?: SortObject<Entity> | string;
+    sort?: SortObject<AnyRecord> | string;
   };
 }
 
 type PrimaryId = number | string;
 
-export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository<T> {
+export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyRepository<T> {
   private readonly _modelMetadata: ModelMetadata<T>;
-
-  protected _type: EntityStatic<T>;
 
   protected _pool: PoolLike;
 
   protected _readonlyPool: PoolLike;
 
-  protected _repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  protected _repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
 
   protected _onQuery: OnQueryCallback | undefined;
 
@@ -72,13 +74,18 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
   protected _intProperties: string[] = [];
 
-  public constructor({ modelMetadata, type, pool, readonlyPool, repositoriesByModelNameLowered, onQuery }: IRepositoryOptions<T>) {
+  protected _beforeCreate: ((values: Partial<T>) => Partial<T> | Promise<Partial<T>>) | undefined;
+
+  protected _beforeUpdate: ((values: Partial<T>) => Partial<T> | Promise<Partial<T>>) | undefined;
+
+  public constructor({ modelMetadata, pool, readonlyPool, repositoriesByModelNameLowered, onQuery, beforeCreate, beforeUpdate }: IRepositoryOptions<T>) {
     this._modelMetadata = modelMetadata;
-    this._type = type;
     this._pool = pool;
     this._readonlyPool = readonlyPool ?? pool;
     this._repositoriesByModelNameLowered = repositoriesByModelNameLowered;
     this._onQuery = onQuery;
+    this._beforeCreate = beforeCreate;
+    this._beforeUpdate = beforeUpdate;
 
     for (const column of modelMetadata.columns) {
       if ((column as ColumnTypeMetadata).type === 'float') {
@@ -188,7 +195,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * @param {string|number} [options.limit] - Number of results to return
        * @returns Query instance
        */
-      populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T, TPopulateType extends GetValueType<T[TProperty], Entity>, TPopulateSelectKeys extends keyof TPopulateType>(
+      populate<TProperty extends string & keyof PickByValueType<T, AnyRecord> & keyof T, TPopulateType extends GetValueType<T[TProperty], AnyRecord>, TPopulateSelectKeys extends keyof TPopulateType>(
         propertyName: TProperty,
         options?: PopulateArgs<TPopulateType, TPopulateSelectKeys>,
       ): FindOneResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>> {
@@ -223,7 +230,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
-      leftJoin(propertyName: string, alias?: string, on?: WhereQuery<Entity>): FindOneResult<T, TReturn> {
+      leftJoin(propertyName: string, alias?: string, on?: WhereQuery<AnyRecord>): FindOneResult<T, TReturn> {
         joins.push({
           propertyName,
           alias: alias ?? propertyName,
@@ -246,7 +253,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         return this;
       },
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(_propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>> {
+      UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, AnyRecord> & keyof T>(
+        _propertyName: TProperty,
+      ): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>> {
         return this as FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
       },
       UNSAFE_withFieldValue<TProperty extends string & keyof T, TValue extends T[TProperty]>(
@@ -297,16 +306,17 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             try {
               onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance._modelMetadata.tableName, operation: 'findOne' });
             } catch {
-              // Swallow — observability must not crash queries
+              // Swallow -- observability must not crash queries
             }
           }
 
           const firstResult = results.rows[0];
           if (firstResult) {
-            const result = returnAsPlainObjects ? modelInstance._buildPlainObject(firstResult) : modelInstance._buildInstance(firstResult);
+            void returnAsPlainObjects; // Always plain objects now
+            const result = modelInstance._buildPlainObject(firstResult);
 
             if (populates.length) {
-              const populatesWithFlag = populates.map((pop) => ({ ...pop, asPlainObjects: returnAsPlainObjects }));
+              const populatesWithFlag = populates.map((pop) => ({ ...pop, asPlainObjects: true }));
               await modelInstance.populateFields([result], populatesWithFlag);
             }
 
@@ -436,8 +446,8 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * @returns Query instance
        */
       populate<
-        TProperty extends string & keyof PickByValueType<T, Entity> & keyof T,
-        TPopulateType extends GetValueType<T[TProperty], Entity>,
+        TProperty extends string & keyof PickByValueType<T, AnyRecord> & keyof T,
+        TPopulateType extends GetValueType<T[TProperty], AnyRecord>,
         TPopulateSelectKeys extends string & keyof TPopulateType,
       >(propertyName: TProperty, options?: PopulateArgs<TPopulateType, TPopulateSelectKeys>): FindResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>> {
         // Add the column if the property is a single relation and not included in the list of select columns
@@ -484,13 +494,13 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
-      leftJoin(propertyNameOrSubquery: SubqueryBuilderLike | string, aliasOrUndefined?: string, onOrOptions?: WhereQuery<Entity> | { on: SubqueryJoinOnCondition }): FindResult<T, TReturn> {
+      leftJoin(propertyNameOrSubquery: SubqueryBuilderLike | string, aliasOrUndefined?: string, onOrOptions?: WhereQuery<AnyRecord> | { on: SubqueryJoinOnCondition }): FindResult<T, TReturn> {
         if (typeof propertyNameOrSubquery === 'string') {
           joins.push({
             propertyName: propertyNameOrSubquery,
             alias: aliasOrUndefined ?? propertyNameOrSubquery,
             type: 'left',
-            on: onOrOptions as WhereQuery<Entity> | undefined,
+            on: onOrOptions as WhereQuery<AnyRecord> | undefined,
           });
         } else {
           if (!aliasOrUndefined) {
@@ -553,7 +563,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         return this;
       },
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(_propertyName: TProperty): FindResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>> {
+      UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, AnyRecord> & keyof T>(_propertyName: TProperty): FindResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>> {
         return this as unknown as FindResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
       },
       /**
@@ -613,7 +623,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             try {
               onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance._modelMetadata.tableName, operation: 'find' });
             } catch {
-              // Swallow — observability must not crash queries
+              // Swallow -- observability must not crash queries
             }
           }
 
@@ -630,10 +640,11 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
               })
             : results.rows;
 
-          const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(rows) : modelInstance._buildInstances(rows);
+          void returnAsPlainObjects; // Always plain objects now
+          const entities = modelInstance._buildPlainObjects(rows);
 
           if (populates.length) {
-            const populatesWithFlag = populates.map((pop) => ({ ...pop, asPlainObjects: returnAsPlainObjects }));
+            const populatesWithFlag = populates.map((pop) => ({ ...pop, asPlainObjects: true }));
             await modelInstance.populateFields(entities, populatesWithFlag);
           }
 
@@ -731,7 +742,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             try {
               onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance._modelMetadata.tableName, operation: 'count' });
             } catch {
-              // Swallow — observability must not crash queries
+              // Swallow -- observability must not crash queries
             }
           }
 
@@ -750,45 +761,6 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         }
       },
     };
-  }
-
-  protected _buildInstance(row: Partial<QueryResult<T>>): QueryResult<T> {
-    const instance = new this._type();
-    Object.assign(instance, row);
-
-    // NOTE: Number fields may be strings coming from the db. In those cases, try to convert the value to Number
-    for (const name of this._floatProperties) {
-      const originalValue = row[name as keyof QueryResult<T>] as number | string | null | undefined;
-      if (originalValue != null && typeof originalValue === 'string') {
-        const value = Number(originalValue);
-        // Skip conversion for very large numbers to avoid precision loss
-        if (Number.isFinite(value) && Math.abs(value) <= Number.MAX_SAFE_INTEGER) {
-          // @ts-expect-error - string cannot be used to index type T
-          instance[name] = value;
-        }
-      }
-    }
-
-    for (const name of this._intProperties) {
-      const originalValue = row[name as keyof QueryResult<T>] as number | string | null | undefined;
-      if (originalValue != null && typeof originalValue === 'string') {
-        const value = Number(originalValue);
-        // Integer columns keep the round-trip check to avoid converting decimal strings to truncated integers
-        if (Number.isFinite(value) && value.toString() === originalValue) {
-          const valueAsInt = Math.trunc(value);
-          if (Number.isSafeInteger(valueAsInt)) {
-            // @ts-expect-error - string cannot be used to index type T
-            instance[name] = valueAsInt;
-          }
-        }
-      }
-    }
-
-    return instance as unknown as QueryResult<T>;
-  }
-
-  protected _buildInstances(rows: Partial<QueryResult<T>>[]): QueryResult<T>[] {
-    return rows.map((row: Partial<QueryResult<T>>) => this._buildInstance(row));
   }
 
   protected _buildPlainObject(row: Partial<QueryResult<T>>): QueryResult<T> {
@@ -895,9 +867,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           throw new Error(`Unable to populate ${column.target}#${column.propertyName}. There is no primary key defined in ${this.model.name}`);
         }
 
-        const entityIds = new Set<EntityFieldValue>();
+        const entityIds = new Set<FieldValue>();
         for (const entity of entities) {
-          const id = entity[primaryKeyColumn.propertyName as keyof QueryResult<T>] as EntityFieldValue;
+          const id = entity[primaryKeyColumn.propertyName as keyof QueryResult<T>] as FieldValue;
           if (id == null) {
             throw new Error(`Primary key (${primaryKeyColumn.propertyName}) has no value for entity ${column.target}.`);
           }
@@ -946,15 +918,15 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     }
 
     const propertyName = populate.propertyName as string & keyof QueryResult<T>;
-    const populateIds = new Set<EntityFieldValue>();
+    const populateIds = new Set<FieldValue>();
     for (const entity of entities) {
-      const populateId = entity[propertyName] as EntityFieldValue;
+      const populateId = entity[propertyName] as FieldValue;
       if (populateId) {
         populateIds.add(populateId);
       }
     }
 
-    const populateWhere: WhereQuery<Entity> = {
+    const populateWhere: WhereQuery<AnyRecord> = {
       [populateRepository.model.primaryKeyColumn.propertyName]: Array.from(populateIds),
       ...populate.where,
     };
@@ -964,7 +936,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       where: populateWhere,
       sort: populate.sort,
       pool: populate.pool,
-    } as FindArgs<Entity>);
+    } as FindArgs<AnyRecord>);
     const populateResults = populate.asPlainObjects ? await findQuery.toJSON() : await findQuery;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const populateResultsById = keyBy(populateResults, populateRepository.model.primaryKeyColumn.propertyName) as Record<number | string, any>;
@@ -978,10 +950,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
   private async populateOneManyCollection(
     entities: QueryResult<T>[],
     primaryKeyPropertyName: keyof QueryResult<T>,
-    entityIds: EntityFieldValue[],
+    entityIds: FieldValue[],
     populate: Populate,
     column: ColumnCollectionMetadata,
-    populateRepository: IReadonlyRepository<Entity>,
+    populateRepository: IReadonlyRepository<AnyRecord>,
   ): Promise<void> {
     if (entities.length > 1 && populate.select && !populate.select.includes(column.via)) {
       throw new Error(`Unable to populate "${populate.propertyName}" on ${this.model.name}. "${column.via}" is not included in select array.`);
@@ -999,7 +971,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       skip: populate.skip,
       limit: populate.limit,
       pool: populate.pool,
-    } as FindArgs<Entity>);
+    } as FindArgs<AnyRecord>);
     const populateResults = populate.asPlainObjects ? await findQuery.toJSON() : await findQuery;
 
     if (entities.length === 1) {
@@ -1007,7 +979,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         (entity as Record<string, unknown>)[populate.propertyName] = populateResults;
       }
     } else {
-      const populateResultsByEntityId = groupBy(populateResults, column.via) as Record<PrimaryId, Entity[]>;
+      const populateResultsByEntityId = groupBy(populateResults, column.via) as Record<PrimaryId, AnyRecord[]>;
       for (const entity of entities) {
         const id = entity[primaryKeyPropertyName] as PrimaryId;
         (entity as Record<string, unknown>)[populate.propertyName] = populateResultsByEntityId[id] ?? [];
@@ -1018,11 +990,11 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
   private async populateManyManyCollection(
     entities: QueryResult<T>[],
     primaryKeyPropertyName: keyof QueryResult<T>,
-    entityIds: EntityFieldValue[],
+    entityIds: FieldValue[],
     populateModelPrimaryKeyPropertyName: keyof QueryResult<T>,
     populate: Populate,
     column: ColumnCollectionMetadata,
-    populateRepository: IReadonlyRepository<Entity>,
+    populateRepository: IReadonlyRepository<AnyRecord>,
   ): Promise<void> {
     if (!column.through) {
       throw new Error(`Unable to populate multi-map collection: Missing "through" value. From ${column.target}#${populate.propertyName}`);
@@ -1095,10 +1067,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       skip: populate.skip,
       limit: populate.limit,
       pool: populate.pool,
-    } as FindArgs<Entity>);
+    } as FindArgs<AnyRecord>);
     const populateResults = populate.asPlainObjects ? await findQuery.toJSON() : await findQuery;
 
-    const populateResultsById = keyBy(populateResults, populateModelPrimaryKeyPropertyName as string) as Record<PrimaryId, Entity>;
+    const populateResultsById = keyBy(populateResults, populateModelPrimaryKeyPropertyName as string) as Record<PrimaryId, AnyRecord>;
 
     for (const entity of entities) {
       const populatedItems = [];

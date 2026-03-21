@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { faker } from '@faker-js/faker';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { BigAlReadonlyRepository, BigAlRepository, PoolLike, PoolQueryResult, QueryResultRow } from '../src/index.js';
+import type { IReadonlyRepository, IRepository, PoolLike, PoolQueryResult, QueryResultRow } from '../src/index.js';
 import { createBigAl, subquery } from '../src/index.js';
 import type { SelectAggregateExpression, Sort, TypedAggregateExpression, WhereQuery } from '../src/query/index.js';
 
@@ -94,20 +94,20 @@ function getQueryResult<T extends QueryResultRow>(rows: T[]): PoolQueryResult<T>
 describe('ReadonlyRepository', () => {
   const mockedPool = createMockPool();
 
-  let LevelOneRepository: BigAlRepository<LevelOneSelect>;
-  let LevelTwoRepository: BigAlRepository<LevelTwoSelect>;
-  let LevelThreeRepository: BigAlRepository<LevelThreeSelect>;
-  let ProductRepository: BigAlRepository<ProductSelect>;
-  let ReadonlyProductRepository: BigAlReadonlyRepository<ReadonlyProductSelect>;
-  let ReadonlyKitchenSinkRepository: BigAlReadonlyRepository<KitchenSinkSelect>;
-  let StoreRepository: BigAlRepository<StoreSelect>;
-  let SimpleWithJsonRepository: BigAlRepository<SimpleWithJsonSelect>;
-  let SimpleWithOptionalEnumRepository: BigAlRepository<SimpleWithOptionalEnumSelect>;
-  let SimpleWithRelationAndJsonRepository: BigAlRepository<SimpleWithRelationAndJsonSelect>;
-  let SimpleWithSelfReferenceRepository: BigAlRepository<SimpleWithSelfReferenceSelect>;
-  let SimpleWithStringCollectionRepository: BigAlRepository<SimpleWithStringCollectionSelect>;
-  let SimpleWithUnionRepository: BigAlRepository<SimpleWithUnionSelect>;
-  let TeacherRepository: BigAlRepository<TeacherSelect>;
+  let LevelOneRepository: IRepository<LevelOneSelect>;
+  let LevelTwoRepository: IRepository<LevelTwoSelect>;
+  let LevelThreeRepository: IRepository<LevelThreeSelect>;
+  let ProductRepository: IRepository<ProductSelect>;
+  let ReadonlyProductRepository: IReadonlyRepository<ReadonlyProductSelect>;
+  let ReadonlyKitchenSinkRepository: IReadonlyRepository<KitchenSinkSelect>;
+  let StoreRepository: IRepository<StoreSelect>;
+  let SimpleWithJsonRepository: IRepository<SimpleWithJsonSelect>;
+  let SimpleWithOptionalEnumRepository: IRepository<SimpleWithOptionalEnumSelect>;
+  let SimpleWithRelationAndJsonRepository: IRepository<SimpleWithRelationAndJsonSelect>;
+  let SimpleWithSelfReferenceRepository: IRepository<SimpleWithSelfReferenceSelect>;
+  let SimpleWithStringCollectionRepository: IRepository<SimpleWithStringCollectionSelect>;
+  let SimpleWithUnionRepository: IRepository<SimpleWithUnionSelect>;
+  let TeacherRepository: IRepository<TeacherSelect>;
 
   beforeAll(() => {
     const bigal = createBigAl({
@@ -857,7 +857,7 @@ describe('ReadonlyRepository', () => {
 
       const result = await StoreRepository.findOne({
         pool: poolOverride,
-      // @ts-expect-error -- populate type constraint pending Entity migration
+        // @ts-expect-error -- populate type constraint pending Entity migration
       }).populate('products');
 
       expect(mockedPool.query).not.toHaveBeenCalled();
@@ -999,7 +999,7 @@ describe('ReadonlyRepository', () => {
 
       const result = await ProductRepository.findOne({
         pool: poolOverride,
-      // @ts-expect-error -- populate type constraint pending Entity migration
+        // @ts-expect-error -- populate type constraint pending Entity migration
       }).populate('categories');
 
       expect(mockedPool.query).not.toHaveBeenCalled();
@@ -1450,7 +1450,7 @@ describe('ReadonlyRepository', () => {
       });
     });
 
-    it('should have instance functions be equal across multiple queries', async () => {
+    it('should return plain objects without instance methods across multiple queries', async () => {
       const result = {
         id: faker.number.int(),
         name: `sink - ${faker.string.uuid()}`,
@@ -1464,11 +1464,10 @@ describe('ReadonlyRepository', () => {
 
       assert(result1);
       expect(result1).toStrictEqual(result2);
-      // @ts-expect-error -- instance functions not available on inferred schema types
-      expect(result1.instanceFunction()).toBe(`${result.name} bar!`);
+      // Plain objects should not have instance methods
+      expect('instanceFunction' in result1).toBe(false);
       assert(result2);
-      // @ts-expect-error -- instance functions not available on inferred schema types
-      expect(result2.instanceFunction()).toBe(`${result.name} bar!`);
+      expect('instanceFunction' in result2).toBe(false);
     });
 
     it('should not create an object/assign instance functions to null results', async () => {
@@ -2225,7 +2224,7 @@ describe('ReadonlyRepository', () => {
       expect(params).toStrictEqual([store.id]);
     });
 
-    it('should have instance functions be equal across multiple queries', async () => {
+    it('should return plain objects without instance methods across multiple queries', async () => {
       const result = {
         id: faker.number.int(),
         name: `sink - ${faker.string.uuid()}`,
@@ -2238,10 +2237,8 @@ describe('ReadonlyRepository', () => {
       assert(result1);
       assert(result2);
       expect(result1).toStrictEqual(result2);
-      // @ts-expect-error -- instance functions not available on inferred schema types
-      expect(result1[0]!.instanceFunction()).toBe(`${result.name} bar!`);
-      // @ts-expect-error -- instance functions not available on inferred schema types
-      expect(result2[0]!.instanceFunction()).toBe(`${result.name} bar!`);
+      expect('instanceFunction' in result1[0]!).toBe(false);
+      expect('instanceFunction' in result2[0]!).toBe(false);
     });
 
     it('should allow types when used in promise.all with other queries', async () => {
@@ -3241,7 +3238,7 @@ describe('ReadonlyRepository', () => {
 
         const results = await ProductRepository.find({
           pool: poolOverride,
-        // @ts-expect-error -- populate type constraint pending Entity migration
+          // @ts-expect-error -- populate type constraint pending Entity migration
         }).populate('store');
 
         expect(mockedPool.query).not.toHaveBeenCalled();
@@ -3311,7 +3308,7 @@ describe('ReadonlyRepository', () => {
 
         const results = await LevelOneRepository.find({
           select: ['one', 'levelTwo'],
-        // @ts-expect-error -- populate type constraint pending Entity migration
+          // @ts-expect-error -- populate type constraint pending Entity migration
         }).populate('levelTwo', {
           select: ['two', 'levelThree'],
         });
@@ -3401,7 +3398,7 @@ describe('ReadonlyRepository', () => {
 
         const results = await ProductRepository.find({
           select: ['name'],
-        // @ts-expect-error -- populate type constraint pending Entity migration
+          // @ts-expect-error -- populate type constraint pending Entity migration
         }).populate('store', {
           select: ['id'],
         });
@@ -3467,7 +3464,7 @@ describe('ReadonlyRepository', () => {
 
         const results = await StoreRepository.find({
           pool: poolOverride,
-        // @ts-expect-error -- populate type constraint pending Entity migration
+          // @ts-expect-error -- populate type constraint pending Entity migration
         }).populate('products');
 
         expect(mockedPool.query).not.toHaveBeenCalled();
@@ -3627,7 +3624,7 @@ describe('ReadonlyRepository', () => {
 
         const results = await ProductRepository.find({
           pool: poolOverride,
-        // @ts-expect-error -- populate type constraint pending Entity migration
+          // @ts-expect-error -- populate type constraint pending Entity migration
         }).populate('categories');
 
         expect(mockedPool.query).not.toHaveBeenCalled();
@@ -3842,24 +3839,26 @@ describe('ReadonlyRepository', () => {
             classrooms: Pick<ClassroomSelect, 'id' | 'name'>[];
           })[]
         > {
-          return TeacherRepository.find({})
-            .where({
-              isActive: true,
-            })
-            .sort('lastName')
-            // @ts-expect-error -- populate type constraint pending Entity migration
-            .populate('parkingSpace', {
-              select: ['name'],
-            })
-            // @ts-expect-error -- populate type constraint pending Entity migration
-            .populate('classrooms', {
-              select: ['name'],
-              where: {
-                name: {
-                  like: 'classroom%',
+          return (
+            TeacherRepository.find({})
+              .where({
+                isActive: true,
+              })
+              .sort('lastName')
+              // @ts-expect-error -- populate type constraint pending Entity migration
+              .populate('parkingSpace', {
+                select: ['name'],
+              })
+              // @ts-expect-error -- populate type constraint pending Entity migration
+              .populate('classrooms', {
+                select: ['name'],
+                where: {
+                  name: {
+                    like: 'classroom%',
+                  },
                 },
-              },
-            });
+              })
+          );
         }
 
         const results = await getTeachers();
@@ -3888,9 +3887,10 @@ describe('ReadonlyRepository', () => {
         assert(teacherQueryParams);
         expect(teacherQueryParams).toStrictEqual([true]);
         const [parkingSpaceQuery, parkingSpaceQueryParams] = mockedPool.query.mock.calls[1]!;
-        expect(parkingSpaceQuery).toBe('SELECT "name","id" FROM "parking_space" WHERE "id"=$1');
+        expect(parkingSpaceQuery).toBe('SELECT "name","id" FROM "parking_space" WHERE "id"=ANY($1::TEXT[])');
         assert(parkingSpaceQueryParams);
-        expect(parkingSpaceQueryParams).toStrictEqual([parkingSpace.id]);
+        // Both teachers' parking space IDs are collected for the populate query
+        expect(parkingSpaceQueryParams).toStrictEqual([[teacher1.parkingSpace, teacher2.parkingSpace]]);
         const [teacherClassroomQuery, teacherClassroomQueryParams] = mockedPool.query.mock.calls[2]!;
         expect(teacherClassroomQuery).toBe('SELECT "teacher_id" AS "teacher","classroom_id" AS "classroom","id" FROM "teacher__classroom" WHERE "teacher_id"=ANY($1::TEXT[])');
         assert(teacherClassroomQueryParams);
@@ -4084,7 +4084,7 @@ describe('ReadonlyRepository', () => {
             .populate('translations', {
               select: ['id', 'name'],
             }),
-        ).rejects.toThrow('Unable to populate "translations" on simple. "source" is not included in select array.');
+        ).rejects.toThrow('Unable to populate "translations" on SimpleWithSelfReference. "source" is not included in select array.');
       });
     });
 

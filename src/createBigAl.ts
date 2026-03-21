@@ -1,4 +1,3 @@
-import type { Entity, EntityStatic } from './Entity.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
 import { ModelMetadata } from './metadata/ModelMetadata.js';
@@ -7,6 +6,8 @@ import { Repository } from './Repository.js';
 import type { InferSelect, SchemaDefinition } from './schema/InferTypes.js';
 import type { TableDefinition } from './schema/TableDefinition.js';
 import type { PoolLike } from './types/PoolLike.js';
+
+type AnyRecord = Record<string, unknown>;
 
 export interface IConnection {
   pool: PoolLike;
@@ -42,28 +43,14 @@ export interface BigAlInstance {
    * Returns a read-write repository for the given table definition.
    * The repository type is inferred from the table's schema definition.
    */
-  getRepository<TName extends string, TSchema extends SchemaDefinition>(tableDef: TableDefinition<TName, TSchema>): BigAlRepository<InferSelect<TSchema>>;
+  getRepository<TName extends string, TSchema extends SchemaDefinition>(tableDef: TableDefinition<TName, TSchema>): IRepository<InferSelect<TSchema>>;
 
   /**
    * Returns a read-only repository for the given table definition.
    * The repository type is inferred from the table's schema definition.
    */
-  getReadonlyRepository<TName extends string, TSchema extends SchemaDefinition>(tableDef: TableDefinition<TName, TSchema>): BigAlReadonlyRepository<InferSelect<TSchema>>;
+  getReadonlyRepository<TName extends string, TSchema extends SchemaDefinition>(tableDef: TableDefinition<TName, TSchema>): IReadonlyRepository<InferSelect<TSchema>>;
 }
-
-/**
- * A repository type for the new function-based schema API.
- * This is structurally equivalent to `IRepository<T>` but without the `T extends Entity` constraint,
- * allowing plain inferred types from `table()` definitions.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type BigAlRepository<T extends Record<string, any>> = IRepository<T & Entity>;
-
-/**
- * A readonly repository type for the new function-based schema API.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type BigAlReadonlyRepository<T extends Record<string, any>> = IReadonlyRepository<T & Entity>;
 
 export function createBigAl({ pool, readonlyPool = pool, models, connections = {}, onQuery }: BigAlOptions): BigAlInstance {
   if (!models.length) {
@@ -80,8 +67,8 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
         }
       : undefined);
 
-  const repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>> = {};
-  const repositoriesByTableDef = new Map<AnyTableDefinition, IReadonlyRepository<Entity> | IRepository<Entity>>();
+  const repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>> = {};
+  const repositoriesByTableDef = new Map<AnyTableDefinition, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>();
 
   for (const tableDef of models) {
     const modelMetadata = buildModelMetadata(tableDef);
@@ -99,13 +86,10 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
       modelReadonlyPool = modelConnection.readonlyPool ?? modelPool;
     }
 
-    const entityStatic = createEntityStatic(tableDef);
-
-    let repository: ReadonlyRepository<Entity> | Repository<Entity>;
+    let repository: ReadonlyRepository<AnyRecord> | Repository<AnyRecord>;
     if (tableDef.isReadonly) {
       repository = new ReadonlyRepository({
         modelMetadata,
-        type: entityStatic,
         repositoriesByModelNameLowered,
         pool: modelPool,
         readonlyPool: modelReadonlyPool,
@@ -114,15 +98,16 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
     } else {
       repository = new Repository({
         modelMetadata,
-        type: entityStatic,
         repositoriesByModelNameLowered,
         pool: modelPool,
         readonlyPool: modelReadonlyPool,
         onQuery: resolvedOnQuery,
+        beforeCreate: tableDef.hooks?.beforeCreate,
+        beforeUpdate: tableDef.hooks?.beforeUpdate,
       });
     }
 
-    repositoriesByModelNameLowered[tableDef.tableName.toLowerCase()] = repository;
+    repositoriesByModelNameLowered[tableDef.modelName.toLowerCase()] = repository;
     repositoriesByTableDef.set(tableDef, repository);
   }
 
@@ -132,22 +117,22 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
   }
 
   return {
-    getRepository<TName extends string, TSchema extends SchemaDefinition>(tableDef: TableDefinition<TName, TSchema>): BigAlRepository<InferSelect<TSchema>> {
+    getRepository<TName extends string, TSchema extends SchemaDefinition>(tableDef: TableDefinition<TName, TSchema>): IRepository<InferSelect<TSchema>> {
       const repository = repositoriesByTableDef.get(tableDef);
       if (!repository) {
         throw new Error(`Repository not found for table "${tableDef.tableName}". Was it included in the models array?`);
       }
 
-      return repository as unknown as BigAlRepository<InferSelect<TSchema>>;
+      return repository as unknown as IRepository<InferSelect<TSchema>>;
     },
 
-    getReadonlyRepository<TName extends string, TSchema extends SchemaDefinition>(tableDef: TableDefinition<TName, TSchema>): BigAlReadonlyRepository<InferSelect<TSchema>> {
+    getReadonlyRepository<TName extends string, TSchema extends SchemaDefinition>(tableDef: TableDefinition<TName, TSchema>): IReadonlyRepository<InferSelect<TSchema>> {
       const repository = repositoriesByTableDef.get(tableDef);
       if (!repository) {
         throw new Error(`Repository not found for table "${tableDef.tableName}". Was it included in the models array?`);
       }
 
-      return repository as unknown as BigAlReadonlyRepository<InferSelect<TSchema>>;
+      return repository as unknown as IReadonlyRepository<InferSelect<TSchema>>;
     },
   };
 }
@@ -155,32 +140,29 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
 function validateRelationships(tableDef: AnyTableDefinition, repositoriesByModelNameLowered: Record<string, unknown>): void {
   for (const entry of tableDef.belongsToEntries) {
     const referencedTable = entry.builder.modelFn();
-    if (!repositoriesByModelNameLowered[referencedTable.tableName.toLowerCase()]) {
-      throw new Error(`belongsTo reference from "${tableDef.tableName}.${entry.propertyName}" points to table "${referencedTable.tableName}" which is not registered`);
+    if (!repositoriesByModelNameLowered[referencedTable.modelName.toLowerCase()]) {
+      throw new Error(`belongsTo reference from "${tableDef.modelName}.${entry.propertyName}" points to model "${referencedTable.modelName}" which is not registered`);
     }
   }
 
   for (const entry of tableDef.hasManyEntries) {
     const referencedTable = entry.builder.modelFn();
-    if (!repositoriesByModelNameLowered[referencedTable.tableName.toLowerCase()]) {
-      throw new Error(`hasMany reference from "${tableDef.tableName}.${entry.propertyName}" points to table "${referencedTable.tableName}" which is not registered`);
+    if (!repositoriesByModelNameLowered[referencedTable.modelName.toLowerCase()]) {
+      throw new Error(`hasMany reference from "${tableDef.modelName}.${entry.propertyName}" points to model "${referencedTable.modelName}" which is not registered`);
     }
 
     if (entry.builder.throughFn) {
       const throughTable = entry.builder.throughFn();
-      if (!repositoriesByModelNameLowered[throughTable.tableName.toLowerCase()]) {
-        throw new Error(`hasMany.through reference from "${tableDef.tableName}.${entry.propertyName}" points to junction table "${throughTable.tableName}" which is not registered`);
+      if (!repositoriesByModelNameLowered[throughTable.modelName.toLowerCase()]) {
+        throw new Error(`hasMany.through reference from "${tableDef.modelName}.${entry.propertyName}" points to junction model "${throughTable.modelName}" which is not registered`);
       }
     }
   }
 }
 
-function buildModelMetadata(tableDef: AnyTableDefinition): ModelMetadata<Entity> {
-  const entityStatic = createEntityStatic(tableDef);
-
-  const metadata = new ModelMetadata<Entity>({
-    name: tableDef.tableName,
-    type: entityStatic,
+function buildModelMetadata(tableDef: AnyTableDefinition): ModelMetadata<AnyRecord> {
+  const metadata = new ModelMetadata<AnyRecord>({
+    name: tableDef.modelName,
     connection: tableDef.connection,
     schema: tableDef.dbSchema,
     tableName: tableDef.tableName,
@@ -190,27 +172,4 @@ function buildModelMetadata(tableDef: AnyTableDefinition): ModelMetadata<Entity>
   metadata.columns = tableDef.columns;
 
   return metadata;
-}
-
-function createEntityStatic(tableDef: AnyTableDefinition): EntityStatic<Entity> {
-  // Use a constructor function (not a class) so that instances are plain objects.
-  // This ensures Object.getPrototypeOf(new PlainEntity()) === Object.prototype,
-  // which matters for deep equality checks (e.g. toStrictEqual).
-  function PlainEntity(this: Entity) {
-    // intentionally empty
-  }
-
-  PlainEntity.prototype = Object.prototype;
-
-  if (tableDef.hooks?.beforeCreate) {
-    const hookFn = tableDef.hooks.beforeCreate;
-    (PlainEntity as unknown as EntityStatic<Entity>).beforeCreate = (values) => hookFn(values);
-  }
-
-  if (tableDef.hooks?.beforeUpdate) {
-    const hookFn = tableDef.hooks.beforeUpdate;
-    (PlainEntity as unknown as EntityStatic<Entity>).beforeUpdate = (values) => hookFn(values);
-  }
-
-  return PlainEntity as unknown as EntityStatic<Entity>;
 }

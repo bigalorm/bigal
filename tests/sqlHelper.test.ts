@@ -2928,10 +2928,7 @@ describe('sqlHelper', () => {
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
-          or: [
-            { or: [{ name: name1 }, { sku: sku1 }] },
-            { or: [{ name: name2 }, { sku: sku2 }] },
-          ],
+          or: [{ or: [{ name: name1 }, { sku: sku1 }] }, { or: [{ name: name2 }, { sku: sku2 }] }],
         },
       });
 
@@ -2951,10 +2948,7 @@ describe('sqlHelper', () => {
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
           id,
-          or: [
-            { or: [{ name: name1 }, { store: store1 }] },
-            { or: [{ name: name2 }, { store: store2 }] },
-          ],
+          or: [{ or: [{ name: name1 }, { store: store1 }] }, { or: [{ name: name2 }, { store: store2 }] }],
         },
       });
 
@@ -2993,10 +2987,7 @@ describe('sqlHelper', () => {
         repositoriesByModelNameLowered,
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         where: {
-          and: [
-            { or: [{ name: name1 }, { sku: sku1 }] },
-            { or: [{ name: name2 }, { sku: sku2 }] },
-          ],
+          and: [{ or: [{ name: name1 }, { sku: sku1 }] }, { or: [{ name: name2 }, { sku: sku2 }] }],
         },
       });
 

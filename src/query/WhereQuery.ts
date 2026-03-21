@@ -1,4 +1,3 @@
-import type { Entity, NotEntityBrand } from '../Entity.js';
 import type { ExcludeEntityCollections, ExcludeFunctions } from '../types/index.js';
 
 import type { ScalarSubquery, SubqueryBuilderLike } from './Subquery.js';
@@ -6,16 +5,7 @@ import type { ScalarSubquery, SubqueryBuilderLike } from './Subquery.js';
 type ExcludeUndefined<T> = Exclude<T, undefined>;
 export type LiteralValues<TValue> = (TValue | null)[] | TValue | null;
 
-export type WhereClauseValue<TValue> = TValue extends NotEntityBrand | undefined
-  ? Exclude<TValue, NotEntityBrand | undefined> // If the value is a NotEntityBrand, return the type without undefined
-  : Extract<TValue, Entity> extends undefined // Otherwise if the type does not extend Entity
-    ? LiteralValues<ExcludeUndefined<TValue>>
-    :
-        | (ExcludeUndefined<Exclude<TValue, Entity>> | null)[] // Allow an array of the literal value (non-entity)
-        | (Pick<Extract<ExcludeUndefined<TValue>, Entity>, 'id'> | null)[] // Allow an array of objects with the id property
-        | ExcludeUndefined<Exclude<TValue, Entity>> // Allow a single literal value
-        | Pick<Extract<ExcludeUndefined<TValue>, Entity>, 'id'> // Allow a single object with the id property
-        | null;
+export type WhereClauseValue<TValue> = LiteralValues<ExcludeUndefined<TValue>>;
 
 export type StringConstraint<TValue extends string> = Partial<Record<'contains' | 'endsWith' | 'like' | 'startsWith', LiteralValues<ExcludeUndefined<TValue>>>>;
 
@@ -51,7 +41,7 @@ export type WhereQueryStatement<TValue> = [TValue] extends [string] // Avoid dis
       ? NegatableConstraint<NumberOrDateConstraintWithSubquery<TValue> | SubqueryInConstraint | WhereClauseValue<TValue>>
       : NegatableConstraint<JsonConstraint<TValue> | JsonPropertyConstraint | SubqueryInConstraint | WhereClauseValue<TValue>>;
 
-export type WhereQuery<T extends Entity> = {
+export type WhereQuery<T extends Record<string, unknown>> = {
   // Exclude entity collections and functions. Make the rest of the properties optional
   [K in keyof T as ExcludeEntityCollections<T[K], ExcludeFunctions<T[K], K>>]?: K extends 'id'
     ? NegatableConstraint<WhereClauseValue<T>> | WhereQueryStatement<T[K]> // Allow entity objects (via Pick<T,'id'>) and literal id values
