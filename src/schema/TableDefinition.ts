@@ -231,6 +231,9 @@ export function table<TName extends string, TSchema extends SchemaDefinition>(
  * Defines a read-only table definition backed by a PostgreSQL view.
  * Equivalent to `table(name, schema, { readonly: true, ...options })`.
  * Returns a `ReadonlyRepository` when registered with `createBigAl`.
+ * @param {string} viewName - The PostgreSQL view name
+ * @param {TSchema} schemaDefinition - Column definitions
+ * @param {object} [options] - Additional options (schema, connection, modelName)
  */
 export function view<TName extends string, TSchema extends SchemaDefinition>(
   viewName: TName,
