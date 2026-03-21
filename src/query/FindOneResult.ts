@@ -68,6 +68,8 @@ export interface FindOneResult<T extends Record<string, unknown>, TReturn, TJoin
    * Useful for when data must be serializable.
    */
   toJSON(): FindOneResultJSON<T, TReturn, TJoins>;
+  /** Control global filters. false = disable all, { filterName: false } = disable specific */
+  filters(value: Record<string, false> | false): FindOneResult<T, TReturn, TJoins>;
   /** Returns the generated SQL and parameters without executing the query. */
   toSQL(): { params: readonly unknown[]; sql: string };
 }
