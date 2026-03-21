@@ -127,6 +127,7 @@ export function initialize<TModels extends Record<string, AnyModel>>(options: In
         pool: modelPool,
         readonlyPool: modelReadonlyPool,
         onQuery: resolvedOnQuery,
+        afterFind: model.hooks?.afterFind,
       });
     } else {
       repository = new Repository({
@@ -135,6 +136,7 @@ export function initialize<TModels extends Record<string, AnyModel>>(options: In
         pool: modelPool,
         readonlyPool: modelReadonlyPool,
         onQuery: resolvedOnQuery,
+        afterFind: model.hooks?.afterFind,
         beforeCreate: model.hooks?.beforeCreate,
         beforeUpdate: model.hooks?.beforeUpdate,
       });

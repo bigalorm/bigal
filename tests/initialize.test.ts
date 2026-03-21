@@ -528,6 +528,138 @@ describe('initialize', () => {
     });
   });
 
+  describe('afterFind hook', () => {
+    const mockedPool = createMockPool();
+
+    it('should transform find results via afterFind hook', async () => {
+      const ProductWithAfterFind = table(
+        'products',
+        {
+          id: serial().primaryKey(),
+          name: text().notNull(),
+          sku: text(),
+        },
+        {
+          modelName: 'ProductWithAfterFind',
+          hooks: {
+            afterFind(results) {
+              return results.map((row) => ({
+                ...row,
+                displayName: `${row.name} (${row.sku ?? 'no sku'})`,
+              }));
+            },
+          },
+        },
+      );
+
+      const bigal = initialize({ pool: mockedPool, models: [ProductWithAfterFind] });
+      const repo = bigal.getRepository(ProductWithAfterFind);
+
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([{ id: 1, name: 'Widget', sku: 'WDG-001' }]));
+      const results = await repo.find({});
+      expect(results).toHaveLength(1);
+      // @ts-expect-error -- afterFind added displayName which isn't on the inferred type
+      expect(results[0]!.displayName).toBe('Widget (WDG-001)');
+    });
+
+    it('should transform findOne results via afterFind hook', async () => {
+      const ProductWithAfterFind = table(
+        'products',
+        {
+          id: serial().primaryKey(),
+          name: text().notNull(),
+        },
+        {
+          modelName: 'ProductWithAfterFindOne',
+          hooks: {
+            afterFind(results) {
+              return results.map((row) => ({ ...row, transformed: true }));
+            },
+          },
+        },
+      );
+
+      const bigal = initialize({ pool: mockedPool, models: [ProductWithAfterFind] });
+      const repo = bigal.getRepository(ProductWithAfterFind);
+
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([{ id: 1, name: 'Widget' }]));
+      const result = await repo.findOne({});
+      assert(result);
+      // @ts-expect-error -- afterFind added transformed which isn't on the inferred type
+      expect(result.transformed).toBe(true);
+    });
+
+    it('should support async afterFind hooks', async () => {
+      const ProductWithAsyncHook = table(
+        'products',
+        {
+          id: serial().primaryKey(),
+          name: text().notNull(),
+        },
+        {
+          modelName: 'ProductWithAsyncAfterFind',
+          hooks: {
+            async afterFind(results) {
+              await Promise.resolve();
+              return results.map((row) => ({ ...row, async: true }));
+            },
+          },
+        },
+      );
+
+      const bigal = initialize({ pool: mockedPool, models: [ProductWithAsyncHook] });
+      const repo = bigal.getRepository(ProductWithAsyncHook);
+
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([{ id: 1, name: 'Widget' }]));
+      const results = await repo.find({});
+      // @ts-expect-error -- afterFind added async which isn't on the inferred type
+      expect(results[0]!.async).toBe(true);
+    });
+  });
+
+  describe('toSQL()', () => {
+    const mockedPool = createMockPool();
+
+    it('should return SQL and params from find() without executing', () => {
+      const bigal = initialize({ pool: mockedPool, models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef] });
+      const repo = bigal.getRepository(ProductDef);
+
+      const { sql, params } = repo.find().where({ name: 'Widget' }).sort('name asc').limit(10).toSQL();
+
+      expect(sql).toContain('SELECT');
+      expect(sql).toContain('"name"=$1');
+      expect(sql).toContain('ORDER BY');
+      expect(sql).toContain('LIMIT');
+      expect(params).toStrictEqual(['Widget']);
+      // Should NOT have called pool.query
+      expect(mockedPool.query).not.toHaveBeenCalled();
+    });
+
+    it('should return SQL and params from findOne() without executing', () => {
+      const bigal = initialize({ pool: mockedPool, models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef] });
+      const repo = bigal.getRepository(ProductDef);
+
+      const { sql, params } = repo.findOne().where({ id: 42 }).toSQL();
+
+      expect(sql).toContain('SELECT');
+      expect(sql).toContain('"id"=$1');
+      expect(sql).toContain('LIMIT 1');
+      expect(params).toStrictEqual([42]);
+      expect(mockedPool.query).not.toHaveBeenCalled();
+    });
+
+    it('should return SQL with select columns', () => {
+      const bigal = initialize({ pool: mockedPool, models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef] });
+      const repo = bigal.getRepository(ProductDef);
+
+      const { sql } = repo.find().select(['name', 'sku']).toSQL();
+
+      expect(sql).toContain('"name"');
+      expect(sql).toContain('"sku"');
+      expect(sql).not.toContain('"location"');
+    });
+  });
+
   describe('Populate', () => {
     const mockedPool = createMockPool();
 
