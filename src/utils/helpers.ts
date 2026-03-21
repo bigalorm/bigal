@@ -22,6 +22,7 @@ function words(str: string): string[] {
  * Naive English singularization for common table name patterns.
  * Handles: -ies → -y, -ses → -s, -es → -e, -s → (drop s).
  * Does NOT handle irregular plurals (people, children, etc.).
+ * @param {string} word - The word to singularize
  */
 export function singularize(word: string): string {
   if (word.endsWith('ies')) {
@@ -45,6 +46,7 @@ export function singularize(word: string): string {
 
 /**
  * Converts a table name to a PascalCase singular model name.
+ * @param {string} tableName - The PostgreSQL table name
  * @example modelNameFromTable('products') // 'Product'
  * @example modelNameFromTable('product__category') // 'ProductCategory'
  * @example modelNameFromTable('categories') // 'Category'
@@ -62,6 +64,7 @@ export function modelNameFromTable(tableName: string): string {
 
 /**
  * Converts a string to PascalCase.
+ * @param {string} str - The string to convert
  * @example pascalCase('products') // 'Products'
  * @example pascalCase('product__category') // 'ProductCategory'
  * @example pascalCase('foo_bar') // 'FooBar'
@@ -74,6 +77,7 @@ export function pascalCase(str: string): string {
 
 /**
  * Converts a string to snake_case.
+ * @param {string} str - The string to convert
  * @example snakeCase('fooBar') // 'foo_bar'
  * @example snakeCase('FooBar') // 'foo_bar'
  * @example snakeCase('foo-bar') // 'foo_bar'
