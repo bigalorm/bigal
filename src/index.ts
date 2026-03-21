@@ -53,6 +53,7 @@ export {
   uuid,
   varchar,
   table as defineTable,
+  view,
 } from './schema/index.js';
 
 export type {
@@ -60,6 +61,7 @@ export type {
   BelongsToEntry,
   ColumnBuilderConfig,
   ColumnBuilderRuntimeConfig,
+  ColumnOptions,
   HasManyConfig,
   HasManyEntry,
   HasManyThroughIntermediate,

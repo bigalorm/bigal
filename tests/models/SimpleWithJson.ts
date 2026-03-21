@@ -1,24 +1,14 @@
-import { column, table } from '../../src/index.js';
+import { jsonb, text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithJson extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
+export const simpleWithJsonSchema = {
+  ...modelBase,
+  name: text().notNull(),
+  bar: jsonb(),
+  keyValue: jsonb<Record<string, number>>(),
+};
 
-  @column({
-    type: 'json',
-  })
-  public bar?: unknown;
-
-  @column({
-    type: 'json',
-  })
-  public keyValue?: Record<string, number>;
-}
+export type SimpleWithJsonSelect = InferSelect<typeof simpleWithJsonSchema>;
+export type SimpleWithJsonInsert = InferInsert<typeof simpleWithJsonSchema>;

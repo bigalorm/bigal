@@ -1,17 +1,10 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { text, uuid } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-@table({
-  name: 'simple_with_uuid',
-})
-export class SimpleWithUUID extends Entity {
-  @primaryColumn({
-    type: 'uuid',
-  })
-  public id!: string;
+export const simpleWithUUIDSchema = {
+  id: uuid().primaryKey(),
+  name: text().notNull(),
+};
 
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-}
+export type SimpleWithUUIDSelect = InferSelect<typeof simpleWithUUIDSchema>;
+export type SimpleWithUUIDInsert = InferInsert<typeof simpleWithUUIDSchema>;

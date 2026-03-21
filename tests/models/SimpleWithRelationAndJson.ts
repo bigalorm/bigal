@@ -1,31 +1,20 @@
-import { column, type NotEntity, table } from '../../src/index.js';
+import { belongsTo, jsonb, text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
-import { Store } from './Store.js';
+import { modelBase } from './base.js';
+import { tables } from './index.js';
 
 export interface IJsonLikeEntity {
   id: string;
   message: string;
 }
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithRelationAndJson extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
+export const simpleWithRelationAndJsonSchema = {
+  ...modelBase,
+  name: text().notNull(),
+  store: belongsTo(() => tables.Store!),
+  message: jsonb<IJsonLikeEntity>(),
+};
 
-  @column({
-    model: () => Store.name,
-    name: 'store_id',
-  })
-  public store!: Store | number;
-
-  @column({
-    type: 'json',
-  })
-  public message?: NotEntity<IJsonLikeEntity>;
-}
+export type SimpleWithRelationAndJsonSelect = InferSelect<typeof simpleWithRelationAndJsonSchema>;
+export type SimpleWithRelationAndJsonInsert = InferInsert<typeof simpleWithRelationAndJsonSchema>;

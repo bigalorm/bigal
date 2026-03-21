@@ -1,29 +1,15 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { belongsTo, text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { type LevelThree } from './LevelThree.js';
+import { stringIdBase } from './base.js';
+import { tables } from './index.js';
 
-@table({
-  name: 'level_two',
-})
-export class LevelTwo extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
+export const levelTwoSchema = {
+  ...stringIdBase,
+  two: text().notNull(),
+  foo: text(),
+  levelThree: belongsTo<string>(() => tables.LevelThree!),
+};
 
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public two!: string;
-
-  @column({
-    type: 'string',
-  })
-  public foo?: string;
-
-  @column({
-    required: true,
-    model: 'LevelThree',
-    name: 'level_three_id',
-  })
-  public levelThree!: LevelThree | string;
-}
+export type LevelTwoSelect = InferSelect<typeof levelTwoSchema>;
+export type LevelTwoInsert = InferInsert<typeof levelTwoSchema>;

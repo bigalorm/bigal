@@ -1,23 +1,16 @@
-import { column, table } from '../../src/index.js';
+import { hasMany, text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
-import { Product } from './Product.js';
-import { ProductCategory } from './ProductCategory.js';
+import { modelBase } from './base.js';
+import { tables } from './index.js';
 
-@table({
-  name: 'categories',
-})
-export class Category extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
+export const categorySchema = {
+  ...modelBase,
+  name: text().notNull(),
+  products: hasMany(() => tables.Product!)
+    .through(() => tables.ProductCategory!)
+    .via('category'),
+};
 
-  @column({
-    collection: () => Product.name,
-    through: () => ProductCategory.name,
-    via: 'category',
-  })
-  public products?: Product[];
-}
+export type CategorySelect = InferSelect<typeof categorySchema>;
+export type CategoryInsert = InferInsert<typeof categorySchema>;

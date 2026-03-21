@@ -1,21 +1,13 @@
-import { column, table } from '../../src/index.js';
+import { text, textArray } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithStringCollection extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
+export const simpleWithStringCollectionSchema = {
+  ...modelBase,
+  name: text().notNull(),
+  otherIds: textArray().default([]),
+};
 
-  @column({
-    defaultsTo: [],
-    type: 'string[]',
-    name: 'other_ids',
-  })
-  public otherIds!: string[];
-}
+export type SimpleWithStringCollectionSelect = InferSelect<typeof simpleWithStringCollectionSchema>;
+export type SimpleWithStringCollectionInsert = InferInsert<typeof simpleWithStringCollectionSchema>;

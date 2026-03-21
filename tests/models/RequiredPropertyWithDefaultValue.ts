@@ -1,20 +1,13 @@
-import { column, table } from '../../src/index.js';
+import { text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'some_table',
-})
-export class RequiredPropertyWithDefaultValue extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-    defaultsTo: 'foobar',
-  })
-  public foo!: string;
+export const requiredPropertyWithDefaultValueSchema = {
+  ...modelBase,
+  foo: text().notNull().default('foobar'),
+  bar: text(),
+};
 
-  @column({
-    type: 'string',
-  })
-  public bar?: string;
-}
+export type RequiredPropertyWithDefaultValueSelect = InferSelect<typeof requiredPropertyWithDefaultValueSchema>;
+export type RequiredPropertyWithDefaultValueInsert = InferInsert<typeof requiredPropertyWithDefaultValueSchema>;

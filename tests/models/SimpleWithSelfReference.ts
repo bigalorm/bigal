@@ -1,27 +1,15 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { belongsTo, hasMany, text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithSelfReference extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
+import { stringIdBase } from './base.js';
+import { tables } from './index.js';
 
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
+export const simpleWithSelfReferenceSchema = {
+  ...stringIdBase,
+  name: text().notNull(),
+  source: belongsTo<string>(() => tables.SimpleWithSelfReference!),
+  translations: hasMany(() => tables.SimpleWithSelfReference!).via('source'),
+};
 
-  @column({
-    model: () => SimpleWithSelfReference.name,
-    name: 'source_id',
-  })
-  public source?: SimpleWithSelfReference | string;
-
-  @column({
-    collection: () => SimpleWithSelfReference.name,
-    via: 'source',
-  })
-  public translations?: SimpleWithSelfReference[];
-}
+export type SimpleWithSelfReferenceSelect = InferSelect<typeof simpleWithSelfReferenceSchema>;
+export type SimpleWithSelfReferenceInsert = InferInsert<typeof simpleWithSelfReferenceSchema>;

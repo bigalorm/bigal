@@ -1,31 +1,17 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { hasMany, text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { Classroom } from './Classroom.js';
-import { StudentClassroom } from './StudentClassroom.js';
+import { stringIdBase } from './base.js';
+import { tables } from './index.js';
 
-@table({
-  name: 'student',
-})
-export class Student extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
+export const studentSchema = {
+  ...stringIdBase,
+  firstName: text().notNull(),
+  lastName: text().notNull(),
+  classrooms: hasMany(() => tables.Classroom!)
+    .through(() => tables.StudentClassroom!)
+    .via('student'),
+};
 
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public firstName!: string;
-
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public lastName!: string;
-
-  @column({
-    collection: () => Classroom.name,
-    through: () => StudentClassroom.name,
-    via: 'student',
-  })
-  public classrooms?: Classroom[];
-}
+export type StudentSelect = InferSelect<typeof studentSchema>;
+export type StudentInsert = InferInsert<typeof studentSchema>;

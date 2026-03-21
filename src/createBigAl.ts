@@ -81,7 +81,7 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
       : undefined);
 
   const repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>> = {};
-  const repositoriesByTableName = new Map<string, IReadonlyRepository<Entity> | IRepository<Entity>>();
+  const repositoriesByTableDef = new Map<AnyTableDefinition, IReadonlyRepository<Entity> | IRepository<Entity>>();
 
   for (const tableDef of models) {
     const modelMetadata = buildModelMetadata(tableDef);
@@ -123,7 +123,7 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
     }
 
     repositoriesByModelNameLowered[tableDef.tableName.toLowerCase()] = repository;
-    repositoriesByTableName.set(tableDef.tableName, repository);
+    repositoriesByTableDef.set(tableDef, repository);
   }
 
   // Validate all relationships resolve to registered models
@@ -133,7 +133,7 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
 
   return {
     getRepository<TName extends string, TSchema extends SchemaDefinition>(tableDef: TableDefinition<TName, TSchema>): BigAlRepository<InferSelect<TSchema>> {
-      const repository = repositoriesByTableName.get(tableDef.tableName);
+      const repository = repositoriesByTableDef.get(tableDef);
       if (!repository) {
         throw new Error(`Repository not found for table "${tableDef.tableName}". Was it included in the models array?`);
       }
@@ -142,7 +142,7 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
     },
 
     getReadonlyRepository<TName extends string, TSchema extends SchemaDefinition>(tableDef: TableDefinition<TName, TSchema>): BigAlReadonlyRepository<InferSelect<TSchema>> {
-      const repository = repositoriesByTableName.get(tableDef.tableName);
+      const repository = repositoriesByTableDef.get(tableDef);
       if (!repository) {
         throw new Error(`Repository not found for table "${tableDef.tableName}". Was it included in the models array?`);
       }
@@ -193,10 +193,14 @@ function buildModelMetadata(tableDef: AnyTableDefinition): ModelMetadata<Entity>
 }
 
 function createEntityStatic(tableDef: AnyTableDefinition): EntityStatic<Entity> {
-  // eslint-disable-next-line @typescript-eslint/no-extraneous-class
-  class PlainEntity {
-    public id: unknown;
+  // Use a constructor function (not a class) so that instances are plain objects.
+  // This ensures Object.getPrototypeOf(new PlainEntity()) === Object.prototype,
+  // which matters for deep equality checks (e.g. toStrictEqual).
+  function PlainEntity(this: Entity) {
+    // intentionally empty
   }
+
+  PlainEntity.prototype = Object.prototype;
 
   if (tableDef.hooks?.beforeCreate) {
     const hookFn = tableDef.hooks.beforeCreate;

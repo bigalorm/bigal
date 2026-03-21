@@ -1,24 +1,14 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { belongsTo } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { Classroom } from './Classroom.js';
-import { Teacher } from './Teacher.js';
+import { stringIdBase } from './base.js';
+import { tables } from './index.js';
 
-@table({
-  name: 'teacher__classroom',
-})
-export class TeacherClassroom extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
+export const teacherClassroomSchema = {
+  ...stringIdBase,
+  teacher: belongsTo<string>(() => tables.Teacher!),
+  classroom: belongsTo<string>(() => tables.Classroom!),
+};
 
-  @column({
-    model: () => Teacher.name,
-    name: 'teacher_id',
-  })
-  public teacher!: Teacher | string;
-
-  @column({
-    model: () => Classroom.name,
-    name: 'classroom_id',
-  })
-  public classroom!: Classroom | string;
-}
+export type TeacherClassroomSelect = InferSelect<typeof teacherClassroomSchema>;
+export type TeacherClassroomInsert = InferInsert<typeof teacherClassroomSchema>;

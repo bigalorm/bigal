@@ -1,45 +1,19 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { belongsTo, booleanColumn, hasMany, text } from '../../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
-import { Classroom } from './Classroom.js';
-import { ParkingSpace } from './ParkingSpace.js';
-import { TeacherClassroom } from './TeacherClassroom.js';
+import { stringIdBase } from './base.js';
+import { tables } from './index.js';
 
-@table({
-  name: 'teacher',
-})
-export class Teacher extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
+export const teacherSchema = {
+  ...stringIdBase,
+  firstName: text().notNull(),
+  lastName: text().notNull(),
+  parkingSpace: belongsTo<string>(() => tables.ParkingSpace!),
+  classrooms: hasMany(() => tables.Classroom!)
+    .through(() => tables.TeacherClassroom!)
+    .via('teacher'),
+  isActive: booleanColumn().default(true),
+};
 
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public firstName!: string;
-
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public lastName!: string;
-
-  @column({
-    model: () => ParkingSpace.name,
-    name: 'parking_space_id',
-  })
-  public parkingSpace?: ParkingSpace | string;
-
-  @column({
-    collection: () => Classroom.name,
-    through: () => TeacherClassroom.name,
-    via: 'teacher',
-  })
-  public classrooms?: Classroom[];
-
-  @column({
-    defaultsTo: true,
-    type: 'boolean',
-    name: 'is_active',
-  })
-  public isActive!: boolean;
-}
+export type TeacherSelect = InferSelect<typeof teacherSchema>;
+export type TeacherInsert = InferInsert<typeof teacherSchema>;
