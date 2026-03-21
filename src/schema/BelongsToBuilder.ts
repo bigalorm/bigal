@@ -32,10 +32,7 @@ export class BelongsToBuilder<TFkType = number> {
  * The FK column name is auto-derived as `snakeCase(propertyKey) + '_id'` by `table()`.
  * Pass an explicit name to override: `belongsTo(() => Store, { name: 'shop_id' })`.
  */
-export function belongsTo<TFkType = number>(
-  modelFn: LazyTableReference,
-  options?: string | { name: string },
-): BelongsToBuilder<TFkType> {
+export function belongsTo<TFkType = number>(modelFn: LazyTableReference, options?: string | { name: string }): BelongsToBuilder<TFkType> {
   const fkColumnName = typeof options === 'string' ? options : options?.name;
   return new BelongsToBuilder<TFkType>(modelFn, fkColumnName);
 }

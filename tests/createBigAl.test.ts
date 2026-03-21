@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { faker } from '@faker-js/faker';
 import { afterEach, beforeAll, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
-import type { BigAlRepository, OnQueryEvent, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
+import type { IRepository, OnQueryEvent, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
 import { belongsTo, boolean as booleanColumn, createBigAl, hasMany, integer, serial, text, textArray, defineTable as table, createdAt, updatedAt } from '../src/index.js';
 
 type PoolQueryFn = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
@@ -217,7 +217,7 @@ describe('createBigAl', () => {
   describe('Repository operations', () => {
     const mockedPool = createMockPool();
 
-    let ProductRepo: BigAlRepository<typeof ProductDef.$inferSelect>;
+    let ProductRepo: IRepository<typeof ProductDef.$inferSelect>;
 
     beforeAll(() => {
       const bigal = createBigAl({
@@ -468,7 +468,7 @@ describe('createBigAl', () => {
   describe('Hooks via table definition', () => {
     const mockedPool = createMockPool();
 
-    let HookedProductRepo: BigAlRepository<typeof ProductWithHooksDef.$inferSelect>;
+    let HookedProductRepo: IRepository<typeof ProductWithHooksDef.$inferSelect>;
 
     beforeAll(() => {
       // Use a separate createBigAl instance for hooked models
@@ -531,7 +531,7 @@ describe('createBigAl', () => {
   describe('Populate', () => {
     const mockedPool = createMockPool();
 
-    let ProductRepo: BigAlRepository<typeof ProductDef.$inferSelect>;
+    let ProductRepo: IRepository<typeof ProductDef.$inferSelect>;
 
     beforeAll(() => {
       const bigal = createBigAl({
@@ -592,7 +592,7 @@ describe('createBigAl', () => {
     const mockedPool = createMockPool();
     const events: OnQueryEvent[] = [];
 
-    let ProductRepo: BigAlRepository<typeof ProductDef.$inferSelect>;
+    let ProductRepo: IRepository<typeof ProductDef.$inferSelect>;
 
     beforeAll(() => {
       const bigal = createBigAl({

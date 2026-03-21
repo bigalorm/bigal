@@ -1,14 +1,5 @@
-import type { Entity, NotEntityBrand } from '../Entity.js';
-
-import type { ExcludeEntityCollections } from './ExcludeEntityCollections.js';
-
 /**
- * Changes all properties with Entity values to Primitive (string|number). Removes any properties that with values
- * of Entity arrays
+ * In the new schema API, InferSelect already produces the correct types for query results.
+ * This type is preserved as a passthrough for backward compatibility.
  */
-export type QueryResult<T extends Entity> = Extract<
-  {
-    [K in keyof T as ExcludeEntityCollections<NonNullable<T[K]>, K>]: T[K] extends NotEntityBrand | undefined ? T[K] : Exclude<T[K], Entity>;
-  },
-  T
->;
+export type QueryResult<T extends Record<string, unknown>> = T;

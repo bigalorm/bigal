@@ -1,4 +1,3 @@
-import type { Entity, EntityStatic } from '../Entity.js';
 import { snakeCase } from '../utils/index.js';
 
 import type { ColumnCollectionMetadata } from './ColumnCollectionMetadata.js';
@@ -8,16 +7,16 @@ import type { ColumnTypeMetadata } from './ColumnTypeMetadata.js';
 type Column = ColumnCollectionMetadata | ColumnModelMetadata | ColumnTypeMetadata;
 type ColumnByStringId = Record<string, Column>;
 
-export interface ModelMetadataOptions<T extends Entity> {
+export interface ModelMetadataOptions<_T extends Record<string, unknown>> {
   name: string;
-  type: EntityStatic<T>;
+  type?: { new (): unknown };
   connection?: string;
   schema?: string;
   tableName?: string;
   readonly?: boolean;
 }
 
-export class ModelMetadata<T extends Entity> {
+export class ModelMetadata<_T extends Record<string, unknown>> {
   private _columns: readonly Column[] = [];
 
   private _primaryKeyColumn: Column | undefined;
@@ -81,7 +80,7 @@ export class ModelMetadata<T extends Entity> {
 
   public name: string;
 
-  public type: EntityStatic<T>;
+  public type?: { new (): unknown };
 
   public connection?: string;
 
@@ -102,7 +101,7 @@ export class ModelMetadata<T extends Entity> {
     schema,
     tableName,
     readonly = false,
-  }: ModelMetadataOptions<T>) {
+  }: ModelMetadataOptions<_T>) {
     this.name = name;
     this.type = type;
     this.connection = connection;

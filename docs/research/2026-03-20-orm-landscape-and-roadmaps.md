@@ -113,6 +113,7 @@ moves to standard decorators.
 ## Key Takeaway
 
 The TypeScript ORM ecosystem is converging on:
+
 1. **Function-based schema definitions** (Drizzle, MikroORM, Prisma Next)
 2. **Type inference from schema** (no separate interfaces)
 3. **SQL-first with type safety** (not heavy abstraction)

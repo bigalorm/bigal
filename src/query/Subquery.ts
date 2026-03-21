@@ -1,4 +1,3 @@
-import type { Entity } from '../Entity.js';
 import type { IReadonlyRepository } from '../IReadonlyRepository.js';
 import type { IRepository } from '../IRepository.js';
 
@@ -10,6 +9,6 @@ export type { AggregateBuilder, SelectAggregateExpression } from './SelectBuilde
 export { SubqueryBuilder } from './SubqueryBuilder.js';
 export type { AggregateCallback, HavingComparer, HavingCondition, SelectItem, SubqueryBuilderLike, TypedAggregateExpression, TypedSelectItem, TypedSubqueryBuilder } from './SubqueryBuilder.js';
 
-export function subquery<T extends Entity>(repository: IReadonlyRepository<T> | IRepository<T>): SubqueryBuilder<T> {
+export function subquery<T extends Record<string, unknown>>(repository: IReadonlyRepository<T> | IRepository<T>): SubqueryBuilder<T> {
   return new SubqueryBuilder<T>(repository);
 }

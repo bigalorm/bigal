@@ -1,7 +1,7 @@
 import { ColumnCollectionMetadata } from '../metadata/ColumnCollectionMetadata.js';
 import { ColumnModelMetadata } from '../metadata/ColumnModelMetadata.js';
 import { ColumnTypeMetadata } from '../metadata/ColumnTypeMetadata.js';
-import { assertValidSqlIdentifier, snakeCase } from '../utils/index.js';
+import { assertValidSqlIdentifier, modelNameFromTable, snakeCase } from '../utils/index.js';
 
 import { BelongsToBuilder } from './BelongsToBuilder.js';
 import { ColumnBuilder } from './ColumnBuilder.js';
@@ -29,6 +29,8 @@ export interface ModelHooks<TInsert> {
 // ---------------------------------------------------------------------------
 
 export interface TableOptions<TInsert> {
+  /** Unique model name for relationship lookups. Defaults to the table name. */
+  modelName?: string;
   schema?: string;
   readonly?: boolean;
   connection?: string;
@@ -40,6 +42,8 @@ export interface TableOptions<TInsert> {
 // ---------------------------------------------------------------------------
 
 export interface TableDefinition<TName extends string = string, TSchema extends SchemaDefinition = SchemaDefinition> {
+  /** Unique model name used for relationship lookups. Defaults to tableName. */
+  readonly modelName: string;
   readonly tableName: TName;
   readonly dbSchema: string | undefined;
   readonly isReadonly: boolean;
@@ -87,7 +91,7 @@ function buildColumnModelMetadata(entry: BelongsToBuilder<unknown>, propertyName
     propertyName,
     model: () => {
       const referencedTable = entry.modelFn();
-      return referencedTable.tableName;
+      return referencedTable.modelName;
     },
   });
 }
@@ -102,13 +106,13 @@ function buildColumnCollectionMetadata(entry: HasManyBuilder, propertyName: stri
     update: false,
     collection: () => {
       const referencedTable = entry.modelFn();
-      return referencedTable.tableName;
+      return referencedTable.modelName;
     },
     via: entry.viaPropertyName ?? '',
     through: entry.throughFn
       ? () => {
           const throughTable = entry.throughFn!();
-          return throughTable.tableName;
+          return throughTable.modelName;
         }
       : undefined,
   });
@@ -196,6 +200,7 @@ export function table<TName extends string, TSchema extends SchemaDefinition>(
   }
 
   const definition: TableDefinition<TName, TSchema> = {
+    modelName: options?.modelName ?? modelNameFromTable(tableName),
     tableName,
     dbSchema: options?.schema,
     isReadonly: options?.readonly ?? false,

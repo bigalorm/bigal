@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { faker } from '@faker-js/faker';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { BigAlRepository, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
+import type { IRepository, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
 import { belongsTo, boolean as booleanColumn, createBigAl, hasMany, integer, serial, text, textArray, defineTable as table } from '../src/index.js';
 
 import { pick } from './utils/pick.js';
@@ -171,11 +171,11 @@ function generateSimpleWithStringCollection(args?: Partial<typeof SimpleWithStri
 describe('Repository', () => {
   const mockedPool = createMockPool();
 
-  let ProductRepository: BigAlRepository<ProductSelect>;
-  let ProductCategoryRepository: BigAlRepository<ProductCategorySelect>;
-  let SimpleWithStringCollectionRepository: BigAlRepository<typeof SimpleWithStringCollectionDef.$inferSelect>;
-  let StoreRepository: BigAlRepository<StoreSelect>;
-  let ProductWithHooksRepository: BigAlRepository<typeof ProductWithHooksDef.$inferSelect>;
+  let ProductRepository: IRepository<ProductSelect>;
+  let ProductCategoryRepository: IRepository<ProductCategorySelect>;
+  let SimpleWithStringCollectionRepository: IRepository<typeof SimpleWithStringCollectionDef.$inferSelect>;
+  let StoreRepository: IRepository<StoreSelect>;
+  let ProductWithHooksRepository: IRepository<typeof ProductWithHooksDef.$inferSelect>;
 
   beforeAll(() => {
     const bigal = createBigAl({

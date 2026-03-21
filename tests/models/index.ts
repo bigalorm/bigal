@@ -85,7 +85,7 @@ tables.Product = Product;
 export const ProductCategory = table('product__category', productCategorySchema);
 tables.ProductCategory = ProductCategory;
 
-export const ProductWithCreatedAt = table('products', productWithCreatedAtSchema);
+export const ProductWithCreatedAt = table('products', productWithCreatedAtSchema, { modelName: 'ProductWithCreatedAt' });
 tables.ProductWithCreatedAt = ProductWithCreatedAt;
 
 export const ProductWithCreateUpdateDateTracking = table('products', productWithCreateUpdateDateTrackingSchema, {
@@ -125,40 +125,40 @@ tables.RequiredPropertyWithDefaultValue = RequiredPropertyWithDefaultValue;
 export const RequiredPropertyWithDefaultValueFunction = table('some_other_table', requiredPropertyWithDefaultValueFunctionSchema);
 tables.RequiredPropertyWithDefaultValueFunction = RequiredPropertyWithDefaultValueFunction;
 
-export const SimpleWithCollections = table('simple', simpleWithCollectionsSchema);
+export const SimpleWithCollections = table('simple', simpleWithCollectionsSchema, { modelName: 'SimpleWithCollections' });
 tables.SimpleWithCollections = SimpleWithCollections;
 
-export const SimpleWithCreatedAt = table('simple', simpleWithCreatedAtSchema);
+export const SimpleWithCreatedAt = table('simple', simpleWithCreatedAtSchema, { modelName: 'SimpleWithCreatedAt' });
 tables.SimpleWithCreatedAt = SimpleWithCreatedAt;
 
-export const SimpleWithCreatedAtAndUpdatedAt = table('simple', simpleWithCreatedAtAndUpdatedAtSchema);
+export const SimpleWithCreatedAtAndUpdatedAt = table('simple', simpleWithCreatedAtAndUpdatedAtSchema, { modelName: 'SimpleWithCreatedAtAndUpdatedAt' });
 tables.SimpleWithCreatedAtAndUpdatedAt = SimpleWithCreatedAtAndUpdatedAt;
 
-export const SimpleWithJson = table('simple', simpleWithJsonSchema);
+export const SimpleWithJson = table('simple', simpleWithJsonSchema, { modelName: 'SimpleWithJson' });
 tables.SimpleWithJson = SimpleWithJson;
 
-export const SimpleWithOptionalEnum = table('simple', simpleWithOptionalEnumSchema);
+export const SimpleWithOptionalEnum = table('simple', simpleWithOptionalEnumSchema, { modelName: 'SimpleWithOptionalEnum' });
 tables.SimpleWithOptionalEnum = SimpleWithOptionalEnum;
 
-export const SimpleWithRelationAndJson = table('simple', simpleWithRelationAndJsonSchema);
+export const SimpleWithRelationAndJson = table('simple', simpleWithRelationAndJsonSchema, { modelName: 'SimpleWithRelationAndJson' });
 tables.SimpleWithRelationAndJson = SimpleWithRelationAndJson;
 
-export const SimpleWithSchema = table('simple', simpleWithSchemaSchema, { schema: 'foo' });
+export const SimpleWithSchema = table('simple', simpleWithSchemaSchema, { modelName: 'SimpleWithSchema', schema: 'foo' });
 tables.SimpleWithSchema = SimpleWithSchema;
 
-export const SimpleWithSelfReference = table('simple', simpleWithSelfReferenceSchema);
+export const SimpleWithSelfReference = table('simple', simpleWithSelfReferenceSchema, { modelName: 'SimpleWithSelfReference' });
 tables.SimpleWithSelfReference = SimpleWithSelfReference;
 
-export const SimpleWithStringCollection = table('simple', simpleWithStringCollectionSchema);
+export const SimpleWithStringCollection = table('simple', simpleWithStringCollectionSchema, { modelName: 'SimpleWithStringCollection' });
 tables.SimpleWithStringCollection = SimpleWithStringCollection;
 
-export const SimpleWithStringId = table('simple', simpleWithStringIdSchema);
+export const SimpleWithStringId = table('simple', simpleWithStringIdSchema, { modelName: 'SimpleWithStringId' });
 tables.SimpleWithStringId = SimpleWithStringId;
 
-export const SimpleWithUnion = table('simple', simpleWithUnionSchema);
+export const SimpleWithUnion = table('simple', simpleWithUnionSchema, { modelName: 'SimpleWithUnion' });
 tables.SimpleWithUnion = SimpleWithUnion;
 
-export const SimpleWithUpdatedAt = table('simple', simpleWithUpdatedAtSchema);
+export const SimpleWithUpdatedAt = table('simple', simpleWithUpdatedAtSchema, { modelName: 'SimpleWithUpdatedAt' });
 tables.SimpleWithUpdatedAt = SimpleWithUpdatedAt;
 
 export const SimpleWithUUID = table('simple_with_uuid', simpleWithUUIDSchema);

@@ -19,10 +19,61 @@ function words(str: string): string[] {
 }
 
 /**
+ * Naive English singularization for common table name patterns.
+ * Handles: -ies → -y, -ses → -s, -es → -e, -s → (drop s).
+ * Does NOT handle irregular plurals (people, children, etc.).
+ */
+export function singularize(word: string): string {
+  if (word.endsWith('ies')) {
+    return `${word.slice(0, -3)}y`;
+  }
+
+  if (word.endsWith('sses') || word.endsWith('uses')) {
+    return word.slice(0, -2);
+  }
+
+  if (word.endsWith('ses')) {
+    return word.slice(0, -1);
+  }
+
+  if (word.endsWith('s') && !word.endsWith('ss')) {
+    return word.slice(0, -1);
+  }
+
+  return word;
+}
+
+/**
+ * Converts a table name to a PascalCase singular model name.
+ * @example modelNameFromTable('products') // 'Product'
+ * @example modelNameFromTable('product__category') // 'ProductCategory'
+ * @example modelNameFromTable('categories') // 'Category'
+ * @example modelNameFromTable('stores') // 'Store'
+ */
+export function modelNameFromTable(tableName: string): string {
+  return words(tableName)
+    .map((word, index, arr) => {
+      // Only singularize the last word (e.g., 'products' → 'product', but 'product_categories' → 'product' + 'category')
+      const processed = index === arr.length - 1 ? singularize(word) : word;
+      return processed.charAt(0).toUpperCase() + processed.slice(1).toLowerCase();
+    })
+    .join('');
+}
+
+/**
+ * Converts a string to PascalCase.
+ * @example pascalCase('products') // 'Products'
+ * @example pascalCase('product__category') // 'ProductCategory'
+ * @example pascalCase('foo_bar') // 'FooBar'
+ */
+export function pascalCase(str: string): string {
+  return words(str)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('');
+}
+
+/**
  * Converts a string to snake_case.
- * Matches lodash/es-toolkit behavior.
- * @param {string} str - The string to convert
- * @returns {string} The snake_case version of the string
  * @example snakeCase('fooBar') // 'foo_bar'
  * @example snakeCase('FooBar') // 'foo_bar'
  * @example snakeCase('foo-bar') // 'foo_bar'

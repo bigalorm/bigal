@@ -1,4 +1,3 @@
-import type { Entity } from './Entity.js';
 import type { IRepository } from './IRepository.js';
 import type { CreateOptions } from './query/CreateOptions.js';
 import type {
@@ -18,7 +17,9 @@ import { ReadonlyRepository } from './ReadonlyRepository.js';
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper.js';
 import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions, QueryResult } from './types/index.js';
 
-export class Repository<T extends Entity> extends ReadonlyRepository<T> implements IRepository<T> {
+type AnyRecord = Record<string, unknown>;
+
+export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> implements IRepository<T> {
   /**
    * Creates an object using the specified values
    * @param {object} values - Values to insert as multiple new objects.
@@ -96,12 +97,12 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
             return resolve ? await resolve([]) : ([] as unknown as TResult);
           }
 
-          const beforeCreate = modelInstance._type.beforeCreate;
+          const beforeCreate = modelInstance._beforeCreate;
           if (beforeCreate) {
             if (isArray) {
-              values = await Promise.all((values as CreateUpdateParams<T>[]).map(async (value) => beforeCreate(value)));
+              values = await Promise.all((values as CreateUpdateParams<T>[]).map(async (value) => beforeCreate(value as Partial<T>) as CreateUpdateParams<T>));
             } else {
-              values = await beforeCreate(values as CreateUpdateParams<T>);
+              values = (await beforeCreate(values as Partial<T>)) as CreateUpdateParams<T>;
             }
           }
 
@@ -126,19 +127,21 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
             try {
               onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance.model.tableName, operation: 'create' });
             } catch {
-              // Swallow — observability must not crash queries
+              // Swallow -- observability must not crash queries
             }
           }
 
           if (returnRecords) {
             if (isArray) {
-              const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(results.rows) : modelInstance._buildInstances(results.rows);
+              void returnAsPlainObjects; // Always plain objects now
+              const entities = modelInstance._buildPlainObjects(results.rows);
               return resolve ? await resolve(entities) : (entities as unknown as TResult);
             }
 
             const firstResult = results.rows[0];
             if (firstResult) {
-              const entity = returnAsPlainObjects ? modelInstance._buildPlainObject(firstResult) : modelInstance._buildInstance(firstResult);
+              void returnAsPlainObjects; // Always plain objects now
+              const entity = modelInstance._buildPlainObject(firstResult);
               return resolve ? await resolve(entity) : (entity as unknown as TResult);
             }
 
@@ -224,8 +227,8 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
         reject?: ((error: Error) => PromiseLike<TErrorResult> | TErrorResult) | null,
       ): Promise<TErrorResult | TResult> {
         try {
-          if (modelInstance._type.beforeUpdate) {
-            values = await modelInstance._type.beforeUpdate(values);
+          if (modelInstance._beforeUpdate) {
+            values = (await modelInstance._beforeUpdate(values as Partial<T>)) as CreateUpdateParams<T>;
           }
 
           const { query, params } = getUpdateQueryAndParams({
@@ -249,12 +252,13 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
             try {
               onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance.model.tableName, operation: 'update' });
             } catch {
-              // Swallow — observability must not crash queries
+              // Swallow -- observability must not crash queries
             }
           }
 
           if (returnRecords) {
-            const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(results.rows) : modelInstance._buildInstances(results.rows);
+            void returnAsPlainObjects; // Always plain objects now
+            const entities = modelInstance._buildPlainObjects(results.rows);
             return resolve ? await resolve(entities) : (entities as unknown as TResult);
           }
 
@@ -350,12 +354,13 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
             try {
               onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance.model.tableName, operation: 'destroy' });
             } catch {
-              // Swallow — observability must not crash queries
+              // Swallow -- observability must not crash queries
             }
           }
 
           if (returnRecords) {
-            const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(queryResult.rows) : modelInstance._buildInstances(queryResult.rows);
+            void returnAsPlainObjects; // Always plain objects now
+            const entities = modelInstance._buildPlainObjects(queryResult.rows);
             return await resolve(entities);
           }
 
