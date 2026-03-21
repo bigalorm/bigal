@@ -20,7 +20,7 @@ export interface IReadonlyRepository<T extends Record<string, unknown>> {
     // Return type used to pass through to all chained methods
     TReturn = QueryResult<Pick<T, K | 'id'>>,
   >(
-    args: FindOneArgs<T, K> | WhereQuery<T>,
+    args?: FindOneArgs<T, K> | WhereQuery<T>,
   ): FindOneResult<T, TReturn>;
 
   /**
@@ -39,7 +39,7 @@ export interface IReadonlyRepository<T extends Record<string, unknown>> {
     // Return type used to pass through to all chained methods
     TReturn = QueryResult<Pick<T, K | 'id'>>,
   >(
-    args: FindArgs<T, K> | WhereQuery<T>,
+    args?: FindArgs<T, K> | WhereQuery<T>,
   ): FindResult<T, TReturn>;
 
   /**

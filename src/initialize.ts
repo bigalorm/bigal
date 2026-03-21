@@ -138,7 +138,11 @@ export function initialize<TModels extends Record<string, AnyModel>>(options: In
         onQuery: resolvedOnQuery,
         afterFind: model.hooks?.afterFind,
         beforeCreate: model.hooks?.beforeCreate,
+        afterCreate: model.hooks?.afterCreate,
         beforeUpdate: model.hooks?.beforeUpdate,
+        afterUpdate: model.hooks?.afterUpdate,
+        beforeDestroy: model.hooks?.beforeDestroy,
+        afterDestroy: model.hooks?.afterDestroy,
       });
     }
 

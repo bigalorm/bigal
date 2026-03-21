@@ -617,6 +617,177 @@ describe('initialize', () => {
     });
   });
 
+  describe('afterCreate hook', () => {
+    const mockedPool = createMockPool();
+
+    it('should fire afterCreate with the created entity', async () => {
+      const created: unknown[] = [];
+      const ProductWithAfterCreate = table(
+        'products',
+        {
+          id: serial().primaryKey(),
+          name: text().notNull(),
+        },
+        {
+          modelName: 'ProductWithAfterCreate',
+          hooks: {
+            afterCreate(result) {
+              created.push(result);
+            },
+          },
+        },
+      );
+
+      const bigal = initialize({ pool: mockedPool, models: [ProductWithAfterCreate] });
+      const repo = bigal.getRepository(ProductWithAfterCreate);
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([{ id: 1, name: 'Widget' }]));
+      await repo.create({ name: 'Widget' });
+      expect(created).toHaveLength(1);
+      expect(created[0]).toStrictEqual({ id: 1, name: 'Widget' });
+    });
+
+    it('should swallow afterCreate errors', async () => {
+      const ProductWithBrokenHook = table(
+        'products',
+        {
+          id: serial().primaryKey(),
+          name: text().notNull(),
+        },
+        {
+          modelName: 'ProductWithBrokenAfterCreate',
+          hooks: {
+            afterCreate() {
+              throw new Error('hook failed');
+            },
+          },
+        },
+      );
+
+      const bigal = initialize({ pool: mockedPool, models: [ProductWithBrokenHook] });
+      const repo = bigal.getRepository(ProductWithBrokenHook);
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([{ id: 1, name: 'Widget' }]));
+      // Should not throw despite the hook error
+      const result = await repo.create({ name: 'Widget' });
+      expect(result).toStrictEqual({ id: 1, name: 'Widget' });
+    });
+  });
+
+  describe('afterUpdate hook', () => {
+    const mockedPool = createMockPool();
+
+    it('should fire afterUpdate with the updated entity', async () => {
+      const updated: unknown[] = [];
+      const ProductWithAfterUpdate = table(
+        'products',
+        {
+          id: serial().primaryKey(),
+          name: text().notNull(),
+        },
+        {
+          modelName: 'ProductWithAfterUpdate',
+          hooks: {
+            afterUpdate(result) {
+              updated.push(result);
+            },
+          },
+        },
+      );
+
+      const bigal = initialize({ pool: mockedPool, models: [ProductWithAfterUpdate] });
+      const repo = bigal.getRepository(ProductWithAfterUpdate);
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([{ id: 1, name: 'Updated' }]));
+      await repo.update({ id: 1 }, { name: 'Updated' });
+      expect(updated).toHaveLength(1);
+      expect(updated[0]).toStrictEqual({ id: 1, name: 'Updated' });
+    });
+  });
+
+  describe('beforeDestroy hook', () => {
+    const mockedPool = createMockPool();
+
+    beforeEach(() => {
+      mockedPool.query.mockReset();
+    });
+
+    it('should fire beforeDestroy which can modify the where clause', async () => {
+      const ProductWithBeforeDestroy = table(
+        'products',
+        {
+          id: serial().primaryKey(),
+          name: text().notNull(),
+        },
+        {
+          modelName: 'ProductWithBeforeDestroy',
+          hooks: {
+            beforeDestroy(where) {
+              return { ...where, name: 'only-delete-this' };
+            },
+          },
+        },
+      );
+
+      const bigal = initialize({ pool: mockedPool, models: [ProductWithBeforeDestroy] });
+      const repo = bigal.getRepository(ProductWithBeforeDestroy);
+      mockedPool.query.mockResolvedValueOnce(getQueryResult());
+      await repo.destroy({ id: 1 });
+
+      const [query] = mockedPool.query.mock.calls[0]!;
+      expect(query).toContain('"name"=');
+    });
+
+    it('should abort destroy when beforeDestroy throws', async () => {
+      const ProductWithAbortDestroy = table(
+        'products',
+        {
+          id: serial().primaryKey(),
+          name: text().notNull(),
+        },
+        {
+          modelName: 'ProductWithAbortDestroy',
+          hooks: {
+            beforeDestroy() {
+              throw new Error('abort!');
+            },
+          },
+        },
+      );
+
+      const bigal = initialize({ pool: mockedPool, models: [ProductWithAbortDestroy] });
+      const repo = bigal.getRepository(ProductWithAbortDestroy);
+      await expect(repo.destroy({ id: 1 })).rejects.toThrow('abort!');
+      expect(mockedPool.query).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('afterDestroy hook', () => {
+    const mockedPool = createMockPool();
+
+    it('should fire afterDestroy with rowCount', async () => {
+      let destroyResult: { rowCount: number } | undefined;
+      const ProductWithAfterDestroy = table(
+        'products',
+        {
+          id: serial().primaryKey(),
+          name: text().notNull(),
+        },
+        {
+          modelName: 'ProductWithAfterDestroy',
+          hooks: {
+            afterDestroy(result) {
+              destroyResult = result;
+            },
+          },
+        },
+      );
+
+      const bigal = initialize({ pool: mockedPool, models: [ProductWithAfterDestroy] });
+      const repo = bigal.getRepository(ProductWithAfterDestroy);
+      mockedPool.query.mockResolvedValueOnce({ rows: [], rowCount: 3 });
+      await repo.destroy({ id: 1 });
+      expect(destroyResult).toStrictEqual({ rowCount: 3 });
+    });
+  });
+
   describe('toSQL()', () => {
     const mockedPool = createMockPool();
 

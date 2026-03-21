@@ -22,7 +22,11 @@ type ColumnByStringId = Record<string, ColumnMetadata>;
 
 export interface ModelHooks<TInsert, TSelect = TInsert> {
   beforeCreate?: (values: TInsert) => Promise<TInsert> | TInsert;
+  afterCreate?: (result: TSelect) => Promise<void> | void;
   beforeUpdate?: (values: Partial<TInsert>) => Partial<TInsert> | Promise<Partial<TInsert>>;
+  afterUpdate?: (result: TSelect) => Promise<void> | void;
+  beforeDestroy?: (where: Record<string, unknown>) => Promise<Record<string, unknown>> | Record<string, unknown>;
+  afterDestroy?: (result: { rowCount: number }) => Promise<void> | void;
   afterFind?: (results: TSelect[]) => Promise<TSelect[]> | TSelect[];
 }
 
