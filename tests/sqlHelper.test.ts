@@ -2984,6 +2984,27 @@ describe('sqlHelper', () => {
       expect(params).toStrictEqual([name, store, sku, location]);
     });
 
+    it('should handle or groups joined by and', () => {
+      const name1 = faker.string.uuid();
+      const sku1 = faker.string.uuid();
+      const name2 = faker.string.uuid();
+      const sku2 = faker.string.uuid();
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: {
+          and: [
+            { or: [{ name: name1 }, { sku: sku1 }] },
+            { or: [{ name: name2 }, { sku: sku2 }] },
+          ],
+        },
+      });
+
+      assert(whereStatement);
+      expect(whereStatement).toBe('WHERE (((("name"=$1) OR ("sku"=$2))) AND ((("name"=$3) OR ("sku"=$4))))');
+      expect(params).toStrictEqual([name1, sku1, name2, sku2]);
+    });
+
     it('should handle and', () => {
       const name = faker.string.uuid();
       const sku = faker.string.uuid();
