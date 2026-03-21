@@ -4,7 +4,7 @@ import { faker } from '@faker-js/faker';
 import { afterEach, beforeAll, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import type { IRepository, OnQueryEvent, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
-import { belongsTo, boolean as booleanColumn, createBigAl, hasMany, integer, serial, text, textArray, defineTable as table, createdAt, updatedAt } from '../src/index.js';
+import { belongsTo, boolean as booleanColumn, initialize, hasMany, integer, serial, text, textArray, defineTable as table, createdAt, updatedAt } from '../src/index.js';
 
 type PoolQueryFn = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
 
@@ -137,34 +137,34 @@ const ReadonlyProductDef = table('readonly_products', readonlyProductSchema, { r
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('createBigAl', () => {
+describe('initialize', () => {
   describe('initialization', () => {
     it('should throw if no models provided', () => {
       const pool = createMockPool();
-      expect(() => createBigAl({ pool, models: [] })).toThrow('At least one model must be provided');
+      expect(() => initialize({ pool, models: [] })).toThrow('At least one model must be provided');
     });
 
     it('should throw if belongsTo references an unregistered model', () => {
       const pool = createMockPool();
       // Only register Product, not Store - the belongsTo on Product references Store
-      expect(() => createBigAl({ pool, models: [ProductDef] })).toThrow(/not registered/);
+      expect(() => initialize({ pool, models: [ProductDef] })).toThrow(/not registered/);
     });
 
     it('should throw if hasMany references an unregistered model', () => {
       const pool = createMockPool();
       // Register Store but not Product - Store has hasMany to Product
-      expect(() => createBigAl({ pool, models: [StoreDef] })).toThrow(/not registered/);
+      expect(() => initialize({ pool, models: [StoreDef] })).toThrow(/not registered/);
     });
 
     it('should throw if hasMany.through references an unregistered junction table', () => {
       const pool = createMockPool();
       // Register Product and Store but not ProductCategory
-      expect(() => createBigAl({ pool, models: [ProductDef, StoreDef, CategoryDef] })).toThrow(/not registered/);
+      expect(() => initialize({ pool, models: [ProductDef, StoreDef, CategoryDef] })).toThrow(/not registered/);
     });
 
     it('should successfully create when all relationships resolve', () => {
       const pool = createMockPool();
-      const bigal = createBigAl({
+      const bigal = initialize({
         pool,
         models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
       });
@@ -177,7 +177,7 @@ describe('createBigAl', () => {
       const pool = createMockPool();
       // Use a standalone table with no relationships for this test
       const standaloneDef = table('standalone', { ...modelBase, name: text().notNull() });
-      const bigal = createBigAl({ pool, models: [standaloneDef] });
+      const bigal = initialize({ pool, models: [standaloneDef] });
       expect(() => bigal.getRepository(ProductDef)).toThrow(/not found/);
     });
 
@@ -191,7 +191,7 @@ describe('createBigAl', () => {
       };
       const AnalyticsDef = table('analytics_events', analyticsSchema, { connection: 'analytics' });
 
-      const bigal = createBigAl({
+      const bigal = initialize({
         pool: mainPool,
         models: [AnalyticsDef],
         connections: {
@@ -210,7 +210,7 @@ describe('createBigAl', () => {
       };
       const def = table('foo_table', schema, { connection: 'nonexistent' });
 
-      expect(() => createBigAl({ pool, models: [def] })).toThrow(/Unable to find connection/);
+      expect(() => initialize({ pool, models: [def] })).toThrow(/Unable to find connection/);
     });
   });
 
@@ -220,7 +220,7 @@ describe('createBigAl', () => {
     let ProductRepo: IRepository<typeof ProductDef.$inferSelect>;
 
     beforeAll(() => {
-      const bigal = createBigAl({
+      const bigal = initialize({
         pool: mockedPool,
         models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef, SimpleWithStringCollectionDef],
       });
@@ -471,8 +471,8 @@ describe('createBigAl', () => {
     let HookedProductRepo: IRepository<typeof ProductWithHooksDef.$inferSelect>;
 
     beforeAll(() => {
-      // Use a separate createBigAl instance for hooked models
-      const bigal = createBigAl({
+      // Use a separate initialize instance for hooked models
+      const bigal = initialize({
         pool: mockedPool,
         models: [ProductWithHooksDef, StoreDef, CategoryDef, ProductCategoryDef],
       });
@@ -517,7 +517,7 @@ describe('createBigAl', () => {
     const mockedPool = createMockPool();
 
     it('should return a readonly repository', () => {
-      const bigal = createBigAl({
+      const bigal = initialize({
         pool: mockedPool,
         models: [ReadonlyProductDef, ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
       });
@@ -534,7 +534,7 @@ describe('createBigAl', () => {
     let ProductRepo: IRepository<typeof ProductDef.$inferSelect>;
 
     beforeAll(() => {
-      const bigal = createBigAl({
+      const bigal = initialize({
         pool: mockedPool,
         models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
       });
@@ -595,7 +595,7 @@ describe('createBigAl', () => {
     let ProductRepo: IRepository<typeof ProductDef.$inferSelect>;
 
     beforeAll(() => {
-      const bigal = createBigAl({
+      const bigal = initialize({
         pool: mockedPool,
         models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
         onQuery(event) {
@@ -715,7 +715,7 @@ describe('createBigAl', () => {
       const throwingPool = createMockPool();
       throwingPool.query.mockResolvedValueOnce(getQueryResult([]));
 
-      const bigal = createBigAl({
+      const bigal = initialize({
         pool: throwingPool,
         models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
         onQuery() {
@@ -733,7 +733,7 @@ describe('createBigAl', () => {
       const plainPool = createMockPool();
       plainPool.query.mockResolvedValueOnce(getQueryResult([]));
 
-      const bigal = createBigAl({
+      const bigal = initialize({
         pool: plainPool,
         models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
       });
@@ -769,7 +769,7 @@ describe('createBigAl', () => {
 
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      const bigal = createBigAl({
+      const bigal = initialize({
         pool: mockedPool,
         models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
       });
@@ -794,7 +794,7 @@ describe('createBigAl', () => {
 
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      const bigal = createBigAl({
+      const bigal = initialize({
         pool: mockedPool,
         models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
       });
@@ -816,7 +816,7 @@ describe('createBigAl', () => {
       const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       const customEvents: OnQueryEvent[] = [];
 
-      const bigal = createBigAl({
+      const bigal = initialize({
         pool: mockedPool,
         models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
         onQuery(event) {

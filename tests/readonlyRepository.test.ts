@@ -4,7 +4,7 @@ import { faker } from '@faker-js/faker';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { IReadonlyRepository, IRepository, PoolLike, PoolQueryResult, QueryResultRow } from '../src/index.js';
-import { createBigAl, subquery } from '../src/index.js';
+import { initialize, subquery } from '../src/index.js';
 import type { SelectAggregateExpression, Sort, TypedAggregateExpression, WhereQuery } from '../src/query/index.js';
 
 import { pick } from './utils/pick.js';
@@ -110,7 +110,7 @@ describe('ReadonlyRepository', () => {
   let TeacherRepository: IRepository<TeacherSelect>;
 
   beforeAll(() => {
-    const bigal = createBigAl({
+    const bigal = initialize({
       models: [
         ClassroomDef,
         CategoryDef,

@@ -4,7 +4,7 @@ import { faker } from '@faker-js/faker';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { IRepository, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
-import { belongsTo, boolean as booleanColumn, createBigAl, hasMany, integer, serial, text, textArray, defineTable as table } from '../src/index.js';
+import { belongsTo, boolean as booleanColumn, initialize, hasMany, integer, serial, text, textArray, defineTable as table } from '../src/index.js';
 
 import { pick } from './utils/pick.js';
 
@@ -178,7 +178,7 @@ describe('Repository', () => {
   let ProductWithHooksRepository: IRepository<typeof ProductWithHooksDef.$inferSelect>;
 
   beforeAll(() => {
-    const bigal = createBigAl({
+    const bigal = initialize({
       models: [CategoryDef, ProductDef, ProductCategoryDef, SimpleWithStringCollectionDef, StoreDef],
       pool: mockedPool,
     });
@@ -189,7 +189,7 @@ describe('Repository', () => {
     StoreRepository = bigal.getRepository(StoreDef);
 
     // Separate instance for hooked models since they share the 'products' table name
-    const hookedBigal = createBigAl({
+    const hookedBigal = initialize({
       models: [ProductWithHooksDef, StoreDef, CategoryDef, ProductCategoryDef],
       pool: mockedPool,
     });

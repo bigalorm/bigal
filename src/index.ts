@@ -1,4 +1,4 @@
-export * from './createBigAl.js';
+export * from './initialize.js';
 export * from './errors/index.js';
 export * from './metadata/index.js';
 export * from './query/index.js';
