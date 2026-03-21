@@ -56,7 +56,7 @@ export type {
   HasManyThroughIntermediate,
   InferInsert,
   InferSelect,
-  LazyTableReference,
+  ModelReference,
   ModelHooks,
   OptionalInsertKeys,
   RequiredInsertKeys,

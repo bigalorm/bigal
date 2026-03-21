@@ -137,24 +137,32 @@ export function createBigAl({ pool, readonlyPool = pool, models, connections = {
   };
 }
 
+function resolveModelName(ref: AnyTableDefinition['belongsToEntries'][number]['builder']['modelRef']): string {
+  if (typeof ref === 'string') {
+    return ref;
+  }
+
+  return ref().modelName;
+}
+
 function validateRelationships(tableDef: AnyTableDefinition, repositoriesByModelNameLowered: Record<string, unknown>): void {
   for (const entry of tableDef.belongsToEntries) {
-    const referencedTable = entry.builder.modelFn();
-    if (!repositoriesByModelNameLowered[referencedTable.modelName.toLowerCase()]) {
-      throw new Error(`belongsTo reference from "${tableDef.modelName}.${entry.propertyName}" points to model "${referencedTable.modelName}" which is not registered`);
+    const modelName = resolveModelName(entry.builder.modelRef);
+    if (!repositoriesByModelNameLowered[modelName.toLowerCase()]) {
+      throw new Error(`belongsTo reference from "${tableDef.modelName}.${entry.propertyName}" points to model "${modelName}" which is not registered`);
     }
   }
 
   for (const entry of tableDef.hasManyEntries) {
-    const referencedTable = entry.builder.modelFn();
-    if (!repositoriesByModelNameLowered[referencedTable.modelName.toLowerCase()]) {
-      throw new Error(`hasMany reference from "${tableDef.modelName}.${entry.propertyName}" points to model "${referencedTable.modelName}" which is not registered`);
+    const modelName = resolveModelName(entry.builder.modelRef);
+    if (!repositoriesByModelNameLowered[modelName.toLowerCase()]) {
+      throw new Error(`hasMany reference from "${tableDef.modelName}.${entry.propertyName}" points to model "${modelName}" which is not registered`);
     }
 
-    if (entry.builder.throughFn) {
-      const throughTable = entry.builder.throughFn();
-      if (!repositoriesByModelNameLowered[throughTable.modelName.toLowerCase()]) {
-        throw new Error(`hasMany.through reference from "${tableDef.modelName}.${entry.propertyName}" points to junction model "${throughTable.modelName}" which is not registered`);
+    if (entry.builder.throughRef) {
+      const throughName = resolveModelName(entry.builder.throughRef);
+      if (!repositoriesByModelNameLowered[throughName.toLowerCase()]) {
+        throw new Error(`hasMany.through reference from "${tableDef.modelName}.${entry.propertyName}" points to junction model "${throughName}" which is not registered`);
       }
     }
   }

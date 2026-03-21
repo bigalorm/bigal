@@ -2,7 +2,6 @@ import { belongsTo, jsonb, text } from '../../src/schema/index.js';
 import type { InferInsert, InferSelect } from '../../src/schema/index.js';
 
 import { modelBase } from './base.js';
-import { tables } from './index.js';
 
 export interface IJsonLikeEntity {
   id: string;
@@ -12,7 +11,7 @@ export interface IJsonLikeEntity {
 export const simpleWithRelationAndJsonSchema = {
   ...modelBase,
   name: text().notNull(),
-  store: belongsTo(() => tables.Store!),
+  store: belongsTo('Store'),
   message: jsonb<IJsonLikeEntity>(),
 };
 
