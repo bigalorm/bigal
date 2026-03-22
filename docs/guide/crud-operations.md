@@ -181,7 +181,7 @@ This is useful for debugging, logging, and testing SQL generation.
 import { initialize, defineTable as table, serial, text, integer, createdAt, updatedAt } from 'bigal';
 import { Pool } from 'postgres-pool';
 
-const Product = table('products', {
+const ProductModel = table('products', {
   id: serial().primaryKey(),
   name: text().notNull(),
   priceCents: integer().notNull(),
@@ -190,5 +190,5 @@ const Product = table('products', {
 });
 
 const pool = new Pool('postgres://localhost/mydb');
-const { Product } = initialize({ models: { Product }, pool });
+const { Product } = initialize({ models: { ProductModel }, pool });
 ```
