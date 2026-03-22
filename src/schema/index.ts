@@ -29,8 +29,9 @@ export {
   updatedAt,
   uuid,
   varchar,
+  vector,
 } from './columns.js';
-export type { ColumnOptions, VarcharOptions } from './columns.js';
+export type { ColumnOptions, VarcharOptions, VectorOptions } from './columns.js';
 
 export { hasMany, HasManyBuilder } from './HasManyBuilder.js';
 export type { HasManyConfig, HasManyThroughIntermediate } from './HasManyBuilder.js';

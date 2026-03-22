@@ -941,17 +941,30 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
         }
       } else if (typeof sorts === 'object') {
         for (const [propertyName, orderValue] of Object.entries(sorts)) {
-          let descending = false;
-          const order = orderValue as SortObjectValue;
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-          if (order && (order === -1 || /desc/i.test(`${order}`))) {
-            descending = true;
-          }
+          // Vector distance sort: { embedding: { nearestTo: [1,2,3], metric: 'cosine' } }
+          if (orderValue && typeof orderValue === 'object' && 'nearestTo' in orderValue) {
+            const vectorSort = orderValue as { nearestTo: number[]; metric?: string };
+            result.push({
+              propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
+              descending: false,
+              vectorDistance: {
+                vector: vectorSort.nearestTo,
+                metric: (vectorSort.metric ?? 'cosine') as 'cosine' | 'innerProduct' | 'l1' | 'l2',
+              },
+            });
+          } else {
+            let descending = false;
+            const order = orderValue as SortObjectValue;
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            if (order && (order === -1 || /desc/i.test(`${order}`))) {
+              descending = true;
+            }
 
-          result.push({
-            propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
-            descending,
-          });
+            result.push({
+              propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
+              descending,
+            });
+          }
         }
       }
     }

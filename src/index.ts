@@ -41,6 +41,7 @@ export {
   updatedAt,
   uuid,
   varchar,
+  vector,
   table as defineTable,
   view,
 } from './schema/index.js';
@@ -67,6 +68,7 @@ export type {
   TableDefinition,
   TableOptions as SchemaTableOptions,
   VarcharOptions,
+  VectorOptions,
 } from './schema/index.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any TableDefinition

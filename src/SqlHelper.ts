@@ -145,6 +145,7 @@ export function getSelectQueryAndParams<T extends AnyRecord>({
     model,
     sorts,
     joins,
+    params,
   });
 
   if (orderStatement) {
@@ -932,6 +933,7 @@ function buildSubquerySelectSQL({
       repositoriesByModelNameLowered,
       model: subqueryModel,
       sorts,
+      params,
     });
 
     if (orderStatement) {
@@ -1080,11 +1082,13 @@ export function buildOrderStatement<T extends AnyRecord>({
   model,
   sorts,
   joins,
+  params,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
   sorts: readonly OrderBy<T>[];
   joins?: readonly JoinDefinition[];
+  params?: unknown[];
 }): string {
   if (!sorts.length) {
     return '';
@@ -1097,7 +1101,7 @@ export function buildOrderStatement<T extends AnyRecord>({
       orderStatement += ',';
     }
 
-    const { propertyName, descending } = orderProperty;
+    const { propertyName, descending, vectorDistance } = orderProperty;
 
     const resolvedProperty = resolvePropertyPath({
       propertyPath: propertyName,
@@ -1106,15 +1110,24 @@ export function buildOrderStatement<T extends AnyRecord>({
       repositoriesByModelNameLowered,
     });
 
+    let columnRef: string;
     if (resolvedProperty) {
-      orderStatement += `"${resolvedProperty.tableAlias}"."${resolvedProperty.column.name}"`;
+      columnRef = `"${resolvedProperty.tableAlias}"."${resolvedProperty.column.name}"`;
     } else {
       const column = model.columnsByPropertyName[propertyName];
       if (!column) {
         throw new QueryError(`Property (${propertyName}) not found in model (${model.name}).`, model);
       }
 
-      orderStatement += `"${column.name}"`;
+      columnRef = `"${column.name}"`;
+    }
+
+    if (vectorDistance && params) {
+      const operator = vectorDistanceOperator(vectorDistance.metric);
+      params.push(`[${vectorDistance.vector.join(',')}]`);
+      orderStatement += `${columnRef} ${operator} $${params.length}`;
+    } else {
+      orderStatement += columnRef;
     }
 
     if (descending) {
@@ -1588,6 +1601,28 @@ function buildWhere<T extends AnyRecord>({
             params,
             joins,
           });
+        }
+
+        // Vector distance constraint: { nearestTo: [...], metric: '...', distance: { '<': 0.5 } }
+        if (typeof value === 'object' && value !== null && 'nearestTo' in value) {
+          const vectorConstraint = value as unknown as { nearestTo: number[]; metric?: string; distance?: Record<string, number> };
+          const column = propertyName ? model.columnsByPropertyName[propertyName] : undefined;
+          if (!column || !propertyName) {
+            throw new QueryError(`Property name is required for vector distance constraint`, model);
+          }
+
+          const metric = (vectorConstraint.metric ?? 'cosine') as 'cosine' | 'innerProduct' | 'l1' | 'l2';
+          const operator = vectorDistanceOperator(metric);
+          params.push(`[${vectorConstraint.nearestTo.join(',')}]`);
+          const vectorParamIndex = params.length;
+
+          if (vectorConstraint.distance) {
+            const [distanceOp, threshold] = Object.entries(vectorConstraint.distance)[0]!;
+            params.push(threshold);
+            return `"${column.name}" ${operator} $${vectorParamIndex} ${distanceOp} $${params.length}`;
+          }
+
+          return `"${column.name}" ${operator} $${vectorParamIndex}`;
         }
 
         const andValues: string[] = [];
@@ -2476,6 +2511,7 @@ export function buildSubquerySQL<T extends AnyRecord>({
       repositoriesByModelNameLowered,
       model,
       sorts,
+      params,
     });
 
     if (orderStatement) {
@@ -2555,17 +2591,45 @@ function convertSortToOrderBy<T extends AnyRecord>(sort: Record<string, unknown>
     }
   } else if (typeof sort === 'object') {
     for (const [propertyName, orderValue] of Object.entries(sort)) {
-      let descending = false;
-      if (orderValue && (orderValue === -1 || (typeof orderValue === 'string' && /desc/i.test(orderValue)))) {
-        descending = true;
-      }
+      // Vector distance sort: { embedding: { nearestTo: [1,2,3], metric: 'cosine' } }
+      if (orderValue && typeof orderValue === 'object' && 'nearestTo' in orderValue) {
+        const vectorSort = orderValue as { nearestTo: number[]; metric?: string };
+        result.push({
+          propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
+          descending: false,
+          vectorDistance: {
+            vector: vectorSort.nearestTo,
+            metric: (vectorSort.metric ?? 'cosine') as 'cosine' | 'innerProduct' | 'l1' | 'l2',
+          },
+        });
+      } else {
+        let descending = false;
+        if (orderValue && (orderValue === -1 || (typeof orderValue === 'string' && /desc/i.test(orderValue)))) {
+          descending = true;
+        }
 
-      result.push({
-        propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
-        descending,
-      });
+        result.push({
+          propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
+          descending,
+        });
+      }
     }
   }
 
   return result;
+}
+
+function vectorDistanceOperator(metric: 'cosine' | 'innerProduct' | 'l1' | 'l2'): string {
+  switch (metric) {
+    case 'l2':
+      return '<->';
+    case 'cosine':
+      return '<=>';
+    case 'innerProduct':
+      return '<#>';
+    case 'l1':
+      return '<+>';
+    default:
+      return '<=>';
+  }
 }

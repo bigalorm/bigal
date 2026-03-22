@@ -4,9 +4,9 @@ import { faker } from '@faker-js/faker';
 import { afterEach, beforeAll, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import type { OnQueryEvent, PoolLike, PoolQueryResult, QueryResultRow, Repository } from '../src/index.js';
-import { initialize, boolean as booleanColumn, serial, text, defineTable as table } from '../src/index.js';
+import { initialize, belongsTo, boolean as booleanColumn, serial, text, defineTable as table } from '../src/index.js';
 
-import { Category, modelBase, Product, ProductCategory, ProductWithLifecycleMethods as ProductWithHooks, ReadonlyProduct, SimpleWithStringCollection, Store } from './models/index.js';
+import { Category, modelBase, Product, ProductCategory, ReadonlyProduct, SimpleWithStringCollection, Store } from './models/index.js';
 
 type PoolQueryFn = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
 
@@ -360,16 +360,36 @@ describe('initialize', () => {
   describe('Hooks via table definition', () => {
     const mockedPool = createMockPool();
 
-    let HookedProductRepo: Repository<typeof ProductWithHooks>;
+    const HookedProduct = table(
+      'products',
+      {
+        ...modelBase,
+        name: text().notNull(),
+        sku: text(),
+        store: belongsTo('Store'),
+      },
+      {
+        modelName: 'HookedProduct',
+        hooks: {
+          async beforeCreate(values) {
+            return { ...values, name: `beforeCreate - ${values.name}` };
+          },
+          beforeUpdate(values) {
+            return { ...values, name: values.name ? `beforeUpdate - ${values.name}` : values.name };
+          },
+        },
+      },
+    );
+
+    let HookedProductRepo: Repository<typeof HookedProduct>;
 
     beforeAll(() => {
-      // Use a separate initialize instance for hooked models
       const bigal = initialize({
         pool: mockedPool,
-        models: [ProductWithHooks, Store, Category, ProductCategory],
+        models: [Product, HookedProduct, Store, Category, ProductCategory],
       });
 
-      HookedProductRepo = bigal.getRepository(ProductWithHooks);
+      HookedProductRepo = bigal.getRepository(HookedProduct);
     });
 
     beforeEach(() => {

@@ -141,4 +141,16 @@ export function updatedAt(options?: ColumnOptions): ColumnBuilder<UpdatedAtConfi
   return builder as unknown as ColumnBuilder<UpdatedAtConfig>;
 }
 
+export interface VectorOptions extends ColumnOptions {
+  dimensions: number;
+}
+
+type VectorConfig = ColumnBuilderConfig<number[]>;
+
+export function vector(options: VectorOptions): ColumnBuilder<VectorConfig> {
+  const builder = new ColumnBuilder('VECTOR', options.name) as unknown as ColumnBuilder<VectorConfig>;
+  builder.config.maxLength = options.dimensions;
+  return builder;
+}
+
 export { booleanColumn as boolean, dateColumn as date };

@@ -26,13 +26,24 @@ export type MultipleSortString<T extends Record<string, unknown>, TSortString ex
 
 export type SortObjectValue = -1 | 'asc' | 'desc' | 1;
 
+export interface VectorDistanceSort {
+  nearestTo: number[];
+  metric?: VectorDistanceMetric;
+}
+
 export type SortObject<T extends Record<string, unknown>> = {
-  [K in keyof T as ExcludeFunctions<OmitEntityCollections<T>, K>]?: SortObjectValue;
+  [K in keyof T as ExcludeFunctions<OmitEntityCollections<T>, K>]?: SortObjectValue | VectorDistanceSort;
 };
 
 export type Sort<T extends Record<string, unknown>> = MultipleSortString<T> | SortObject<T>;
 
+export type VectorDistanceMetric = 'cosine' | 'innerProduct' | 'l1' | 'l2';
+
 export interface OrderBy<T extends Record<string, unknown>> {
   propertyName: string & keyof OmitFunctions<OmitEntityCollections<T>>;
   descending?: boolean;
+  vectorDistance?: {
+    vector: number[];
+    metric: VectorDistanceMetric;
+  };
 }

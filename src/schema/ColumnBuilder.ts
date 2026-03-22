@@ -136,6 +136,8 @@ function resolveMetadataType(postgresType: string): BigAlColumnType {
       return 'integer[]';
     case 'BOOLEAN[]':
       return 'boolean[]';
+    case 'VECTOR':
+      return 'float[]';
     default:
       return 'string';
   }
