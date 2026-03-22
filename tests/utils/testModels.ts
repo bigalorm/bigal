@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker';
 
+import type { InferSelect } from '../../src/schema/index.js';
 import {
   Category,
   Classroom,
@@ -43,38 +44,38 @@ import {
 // Select types derived from table definitions
 // ---------------------------------------------------------------------------
 
-export type CategorySelect = typeof Category.$inferSelect;
-export type ClassroomSelect = typeof Classroom.$inferSelect;
-export type KitchenSinkSelect = typeof KitchenSink.$inferSelect;
-export type LevelOneSelect = typeof LevelOne.$inferSelect;
-export type LevelTwoSelect = typeof LevelTwo.$inferSelect;
-export type LevelThreeSelect = typeof LevelThree.$inferSelect;
-export type ParkingLotSelect = typeof ParkingLot.$inferSelect;
-export type ParkingSpaceSelect = typeof ParkingSpace.$inferSelect;
-export type ProductSelect = typeof Product.$inferSelect;
-export type ProductCategorySelect = typeof ProductCategory.$inferSelect;
-export type ReadonlyProductSelect = typeof ReadonlyProduct.$inferSelect;
-export type SimpleWithJsonSelect = typeof SimpleWithJson.$inferSelect;
-export type SimpleWithOptionalEnumSelect = typeof SimpleWithOptionalEnum.$inferSelect;
-export type SimpleWithRelationAndJsonSelect = typeof SimpleWithRelationAndJson.$inferSelect;
-export type SimpleWithSelfReferenceSelect = typeof SimpleWithSelfReference.$inferSelect;
-export type SimpleWithStringCollectionSelect = typeof SimpleWithStringCollection.$inferSelect;
-export type SimpleWithStringIdSelect = typeof SimpleWithStringId.$inferSelect;
-export type SimpleWithUnionSelect = typeof SimpleWithUnion.$inferSelect;
-export type StoreSelect = typeof Store.$inferSelect;
-export type TeacherSelect = typeof Teacher.$inferSelect;
-export type TeacherClassroomSelect = typeof TeacherClassroom.$inferSelect;
-export type ImportedItemSelect = typeof ImportedItem.$inferSelect;
-export type ProductWithCreatedAtSelect = typeof ProductWithCreatedAt.$inferSelect;
-export type RequiredPropertyWithDefaultValueSelect = typeof RequiredPropertyWithDefaultValue.$inferSelect;
-export type RequiredPropertyWithDefaultValueFunctionSelect = typeof RequiredPropertyWithDefaultValueFunction.$inferSelect;
-export type SimpleWithCollectionsSelect = typeof SimpleWithCollections.$inferSelect;
-export type SimpleWithCreatedAtSelect = typeof SimpleWithCreatedAt.$inferSelect;
-export type SimpleWithCreatedAtAndUpdatedAtSelect = typeof SimpleWithCreatedAtAndUpdatedAt.$inferSelect;
-export type SimpleWithSchemaSelect = typeof SimpleWithSchema.$inferSelect;
-export type SimpleWithUUIDSelect = typeof SimpleWithUUID.$inferSelect;
-export type SimpleWithUpdatedAtSelect = typeof SimpleWithUpdatedAt.$inferSelect;
-export type SimpleWithVersionSelect = typeof SimpleWithVersion.$inferSelect;
+export type CategorySelect = InferSelect<(typeof Category)['schema']>;
+export type ClassroomSelect = InferSelect<(typeof Classroom)['schema']>;
+export type KitchenSinkSelect = InferSelect<(typeof KitchenSink)['schema']>;
+export type LevelOneSelect = InferSelect<(typeof LevelOne)['schema']>;
+export type LevelTwoSelect = InferSelect<(typeof LevelTwo)['schema']>;
+export type LevelThreeSelect = InferSelect<(typeof LevelThree)['schema']>;
+export type ParkingLotSelect = InferSelect<(typeof ParkingLot)['schema']>;
+export type ParkingSpaceSelect = InferSelect<(typeof ParkingSpace)['schema']>;
+export type ProductSelect = InferSelect<(typeof Product)['schema']>;
+export type ProductCategorySelect = InferSelect<(typeof ProductCategory)['schema']>;
+export type ReadonlyProductSelect = InferSelect<(typeof ReadonlyProduct)['schema']>;
+export type SimpleWithJsonSelect = InferSelect<(typeof SimpleWithJson)['schema']>;
+export type SimpleWithOptionalEnumSelect = InferSelect<(typeof SimpleWithOptionalEnum)['schema']>;
+export type SimpleWithRelationAndJsonSelect = InferSelect<(typeof SimpleWithRelationAndJson)['schema']>;
+export type SimpleWithSelfReferenceSelect = InferSelect<(typeof SimpleWithSelfReference)['schema']>;
+export type SimpleWithStringCollectionSelect = InferSelect<(typeof SimpleWithStringCollection)['schema']>;
+export type SimpleWithStringIdSelect = InferSelect<(typeof SimpleWithStringId)['schema']>;
+export type SimpleWithUnionSelect = InferSelect<(typeof SimpleWithUnion)['schema']>;
+export type StoreSelect = InferSelect<(typeof Store)['schema']>;
+export type TeacherSelect = InferSelect<(typeof Teacher)['schema']>;
+export type TeacherClassroomSelect = InferSelect<(typeof TeacherClassroom)['schema']>;
+export type ImportedItemSelect = InferSelect<(typeof ImportedItem)['schema']>;
+export type ProductWithCreatedAtSelect = InferSelect<(typeof ProductWithCreatedAt)['schema']>;
+export type RequiredPropertyWithDefaultValueSelect = InferSelect<(typeof RequiredPropertyWithDefaultValue)['schema']>;
+export type RequiredPropertyWithDefaultValueFunctionSelect = InferSelect<(typeof RequiredPropertyWithDefaultValueFunction)['schema']>;
+export type SimpleWithCollectionsSelect = InferSelect<(typeof SimpleWithCollections)['schema']>;
+export type SimpleWithCreatedAtSelect = InferSelect<(typeof SimpleWithCreatedAt)['schema']>;
+export type SimpleWithCreatedAtAndUpdatedAtSelect = InferSelect<(typeof SimpleWithCreatedAtAndUpdatedAt)['schema']>;
+export type SimpleWithSchemaSelect = InferSelect<(typeof SimpleWithSchema)['schema']>;
+export type SimpleWithUUIDSelect = InferSelect<(typeof SimpleWithUUID)['schema']>;
+export type SimpleWithUpdatedAtSelect = InferSelect<(typeof SimpleWithUpdatedAt)['schema']>;
+export type SimpleWithVersionSelect = InferSelect<(typeof SimpleWithVersion)['schema']>;
 
 // ---------------------------------------------------------------------------
 // Re-export models (used by test files)

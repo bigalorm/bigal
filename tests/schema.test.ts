@@ -118,8 +118,8 @@ const stringIdSchema = {
 };
 const SimpleWithStringId = table('simple_with_string_id', stringIdSchema);
 
-type StringIdSelect = typeof SimpleWithStringId.$inferSelect;
-type StringIdInsert = typeof SimpleWithStringId.$inferInsert;
+type StringIdSelect = InferSelect<(typeof SimpleWithStringId)['schema']>;
+type StringIdInsert = InferInsert<(typeof SimpleWithStringId)['schema']>;
 
 // Self-referential model
 const selfRefSchema = {
@@ -146,7 +146,7 @@ const jsonWithIdSchema = {
 };
 const JsonWithId = table('json_with_id', jsonWithIdSchema);
 
-type JsonWithIdSelect = typeof JsonWithId.$inferSelect;
+type JsonWithIdSelect = InferSelect<(typeof JsonWithId)['schema']>;
 
 // Every column type
 const kitchenSinkSchema = {
@@ -173,8 +173,8 @@ const kitchenSinkSchema = {
 };
 const KitchenSink = table('kitchen_sink', kitchenSinkSchema);
 
-type KitchenSinkSelect = typeof KitchenSink.$inferSelect;
-type KitchenSinkInsert = typeof KitchenSink.$inferInsert;
+type KitchenSinkSelect = InferSelect<(typeof KitchenSink)['schema']>;
+type KitchenSinkInsert = InferInsert<(typeof KitchenSink)['schema']>;
 
 // Readonly model (view)
 const readonlyViewSchema = {

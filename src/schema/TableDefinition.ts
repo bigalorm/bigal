@@ -73,9 +73,6 @@ export interface TableDefinition<TName extends string = string, TSchema extends 
 
   readonly belongsToEntries: readonly BelongsToEntry[];
   readonly hasManyEntries: readonly HasManyEntry[];
-
-  readonly $inferSelect: InferSelect<TSchema>;
-  readonly $inferInsert: InferInsert<TSchema>;
 }
 
 export interface BelongsToEntry {
@@ -232,10 +229,6 @@ export function table<TName extends string, TSchema extends SchemaDefinition>(
 
     belongsToEntries,
     hasManyEntries,
-
-    // Phantom types — accessed only via `typeof X.$inferSelect`, never at runtime
-    $inferSelect: undefined as unknown as InferSelect<TSchema>,
-    $inferInsert: undefined as unknown as InferInsert<TSchema>,
   };
 
   return Object.freeze(definition);
