@@ -36,7 +36,7 @@ export type { ColumnOptions, VarcharOptions, VectorOptions } from './columns.js'
 export { hasMany, HasManyBuilder } from './HasManyBuilder.js';
 export type { HasManyConfig, HasManyThroughIntermediate } from './HasManyBuilder.js';
 
-export type { InferInsert, InferSelect, OptionalInsertKeys, RequiredInsertKeys, SchemaDefinition, SchemaEntry, SelectKeys } from './InferTypes.js';
+export type { BelongsToKeys, HasManyKeys, InferInsert, InferSelect, OptionalInsertKeys, RelationshipKeys, RequiredInsertKeys, SchemaDefinition, SchemaEntry, SelectKeys } from './InferTypes.js';
 
 export { table, view } from './TableDefinition.js';
 export type { BelongsToEntry, FilterDefinition, HasManyEntry, ModelHooks, TableDefinition, TableOptions } from './TableDefinition.js';

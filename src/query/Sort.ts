@@ -1,11 +1,11 @@
-import type { ExcludeFunctions, OmitEntityCollections, OmitFunctions } from '../types/index.js';
+import type { ExcludeFunctions, OmitFunctions } from '../types/index.js';
 
 export type SortString<T extends Record<string, unknown>> =
-  | `${string & keyof OmitFunctions<OmitEntityCollections<T>>} ASC`
-  | `${string & keyof OmitFunctions<OmitEntityCollections<T>>} asc`
-  | `${string & keyof OmitFunctions<OmitEntityCollections<T>>} DESC`
-  | `${string & keyof OmitFunctions<OmitEntityCollections<T>>} desc`
-  | (string & keyof OmitFunctions<OmitEntityCollections<T>>);
+  | `${string & keyof OmitFunctions<T>} ASC`
+  | `${string & keyof OmitFunctions<T>} asc`
+  | `${string & keyof OmitFunctions<T>} DESC`
+  | `${string & keyof OmitFunctions<T>} desc`
+  | (string & keyof OmitFunctions<T>);
 
 type ValidateMultipleSorts<
   T extends Record<string, unknown>,
@@ -32,7 +32,7 @@ export interface VectorDistanceSort {
 }
 
 export type SortObject<T extends Record<string, unknown>> = {
-  [K in keyof T as ExcludeFunctions<OmitEntityCollections<T>, K>]?: SortObjectValue | VectorDistanceSort;
+  [K in keyof T as ExcludeFunctions<T[K], K>]?: SortObjectValue | VectorDistanceSort;
 };
 
 export type Sort<T extends Record<string, unknown>> = MultipleSortString<T> | SortObject<T>;
@@ -40,7 +40,7 @@ export type Sort<T extends Record<string, unknown>> = MultipleSortString<T> | So
 export type VectorDistanceMetric = 'cosine' | 'innerProduct' | 'l1' | 'l2';
 
 export interface OrderBy<T extends Record<string, unknown>> {
-  propertyName: string & keyof OmitFunctions<OmitEntityCollections<T>>;
+  propertyName: string & keyof OmitFunctions<T>;
   descending?: boolean;
   vectorDistance?: {
     vector: number[];

@@ -98,6 +98,23 @@ export type InferInsert<TSchema extends SchemaDefinition> = {
   [K in OptionalInsertKeys<TSchema>]?: InferInsertColumn<TSchema[K]>;
 };
 
+// ---------------------------------------------------------------------------
+// Schema-level key helpers (used by type helpers that need schema awareness)
+// ---------------------------------------------------------------------------
+
+/** Keys in the schema that are BelongsToBuilder (many-to-one FK columns) */
+export type BelongsToKeys<TSchema extends SchemaDefinition> = {
+  [K in keyof TSchema]: TSchema[K] extends BelongsToBuilder<unknown> ? K : never;
+}[keyof TSchema];
+
+/** Keys in the schema that are HasManyBuilder (collection relationships) */
+export type HasManyKeys<TSchema extends SchemaDefinition> = {
+  [K in keyof TSchema]: TSchema[K] extends HasManyBuilder ? K : never;
+}[keyof TSchema];
+
+/** Keys in the schema that are any relationship (belongsTo or hasMany) */
+export type RelationshipKeys<TSchema extends SchemaDefinition> = BelongsToKeys<TSchema> | HasManyKeys<TSchema>;
+
 // Re-export the key helpers for external use in type-level tests
 export type { OptionalInsertKeys, RequiredInsertKeys, SelectKeys };
 

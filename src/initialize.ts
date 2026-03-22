@@ -30,7 +30,7 @@ type AnyModel = TableDefinition<string, any>;
 
 /** Infers the repository type for a model — readonly or read-write based on the model's isReadonly flag */
 type InferRepository<T extends AnyModel> =
-  T extends TableDefinition<string, infer TSchema> ? (T['isReadonly'] extends true ? IReadonlyRepository<InferSelect<TSchema>> : IRepository<InferSelect<TSchema>>) : never;
+  T extends TableDefinition<string, infer TSchema> ? (T['isReadonly'] extends true ? IReadonlyRepository<InferSelect<TSchema>, TSchema> : IRepository<InferSelect<TSchema>, TSchema>) : never;
 
 /** Maps a named models object to a typed repositories object */
 type RepositoryMap<TModels extends Record<string, AnyModel>> = {
@@ -56,9 +56,9 @@ export interface InitializeOptionsObject<TModels extends Record<string, AnyModel
 // --- Return types ---
 
 export interface InitializeResult {
-  getRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IRepository<InferSelect<TSchema>>;
+  getRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IRepository<InferSelect<TSchema>, TSchema>;
 
-  getReadonlyRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IReadonlyRepository<InferSelect<TSchema>>;
+  getReadonlyRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IReadonlyRepository<InferSelect<TSchema>, TSchema>;
 }
 
 export type InitializeResultWithRepos<TModels extends Record<string, AnyModel>> = InitializeResult & RepositoryMap<TModels>;
@@ -158,22 +158,22 @@ export function initialize<TModels extends Record<string, AnyModel>>(options: In
   }
 
   const instance: InitializeResult = {
-    getRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IRepository<InferSelect<TSchema>> {
+    getRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IRepository<InferSelect<TSchema>, TSchema> {
       const repository = repositoriesByModel.get(model);
       if (!repository) {
         throw new Error(`Repository not found for table "${model.tableName}". Was it included in the models array?`);
       }
 
-      return repository as unknown as IRepository<InferSelect<TSchema>>;
+      return repository as unknown as IRepository<InferSelect<TSchema>, TSchema>;
     },
 
-    getReadonlyRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IReadonlyRepository<InferSelect<TSchema>> {
+    getReadonlyRepository<TName extends string, TSchema extends SchemaDefinition>(model: TableDefinition<TName, TSchema>): IReadonlyRepository<InferSelect<TSchema>, TSchema> {
       const repository = repositoriesByModel.get(model);
       if (!repository) {
         throw new Error(`Repository not found for table "${model.tableName}". Was it included in the models array?`);
       }
 
-      return repository as unknown as IReadonlyRepository<InferSelect<TSchema>>;
+      return repository as unknown as IReadonlyRepository<InferSelect<TSchema>, TSchema>;
     },
   };
 

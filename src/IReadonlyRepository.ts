@@ -1,9 +1,10 @@
 import type { ModelMetadata } from './metadata/index.js';
 import type { CountArgs } from './query/CountArgs.js';
 import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, WhereQuery } from './query/index.js';
+import type { SchemaDefinition } from './schema/InferTypes.js';
 import type { QueryResult } from './types/index.js';
 
-export interface IReadonlyRepository<T extends Record<string, unknown>> {
+export interface IReadonlyRepository<T extends Record<string, unknown>, TSchema extends SchemaDefinition = SchemaDefinition> {
   readonly model: ModelMetadata<T>;
 
   /**
@@ -18,7 +19,7 @@ export interface IReadonlyRepository<T extends Record<string, unknown>> {
     // Optional keys specified as args.select
     K extends string & keyof T,
     // Return type used to pass through to all chained methods
-    TReturn = QueryResult<Pick<T, K | 'id'>>,
+    TReturn = QueryResult<Pick<T, K | 'id'>, TSchema>,
   >(
     args?: FindOneArgs<T, K> | WhereQuery<T>,
   ): FindOneResult<T, TReturn>;
@@ -37,7 +38,7 @@ export interface IReadonlyRepository<T extends Record<string, unknown>> {
     // Optional keys specified as args.select
     K extends string & keyof T,
     // Return type used to pass through to all chained methods
-    TReturn = QueryResult<Pick<T, K | 'id'>>,
+    TReturn = QueryResult<Pick<T, K | 'id'>, TSchema>,
   >(
     args?: FindArgs<T, K> | WhereQuery<T>,
   ): FindResult<T, TReturn>;

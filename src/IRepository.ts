@@ -13,9 +13,10 @@ import type {
   WhereQuery,
 } from './query/index.js';
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
+import type { SchemaDefinition } from './schema/InferTypes.js';
 import type { CreateUpdateParams } from './types/index.js';
 
-export interface IRepository<T extends Record<string, unknown>> extends IReadonlyRepository<T> {
+export interface IRepository<T extends Record<string, unknown>, TSchema extends SchemaDefinition = SchemaDefinition> extends IReadonlyRepository<T, TSchema> {
   /**
    * Creates an object using the specified values
    * @param {object} values - Values to insert as multiple new objects.

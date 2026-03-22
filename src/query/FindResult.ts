@@ -1,4 +1,4 @@
-import type { GetValueType, ModelRelationshipKeys, OmitEntityCollections, OmitFunctions, PickByValueType, Populated } from '../types/index.js';
+import type { GetValueType, ModelRelationshipKeys, OmitFunctions, PickByValueType, Populated } from '../types/index.js';
 
 import type { FindQueryWithCount } from './FindWithCountResult.js';
 import type { SubqueryJoinOnCondition } from './JoinDefinition.js';
@@ -66,7 +66,7 @@ export interface FindResult<T extends Record<string, unknown>, TReturn, TJoins e
    * Cannot be combined with withCount().
    * @param columns - Column names for DISTINCT ON clause
    */
-  distinctOn(columns: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]): FindResult<T, TReturn, TJoins>;
+  distinctOn(columns: (string & keyof OmitFunctions<T>)[]): FindResult<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindResult<T, TReturn, TJoins>;
   limit(value: number): FindResult<T, TReturn, TJoins>;
   skip(value: number): FindResult<T, TReturn, TJoins>;

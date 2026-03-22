@@ -15,7 +15,7 @@ import type {
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
 import { ReadonlyRepository } from './ReadonlyRepository.js';
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper.js';
-import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions, QueryResult } from './types/index.js';
+import type { CreateUpdateParams, OmitFunctions, QueryResult } from './types/index.js';
 
 type AnyRecord = Record<string, unknown>;
 
@@ -69,7 +69,7 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
     const isArray = Array.isArray(values);
 
     let returnRecords = true;
-    let returnSelect: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[] | undefined;
+    let returnSelect: (string & keyof OmitFunctions<T>)[] | undefined;
     if (options) {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition,@typescript-eslint/no-unnecessary-boolean-literal-compare
       if ((options as DoNotReturnRecords).returnRecords === false) {
@@ -235,7 +235,7 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
     const modelInstance = this;
 
     let returnRecords = true;
-    let returnSelect: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[] | undefined;
+    let returnSelect: (string & keyof OmitFunctions<T>)[] | undefined;
     if (options) {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition,@typescript-eslint/no-unnecessary-boolean-literal-compare
       if ((options as DoNotReturnRecords).returnRecords === false) {

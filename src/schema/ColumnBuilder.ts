@@ -80,6 +80,12 @@ export class ColumnBuilder<TConfig extends ColumnBuilderConfig = ColumnBuilderCo
     return this;
   }
 
+  public version(): ColumnBuilder<TConfig & { notNull: true }> {
+    this.config.isVersion = true;
+    this.config.isNotNull = true;
+    return this as unknown as ColumnBuilder<TConfig & { notNull: true }>;
+  }
+
   public toColumnTypeMetadataOptions(propertyName: string, tableName: string): ColumnTypeMetadataOptions {
     return {
       target: tableName,

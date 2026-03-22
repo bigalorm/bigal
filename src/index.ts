@@ -49,18 +49,21 @@ export {
 export type {
   BelongsToConfig,
   BelongsToEntry,
+  BelongsToKeys,
   ColumnBuilderConfig,
   ColumnBuilderRuntimeConfig,
   ColumnOptions,
   FilterDefinition,
   HasManyConfig,
   HasManyEntry,
+  HasManyKeys,
   HasManyThroughIntermediate,
   InferInsert,
   InferSelect,
   ModelReference,
   ModelHooks,
   OptionalInsertKeys,
+  RelationshipKeys,
   RequiredInsertKeys,
   SchemaDefinition,
   SchemaEntry,
@@ -87,7 +90,7 @@ type AnyTableDef = TableDefinition<string, any>;
  * }
  * ```
  */
-export type Repository<T extends AnyTableDef> = T extends TableDefinition<string, infer TSchema> ? IRepository<InferSelect<TSchema>> : never;
+export type Repository<T extends AnyTableDef> = T extends TableDefinition<string, infer TSchema> ? IRepository<InferSelect<TSchema>, TSchema> : never;
 
 /**
  * A typed read-only repository for a model backed by a PostgreSQL view.
@@ -102,4 +105,4 @@ export type Repository<T extends AnyTableDef> = T extends TableDefinition<string
  * }
  * ```
  */
-export type ReadonlyRepository<T extends AnyTableDef> = T extends TableDefinition<string, infer TSchema> ? IReadonlyRepository<InferSelect<TSchema>> : never;
+export type ReadonlyRepository<T extends AnyTableDef> = T extends TableDefinition<string, infer TSchema> ? IReadonlyRepository<InferSelect<TSchema>, TSchema> : never;

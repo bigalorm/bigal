@@ -1,6 +1,7 @@
+import type { HasManyKeys, SchemaDefinition } from '../schema/InferTypes.js';
+
 /**
- * Passes through all properties. In the new schema API, collections are already excluded by InferSelect.
- * Preserved for backward compatibility with internal repository code.
+ * Excludes hasMany collection keys from K when a concrete TSchema is provided.
+ * Falls back to passing through all keys when TSchema is the default.
  */
-// oxlint-disable-next-line no-unused-vars -- T required at call sites for API compatibility
-export type ExcludeEntityCollections<_T, K extends PropertyKey> = K;
+export type ExcludeEntityCollections<K extends PropertyKey, TSchema extends SchemaDefinition = SchemaDefinition> = SchemaDefinition extends TSchema ? K : K extends HasManyKeys<TSchema> ? never : K;

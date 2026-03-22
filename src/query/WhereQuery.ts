@@ -43,7 +43,7 @@ export type WhereQueryStatement<TValue> = [TValue] extends [string] // Avoid dis
 
 export type WhereQuery<T extends Record<string, unknown>> = {
   // Exclude entity collections and functions. Make the rest of the properties optional
-  [K in keyof T as ExcludeEntityCollections<T[K], ExcludeFunctions<T[K], K>>]?: K extends 'id'
+  [K in keyof T as ExcludeEntityCollections<ExcludeFunctions<T[K], K>>]?: K extends 'id'
     ? NegatableConstraint<WhereClauseValue<T>> | WhereQueryStatement<T[K]> // Allow entity objects (via Pick<T,'id'>) and literal id values
     : T[K] extends (infer U)[] | undefined // If property type is an array, allow where query statements for the array type
       ? WhereQueryStatement<ExcludeUndefined<U>>

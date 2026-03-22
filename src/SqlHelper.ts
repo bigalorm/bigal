@@ -8,7 +8,7 @@ import type { OnConflictOptions } from './query/OnConflictOptions.js';
 import type { SelectAggregateExpression } from './query/SelectBuilder.js';
 import type { HavingCondition, SubqueryBuilderLike } from './query/Subquery.js';
 import { ScalarSubquery, SubqueryBuilder } from './query/Subquery.js';
-import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types/index.js';
+import type { CreateUpdateParams, OmitFunctions } from './types/index.js';
 import { assertValidSqlIdentifier } from './utils/index.js';
 
 type AnyRecord = Record<string, unknown>;
@@ -48,7 +48,7 @@ export function getSelectQueryAndParams<T extends AnyRecord>({
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
-  select?: readonly (string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
+  select?: readonly (string & keyof OmitFunctions<T>)[];
   where?: WhereQuery<T>;
   sorts: readonly OrderBy<T>[];
   skip: number;
@@ -228,7 +228,7 @@ export function getCountQueryAndParams<T extends AnyRecord>({
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: object[]}}
  */
-export function getInsertQueryAndParams<T extends AnyRecord, K extends string & keyof OmitFunctions<OmitEntityCollections<T>> = string & keyof OmitFunctions<OmitEntityCollections<T>>>({
+export function getInsertQueryAndParams<T extends AnyRecord, K extends string & keyof OmitFunctions<T> = string & keyof OmitFunctions<T>>({
   repositoriesByModelNameLowered,
   model,
   values,
@@ -489,7 +489,7 @@ export function getUpdateQueryAndParams<T extends AnyRecord>({
   where: WhereQuery<T>;
   values: CreateUpdateParams<T>;
   returnRecords?: boolean;
-  returnSelect?: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
+  returnSelect?: (string & keyof OmitFunctions<T>)[];
 }): QueryAndParams {
   for (const column of model.updateDateColumns) {
     if (values[column.propertyName as string & keyof CreateUpdateParams<T>] === undefined) {
@@ -623,7 +623,7 @@ export function getDeleteQueryAndParams<T extends AnyRecord>({
   model: ModelMetadata<T>;
   where?: WhereQuery<T>;
   returnRecords?: boolean;
-  returnSelect?: readonly (string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
+  returnSelect?: readonly (string & keyof OmitFunctions<T>)[];
 }): QueryAndParams {
   let query = `DELETE FROM ${model.qualifiedTableName}`;
 
@@ -660,7 +660,7 @@ export function getDeleteQueryAndParams<T extends AnyRecord>({
  * @private
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
-export function getColumnsToSelect<T extends AnyRecord, K extends string & keyof OmitFunctions<OmitEntityCollections<T>> = string & keyof OmitFunctions<OmitEntityCollections<T>>>({
+export function getColumnsToSelect<T extends AnyRecord, K extends string & keyof OmitFunctions<T> = string & keyof OmitFunctions<T>>({
   model,
   select,
 }: {
@@ -2583,7 +2583,7 @@ function convertSortToOrderBy<T extends AnyRecord>(sort: Record<string, unknown>
   if (typeof sort === 'string') {
     for (const sortPart of sort.split(',')) {
       const parts = sortPart.trim().split(' ');
-      const propertyName = parts.shift() as string & keyof OmitFunctions<OmitEntityCollections<T>>;
+      const propertyName = parts.shift() as string & keyof OmitFunctions<T>;
       result.push({
         propertyName,
         descending: /desc/i.test(parts.join('')),
@@ -2595,7 +2595,7 @@ function convertSortToOrderBy<T extends AnyRecord>(sort: Record<string, unknown>
       if (orderValue && typeof orderValue === 'object' && 'nearestTo' in orderValue) {
         const vectorSort = orderValue as { nearestTo: number[]; metric?: string };
         result.push({
-          propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
+          propertyName: propertyName as string & keyof OmitFunctions<T>,
           descending: false,
           vectorDistance: {
             vector: vectorSort.nearestTo,
@@ -2609,7 +2609,7 @@ function convertSortToOrderBy<T extends AnyRecord>(sort: Record<string, unknown>
         }
 
         result.push({
-          propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
+          propertyName: propertyName as string & keyof OmitFunctions<T>,
           descending,
         });
       }

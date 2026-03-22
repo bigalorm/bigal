@@ -23,7 +23,7 @@ import type {
   WhereQuery,
 } from './query/index.js';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
-import type { GetValueType, OmitEntityCollections, OmitFunctions, PickAsType, PickByValueType, PickFunctions, PoolLike, Populated, QueryResult } from './types/index.js';
+import type { GetValueType, OmitFunctions, PickAsType, PickByValueType, PickFunctions, PoolLike, Populated, QueryResult } from './types/index.js';
 import { groupBy, keyBy } from './utils/index.js';
 
 type FieldValue = boolean[] | Date | number[] | Record<string, unknown> | string[] | boolean | number | string | unknown | null;
@@ -342,7 +342,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
         const result = getSelectQueryAndParams({
           repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
           model: modelInstance.model,
-          select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
+          select: select ? (Array.from(select) as (string & keyof OmitFunctions<T>)[]) : undefined,
           where: filteredWhere,
           sorts,
           skip: 0,
@@ -365,7 +365,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
           const { query, params } = getSelectQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
-            select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
+            select: select ? (Array.from(select) as (string & keyof OmitFunctions<T>)[]) : undefined,
             where: filteredWhere,
             sorts,
             limit: 1,
@@ -646,7 +646,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
        * @param {string[]} columns - Column names for DISTINCT ON clause
        * @returns Query instance
        */
-      distinctOn(columns: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]): FindResult<T, TReturn> {
+      distinctOn(columns: (string & keyof OmitFunctions<T>)[]): FindResult<T, TReturn> {
         distinctOnColumns = columns;
 
         return this;
@@ -678,7 +678,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
         const result = getSelectQueryAndParams({
           repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
           model: modelInstance.model,
-          select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
+          select: select ? (Array.from(select) as (string & keyof OmitFunctions<T>)[]) : undefined,
           where: filteredWhere,
           sorts,
           skip: skip ?? 0,
@@ -704,7 +704,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
           const { query, params } = getSelectQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
-            select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
+            select: select ? (Array.from(select) as (string & keyof OmitFunctions<T>)[]) : undefined,
             where: filteredWhere,
             sorts,
             skip: skip ?? 0,
@@ -909,7 +909,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
       if (Array.isArray(sorts)) {
         for (const sort of sorts as string[]) {
           const parts = sort.trim().split(' ');
-          const propertyName = parts.shift() as string & keyof OmitFunctions<OmitEntityCollections<T>>;
+          const propertyName = parts.shift() as string & keyof OmitFunctions<T>;
           result.push({
             propertyName,
             descending: /desc/i.test(parts.join('')),
@@ -918,7 +918,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
       } else if (typeof sorts === 'string') {
         for (const sort of sorts.split(',')) {
           const parts = sort.trim().split(' ');
-          const propertyName = parts.shift() as string & keyof OmitFunctions<OmitEntityCollections<T>>;
+          const propertyName = parts.shift() as string & keyof OmitFunctions<T>;
           result.push({
             propertyName,
             descending: /desc/i.test(parts.join('')),
@@ -930,7 +930,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
           if (orderValue && typeof orderValue === 'object' && 'nearestTo' in orderValue) {
             const vectorSort = orderValue as { nearestTo: number[]; metric?: string };
             result.push({
-              propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
+              propertyName: propertyName as string & keyof OmitFunctions<T>,
               descending: false,
               vectorDistance: {
                 vector: vectorSort.nearestTo,
@@ -946,7 +946,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
             }
 
             result.push({
-              propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
+              propertyName: propertyName as string & keyof OmitFunctions<T>,
               descending,
             });
           }

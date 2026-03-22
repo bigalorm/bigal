@@ -1,4 +1,4 @@
-import type { OmitEntityCollections, OmitFunctions } from '../types/index.js';
+import type { OmitFunctions } from '../types/index.js';
 
 import type { AnyJoinInfo, JoinInfo, SubqueryJoinInfo } from './JoinedWhereQuery.js';
 import type { Sort } from './Sort.js';
@@ -18,7 +18,7 @@ type GetJoinColumns<TJoins extends AnyJoinInfo, TAlias extends string> =
   Extract<TJoins, { alias: TAlias }> extends SubqueryJoinInfo<TAlias, infer TColumns>
     ? TColumns
     : Extract<TJoins, { alias: TAlias }> extends JoinInfo<string, TAlias, infer TEntity>
-      ? string & keyof OmitFunctions<OmitEntityCollections<TEntity>>
+      ? string & keyof OmitFunctions<TEntity>
       : never;
 
 /**
