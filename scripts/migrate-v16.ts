@@ -196,24 +196,28 @@ function extractModelName(expr: string): string {
 }
 
 function generateColumnBuilder(col: ColumnInfo): string {
-  const dbName = col.dbColumnName ?? toSnakeCase(col.propertyName);
+  const derivedDbName = toSnakeCase(col.propertyName);
+  const explicitDbName = col.dbColumnName && col.dbColumnName !== derivedDbName ? col.dbColumnName : undefined;
 
   if (col.decoratorName === 'createDateColumn') {
-    return `createdAt('${dbName}')`;
+    return explicitDbName ? `createdAt({ name: '${explicitDbName}' })` : 'createdAt()';
   }
   if (col.decoratorName === 'updateDateColumn') {
-    return `updatedAt('${dbName}')`;
+    return explicitDbName ? `updatedAt({ name: '${explicitDbName}' })` : 'updatedAt()';
   }
   if (col.decoratorName === 'versionColumn') {
-    return `integer('${dbName}').notNull() // TODO: version column`;
+    return 'integer().notNull() // TODO: version column';
   }
   if (col.model) {
-    return `belongsTo(() => tables.${capitalize(col.model)}!, '${dbName}')`;
+    const modelName = capitalize(col.model);
+    const derivedFk = `${toSnakeCase(col.propertyName)}_id`;
+    const explicitFk = col.dbColumnName && col.dbColumnName !== derivedFk ? col.dbColumnName : undefined;
+    return explicitFk ? `belongsTo('${modelName}', '${explicitFk}')` : `belongsTo('${modelName}')`;
   }
   if (col.collection) {
-    let result = `hasMany(() => tables.${extractModelName(col.collection)}!)`;
+    let result = `hasMany('${extractModelName(col.collection)}')`;
     if (col.through) {
-      result += `.through(() => tables.${extractModelName(col.through)}!)`;
+      result += `.through('${extractModelName(col.through)}')`;
     }
     if (col.via) {
       result += `.via('${col.via}')`;
@@ -221,12 +225,15 @@ function generateColumnBuilder(col: ColumnInfo): string {
     return result;
   }
   if (col.decoratorName === 'primaryColumn') {
-    const builderFn = col.type ? (COLUMN_TYPE_MAP[col.type] ?? 'text') : 'integer';
-    return `${builderFn}('${dbName}').primaryKey()`;
+    const builderFn = col.type ? (COLUMN_TYPE_MAP[col.type] ?? 'text') : 'serial';
+    if (builderFn === 'serial') {
+      return 'serial().primaryKey()';
+    }
+    return explicitDbName ? `${builderFn}({ name: '${explicitDbName}' }).primaryKey()` : `${builderFn}().primaryKey()`;
   }
 
   const builderFn = col.type ? (COLUMN_TYPE_MAP[col.type] ?? 'text') : 'text';
-  let result = `${builderFn}('${dbName}')`;
+  let result = explicitDbName ? `${builderFn}({ name: '${explicitDbName}' })` : `${builderFn}()`;
   if (col.required) {
     result += '.notNull()';
   }
@@ -238,27 +245,12 @@ function generateColumnBuilder(col: ColumnInfo): string {
 
 function generateTableDefinition(info: TableInfo): string {
   const lines: string[] = [];
-  const schemaVar = `${info.className.charAt(0).toLowerCase() + info.className.slice(1)}Schema`;
-
-  lines.push(`const ${schemaVar} = {`);
-
-  if (info.baseClass && info.baseClass !== 'Entity') {
-    lines.push('  ...modelBase,');
-  }
-
-  for (const col of info.columns) {
-    lines.push(`  ${col.propertyName}: ${generateColumnBuilder(col)},`);
-  }
-
-  lines.push('};');
-  lines.push('');
+  const varName = info.className;
+  const fn = info.readonly ? 'view' : 'table';
 
   const options: string[] = [];
   if (info.schema) {
     options.push(`schema: '${info.schema}'`);
-  }
-  if (info.readonly) {
-    options.push('readonly: true');
   }
   if (info.connection) {
     options.push(`connection: '${info.connection}'`);
@@ -268,13 +260,18 @@ function generateTableDefinition(info: TableInfo): string {
   }
 
   const optionsStr = options.length ? `, { ${options.join(', ')} }` : '';
-  const varName = info.className;
 
-  lines.push(`const ${varName} = table('${info.tableName}', ${schemaVar}${optionsStr});`);
-  lines.push(`tables.${varName} = ${varName};`);
-  lines.push('');
-  lines.push(`type ${varName}Select = InferSelect<typeof ${schemaVar}>;`);
-  lines.push(`type ${varName}Insert = InferInsert<typeof ${schemaVar}>;`);
+  lines.push(`export const ${varName} = ${fn}('${info.tableName}', {`);
+
+  if (info.baseClass && info.baseClass !== 'Entity') {
+    lines.push('  ...modelBase,');
+  }
+
+  for (const col of info.columns) {
+    lines.push(`  ${col.propertyName}: ${generateColumnBuilder(col)},`);
+  }
+
+  lines.push(`}${optionsStr});`);
 
   if (info.hasInstanceMethods.length) {
     lines.push('');
@@ -318,8 +315,18 @@ function generateImports(tableInfos: TableInfo[]): string {
     }
   }
 
+  // Use 'serial' for integer primary keys by default
+  if (tableInfos.some((tableInfo) => tableInfo.columns.some((col) => col.decoratorName === 'primaryColumn' && (!col.type || col.type === 'integer')))) {
+    builders.add('serial');
+  }
+
+  // Add view() if any readonly models
+  if (tableInfos.some((tableInfo) => tableInfo.readonly)) {
+    builders.add('view');
+  }
+
   const sorted = [...builders].sort();
-  return `import { ${sorted.join(', ')} } from 'bigal';\nimport type { InferInsert, InferSelect, TableDefinition } from 'bigal';`;
+  return `import { ${sorted.join(', ')} } from 'bigal';`;
 }
 
 function processFile(sourceFile: SourceFile): string | undefined {
@@ -341,14 +348,11 @@ function processFile(sourceFile: SourceFile): string | undefined {
 
   lines.push(generateImports(fileTableInfos));
   lines.push('');
-  lines.push('// eslint-disable-next-line @typescript-eslint/no-explicit-any -- registry for circular references');
-  lines.push('const tables: Record<string, TableDefinition<any, any>> = {};');
-  lines.push('');
 
   const hasBase = fileTableInfos.some((tableInfo) => tableInfo.baseClass && tableInfo.baseClass !== 'Entity');
   if (hasBase) {
     lines.push('// TODO: define shared base columns (extracted from base class)');
-    lines.push("// const modelBase = { id: serial('id').primaryKey() };");
+    lines.push('// const modelBase = { id: serial().primaryKey() };');
     lines.push('');
   }
 
