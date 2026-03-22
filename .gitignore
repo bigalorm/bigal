@@ -30,3 +30,7 @@ skills-lock.json
 .dolt/
 *.db
 .beads
+
+docs/brainstorm
+docs/plans
+docs/research
