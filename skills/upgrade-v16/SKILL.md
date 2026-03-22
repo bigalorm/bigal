@@ -159,7 +159,6 @@ const Product = bigal.getRepository(Product);
 - Remove `import { Entity, column, primaryColumn, ... } from 'bigal'`
 - Remove `experimentalDecorators: true` from tsconfig.json
 - Remove `useDefineForClassFields: false` from tsconfig.json
-- Remove `.toJSON()` calls -- results are always plain objects
 - Remove `NotEntity<T>` wrappers -- no longer needed
 
 ### Step 6: Update type references

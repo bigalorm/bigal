@@ -8,10 +8,8 @@ import type {
   FindArgs,
   FindOneArgs,
   FindOneResult,
-  FindOneResultJSON,
   FindQueryWithCount,
   FindResult,
-  FindResultJSON,
   FindWithCountResult,
   JoinDefinition,
   OrderBy,
@@ -225,8 +223,6 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
     const manuallySetFields: ManuallySetField[] = [];
     const sorts: OrderBy<T>[] = sort ? this._convertSortsToOrderBy(sort) : [];
     const joins: JoinDefinition[] = [];
-    let returnAsPlainObjects = false;
-
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const modelInstance = this;
 
@@ -341,10 +337,6 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
 
         return this as FindOneResult<T, Omit<TReturn, TProperty> & PickAsType<T, TProperty, TValue>>;
       },
-      toJSON(): FindOneResultJSON<T, TReturn> {
-        returnAsPlainObjects = true;
-        return this as unknown as FindOneResultJSON<T, TReturn>;
-      },
       toSQL(): { params: readonly unknown[]; sql: string } {
         const filteredWhere = modelInstance._applyFilters(where as Record<string, unknown>, filterOverrides) as WhereQuery<T>;
         const result = getSelectQueryAndParams({
@@ -400,7 +392,6 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
 
           const firstResult = results.rows[0];
           if (firstResult) {
-            void returnAsPlainObjects; // Always plain objects now
             const result = modelInstance._buildPlainObject(firstResult);
 
             if (populates.length) {
@@ -501,7 +492,6 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
     const sorts = sort ? this._convertSortsToOrderBy(sort) : [];
     const joins: JoinDefinition[] = [];
     let includeCount = false;
-    let returnAsPlainObjects = false;
     let distinctOnColumns: string[] | undefined;
 
     // eslint-disable-next-line @typescript-eslint/no-this-alias
@@ -683,10 +673,6 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
         includeCount = true;
         return this as unknown as FindQueryWithCount<T, TReturn>;
       },
-      toJSON(): FindResultJSON<T, TReturn> {
-        returnAsPlainObjects = true;
-        return this as unknown as FindResultJSON<T, TReturn>;
-      },
       toSQL(): { params: readonly unknown[]; sql: string } {
         const filteredWhere = modelInstance._applyFilters(where as Record<string, unknown>, filterOverrides) as WhereQuery<T>;
         const result = getSelectQueryAndParams({
@@ -758,7 +744,6 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
               })
             : results.rows;
 
-          void returnAsPlainObjects; // Always plain objects now
           const entities = modelInstance._buildPlainObjects(rows);
 
           if (populates.length) {

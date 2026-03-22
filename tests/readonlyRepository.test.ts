@@ -1766,7 +1766,7 @@ describe('ReadonlyRepository', () => {
       expect(productResult.store.name).toBe(store.name);
     });
 
-    describe('toJSON()', () => {
+    describe('plain objects', () => {
       it('should return plain object without prototype chain', async () => {
         mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
@@ -4205,7 +4205,7 @@ describe('ReadonlyRepository', () => {
       });
     });
 
-    describe('toJSON()', () => {
+    describe('plain objects', () => {
       it('should return plain objects without prototype chain', async () => {
         const products = [generateProduct({ store: store.id }), generateProduct({ store: store.id })];
 
@@ -4364,7 +4364,7 @@ describe('ReadonlyRepository', () => {
         expect(query).toBe('SELECT DISTINCT ON ("store_id") "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" ORDER BY "store_id" LIMIT 10');
       });
 
-      it('should work with toJSON', async () => {
+      it('should return plain objects', async () => {
         const products = [generateProduct({ store: store.id })];
         mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
 

@@ -80,8 +80,6 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
       }
     }
 
-    const returnAsPlainObjects = false;
-
     type CreateResultType = CreateResult<T> | CreateResultArray<T>;
     const result = {
       toSQL(): { params: readonly unknown[]; sql: string } {
@@ -140,7 +138,6 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
 
           if (returnRecords) {
             if (isArray) {
-              void returnAsPlainObjects; // Always plain objects now
               const entities = modelInstance._buildPlainObjects(results.rows);
 
               if (modelInstance._afterCreate) {
@@ -158,7 +155,6 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
 
             const firstResult = results.rows[0];
             if (firstResult) {
-              void returnAsPlainObjects; // Always plain objects now
               const entity = modelInstance._buildPlainObject(firstResult);
 
               if (modelInstance._afterCreate) {
@@ -250,8 +246,6 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
       }
     }
 
-    const returnAsPlainObjects = false;
-
     const result = {
       toSQL(): { params: readonly unknown[]; sql: string } {
         const { query, params } = getUpdateQueryAndParams({
@@ -300,7 +294,6 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
           }
 
           if (returnRecords) {
-            void returnAsPlainObjects; // Always plain objects now
             const entities = modelInstance._buildPlainObjects(results.rows);
 
             if (modelInstance._afterUpdate) {
@@ -374,7 +367,6 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
     const modelInstance = this;
     const returnSelect = options?.returnSelect;
     const returnRecords = options?.returnRecords ?? !!returnSelect;
-    const returnAsPlainObjects = false;
 
     type DestroyResultType = DestroyResult<T, void> | DestroyResultWithRecords<T>;
     const result = {
@@ -442,7 +434,6 @@ export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> imple
           }
 
           if (returnRecords) {
-            void returnAsPlainObjects; // Always plain objects now
             const entities = modelInstance._buildPlainObjects(queryResult.rows);
             return await resolve(entities);
           }

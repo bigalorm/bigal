@@ -14,7 +14,7 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { Project, SyntaxKind } from 'ts-morph';
-import type { ClassDeclaration, Decorator, ObjectLiteralExpression, PropertyAssignment, SourceFile } from 'ts-morph';
+import type { CallExpression, ClassDeclaration, Decorator, ObjectLiteralExpression, PropertyAssignment, SourceFile } from 'ts-morph';
 
 const COLUMN_TYPE_MAP: Record<string, string> = {
   string: 'text',
@@ -329,6 +329,41 @@ function generateImports(tableInfos: TableInfo[]): string {
   return `import { ${sorted.join(', ')} } from 'bigal';`;
 }
 
+/**
+ * Strips `.toJSON()` calls from query chains.
+ * Results are always plain objects in v16, so `.toJSON()` is unnecessary.
+ * Returns the number of calls removed.
+ * @param {object} sourceFile
+ */
+function stripToJSON(sourceFile: SourceFile): number {
+  let removedCount = 0;
+
+  // Find all .toJSON() call expressions and remove them from chains
+  // We iterate in reverse to avoid position shifts from earlier edits
+  const callExpressions = sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression);
+  const toJsonCalls: CallExpression[] = [];
+
+  for (const call of callExpressions) {
+    const expression = call.getExpression();
+    if (expression.getKind() === SyntaxKind.PropertyAccessExpression) {
+      const propAccess = expression.asKind(SyntaxKind.PropertyAccessExpression);
+      if (propAccess?.getName() === 'toJSON' && call.getArguments().length === 0) {
+        toJsonCalls.push(call);
+      }
+    }
+  }
+
+  // Process in reverse order to preserve positions
+  for (const call of toJsonCalls.reverse()) {
+    const propAccess = call.getExpression().asKind(SyntaxKind.PropertyAccessExpression)!;
+    const receiver = propAccess.getExpression();
+    call.replaceWithText(receiver.getText());
+    removedCount++;
+  }
+
+  return removedCount;
+}
+
 function processFile(sourceFile: SourceFile): string | undefined {
   const classes = sourceFile.getClasses();
   const fileTableInfos: TableInfo[] = [];
@@ -410,8 +445,20 @@ function main(): void {
 
   let convertedCount = 0;
   let skippedCount = 0;
+  let toJsonRemovedCount = 0;
 
   for (const sourceFile of sourceFiles) {
+    const toJsonRemoved = stripToJSON(sourceFile);
+    if (toJsonRemoved > 0) {
+      toJsonRemovedCount += toJsonRemoved;
+      if (writeMode) {
+        sourceFile.saveSync();
+        console.log(`  stripped ${toJsonRemoved} .toJSON() call(s): ${sourceFile.getFilePath()}`);
+      } else {
+        console.log(`=== ${sourceFile.getFilePath()} — ${toJsonRemoved} .toJSON() call(s) to remove ===`);
+      }
+    }
+
     const result = processFile(sourceFile);
     if (result) {
       convertedCount++;
@@ -429,8 +476,8 @@ function main(): void {
     }
   }
 
-  console.log(`\nSummary: ${convertedCount} converted, ${skippedCount} skipped`);
-  if (!writeMode && convertedCount) {
+  console.log(`\nSummary: ${convertedCount} model(s) converted, ${skippedCount} skipped, ${toJsonRemovedCount} .toJSON() call(s) stripped`);
+  if (!writeMode && (convertedCount || toJsonRemovedCount)) {
     console.log('Run with --write to apply changes.');
   }
 }
