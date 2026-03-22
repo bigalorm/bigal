@@ -47,9 +47,11 @@ export type WhereQuery<T extends Record<string, unknown>> = {
     ? NegatableConstraint<WhereClauseValue<T>> | WhereQueryStatement<T[K]> // Allow entity objects (via Pick<T,'id'>) and literal id values
     : T[K] extends (infer U)[] | undefined // If property type is an array, allow where query statements for the array type
       ? WhereQueryStatement<ExcludeUndefined<U>>
-      :
-          | NegatableConstraint<LiteralValues<ExcludeUndefined<T[K]>>> // Allow Single object and arrays of type
-          | WhereQueryStatement<ExcludeUndefined<T[K]>>; // Allow nested where query statements
+      : T[K] extends number | null // BelongsTo FK fields: also accept hydrated entity objects
+        ? NegatableConstraint<LiteralValues<ExcludeUndefined<T[K]>>> | Record<string, unknown> | WhereQueryStatement<ExcludeUndefined<T[K]>>
+        :
+            | NegatableConstraint<LiteralValues<ExcludeUndefined<T[K]>>> // Allow Single object and arrays of type
+            | WhereQueryStatement<ExcludeUndefined<T[K]>>; // Allow nested where query statements
 } & {
   and?: WhereQuery<T>[];
   or?: WhereQuery<T>[];

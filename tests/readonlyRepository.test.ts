@@ -1728,17 +1728,17 @@ describe('ReadonlyRepository', () => {
       const productResult = await ProductRepository.findOne({}).UNSAFE_withOriginalFieldType('store');
       assert(productResult);
       const storeResult = await StoreRepository.findOne({}).where({
-        // @ts-expect-error -- UNSAFE_withOriginalFieldType returns unknown for FK fields
         id: productResult.store,
       });
       assert(storeResult);
 
+      // @ts-expect-error -- UNSAFE manual populate: assigning entity object to FK field
       productResult.store = storeResult;
-      // @ts-expect-error -- populated property type pending Entity migration
+      // @ts-expect-error -- store is typed as number, but manually populated above
       expect(productResult.store.id).toBe(store.id);
-      // @ts-expect-error -- populated property type pending Entity migration
+      // @ts-expect-error -- store is typed as number, but manually populated above
       assert(productResult.store.name);
-      // @ts-expect-error -- populated property type pending Entity migration
+      // @ts-expect-error -- store is typed as number, but manually populated above
       expect(productResult.store.name).toBe(store.name);
     });
 
@@ -1755,12 +1755,13 @@ describe('ReadonlyRepository', () => {
         )
         .mockResolvedValueOnce(getQueryResult([store]));
 
+      // @ts-expect-error -- UNSAFE: manually setting store to full entity object
       const productResult = await ProductRepository.findOne({}).UNSAFE_withFieldValue('store', store);
       assert(productResult);
 
-      // @ts-expect-error -- populated property type pending Entity migration
+      // @ts-expect-error -- store is typed as number, but manually overridden above
       expect(productResult.store.id).toBe(store.id);
-      // @ts-expect-error -- populated property type pending Entity migration
+      // @ts-expect-error -- store is typed as number, but manually overridden above
       assert(productResult.store.name);
       // @ts-expect-error -- populated property type pending Entity migration
       expect(productResult.store.name).toBe(store.name);
@@ -2322,17 +2323,17 @@ describe('ReadonlyRepository', () => {
       assert(productResult);
 
       const stores = await StoreRepository.find({}).where({
-        // @ts-expect-error -- UNSAFE_withOriginalFieldType returns unknown for FK fields
         id: productResult.store,
       });
       expect(stores.length).toBe(1);
       const [storeResult] = stores;
       assert(storeResult);
 
+      // @ts-expect-error -- UNSAFE manual populate: assigning entity object to FK field
       productResult.store = storeResult;
-      // @ts-expect-error -- populated property type pending Entity migration
+      // @ts-expect-error -- store is typed as number, but manually populated above
       expect(productResult.store.id).toBe(store.id);
-      // @ts-expect-error -- populated property type pending Entity migration
+      // @ts-expect-error -- store is typed as number, but manually populated above
       assert(productResult.store.name);
       // @ts-expect-error -- populated property type pending Entity migration
       expect(productResult.store.name).toBe(store.name);
@@ -2372,7 +2373,6 @@ describe('ReadonlyRepository', () => {
           .join('store')
           .where({
             store: {
-              // @ts-expect-error -- joined table filter not typed for inferred schemas
               name: {
                 like: 'Acme',
               },
@@ -2400,7 +2400,6 @@ describe('ReadonlyRepository', () => {
         const result = await ProductRepository.find({})
           .leftJoin('store')
           .where({
-            // @ts-expect-error -- joined table filter not typed for inferred schemas
             store: { name: { like: '%mart%' } },
           });
         assert(result);
@@ -2425,7 +2424,7 @@ describe('ReadonlyRepository', () => {
         const result = await ProductRepository.find({})
           .join('store', 'primaryStore')
           .where({
-            // @ts-expect-error -- joined table filter not typed for inferred schemas
+            // @ts-expect-error -- join alias keys are not yet typed in JoinedWhereQuery
             primaryStore: { name: 'Acme' },
           });
         assert(result);
@@ -2451,7 +2450,7 @@ describe('ReadonlyRepository', () => {
           .join('store')
           .where({
             name: 'Widget',
-            // @ts-expect-error -- joined table filter not typed for inferred schemas
+
             store: { name: 'Acme' },
           });
         assert(result);
@@ -4127,7 +4126,6 @@ describe('ReadonlyRepository', () => {
           .join('store')
           .where({
             store: {
-              // @ts-expect-error -- joined table filter not typed for inferred schemas
               name: 'Test',
             },
           })

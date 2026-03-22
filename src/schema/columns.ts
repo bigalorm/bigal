@@ -75,7 +75,10 @@ export function real(options?: ColumnOptions): ColumnBuilder<RealConfig> {
   return new ColumnBuilder('REAL', options?.name) as unknown as ColumnBuilder<RealConfig>;
 }
 
-export function doublePrecision(options?: ColumnOptions): ColumnBuilder<DoublePrecisionConfig> {
+/** Alias for `real()`. Maps to PostgreSQL REAL (single-precision floating point). */
+export const float = real;
+
+export function double(options?: ColumnOptions): ColumnBuilder<DoublePrecisionConfig> {
   return new ColumnBuilder('DOUBLE PRECISION', options?.name) as unknown as ColumnBuilder<DoublePrecisionConfig>;
 }
 

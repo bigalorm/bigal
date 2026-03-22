@@ -1,17 +1,11 @@
-import { belongsTo, createdAt, hasMany, table, text, textArray } from '../../src/schema/index.js';
+import { createdAt, table } from '../../src/schema/index.js';
 
-import { modelBase } from './base.js';
+import { productColumns } from './Product.js';
 
 export const ProductWithCreatedAt = table(
   'products',
   {
-    ...modelBase,
-    name: text().notNull(),
-    sku: text(),
-    location: text(),
-    aliases: textArray({ name: 'alias_names' }).default([]),
-    store: belongsTo('Store'),
-    categories: hasMany('Category').through('ProductCategory').via('product'),
+    ...productColumns,
     createdAt: createdAt(),
   },
   { modelName: 'ProductWithCreatedAt' },

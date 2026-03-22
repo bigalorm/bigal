@@ -11,7 +11,7 @@ import {
   createdAt,
   date,
   dateColumn,
-  doublePrecision,
+  double,
   hasMany,
   integer,
   integerArray,
@@ -157,7 +157,7 @@ const kitchenSinkSchema = {
   bigintCol: bigserial(),
   smallintCol: smallint(),
   realCol: real(),
-  doubleCol: doublePrecision(),
+  doubleCol: double(),
   boolCol: booleanColumn().notNull().default(false),
   timestampCol: timestamp(),
   timestamptzCol: timestamptz(),
@@ -345,7 +345,7 @@ describe('Schema builder type inference', () => {
         expectTypeOf<KitchenSinkSelect['realCol']>().toEqualTypeOf<number | null>();
       });
 
-      it('doublePrecision → number | null', () => {
+      it('double → number | null', () => {
         expectTypeOf<KitchenSinkSelect['doubleCol']>().toEqualTypeOf<number | null>();
       });
 
