@@ -1,10 +1,6 @@
-import type { Entity, NotEntityBrand } from '../Entity.js';
-
 /**
- * Removes all entity collection properties. To be used as a re-map key function
+ * Passes through all properties. In the new schema API, collections are already excluded by InferSelect.
+ * Preserved for backward compatibility with internal repository code.
  */
-export type ExcludeEntityCollections<T, K extends PropertyKey> = T extends NotEntityBrand[] | undefined
-  ? K // Return the key if collection is a NotEntityBrand array
-  : T extends Entity[] | undefined
-    ? never // If T is an entity array, remove
-    : K; // Otherwise, return the key
+// oxlint-disable-next-line no-unused-vars -- T required at call sites for API compatibility
+export type ExcludeEntityCollections<_T, K extends PropertyKey> = K;

@@ -1,4 +1,3 @@
-import type { Entity } from './Entity.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { CreateOptions } from './query/CreateOptions.js';
 import type {
@@ -14,9 +13,9 @@ import type {
   WhereQuery,
 } from './query/index.js';
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
-import type { CreateUpdateParams, QueryResult } from './types/index.js';
+import type { CreateUpdateParams } from './types/index.js';
 
-export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
+export interface IRepository<T extends Record<string, unknown>> extends IReadonlyRepository<T> {
   /**
    * Creates an object using the specified values
    * @param {object} values - Values to insert as multiple new objects.
@@ -105,5 +104,5 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResultWithRecords<T, QueryResult<T>>;
+  destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResultWithRecords<T>;
 }

@@ -1,4 +1,3 @@
-import type { Entity } from './Entity.js';
 import type { IRepository } from './IRepository.js';
 import type { CreateOptions } from './query/CreateOptions.js';
 import type {
@@ -18,7 +17,9 @@ import { ReadonlyRepository } from './ReadonlyRepository.js';
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper.js';
 import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions, QueryResult } from './types/index.js';
 
-export class Repository<T extends Entity> extends ReadonlyRepository<T> implements IRepository<T> {
+type AnyRecord = Record<string, unknown>;
+
+export class Repository<T extends AnyRecord> extends ReadonlyRepository<T> implements IRepository<T> {
   /**
    * Creates an object using the specified values
    * @param {object} values - Values to insert as multiple new objects.
@@ -79,13 +80,20 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
       }
     }
 
-    let returnAsPlainObjects = false;
+    const returnAsPlainObjects = false;
 
     type CreateResultType = CreateResult<T> | CreateResultArray<T>;
     const result = {
-      toJSON(): CreateResultType {
-        returnAsPlainObjects = true;
-        return result as unknown as CreateResultType;
+      toSQL(): { params: readonly unknown[]; sql: string } {
+        const { query, params } = getInsertQueryAndParams({
+          repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+          model: modelInstance.model,
+          values: values as CreateUpdateParams<T>,
+          returnRecords,
+          returnSelect,
+        });
+
+        return { sql: query, params };
       },
       async then<TResult = QueryResult<T> | QueryResult<T>[], TErrorResult = never>(
         resolve?: ((value: QueryResult<T> | QueryResult<T>[] | void) => PromiseLike<TResult> | TResult) | null,
@@ -96,12 +104,12 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
             return resolve ? await resolve([]) : ([] as unknown as TResult);
           }
 
-          const beforeCreate = modelInstance._type.beforeCreate;
+          const beforeCreate = modelInstance._beforeCreate;
           if (beforeCreate) {
             if (isArray) {
-              values = await Promise.all((values as CreateUpdateParams<T>[]).map(async (value) => beforeCreate(value)));
+              values = await Promise.all((values as CreateUpdateParams<T>[]).map(async (value) => beforeCreate(value as Partial<T>) as CreateUpdateParams<T>));
             } else {
-              values = await beforeCreate(values as CreateUpdateParams<T>);
+              values = (await beforeCreate(values as Partial<T>)) as CreateUpdateParams<T>;
             }
           }
 
@@ -114,20 +122,65 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
             onConflict: options?.onConflict,
           });
 
+          const onQuery = modelInstance._onQuery;
+          let startTime: number | undefined;
+          if (onQuery) {
+            startTime = performance.now();
+          }
+
           const results = await modelInstance._pool.query<Partial<QueryResult<T>>>(query, params);
+
+          if (onQuery) {
+            try {
+              onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance.model.tableName, operation: 'create' });
+            } catch {
+              // Swallow -- observability must not crash queries
+            }
+          }
+
           if (returnRecords) {
             if (isArray) {
-              const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(results.rows) : modelInstance._buildInstances(results.rows);
+              void returnAsPlainObjects; // Always plain objects now
+              const entities = modelInstance._buildPlainObjects(results.rows);
+
+              if (modelInstance._afterCreate) {
+                await Promise.all(
+                  entities.map((entity) =>
+                    Promise.resolve(modelInstance._afterCreate!(entity as T)).catch(() => {
+                      /* side-effect only */
+                    }),
+                  ),
+                );
+              }
+
               return resolve ? await resolve(entities) : (entities as unknown as TResult);
             }
 
             const firstResult = results.rows[0];
             if (firstResult) {
-              const entity = returnAsPlainObjects ? modelInstance._buildPlainObject(firstResult) : modelInstance._buildInstance(firstResult);
+              void returnAsPlainObjects; // Always plain objects now
+              const entity = modelInstance._buildPlainObject(firstResult);
+
+              if (modelInstance._afterCreate) {
+                try {
+                  await modelInstance._afterCreate(entity as T);
+                } catch {
+                  /* side-effect only */
+                }
+              }
+
               return resolve ? await resolve(entity) : (entity as unknown as TResult);
             }
 
             throw new Error('Unknown error getting created rows back from the database');
+          }
+
+          if (modelInstance._afterCreate) {
+            try {
+              await modelInstance._afterCreate({} as T);
+            } catch {
+              /* side-effect only */
+            }
           }
 
           return resolve ? await resolve(undefined) : (undefined as unknown as TResult);
@@ -197,20 +250,28 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
       }
     }
 
-    let returnAsPlainObjects = false;
+    const returnAsPlainObjects = false;
 
     const result = {
-      toJSON(): UpdateResult<T> {
-        returnAsPlainObjects = true;
-        return result as unknown as UpdateResult<T>;
+      toSQL(): { params: readonly unknown[]; sql: string } {
+        const { query, params } = getUpdateQueryAndParams({
+          repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+          model: modelInstance.model,
+          where,
+          values: values as CreateUpdateParams<T>,
+          returnRecords,
+          returnSelect,
+        });
+
+        return { sql: query, params };
       },
       async then<TResult = QueryResult<T>[], TErrorResult = never>(
         resolve?: ((value: QueryResult<T>[] | void) => PromiseLike<TResult> | TResult) | null,
         reject?: ((error: Error) => PromiseLike<TErrorResult> | TErrorResult) | null,
       ): Promise<TErrorResult | TResult> {
         try {
-          if (modelInstance._type.beforeUpdate) {
-            values = await modelInstance._type.beforeUpdate(values);
+          if (modelInstance._beforeUpdate) {
+            values = (await modelInstance._beforeUpdate(values as Partial<T>)) as CreateUpdateParams<T>;
           }
 
           const { query, params } = getUpdateQueryAndParams({
@@ -222,11 +283,45 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
             returnSelect,
           });
 
+          const onQuery = modelInstance._onQuery;
+          let startTime: number | undefined;
+          if (onQuery) {
+            startTime = performance.now();
+          }
+
           const results = await modelInstance._pool.query<Partial<QueryResult<T>>>(query, params);
 
+          if (onQuery) {
+            try {
+              onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance.model.tableName, operation: 'update' });
+            } catch {
+              // Swallow -- observability must not crash queries
+            }
+          }
+
           if (returnRecords) {
-            const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(results.rows) : modelInstance._buildInstances(results.rows);
+            void returnAsPlainObjects; // Always plain objects now
+            const entities = modelInstance._buildPlainObjects(results.rows);
+
+            if (modelInstance._afterUpdate) {
+              await Promise.all(
+                entities.map((entity) =>
+                  Promise.resolve(modelInstance._afterUpdate!(entity as T)).catch(() => {
+                    /* side-effect only */
+                  }),
+                ),
+              );
+            }
+
             return resolve ? await resolve(entities) : (entities as unknown as TResult);
+          }
+
+          if (modelInstance._afterUpdate) {
+            try {
+              await modelInstance._afterUpdate({} as T);
+            } catch {
+              /* side-effect only */
+            }
           }
 
           return resolve ? await resolve(undefined) : (undefined as unknown as TResult);
@@ -258,7 +353,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResultWithRecords<T, QueryResult<T>>;
+  public destroy(where: WhereQuery<T>, options: DeleteOptions<T>): DestroyResultWithRecords<T>;
 
   /**
    * Destroys object(s) matching the where query
@@ -268,7 +363,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]|void} `void` or records affected if returnRecords=true
    */
-  public destroy(where: WhereQuery<T> = {}, options?: DeleteOptions<T>): DestroyResult<T, void> | DestroyResultWithRecords<T, QueryResult<T>> {
+  public destroy(where: WhereQuery<T> = {}, options?: DeleteOptions<T>): DestroyResult<T, void> | DestroyResultWithRecords<T> {
     if (this.model.readonly) {
       throw new Error(`${this.model.name} is readonly.`);
     }
@@ -279,18 +374,25 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
     const modelInstance = this;
     const returnSelect = options?.returnSelect;
     const returnRecords = options?.returnRecords ?? !!returnSelect;
-    let returnAsPlainObjects = false;
+    const returnAsPlainObjects = false;
 
-    type DestroyResultType = DestroyResult<T, void> | DestroyResultWithRecords<T, QueryResult<T>>;
+    type DestroyResultType = DestroyResult<T, void> | DestroyResultWithRecords<T>;
     const result = {
       where(value: WhereQuery<T>): DestroyResultType {
         where = value;
 
         return result as unknown as DestroyResultType;
       },
-      toJSON(): DestroyResultType {
-        returnAsPlainObjects = true;
-        return result as unknown as DestroyResultType;
+      toSQL(): { params: readonly unknown[]; sql: string } {
+        const { query, params } = getDeleteQueryAndParams({
+          repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+          model: modelInstance.model,
+          where,
+          returnRecords,
+          returnSelect,
+        });
+
+        return { sql: query, params };
       },
       async then<TResult = QueryResult<T>[], TErrorResult = void>(
         resolve: (result: QueryResult<T>[] | void) => PromiseLike<TResult> | TResult,
@@ -301,18 +403,47 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
         }
 
         try {
+          // beforeDestroy can modify the where clause or throw to abort
+          let resolvedWhere = where;
+          if (modelInstance._beforeDestroy) {
+            resolvedWhere = (await modelInstance._beforeDestroy(where as Record<string, unknown>)) as WhereQuery<T>;
+          }
+
           const { query, params } = getDeleteQueryAndParams({
             repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
             model: modelInstance.model,
-            where,
+            where: resolvedWhere,
             returnRecords,
             returnSelect,
           });
 
+          const onQuery = modelInstance._onQuery;
+          let startTime: number | undefined;
+          if (onQuery) {
+            startTime = performance.now();
+          }
+
           const queryResult = await modelInstance._pool.query<Partial<QueryResult<T>>>(query, params);
 
+          if (onQuery) {
+            try {
+              onQuery({ sql: query, params, duration: performance.now() - startTime!, model: modelInstance.model.tableName, operation: 'destroy' });
+            } catch {
+              // Swallow -- observability must not crash queries
+            }
+          }
+
+          if (modelInstance._afterDestroy) {
+            try {
+              await modelInstance._afterDestroy({ rowCount: queryResult.rowCount ?? 0 });
+            } catch {
+              /* side-effect only */
+            }
+          }
+
           if (returnRecords) {
-            const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(queryResult.rows) : modelInstance._buildInstances(queryResult.rows);
+            void returnAsPlainObjects; // Always plain objects now
+            const entities = modelInstance._buildPlainObjects(queryResult.rows);
             return await resolve(entities);
           }
 
@@ -330,6 +461,6 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
       },
     };
 
-    return result as DestroyResult<T, void> | DestroyResultWithRecords<T, QueryResult<T>>;
+    return result as DestroyResult<T, void> | DestroyResultWithRecords<T>;
   }
 }

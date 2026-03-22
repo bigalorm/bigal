@@ -4,8 +4,9 @@ description: Create, update, and destroy records with RETURNING support, query p
 
 # CRUD Operations
 
-BigAl repositories provide `create()`, `update()`, and `destroy()` methods. All three return affected records
-by default (using `RETURNING *`), and all support `returnRecords` and `returnSelect` options.
+BigAl repositories provide `create()`, `update()`, and `destroy()` methods. All three return affected
+records by default (using `RETURNING *`), and all support `returnRecords` and `returnSelect` options.
+Results are always plain objects.
 
 ## Create
 
@@ -156,3 +157,22 @@ const products = await productRepository.destroy({ id: [42, 43] }, { returnSelec
 ```
 
 > The primary key is always included. Pass an empty array to return only the primary key.
+
+## Initialization example
+
+```ts
+import { createBigAl, defineTable as table, serial, text, integer, createdAt, updatedAt } from 'bigal';
+import { Pool } from 'postgres-pool';
+
+const Product = table('products', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  priceCents: integer('price_cents').notNull(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+const pool = new Pool('postgres://localhost/mydb');
+const bigal = createBigAl({ models: [Product], pool });
+const productRepository = bigal.getRepository(Product);
+```

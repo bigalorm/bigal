@@ -1,4 +1,3 @@
-import type { Entity } from '../Entity.js';
 import type { GetValueType, ModelRelationshipKeys, OmitEntityCollections, OmitFunctions, PickByValueType, PlainObject, Populated } from '../types/index.js';
 
 import type { FindQueryWithCount, FindQueryWithCountJSON } from './FindWithCountResult.js';
@@ -12,17 +11,21 @@ import type { WhereQuery } from './WhereQuery.js';
 
 // WhereQuery is used for leftJoin 'on' condition
 
-export interface FindResultJSON<T extends Entity, TReturn, TJoins extends AnyJoinInfo = never> extends PromiseLike<PlainObject<TReturn>[]> {
+export interface FindResultJSON<T extends Record<string, unknown>, TReturn, TJoins extends AnyJoinInfo = never> extends PromiseLike<PlainObject<TReturn>[]> {
   select<TKeys extends string & keyof T>(keys: TKeys[]): FindResultJSON<T, Pick<T, TKeys>, TJoins>;
   where(args: JoinedWhereQuery<T, TJoins>): FindResultJSON<T, TReturn, TJoins>;
-  populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T, TPopulateType extends GetValueType<T[TProperty], Entity>, TPopulateSelectKeys extends string & keyof TPopulateType>(
+  populate<
+    TProperty extends string & keyof PickByValueType<T, Record<string, unknown>> & keyof T,
+    TPopulateType extends GetValueType<T[TProperty], Record<string, unknown>>,
+    TPopulateSelectKeys extends string & keyof TPopulateType,
+  >(
     propertyName: TProperty,
     options?: PopulateArgs<TPopulateType, TPopulateSelectKeys>,
   ): FindResultJSON<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>, TJoins>;
   join<TProperty extends ModelRelationshipKeys<T>, TAlias extends string = TProperty>(
     propertyName: TProperty,
     alias?: TAlias,
-  ): FindResultJSON<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
+  ): FindResultJSON<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Record<string, unknown>>> | TJoins>;
   /**
    * Join a subquery with type-safe column tracking.
    * Use `agg()` helper when building the subquery to enable type-safe sorting.
@@ -44,8 +47,8 @@ export interface FindResultJSON<T extends Entity, TReturn, TJoins extends AnyJoi
   leftJoin<TProperty extends ModelRelationshipKeys<T>, TAlias extends string = TProperty>(
     propertyName: TProperty,
     alias?: TAlias,
-    on?: WhereQuery<GetValueType<T[TProperty], Entity>>,
-  ): FindResultJSON<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
+    on?: WhereQuery<GetValueType<T[TProperty], Record<string, unknown>>>,
+  ): FindResultJSON<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Record<string, unknown>>> | TJoins>;
   /**
    * Left join a subquery with type-safe column tracking.
    * Use `agg()` helper when building the subquery to enable type-safe sorting.
@@ -69,22 +72,26 @@ export interface FindResultJSON<T extends Entity, TReturn, TJoins extends AnyJoi
   skip(value: number): FindResultJSON<T, TReturn, TJoins>;
   paginate(options: PaginateOptions): FindResultJSON<T, TReturn, TJoins>;
   withCount(): FindQueryWithCountJSON<T, TReturn, TJoins>;
-  UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(
+  UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Record<string, unknown>> & keyof T>(
     propertyName: TProperty,
   ): FindResultJSON<T, Omit<TReturn, TProperty> & Pick<T, TProperty>, TJoins>;
 }
 
-export interface FindResult<T extends Entity, TReturn, TJoins extends AnyJoinInfo = never> extends PromiseLike<TReturn[]> {
+export interface FindResult<T extends Record<string, unknown>, TReturn, TJoins extends AnyJoinInfo = never> extends PromiseLike<TReturn[]> {
   select<TKeys extends string & keyof T>(keys: TKeys[]): FindResult<T, Pick<T, TKeys>, TJoins>;
   where(args: JoinedWhereQuery<T, TJoins>): FindResult<T, TReturn, TJoins>;
-  populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T, TPopulateType extends GetValueType<T[TProperty], Entity>, TPopulateSelectKeys extends string & keyof TPopulateType>(
+  populate<
+    TProperty extends string & keyof PickByValueType<T, Record<string, unknown>> & keyof T,
+    TPopulateType extends GetValueType<T[TProperty], Record<string, unknown>>,
+    TPopulateSelectKeys extends string & keyof TPopulateType,
+  >(
     propertyName: TProperty,
     options?: PopulateArgs<TPopulateType, TPopulateSelectKeys>,
   ): FindResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>, TJoins>;
   join<TProperty extends ModelRelationshipKeys<T>, TAlias extends string = TProperty>(
     propertyName: TProperty,
     alias?: TAlias,
-  ): FindResult<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
+  ): FindResult<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Record<string, unknown>>> | TJoins>;
   /**
    * Join a subquery with type-safe column tracking.
    * Use `agg()` helper when building the subquery to enable type-safe sorting.
@@ -106,8 +113,8 @@ export interface FindResult<T extends Entity, TReturn, TJoins extends AnyJoinInf
   leftJoin<TProperty extends ModelRelationshipKeys<T>, TAlias extends string = TProperty>(
     propertyName: TProperty,
     alias?: TAlias,
-    on?: WhereQuery<GetValueType<T[TProperty], Entity>>,
-  ): FindResult<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
+    on?: WhereQuery<GetValueType<T[TProperty], Record<string, unknown>>>,
+  ): FindResult<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Record<string, unknown>>> | TJoins>;
   /**
    * Left join a subquery with type-safe column tracking.
    * Use `agg()` helper when building the subquery to enable type-safe sorting.
@@ -131,10 +138,16 @@ export interface FindResult<T extends Entity, TReturn, TJoins extends AnyJoinInf
   skip(value: number): FindResult<T, TReturn, TJoins>;
   paginate(options: PaginateOptions): FindResult<T, TReturn, TJoins>;
   withCount(): FindQueryWithCount<T, TReturn, TJoins>;
-  UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(propertyName: TProperty): FindResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>, TJoins>;
+  UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Record<string, unknown>> & keyof T>(
+    propertyName: TProperty,
+  ): FindResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>, TJoins>;
   /**
    * Returns results as plain objects instead of entity class instances.
    * Useful for when data must be serializable.
    */
   toJSON(): FindResultJSON<T, TReturn, TJoins>;
+  /** Control global filters. false = disable all, { filterName: false } = disable specific */
+  filters(value: Record<string, false> | false): FindResult<T, TReturn, TJoins>;
+  /** Returns the generated SQL and parameters without executing the query. */
+  toSQL(): { params: readonly unknown[]; sql: string };
 }

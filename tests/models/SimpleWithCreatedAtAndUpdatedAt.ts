@@ -1,8 +1,14 @@
-import { updateDateColumn } from '../../src/index.js';
+import { createdAt, table, text, updatedAt } from '../../src/schema/index.js';
 
-import { SimpleWithCreatedAt } from './SimpleWithCreatedAt.js';
+import { modelBase } from './base.js';
 
-export class SimpleWithCreatedAtAndUpdatedAt extends SimpleWithCreatedAt {
-  @updateDateColumn()
-  public updatedAt!: Date;
-}
+export const SimpleWithCreatedAtAndUpdatedAt = table(
+  'simple',
+  {
+    ...modelBase,
+    name: text().notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  { modelName: 'SimpleWithCreatedAtAndUpdatedAt' },
+);

@@ -1,10 +1,9 @@
-import type { Entity } from './Entity.js';
 import type { ModelMetadata } from './metadata/index.js';
 import type { CountArgs } from './query/CountArgs.js';
 import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, WhereQuery } from './query/index.js';
 import type { QueryResult } from './types/index.js';
 
-export interface IReadonlyRepository<T extends Entity> {
+export interface IReadonlyRepository<T extends Record<string, unknown>> {
   readonly model: ModelMetadata<T>;
 
   /**
@@ -21,7 +20,7 @@ export interface IReadonlyRepository<T extends Entity> {
     // Return type used to pass through to all chained methods
     TReturn = QueryResult<Pick<T, K | 'id'>>,
   >(
-    args: FindOneArgs<T, K> | WhereQuery<T>,
+    args?: FindOneArgs<T, K> | WhereQuery<T>,
   ): FindOneResult<T, TReturn>;
 
   /**
@@ -40,7 +39,7 @@ export interface IReadonlyRepository<T extends Entity> {
     // Return type used to pass through to all chained methods
     TReturn = QueryResult<Pick<T, K | 'id'>>,
   >(
-    args: FindArgs<T, K> | WhereQuery<T>,
+    args?: FindArgs<T, K> | WhereQuery<T>,
   ): FindResult<T, TReturn>;
 
   /**

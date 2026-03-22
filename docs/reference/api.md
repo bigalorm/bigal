@@ -1,42 +1,234 @@
 ---
-description: Complete API reference for BigAl — initialize(), Repository, ReadonlyRepository, query builder methods, subquery(), decorators, and types.
+description: Complete API reference for BigAl -- createBigAl(), table(), column builders, relationships, repository methods, query builder, and types.
 ---
 
 # API Reference
 
 All public exports from `bigal`.
 
-## initialize()
+## createBigAl()
 
-Creates repositories for all provided models.
+Creates a BigAl instance with typed repositories for all provided table definitions.
 
 ```ts
-import { initialize } from 'bigal';
+import { createBigAl } from 'bigal';
 
-const repos = initialize({
-  models: [Product, Store],
+const bigal = createBigAl({
   pool,
   readonlyPool,
-  connections,
-  expose,
+  models: [Product, Store, Category, ProductCategory],
+  connections: {
+    audit: { pool: auditPool },
+  },
+  onQuery({ sql, params, duration, error, model, operation }) {
+    logger.debug({ sql, params, duration, model, operation });
+  },
 });
 ```
 
-**Parameters:** `InitializeOptions`
+**Parameters:** `BigAlOptions`
 
 | Option         | Type                          | Required | Description                                   |
 | -------------- | ----------------------------- | -------- | --------------------------------------------- |
-| `models`       | `EntityStatic<Entity>[]`      | Yes      | Model classes decorated with `@table()`       |
 | `pool`         | `PoolLike`                    | Yes      | Primary connection pool                       |
 | `readonlyPool` | `PoolLike`                    | No       | Pool for read operations (defaults to `pool`) |
+| `models`       | `TableDefinition[]`           | Yes      | All table definitions                         |
 | `connections`  | `Record<string, IConnection>` | No       | Named connections for multi-database setups   |
-| `expose`       | `(repo, metadata) => void`    | No       | Callback invoked for each created repository  |
+| `onQuery`      | `OnQueryCallback`             | No       | Query observability callback                  |
 
-**Returns:** `Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>`
+**Returns:** `BigAlInstance`
+
+All relationships are validated eagerly at construction time. If a `belongsTo` or `hasMany` references
+a table not included in `models`, `createBigAl()` throws immediately.
+
+## getRepository()
+
+Returns a typed read-write repository for a table definition.
+
+```ts
+const ProductRepo = bigal.getRepository(Product);
+// Type: IRepository<typeof Product.$inferSelect>
+```
+
+Throws if the table was not included in the `models` array.
+
+## getReadonlyRepository()
+
+Returns a typed read-only repository for a table definition.
+
+```ts
+const ViewRepo = bigal.getReadonlyRepository(StoreSummary);
+// Type: IReadonlyRepository<typeof StoreSummary.$inferSelect>
+```
+
+## table()
+
+Creates a table definition with column metadata and inferred types. Exported as `defineTable` from the
+main `'bigal'` package to avoid naming conflicts.
+
+```ts
+import { defineTable as table, serial, text } from 'bigal';
+
+export const Product = table(
+  'products',
+  {
+    id: serial('id').primaryKey(),
+    name: text('name').notNull(),
+  },
+  {
+    schema: 'public',
+    readonly: false,
+    connection: undefined,
+    hooks: {
+      beforeCreate(v) {
+        return v;
+      },
+    },
+  },
+);
+```
+
+**Parameters:**
+
+| Parameter   | Type               | Description                         |
+| ----------- | ------------------ | ----------------------------------- |
+| `tableName` | `string`           | Database table or view name         |
+| `schema`    | `SchemaDefinition` | Column and relationship definitions |
+| `options`   | `TableOptions`     | Optional table-level configuration  |
+
+**Returns:** `TableDefinition<TName, TSchema>` (frozen object)
+
+### TableOptions
+
+| Option       | Type         | Description                             |
+| ------------ | ------------ | --------------------------------------- |
+| `schema`     | `string`     | PostgreSQL schema (default: `public`)   |
+| `readonly`   | `boolean`    | If `true`, returns read-only repository |
+| `connection` | `string`     | Named connection key                    |
+| `hooks`      | `ModelHooks` | Lifecycle hooks                         |
+
+### TableDefinition
+
+The returned object exposes:
+
+| Property                | Type                             | Description                       |
+| ----------------------- | -------------------------------- | --------------------------------- |
+| `tableName`             | `string`                         | Database table name               |
+| `dbSchema`              | `string \| undefined`            | PostgreSQL schema                 |
+| `isReadonly`            | `boolean`                        | Whether this is a read-only model |
+| `connection`            | `string \| undefined`            | Named connection key              |
+| `schema`                | `SchemaDefinition`               | The column definitions            |
+| `hooks`                 | `ModelHooks \| undefined`        | Lifecycle hooks                   |
+| `columns`               | `ColumnMetadata[]`               | All column metadata               |
+| `primaryKeyColumn`      | `ColumnMetadata`                 | Primary key column metadata       |
+| `columnsByPropertyName` | `Record<string, ColumnMetadata>` | Lookup by property name           |
+| `columnsByColumnName`   | `Record<string, ColumnMetadata>` | Lookup by database column name    |
+| `$inferSelect`          | Phantom type                     | Row type for queries              |
+| `$inferInsert`          | Phantom type                     | Insert parameter type             |
+
+## Column builders
+
+All column builders accept a database column name and return a `ColumnBuilder` with chain methods.
+
+### Chain methods
+
+| Method            | Description                              |
+| ----------------- | ---------------------------------------- |
+| `.notNull()`      | Removes `null` from the type             |
+| `.default(value)` | Makes column optional on insert          |
+| `.primaryKey()`   | Implies `.notNull()`, optional on insert |
+| `.unique()`       | UNIQUE constraint (no type-level effect) |
+
+### Builder functions
+
+| Function                  | PostgreSQL type  | TypeScript type     |
+| ------------------------- | ---------------- | ------------------- |
+| `serial(name)`            | SERIAL           | `number`            |
+| `bigserial(name)`         | BIGSERIAL        | `number`            |
+| `text(name)`              | TEXT             | `string \| null`    |
+| `varchar(name, options?)` | VARCHAR(n)       | `string \| null`    |
+| `integer(name)`           | INTEGER          | `number \| null`    |
+| `bigint(name)`            | BIGINT           | `number \| null`    |
+| `smallint(name)`          | SMALLINT         | `number \| null`    |
+| `real(name)`              | REAL             | `number \| null`    |
+| `doublePrecision(name)`   | DOUBLE PRECISION | `number \| null`    |
+| `boolean(name)`           | BOOLEAN          | `boolean \| null`   |
+| `timestamp(name)`         | TIMESTAMP        | `Date \| null`      |
+| `timestamptz(name)`       | TIMESTAMPTZ      | `Date \| null`      |
+| `date(name)`              | DATE             | `Date \| null`      |
+| `json<T>(name)`           | JSON             | `T \| null`         |
+| `jsonb<T>(name)`          | JSONB            | `T \| null`         |
+| `uuid(name)`              | UUID             | `string \| null`    |
+| `bytea(name)`             | BYTEA            | `Buffer \| null`    |
+| `textArray(name)`         | TEXT[]           | `string[] \| null`  |
+| `integerArray(name)`      | INTEGER[]        | `number[] \| null`  |
+| `booleanArray(name)`      | BOOLEAN[]        | `boolean[] \| null` |
+| `createdAt(name?)`        | TIMESTAMPTZ      | `Date`              |
+| `updatedAt(name?)`        | TIMESTAMPTZ      | `Date`              |
+
+`serial()` and `bigserial()` imply `.notNull()` and `.default()`.
+
+`createdAt()` defaults to column name `created_at`. `updatedAt()` defaults to `updated_at`.
+
+### VarcharOptions
+
+```ts
+interface VarcharOptions {
+  length?: number;
+}
+```
+
+## Relationship builders
+
+### belongsTo()
+
+Defines a many-to-one relationship where this table holds the foreign key.
+
+```ts
+import { belongsTo } from 'bigal';
+
+store: belongsTo(() => Store, 'store_id'),
+```
+
+**Parameters:**
+
+| Parameter      | Type                    | Description                                |
+| -------------- | ----------------------- | ------------------------------------------ |
+| `modelFn`      | `() => TableDefinition` | Arrow function returning the related table |
+| `fkColumnName` | `string`                | Database column name for the FK            |
+
+**Select type:** the FK type (typically `number`).
+
+**Insert type:** the FK type (required by default).
+
+### hasMany()
+
+Defines a one-to-many or many-to-many relationship.
+
+```ts
+import { hasMany } from 'bigal';
+
+// One-to-many
+products: hasMany(() => Product).via('store'),
+
+// Many-to-many
+categories: hasMany(() => Category)
+  .through(() => ProductCategory)
+  .via('product'),
+```
+
+**Chain methods:**
+
+| Method               | Description                               |
+| -------------------- | ----------------------------------------- |
+| `.via(propertyName)` | Property on the related table with the FK |
+| `.through(modelFn)`  | Junction table for many-to-many           |
+
+`hasMany` columns are excluded from both `$inferSelect` and `$inferInsert`.
 
 ## Repository
 
-Full CRUD repository returned by `initialize()` for non-readonly models.
+Full CRUD repository returned by `getRepository()`.
 
 ### find()
 
@@ -89,7 +281,8 @@ Delete matching records. Options: `{ returnRecords?, returnSelect? }`.
 
 ## ReadonlyRepository
 
-Read-only repository returned for models with `readonly: true`. Exposes `find()`, `findOne()`, and `count()` only.
+Read-only repository returned by `getReadonlyRepository()` or for models with `readonly: true`.
+Exposes `find()`, `findOne()`, and `count()` only.
 
 ## Query builder methods
 
@@ -107,7 +300,6 @@ All query types support fluent chaining. Each method returns a new immutable ins
 | `.join(relation, alias?, on?)`     | find, findOne        | INNER JOIN                       |
 | `.leftJoin(relation, alias?, on?)` | find, findOne        | LEFT JOIN                        |
 | `.distinctOn(columns)`             | find                 | PostgreSQL DISTINCT ON           |
-| `.toJSON()`                        | find, findOne        | Return plain objects             |
 
 ## subquery()
 
@@ -117,60 +309,47 @@ import { subquery } from 'bigal';
 const sub = subquery(repository);
 ```
 
-Returns a `SubqueryBuilder` with methods: `select()`, `where()`, `sort()`, `limit()`, `groupBy()`, `having()`, `distinctOn()`.
+Returns a `SubqueryBuilder` with methods: `select()`, `where()`, `sort()`, `limit()`, `groupBy()`,
+`having()`, `distinctOn()`.
 
-Scalar aggregate shortcuts: `sub.count()`, `sub.sum(col)`, `sub.avg(col)`, `sub.max(col)`, `sub.min(col)`.
-
-## Decorators
-
-### @table(options)
-
-Binds a class to a database table or view.
-
-| Option       | Type      | Description                            |
-| ------------ | --------- | -------------------------------------- |
-| `name`       | `string`  | Table or view name                     |
-| `schema`     | `string`  | PostgreSQL schema (default: `public`)  |
-| `readonly`   | `boolean` | Returns `ReadonlyRepository` if `true` |
-| `connection` | `string`  | Named connection key                   |
-
-### @primaryColumn(options)
-
-Marks the primary key. Options: `{ type }`.
-
-### @column(options)
-
-Defines a column. See [Models > Column options](/guide/models#column-options) for all options.
-
-### @createDateColumn()
-
-Auto-set on insert.
-
-### @updateDateColumn()
-
-Auto-set on update.
-
-### @versionColumn()
-
-Auto-incrementing version for optimistic locking.
+Scalar aggregate shortcuts: `sub.count()`, `sub.sum(col)`, `sub.avg(col)`, `sub.max(col)`,
+`sub.min(col)`.
 
 ## Types
 
-### Entity
+### InferSelect\<TSchema\>
 
-Base class for all models.
+Mapped type that extracts the row type from a schema definition. Equivalent to
+`typeof tableDef.$inferSelect`.
 
-### NotEntity\<T\>
+### InferInsert\<TSchema\>
 
-Wrapper type for JSON column objects that have an `id` field. Prevents BigAl's type system from treating them as entities.
+Mapped type that extracts the insert parameter type from a schema definition. Equivalent to
+`typeof tableDef.$inferInsert`.
+
+### OnQueryCallback
+
+```ts
+type OnQueryCallback = (event: OnQueryEvent) => void;
+```
+
+### OnQueryEvent
+
+```ts
+interface OnQueryEvent {
+  sql: string;
+  params: readonly unknown[];
+  duration: number;
+  error?: Error;
+  model: string;
+  operation: 'count' | 'create' | 'destroy' | 'find' | 'findOne' | 'update';
+}
+```
 
 ### QueryResult\<T\>
 
-Narrows relationship fields from union types to foreign key types. See [Relationships > QueryResult](/guide/relationships#queryresult-type-narrowing).
-
-### QueryResultPopulated\<T, K\>
-
-Type for entities with specific relationships populated.
+Narrows relationship fields from union types to foreign key types. See
+[Relationships > QueryResult](/guide/relationships#queryresult-type-narrowing).
 
 ### TypedAggregateExpression\<Alias\>
 
@@ -178,7 +357,8 @@ Return type annotation for aggregate callbacks that enables type-safe sorting on
 
 ### PoolLike
 
-Interface for compatible connection pools. Supported: `postgres-pool`, `pg`, `@neondatabase/serverless`.
+Interface for compatible connection pools. Supported: `postgres-pool`, `pg`,
+`@neondatabase/serverless`.
 
 ### IConnection
 
@@ -196,3 +376,12 @@ Interface for full CRUD repositories.
 ### IReadonlyRepository\<T\>
 
 Interface for read-only repositories.
+
+### ModelHooks\<TInsert\>
+
+```ts
+interface ModelHooks<TInsert> {
+  beforeCreate?: (values: TInsert) => Promise<TInsert> | TInsert;
+  beforeUpdate?: (values: Partial<TInsert>) => Partial<TInsert> | Promise<Partial<TInsert>>;
+}
+```

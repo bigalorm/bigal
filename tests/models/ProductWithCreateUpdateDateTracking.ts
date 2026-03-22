@@ -1,23 +1,34 @@
-import { type CreateUpdateParams } from '../../src/index.js';
+import { belongsTo, hasMany, table, text, textArray } from '../../src/schema/index.js';
 
-import { Product } from './Product.js';
+import { modelBase } from './base.js';
 
-export class ProductWithCreateUpdateDateTracking extends Product {
-  public static override async beforeCreate(values: CreateUpdateParams<ProductWithCreateUpdateDateTracking>): Promise<CreateUpdateParams<ProductWithCreateUpdateDateTracking>> {
-    await Promise.resolve();
-
-    return {
-      ...values,
-
-      name: `beforeCreate - ${values.name}`,
-    };
-  }
-
-  public static override beforeUpdate(values: CreateUpdateParams<ProductWithCreateUpdateDateTracking>): CreateUpdateParams<ProductWithCreateUpdateDateTracking> {
-    return {
-      ...values,
-
-      name: `beforeUpdate - ${values.name}`,
-    };
-  }
-}
+export const ProductWithCreateUpdateDateTracking = table(
+  'products',
+  {
+    ...modelBase,
+    name: text().notNull(),
+    sku: text(),
+    location: text(),
+    aliases: textArray({ name: 'alias_names' }).default([]),
+    store: belongsTo('Store'),
+    categories: hasMany('Category').through('ProductCategory').via('product'),
+  },
+  {
+    modelName: 'ProductWithCreateUpdateDateTracking',
+    hooks: {
+      async beforeCreate(values) {
+        await Promise.resolve();
+        return {
+          ...values,
+          name: `beforeCreate - ${values.name}`,
+        };
+      },
+      beforeUpdate(values) {
+        return {
+          ...values,
+          name: `beforeUpdate - ${values.name}`,
+        };
+      },
+    },
+  },
+);

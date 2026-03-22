@@ -1,8 +1,18 @@
-import { createDateColumn } from '../../src/index.js';
+import { belongsTo, createdAt, hasMany, table, text, textArray } from '../../src/schema/index.js';
 
-import { Product } from './Product.js';
+import { modelBase } from './base.js';
 
-export class ProductWithCreatedAt extends Product {
-  @createDateColumn()
-  public createdAt!: Date;
-}
+export const ProductWithCreatedAt = table(
+  'products',
+  {
+    ...modelBase,
+    name: text().notNull(),
+    sku: text(),
+    location: text(),
+    aliases: textArray({ name: 'alias_names' }).default([]),
+    store: belongsTo('Store'),
+    categories: hasMany('Category').through('ProductCategory').via('product'),
+    createdAt: createdAt(),
+  },
+  { modelName: 'ProductWithCreatedAt' },
+);

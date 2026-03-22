@@ -1,7 +1,6 @@
-import type { Entity } from '../Entity.js';
 import type { ExcludeFunctions, OmitEntityCollections, OmitFunctions } from '../types/index.js';
 
-export type SortString<T extends Entity> =
+export type SortString<T extends Record<string, unknown>> =
   | `${string & keyof OmitFunctions<OmitEntityCollections<T>>} ASC`
   | `${string & keyof OmitFunctions<OmitEntityCollections<T>>} asc`
   | `${string & keyof OmitFunctions<OmitEntityCollections<T>>} DESC`
@@ -9,7 +8,7 @@ export type SortString<T extends Entity> =
   | (string & keyof OmitFunctions<OmitEntityCollections<T>>);
 
 type ValidateMultipleSorts<
-  T extends Entity,
+  T extends Record<string, unknown>,
   TNextSortPart extends string,
   TPreviouslyValidatedSortString extends string,
   TSortString extends string,
@@ -19,7 +18,7 @@ type ValidateMultipleSorts<
     : ValidateMultipleSorts<T, TRestSortPart, TNextSortPart extends `${infer TValidatedSortPart}${TRestSortPart}` ? `${TPreviouslyValidatedSortString}${TValidatedSortPart}` : never, TSortString>
   : `${TPreviouslyValidatedSortString}, ${SortString<T>}`;
 
-export type MultipleSortString<T extends Entity, TSortString extends string = string> = TSortString extends `${SortString<T>}${infer TRestSortPart}`
+export type MultipleSortString<T extends Record<string, unknown>, TSortString extends string = string> = TSortString extends `${SortString<T>}${infer TRestSortPart}`
   ? TRestSortPart extends ''
     ? TSortString
     : ValidateMultipleSorts<T, TRestSortPart, TSortString extends `${infer TPreviouslyValidatedSortString}${TRestSortPart}` ? TPreviouslyValidatedSortString : never, TSortString>
@@ -27,13 +26,13 @@ export type MultipleSortString<T extends Entity, TSortString extends string = st
 
 export type SortObjectValue = -1 | 'asc' | 'desc' | 1;
 
-export type SortObject<T extends Entity> = {
+export type SortObject<T extends Record<string, unknown>> = {
   [K in keyof T as ExcludeFunctions<OmitEntityCollections<T>, K>]?: SortObjectValue;
 };
 
-export type Sort<T extends Entity> = MultipleSortString<T> | SortObject<T>;
+export type Sort<T extends Record<string, unknown>> = MultipleSortString<T> | SortObject<T>;
 
-export interface OrderBy<T extends Entity> {
+export interface OrderBy<T extends Record<string, unknown>> {
   propertyName: string & keyof OmitFunctions<OmitEntityCollections<T>>;
   descending?: boolean;
 }

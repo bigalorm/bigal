@@ -1,4 +1,3 @@
-import type { Entity } from '../Entity.js';
 import type { IReadonlyRepository } from '../IReadonlyRepository.js';
 import type { IRepository } from '../IRepository.js';
 
@@ -15,26 +14,32 @@ export type TypedAggregateExpression<TAlias extends string> = SelectAggregateExp
 /**
  * A callback that creates an aggregate with a typed alias.
  */
-export type AggregateCallback<T extends Entity, TAlias extends string> = (builder: SelectBuilder<T>) => TypedAggregateExpression<TAlias>;
+export type AggregateCallback<T extends Record<string, unknown>, TAlias extends string> = (builder: SelectBuilder<T>) => TypedAggregateExpression<TAlias>;
 
 /**
  * Extracts the alias type from a select item.
  */
-type ExtractItemAlias<T extends Entity, TItem> = TItem extends string & keyof T ? TItem : TItem extends AggregateCallback<T, infer A> ? A : TItem extends TypedAggregateExpression<infer A> ? A : never;
+type ExtractItemAlias<T extends Record<string, unknown>, TItem> = TItem extends string & keyof T
+  ? TItem
+  : TItem extends AggregateCallback<T, infer A>
+    ? A
+    : TItem extends TypedAggregateExpression<infer A>
+      ? A
+      : never;
 
 /**
  * Extracts all alias types from an array of select items using mapped type.
  */
-type ExtractAllAliases<T extends Entity, TItems extends readonly unknown[]> = {
+type ExtractAllAliases<T extends Record<string, unknown>, TItems extends readonly unknown[]> = {
   [K in keyof TItems]: ExtractItemAlias<T, TItems[K]>;
 }[number];
 
 /**
  * Valid select items for type-safe column tracking.
  */
-export type TypedSelectItem<T extends Entity> = AggregateCallback<T, string> | TypedAggregateExpression<string> | (string & keyof T);
+export type TypedSelectItem<T extends Record<string, unknown>> = AggregateCallback<T, string> | TypedAggregateExpression<string> | (string & keyof T);
 
-export type SelectItem<T extends Entity> = ((builder: SelectBuilder<T>) => AggregateBuilder | SelectAggregateExpression) | (string & keyof T);
+export type SelectItem<T extends Record<string, unknown>> = ((builder: SelectBuilder<T>) => AggregateBuilder | SelectAggregateExpression) | (string & keyof T);
 
 export interface HavingComparer {
   '<'?: number;
@@ -71,7 +76,7 @@ export interface TypedSubqueryBuilder<TColumns extends string = never> extends S
   readonly _columns?: TColumns;
 }
 
-export class SubqueryBuilder<T extends Entity, TColumns extends string = never> implements TypedSubqueryBuilder<TColumns> {
+export class SubqueryBuilder<T extends Record<string, unknown>, TColumns extends string = never> implements TypedSubqueryBuilder<TColumns> {
   public readonly _repository: IReadonlyRepository<T> | IRepository<T>;
   public _select?: string[];
   public _selectExpressions?: SelectAggregateExpression[];
@@ -205,23 +210,23 @@ export class SubqueryBuilder<T extends Entity, TColumns extends string = never> 
   }
 
   public count(): ScalarSubquery<number> {
-    return new ScalarSubquery<number>(this as unknown as SubqueryBuilder<Entity>, 'count');
+    return new ScalarSubquery<number>(this as unknown as SubqueryBuilder<Record<string, unknown>>, 'count');
   }
 
   public sum(column: string & keyof T): ScalarSubquery<number> {
-    return new ScalarSubquery<number>(this as unknown as SubqueryBuilder<Entity>, 'sum', column);
+    return new ScalarSubquery<number>(this as unknown as SubqueryBuilder<Record<string, unknown>>, 'sum', column);
   }
 
   public avg(column: string & keyof T): ScalarSubquery<number> {
-    return new ScalarSubquery<number>(this as unknown as SubqueryBuilder<Entity>, 'avg', column);
+    return new ScalarSubquery<number>(this as unknown as SubqueryBuilder<Record<string, unknown>>, 'avg', column);
   }
 
   public max<K extends string & keyof T>(column: K): ScalarSubquery<T[K]> {
-    return new ScalarSubquery<T[K]>(this as unknown as SubqueryBuilder<Entity>, 'max', column);
+    return new ScalarSubquery<T[K]>(this as unknown as SubqueryBuilder<Record<string, unknown>>, 'max', column);
   }
 
   public min<K extends string & keyof T>(column: K): ScalarSubquery<T[K]> {
-    return new ScalarSubquery<T[K]>(this as unknown as SubqueryBuilder<Entity>, 'min', column);
+    return new ScalarSubquery<T[K]>(this as unknown as SubqueryBuilder<Record<string, unknown>>, 'min', column);
   }
 
   private cloneBuilder<TNewColumns extends string>(): SubqueryBuilder<T, TNewColumns> {

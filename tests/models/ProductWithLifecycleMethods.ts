@@ -1,17 +1,24 @@
-import { type CreateUpdateParams } from '../../src/index.js';
-import { table } from '../../src/index.js';
+import { belongsTo, hasMany, table, text, textArray } from '../../src/schema/index.js';
 
-import { Product } from './Product.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'products',
-})
-export class ProductWithLifecycleMethods extends Product {
-  public static override beforeCreate(values: CreateUpdateParams<ProductWithLifecycleMethods>): CreateUpdateParams<ProductWithLifecycleMethods> {
-    return values;
-  }
-
-  public static override beforeUpdate(values: CreateUpdateParams<ProductWithLifecycleMethods>): Promise<CreateUpdateParams<ProductWithLifecycleMethods>> {
-    return Promise.resolve(values);
-  }
-}
+export const ProductWithLifecycleMethods = table(
+  'products',
+  {
+    ...modelBase,
+    name: text().notNull(),
+    sku: text(),
+    location: text(),
+    aliases: textArray({ name: 'alias_names' }).default([]),
+    store: belongsTo('Store'),
+    categories: hasMany('Category').through('ProductCategory').via('product'),
+  },
+  {
+    modelName: 'ProductWithLifecycleMethods',
+    hooks: {
+      beforeCreate(values) {
+        return values;
+      },
+    },
+  },
+);

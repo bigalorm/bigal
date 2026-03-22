@@ -1,15 +1,8 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { table, text } from '../../src/schema/index.js';
 
-@table({
-  name: 'parking_lot',
-})
-export class ParkingLot extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
+import { stringIdBase } from './base.js';
 
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-}
+export const ParkingLot = table('parking_lot', {
+  ...stringIdBase,
+  name: text().notNull(),
+});

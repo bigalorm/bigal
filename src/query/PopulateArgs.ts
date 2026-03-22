@@ -1,4 +1,3 @@
-import type { Entity } from '../Entity.js';
 import type { OmitEntityCollections, OmitFunctions, PoolLike } from '../types/index.js';
 
 import type { Sort, SortObject } from './Sort.js';
@@ -12,10 +11,10 @@ export interface ThroughArgs {
   /** Filter applied to the junction table query */
   where?: Record<string, unknown>;
   /** Sort applied to the junction table query - determines final ordering of populated items */
-  sort?: SortObject<Entity> | string;
+  sort?: SortObject<Record<string, unknown>> | string;
 }
 
-export interface PopulateArgs<T extends Entity, K extends keyof T> {
+export interface PopulateArgs<T extends Record<string, unknown>, K extends keyof T> {
   where?: WhereQuery<T>;
   select?: (K & string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
   sort?: Sort<T>;

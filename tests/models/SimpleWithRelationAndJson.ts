@@ -1,31 +1,19 @@
-import { column, type NotEntity, table } from '../../src/index.js';
+import { belongsTo, jsonb, table, text } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
-import { Store } from './Store.js';
+import { modelBase } from './base.js';
 
 export interface IJsonLikeEntity {
   id: string;
   message: string;
 }
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithRelationAndJson extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-
-  @column({
-    model: () => Store.name,
-    name: 'store_id',
-  })
-  public store!: Store | number;
-
-  @column({
-    type: 'json',
-  })
-  public message?: NotEntity<IJsonLikeEntity>;
-}
+export const SimpleWithRelationAndJson = table(
+  'simple',
+  {
+    ...modelBase,
+    name: text().notNull(),
+    store: belongsTo('Store'),
+    message: jsonb<IJsonLikeEntity>(),
+  },
+  { modelName: 'SimpleWithRelationAndJson' },
+);

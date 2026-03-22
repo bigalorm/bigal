@@ -1,5 +1,5 @@
 ---
-description: Install BigAl, define your first model with decorators, initialize a repository, and run type-safe PostgreSQL queries.
+description: Install BigAl, define your first table, create a repository, and run type-safe PostgreSQL queries.
 ---
 
 # Getting Started
@@ -23,51 +23,47 @@ npm install pg
 npm install @neondatabase/serverless
 ```
 
-## Define a model
+## Define a table
 
-Models extend `Entity` and use decorators to map to database tables.
+Tables are defined with the `table()` function and PostgreSQL-native column builders. Types are
+inferred from the schema definition.
 
 ```ts
-import { column, primaryColumn, table, Entity } from 'bigal';
+import { createdAt, defineTable as table, integer, serial, text, updatedAt, varchar } from 'bigal';
 
-@table({ name: 'products' })
-export class Product extends Entity {
-  @primaryColumn({ type: 'integer' })
-  public id!: number;
-
-  @column({ type: 'string', required: true })
-  public name!: string;
-
-  @column({ type: 'string' })
-  public sku?: string;
-
-  @column({ type: 'integer', required: true, name: 'price_cents' })
-  public priceCents!: number;
-}
+export const Product = table('products', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  sku: varchar('sku', { length: 100 }),
+  priceCents: integer('price_cents').notNull(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
 ```
 
 ## Initialize repositories
 
-Pass your models and a connection pool to `initialize()`. It returns a map of repositories keyed by model name.
+Pass your table definitions and a connection pool to `createBigAl()`, then use `getRepository()` to
+get a typed repository.
 
 ```ts
-import { initialize, Repository } from 'bigal';
+import { createBigAl } from 'bigal';
 import { Pool } from 'postgres-pool';
 import { Product } from './Product';
 
 const pool = new Pool('postgres://localhost/mydb');
 
-const repos = initialize({
+const bigal = createBigAl({
   models: [Product],
   pool,
 });
 
-const productRepository = repos.Product as Repository<Product>;
+const productRepository = bigal.getRepository(Product);
 ```
 
 ## Run your first query
 
-Queries use a fluent builder and are `PromiseLike` — just `await` the chain.
+Queries use a fluent builder and are `PromiseLike` -- just `await` the chain.
 
 ```ts
 // Find all products with price >= 1000 cents, sorted by name
@@ -95,12 +91,13 @@ npx skills add bigalorm/bigal
 
 Machine-readable documentation is also available:
 
-- [llms.txt](/llms.txt) — structured overview
-- [llms-full.txt](/llms-full.txt) — complete documentation in a single file
+- [llms.txt](/llms.txt) -- structured overview
+- [llms-full.txt](/llms-full.txt) -- complete documentation in a single file
 
 ## Next steps
 
-- [Models](/guide/models) — decorators, relationships, and Entity types
-- [Querying](/guide/querying) — operators, pagination, JSONB, and more
-- [CRUD Operations](/guide/crud-operations) — create, update, and destroy
-- [API Reference](/reference/api) — all exports and method signatures
+- [Models](/guide/models) -- table definitions, column types, relationships
+- [Querying](/guide/querying) -- operators, pagination, JSONB, and more
+- [CRUD Operations](/guide/crud-operations) -- create, update, and destroy
+- [API Reference](/reference/api) -- all exports and method signatures
+- [Migrating from v15](/guide/migration-v16) -- upgrade from decorators to the new API

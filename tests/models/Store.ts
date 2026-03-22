@@ -1,20 +1,9 @@
-import { column, table } from '../../src/index.js';
+import { table, hasMany, text } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
-import { Product } from './Product.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'stores',
-})
-export class Store extends ModelBase {
-  @column({
-    type: 'string',
-  })
-  public name?: string;
-
-  @column({
-    collection: () => Product.name,
-    via: 'store',
-  })
-  public products?: Product[];
-}
+export const Store = table('stores', {
+  ...modelBase,
+  name: text(),
+  products: hasMany('Product').via('store'),
+});

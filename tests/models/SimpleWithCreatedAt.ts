@@ -1,17 +1,13 @@
-import { column, createDateColumn, table } from '../../src/index.js';
+import { createdAt, table, text } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithCreatedAt extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-
-  @createDateColumn()
-  public createdAt!: Date;
-}
+export const SimpleWithCreatedAt = table(
+  'simple',
+  {
+    ...modelBase,
+    name: text().notNull(),
+    createdAt: createdAt(),
+  },
+  { modelName: 'SimpleWithCreatedAt' },
+);

@@ -1,5 +1,5 @@
 ---
-description: Configure connection pools (postgres-pool, pg, Neon), read replicas, multiple databases, and debug logging.
+description: Configure connection pools (postgres-pool, pg, Neon), read replicas, multiple databases, and query observability.
 ---
 
 # Configuration
@@ -12,37 +12,39 @@ BigAl requires a PostgreSQL connection pool that implements `PoolLike`. Three dr
 
 ```ts
 import { Pool } from 'postgres-pool';
-import { initialize } from 'bigal';
+import { createBigAl } from 'bigal';
 
 const pool = new Pool({
   connectionString: 'postgres://user:pass@localhost/mydb',
 });
 
-const repos = initialize({ models, pool });
+const bigal = createBigAl({ models, pool });
 ```
 
 ### node-postgres (pg)
 
 ```ts
 import pg from 'pg';
+import { createBigAl } from 'bigal';
 
 const pool = new pg.Pool({
   connectionString: 'postgres://user:pass@localhost/mydb',
 });
 
-const repos = initialize({ models, pool });
+const bigal = createBigAl({ models, pool });
 ```
 
 ### Neon serverless
 
 ```ts
 import { Pool } from '@neondatabase/serverless';
+import { createBigAl } from 'bigal';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-const repos = initialize({ models, pool });
+const bigal = createBigAl({ models, pool });
 ```
 
 ## Read replicas
@@ -53,14 +55,15 @@ Separate read and write pools by passing `readonlyPool`:
 const pool = new Pool('postgres://localhost/mydb');
 const readonlyPool = new Pool('postgres://readonly-host/mydb');
 
-const repos = initialize({
+const bigal = createBigAl({
   models,
   pool,
   readonlyPool,
 });
 ```
 
-`find()`, `findOne()`, and `count()` use `readonlyPool`. `create()`, `update()`, and `destroy()` use `pool`.
+`find()`, `findOne()`, and `count()` use `readonlyPool`. `create()`, `update()`, and `destroy()` use
+`pool`.
 
 Individual queries can override the pool:
 
@@ -77,12 +80,15 @@ const product = await productRepository
 Use named connections for models that live in different databases:
 
 ```ts
-@table({ name: 'audit_logs', connection: 'audit' })
-export class AuditLog extends Entity {
-  // ...
-}
+const AuditLog = table(
+  'audit_logs',
+  {
+    /* columns */
+  },
+  { connection: 'audit' },
+);
 
-const repos = initialize({
+const bigal = createBigAl({
   models: [Product, AuditLog],
   pool: mainPool,
   connections: {
@@ -96,24 +102,49 @@ const repos = initialize({
 
 Models without a `connection` option use the top-level `pool`.
 
-## Expose callback
+## Query observability
 
-The `expose` callback is invoked for each repository after creation:
+### onQuery callback
+
+Pass an `onQuery` callback to `createBigAl()` for structured query logging:
 
 ```ts
-const repos = initialize({
-  models,
+const bigal = createBigAl({
   pool,
-  expose(repository, tableMetadata) {
-    console.log(`Initialized ${tableMetadata.name}`);
+  models,
+  onQuery({ sql, params, duration, error, model, operation }) {
+    logger.debug({ sql, params, duration, model, operation });
+    if (error) {
+      logger.error({ sql, error, model });
+    }
   },
 });
 ```
 
-## Debugging
+The callback receives an `OnQueryEvent` for every query:
 
-Set the `DEBUG_BIGAL` environment variable to log generated SQL:
+| Property    | Type                 | Description                                           |
+| ----------- | -------------------- | ----------------------------------------------------- |
+| `sql`       | `string`             | The generated SQL statement                           |
+| `params`    | `readonly unknown[]` | Query parameter values                                |
+| `duration`  | `number`             | Execution time in milliseconds                        |
+| `error`     | `Error \| undefined` | Error if the query failed                             |
+| `model`     | `string`             | Table name                                            |
+| `operation` | `string`             | One of: find, findOne, count, create, update, destroy |
+
+The callback is wrapped in a try/catch internally -- exceptions in `onQuery` will not crash your
+queries. When no `onQuery` is provided, there is zero overhead.
+
+**Note:** `params` may contain sensitive data (user input, passwords, etc.). Use appropriate care when
+logging.
+
+### DEBUG_BIGAL environment variable
+
+The `DEBUG_BIGAL` environment variable still works as a fallback. When set and no `onQuery` callback
+is provided, BigAl logs generated SQL to the console:
 
 ```sh
 DEBUG_BIGAL=true node app.js
 ```
+
+For production use, prefer the `onQuery` callback for structured, configurable logging.

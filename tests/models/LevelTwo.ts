@@ -1,29 +1,10 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { belongsTo, table, text } from '../../src/schema/index.js';
 
-import { type LevelThree } from './LevelThree.js';
+import { stringIdBase } from './base.js';
 
-@table({
-  name: 'level_two',
-})
-export class LevelTwo extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
-
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public two!: string;
-
-  @column({
-    type: 'string',
-  })
-  public foo?: string;
-
-  @column({
-    required: true,
-    model: 'LevelThree',
-    name: 'level_three_id',
-  })
-  public levelThree!: LevelThree | string;
-}
+export const LevelTwo = table('level_two', {
+  ...stringIdBase,
+  two: text().notNull(),
+  foo: text(),
+  levelThree: belongsTo<string>('LevelThree'),
+});

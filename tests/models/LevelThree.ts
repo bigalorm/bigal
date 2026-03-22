@@ -1,20 +1,9 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { table, text } from '../../src/schema/index.js';
 
-@table({
-  name: 'level_three',
-})
-export class LevelThree extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
+import { stringIdBase } from './base.js';
 
-  @column({
-    type: 'string',
-  })
-  public foo?: string;
-
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public three!: string;
-}
+export const LevelThree = table('level_three', {
+  ...stringIdBase,
+  foo: text(),
+  three: text().notNull(),
+});

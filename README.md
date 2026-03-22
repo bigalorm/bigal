@@ -4,9 +4,10 @@
 [![node version](https://img.shields.io/node/v/bigal.svg?style=flat)](https://nodejs.org)
 [![Known Vulnerabilities](https://snyk.io/test/npm/bigal/badge.svg)](https://snyk.io/test/npm/bigal)
 
-A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js. BigAl uses a fluent builder pattern for queries,
-decorator-based models, and immutable query state. Built exclusively for Postgres — queries are tuned for
-Postgres performance with native support for JSONB, DISTINCT ON, subquery joins, and ON CONFLICT upserts.
+A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js. BigAl uses a fluent builder
+pattern for queries, function-based schema definitions with PostgreSQL-native column builders,
+and immutable query state. Built exclusively for Postgres with native support for JSONB,
+DISTINCT ON, subquery joins, and ON CONFLICT upserts.
 
 ## Install
 
@@ -27,37 +28,48 @@ npm install pg
 npm install @neondatabase/serverless
 ```
 
+Requires Node.js >= 22.
+
 ## Quick Start
 
 ```ts
-import { column, primaryColumn, table, Entity, initialize, Repository } from 'bigal';
+import { createBigAl, defineTable as table, serial, text, integer, belongsTo, hasMany, createdAt, updatedAt } from 'bigal';
+import type { InferSelect } from 'bigal';
 import { Pool } from 'postgres-pool';
 
-@table({ name: 'products' })
-class Product extends Entity {
-  @primaryColumn({ type: 'integer' })
-  public id!: number;
+// Define models with PostgreSQL-native column builders
+const Product = table('products', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  priceCents: integer('price_cents').notNull(),
+  store: belongsTo(() => Store, 'store_id'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
 
-  @column({ type: 'string', required: true })
-  public name!: string;
+const Store = table('stores', {
+  id: serial('id').primaryKey(),
+  name: text('name'),
+  products: hasMany(() => Product).via('store'),
+});
 
-  @column({ type: 'integer', required: true, name: 'price_cents' })
-  public priceCents!: number;
-}
+// Types inferred from schema — no separate interface needed
+type ProductRow = InferSelect<typeof Product._schema>;
 
+// Initialize and get typed repositories
 const pool = new Pool('postgres://localhost/mydb');
-const repos = initialize({ models: [Product], pool });
-const productRepository = repos.Product as Repository<Product>;
+const bigal = createBigAl({ pool, models: [Product, Store] });
+const productRepo = bigal.getRepository(Product);
 
 // Fluent queries — just await the chain
-const products = await productRepository
+const products = await productRepo
   .find()
   .where({ priceCents: { '>=': 1000 }, name: { contains: 'widget' } })
   .sort('name asc')
   .limit(10);
 
 // Upserts with ON CONFLICT
-await productRepository.create({ name: 'Widget', sku: 'WDG-001', priceCents: 999 }, { onConflict: { action: 'merge', targets: ['sku'], merge: ['priceCents'] } });
+await productRepo.create({ name: 'Widget', priceCents: 999, store: 1 }, { onConflict: { action: 'merge', targets: ['name'], merge: ['priceCents'] } });
 ```
 
 ## Documentation

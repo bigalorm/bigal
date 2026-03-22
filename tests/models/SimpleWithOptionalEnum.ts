@@ -1,20 +1,13 @@
-import { column, table } from '../../src/index.js';
+import { table, text } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithOptionalEnum extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-
-  @column({
-    enum: ['Foo', 'Bar', 'Foobar'],
-    type: 'string',
-  })
-  public status?: 'Bar' | 'Foo' | 'Foobar';
-}
+export const SimpleWithOptionalEnum = table(
+  'simple',
+  {
+    ...modelBase,
+    name: text().notNull(),
+    status: text(),
+  },
+  { modelName: 'SimpleWithOptionalEnum' },
+);
