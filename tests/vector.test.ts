@@ -301,6 +301,62 @@ describe('pgvector support', () => {
       expect(params).toContain('[-1,-0.5,0.3]');
     });
 
+    it('should handle single-element vector', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      await DocumentRepo.find()
+        .sort({ embedding: { nearestTo: [1.0], metric: 'l2' } })
+        .limit(5);
+
+      const [, params] = mockedPool.query.mock.calls[0]!;
+      expect(params).toContain('[1]');
+    });
+
+    it('should handle scientific notation in vector values', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      await DocumentRepo.find()
+        .sort({ embedding: { nearestTo: [1e-10, 2e10, 3], metric: 'cosine' } })
+        .limit(5);
+
+      const [, params] = mockedPool.query.mock.calls[0]!;
+      expect(params).toContain('[1e-10,20000000000,3]');
+    });
+
+    it('should serialize NaN in vector (pgvector rejects server-side)', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      await DocumentRepo.find()
+        .sort({ embedding: { nearestTo: [1, Number.NaN, 3], metric: 'l2' } })
+        .limit(5);
+
+      const [, params] = mockedPool.query.mock.calls[0]!;
+      expect(params).toContain('[1,NaN,3]');
+    });
+
+    it('should serialize Infinity in vector (pgvector rejects server-side)', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      await DocumentRepo.find()
+        .sort({ embedding: { nearestTo: [1, Number.POSITIVE_INFINITY, 3], metric: 'l2' } })
+        .limit(5);
+
+      const [, params] = mockedPool.query.mock.calls[0]!;
+      expect(params).toContain('[1,Infinity,3]');
+    });
+
+    it('should handle float precision in vector values', async () => {
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
+
+      await DocumentRepo.find()
+        .sort({ embedding: { nearestTo: [1.23456789, 2.34567891, 3.45678912], metric: 'cosine' } })
+        .limit(5);
+
+      const [, params] = mockedPool.query.mock.calls[0]!;
+      const vectorParam = params?.find((p) => typeof p === 'string' && p.startsWith('['));
+      expect(vectorParam).toContain('1.23456789');
+    });
+
     it('should handle vector with global filters', async () => {
       const FilteredDocument = table(
         'documents',
