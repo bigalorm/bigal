@@ -53,27 +53,27 @@ const { Product } = initialize({ pool, models: { Product, Store } });
 
 For each model class, create a `table()` call:
 
-| v15 Decorator | v16 Builder |
-| --- | --- |
-| `@primaryColumn({ type: 'integer' })` | `serial().primaryKey()` |
-| `@column({ type: 'string', required: true })` | `text().notNull()` |
-| `@column({ type: 'string' })` | `text()` |
-| `@column({ type: 'integer' })` | `integer()` |
-| `@column({ type: 'float' })` | `real()` |
-| `@column({ type: 'boolean' })` | `boolean()` |
-| `@column({ type: 'json' })` | `jsonb()` |
-| `@column({ type: 'datetime' })` | `timestamptz()` |
-| `@column({ type: 'date' })` | `date()` |
-| `@column({ type: 'uuid' })` | `uuid()` |
-| `@column({ type: 'binary' })` | `bytea()` |
-| `@column({ type: 'string[]' })` | `textArray()` |
-| `@column({ type: 'integer[]' })` | `integerArray()` |
-| `@column({ type: 'boolean[]' })` | `booleanArray()` |
-| `@createDateColumn()` | `createdAt()` |
-| `@updateDateColumn()` | `updatedAt()` |
-| `@versionColumn()` | `integer().notNull()` |
-| `@column({ model: 'Store', name: 'store_id' })` | `belongsTo('Store')` |
-| `@column({ collection: 'Product', via: 'store' })` | `hasMany('Product').via('store')` |
+| v15 Decorator                                             | v16 Builder                             |
+| --------------------------------------------------------- | --------------------------------------- |
+| `@primaryColumn({ type: 'integer' })`                     | `serial().primaryKey()`                 |
+| `@column({ type: 'string', required: true })`             | `text().notNull()`                      |
+| `@column({ type: 'string' })`                             | `text()`                                |
+| `@column({ type: 'integer' })`                            | `integer()`                             |
+| `@column({ type: 'float' })`                              | `real()`                                |
+| `@column({ type: 'boolean' })`                            | `boolean()`                             |
+| `@column({ type: 'json' })`                               | `jsonb()`                               |
+| `@column({ type: 'datetime' })`                           | `timestamptz()`                         |
+| `@column({ type: 'date' })`                               | `date()`                                |
+| `@column({ type: 'uuid' })`                               | `uuid()`                                |
+| `@column({ type: 'binary' })`                             | `bytea()`                               |
+| `@column({ type: 'string[]' })`                           | `textArray()`                           |
+| `@column({ type: 'integer[]' })`                          | `integerArray()`                        |
+| `@column({ type: 'boolean[]' })`                          | `booleanArray()`                        |
+| `@createDateColumn()`                                     | `createdAt()`                           |
+| `@updateDateColumn()`                                     | `updatedAt()`                           |
+| `@versionColumn()`                                        | `integer().notNull()`                   |
+| `@column({ model: 'Store', name: 'store_id' })`           | `belongsTo('Store')`                    |
+| `@column({ collection: 'Product', via: 'store' })`        | `hasMany('Product').via('store')`       |
 | `@column({ collection: 'Cat', through: 'PC', via: 'p' })` | `hasMany('Cat').through('PC').via('p')` |
 
 Column names auto-derive from property keys via snakeCase. Only specify
@@ -176,7 +176,9 @@ type ProductRow = InferSelect<(typeof Product)['schema']>;
 type ProductInsert = InferInsert<(typeof Product)['schema']>;
 
 // For repository type annotations:
-function getProducts(repo: Repository<typeof Product>) { /* ... */ }
+function getProducts(repo: Repository<typeof Product>) {
+  /* ... */
+}
 ```
 
 ## Removed Exports

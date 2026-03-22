@@ -62,8 +62,7 @@ const { Product, Store } = initialize({
 });
 
 // Fluent queries -- just await the chain
-const products = await Product
-  .find()
+const products = await Product.find()
   .where({ priceCents: { '>=': 1000 }, name: { contains: 'widget' } })
   .sort('name asc')
   .limit(10);

@@ -92,8 +92,7 @@ Join to related entities defined in your model:
 
 ```ts
 // Inner join
-const products = await Product
-  .find()
+const products = await Product.find()
   .join('store')
   .where({ store: { name: 'Acme' } });
 // SQL: SELECT "products".* FROM "products"
@@ -101,14 +100,12 @@ const products = await Product
 //   WHERE "stores"."name"=$1
 
 // Left join
-const products = await Product
-  .find()
+const products = await Product.find()
   .leftJoin('store')
   .where({ store: { name: 'Acme' } });
 
 // Custom alias
-const products = await Product
-  .find()
+const products = await Product.find()
   .join('store', 'primaryStore')
   .where({ primaryStore: { name: 'Acme' } });
 
@@ -156,8 +153,7 @@ Use dot notation to sort by joined table columns:
 const products = await Product.find().join('store').sort('store.name asc');
 
 // Subquery join
-const stores = await Store
-  .find()
+const stores = await Store.find()
   .join(productCounts, 'stats', { on: { id: 'store' } })
   .sort('stats.productCount desc');
 ```

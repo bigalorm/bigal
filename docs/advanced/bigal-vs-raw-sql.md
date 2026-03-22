@@ -29,8 +29,8 @@ Drop to raw SQL (via your pool directly) when:
 
 ### Basic queries
 
-| SQL                                                   | BigAl                                                        |
-| ----------------------------------------------------- | ------------------------------------------------------------ |
+| SQL                                                   | BigAl                                                    |
+| ----------------------------------------------------- | -------------------------------------------------------- |
 | `SELECT * FROM products WHERE id = 1`                 | `Product.findOne().where({ id: 1 })`                     |
 | `SELECT name FROM products WHERE id = 1`              | `Product.findOne({ select: ['name'] }).where({ id: 1 })` |
 | `SELECT * FROM products WHERE name ILIKE '%widget%'`  | `Product.find().where({ name: { contains: 'widget' } })` |
@@ -43,21 +43,21 @@ Drop to raw SQL (via your pool directly) when:
 
 ### CRUD
 
-| SQL                                                         | BigAl                                          |
-| ----------------------------------------------------------- | ---------------------------------------------- |
+| SQL                                                         | BigAl                                      |
+| ----------------------------------------------------------- | ------------------------------------------ |
 | `INSERT INTO products (name) VALUES ('Widget') RETURNING *` | `Product.create({ name: 'Widget' })`       |
 | `UPDATE products SET name = 'X' WHERE id = 1 RETURNING *`   | `Product.update({ id: 1 }, { name: 'X' })` |
 | `DELETE FROM products WHERE id = 1 RETURNING *`             | `Product.destroy({ id: 1 })`               |
 
 ### Subqueries, joins, and advanced
 
-| SQL                                                                      | BigAl                                                                                   |
-| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| SQL                                                                      | BigAl                                                                               |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- |
 | `WHERE store_id IN (SELECT id FROM stores WHERE active)`                 | `.where({ store: { in: subquery(Store).select(['id']).where({ active: true }) } })` |
-| `INNER JOIN stores s ON p.store_id = s.id WHERE s.name = 'Acme'`         | `.join('store').where({ store: { name: 'Acme' } })`                                     |
-| `SELECT DISTINCT ON (store_id) * ... ORDER BY store_id, created_at DESC` | `.distinctOn(['store']).sort('store').sort('createdAt desc')`                           |
-| `ON CONFLICT (sku) DO NOTHING`                                           | `{ onConflict: { action: 'ignore', targets: ['sku'] } }`                                |
-| `ON CONFLICT (sku) DO UPDATE SET name = EXCLUDED.name`                   | `{ onConflict: { action: 'merge', targets: ['sku'], merge: ['name'] } }`                |
+| `INNER JOIN stores s ON p.store_id = s.id WHERE s.name = 'Acme'`         | `.join('store').where({ store: { name: 'Acme' } })`                                 |
+| `SELECT DISTINCT ON (store_id) * ... ORDER BY store_id, created_at DESC` | `.distinctOn(['store']).sort('store').sort('createdAt desc')`                       |
+| `ON CONFLICT (sku) DO NOTHING`                                           | `{ onConflict: { action: 'ignore', targets: ['sku'] } }`                            |
+| `ON CONFLICT (sku) DO UPDATE SET name = EXCLUDED.name`                   | `{ onConflict: { action: 'merge', targets: ['sku'], merge: ['name'] } }`            |
 
 ## Mixing BigAl and raw SQL
 

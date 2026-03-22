@@ -68,11 +68,9 @@ const { Product } = initialize({
 Individual queries can override the pool:
 
 ```ts
-const product = await Product
-  .findOne({
-    pool: writePool,
-  })
-  .where({ id: 42 });
+const product = await Product.findOne({
+  pool: writePool,
+}).where({ id: 42 });
 ```
 
 ## Multiple databases

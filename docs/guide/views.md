@@ -59,14 +59,42 @@ export const ProductSummary = table(
 );
 ```
 
+### Sharing columns with a table
+
+If a view returns the same columns as a table (e.g., a filtered subset),
+share the column definitions:
+
+```ts
+import { table, view, serial, text, integer, boolean } from 'bigal';
+
+const productColumns = {
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  priceCents: integer().notNull(),
+  isActive: boolean().notNull(),
+};
+
+export const Product = table('products', {
+  ...productColumns,
+  store: belongsTo('Store'),
+});
+
+// View returns the same columns, just filtered to active products
+export const ActiveProduct = view('active_products', productColumns);
+```
+
 ### Schema option
 
 For views in a non-default schema:
 
 ```ts
-export const ProductSummary = view(
+export const ReportSummary = view(
   'product_summaries',
-  { /* columns */ },
+  {
+    id: serial().primaryKey(),
+    storeName: text().notNull(),
+    totalRevenue: integer().notNull(),
+  },
   { schema: 'reporting' },
 );
 ```
@@ -103,8 +131,7 @@ function getSummaries(repo: ReadonlyRepository<typeof ProductSummary>) {
 Readonly repositories support the same query methods as regular repositories:
 
 ```ts
-const summaries = await ProductSummary
-  .find()
+const summaries = await ProductSummary.find()
   .where({ storeName: { contains: 'Acme' } })
   .sort('categoryCount desc')
   .limit(10);

@@ -65,8 +65,7 @@ Queries use a fluent builder and are `PromiseLike` -- just `await` the chain.
 
 ```ts
 // Find all products with price >= 1000 cents, sorted by name
-const products = await Product
-  .find()
+const products = await Product.find()
   .where({ priceCents: { '>=': 1000 } })
   .sort('name asc')
   .limit(10);

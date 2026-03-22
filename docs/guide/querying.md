@@ -21,11 +21,9 @@ const product = await Product.findOne().where({ id: 42 });
 Select specific columns:
 
 ```ts
-const product = await Product
-  .findOne({
-    select: ['name', 'sku'],
-  })
-  .where({ id: 42 });
+const product = await Product.findOne({
+  select: ['name', 'sku'],
+}).where({ id: 42 });
 ```
 
 ### Pool override
@@ -33,11 +31,9 @@ const product = await Product
 Use an explicit connection pool:
 
 ```ts
-const product = await Product
-  .findOne({
-    pool: poolOverride,
-  })
-  .where({ id: 42 });
+const product = await Product.findOne({
+  pool: poolOverride,
+}).where({ id: 42 });
 ```
 
 ## find
@@ -320,8 +316,7 @@ Filters are not applied to `count()` queries.
 Inspect the generated SQL and parameters without executing the query:
 
 ```ts
-const { sql, params } = Product
-  .find()
+const { sql, params } = Product.find()
   .where({ name: { contains: 'widget' } })
   .sort('name')
   .toSQL();
@@ -338,8 +333,7 @@ and testing SQL generation.
 Load related entities:
 
 ```ts
-const product = await Product
-  .findOne()
+const product = await Product.findOne()
   .where({ id: 42 })
   .populate('store', { select: ['name'] });
 

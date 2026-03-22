@@ -76,15 +76,13 @@ const repos = initialize({
 const Product = repos.Product as Repository<Product>;
 
 // Fluent queries — just await the chain
-const products = await Product
-  .find()
+const products = await Product.find()
   .where({ priceCents: { '>': 1000 }, name: { contains: 'widget' } })
   .sort('name asc')
   .limit(10);
 
 // Joins and subqueries
-const expensiveProducts = await Product
-  .find()
+const expensiveProducts = await Product.find()
   .join('store')
   .where({
     store: { name: 'Acme' },

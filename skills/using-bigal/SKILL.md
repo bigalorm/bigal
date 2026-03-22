@@ -34,8 +34,7 @@ const pool = new Pool('postgres://localhost/mydb');
 const repos = initialize({ models: [Product], pool });
 const Product = repos.Product as Repository<Product>;
 
-const products = await Product
-  .find()
+const products = await Product.find()
   .where({ priceCents: { '>=': 1000 } })
   .sort('name asc')
   .limit(10);
@@ -74,8 +73,8 @@ Use BigAl for the 90% of queries that fit its fluent API, and raw SQL for the re
 
 ### Basic queries
 
-| SQL                                                   | BigAl                                                        |
-| ----------------------------------------------------- | ------------------------------------------------------------ |
+| SQL                                                   | BigAl                                                    |
+| ----------------------------------------------------- | -------------------------------------------------------- |
 | `SELECT * FROM products WHERE id = 1`                 | `Product.findOne().where({ id: 1 })`                     |
 | `SELECT name FROM products WHERE id = 1`              | `Product.findOne({ select: ['name'] }).where({ id: 1 })` |
 | `SELECT * FROM products WHERE name ILIKE '%widget%'`  | `Product.find().where({ name: { contains: 'widget' } })` |
@@ -88,21 +87,21 @@ Use BigAl for the 90% of queries that fit its fluent API, and raw SQL for the re
 
 ### CRUD
 
-| SQL                                                         | BigAl                                          |
-| ----------------------------------------------------------- | ---------------------------------------------- |
+| SQL                                                         | BigAl                                      |
+| ----------------------------------------------------------- | ------------------------------------------ |
 | `INSERT INTO products (name) VALUES ('Widget') RETURNING *` | `Product.create({ name: 'Widget' })`       |
 | `UPDATE products SET name = 'X' WHERE id = 1 RETURNING *`   | `Product.update({ id: 1 }, { name: 'X' })` |
 | `DELETE FROM products WHERE id = 1 RETURNING *`             | `Product.destroy({ id: 1 })`               |
 
 ### Subqueries, joins, and advanced
 
-| SQL                                                                             | BigAl                                                                                   |
-| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| SQL                                                                             | BigAl                                                                               |
+| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `WHERE store_id IN (SELECT id FROM stores WHERE active)`                        | `.where({ store: { in: subquery(Store).select(['id']).where({ active: true }) } })` |
-| `INNER JOIN stores ON products.store_id = stores.id WHERE stores.name = 'Acme'` | `.join('store').where({ store: { name: 'Acme' } })`                                     |
-| `SELECT DISTINCT ON (store_id) * ... ORDER BY store_id, created_at DESC`        | `.distinctOn(['store']).sort('store').sort('createdAt desc')`                           |
-| `ON CONFLICT (sku) DO NOTHING`                                                  | `{ onConflict: { action: 'ignore', targets: ['sku'] } }`                                |
-| `ON CONFLICT (sku) DO UPDATE SET name = EXCLUDED.name`                          | `{ onConflict: { action: 'merge', targets: ['sku'], merge: ['name'] } }`                |
+| `INNER JOIN stores ON products.store_id = stores.id WHERE stores.name = 'Acme'` | `.join('store').where({ store: { name: 'Acme' } })`                                 |
+| `SELECT DISTINCT ON (store_id) * ... ORDER BY store_id, created_at DESC`        | `.distinctOn(['store']).sort('store').sort('createdAt desc')`                       |
+| `ON CONFLICT (sku) DO NOTHING`                                                  | `{ onConflict: { action: 'ignore', targets: ['sku'] } }`                            |
+| `ON CONFLICT (sku) DO UPDATE SET name = EXCLUDED.name`                          | `{ onConflict: { action: 'merge', targets: ['sku'], merge: ['name'] } }`            |
 
 ## Model Definition
 
@@ -262,8 +261,7 @@ const { results, totalCount } = await Product
 ### Populate (eager loading)
 
 ```ts
-const product = await Product
-  .findOne()
+const product = await Product.findOne()
   .where({ id: 42 })
   .populate('store', { select: ['name'] });
 // product.store is the full Store entity
@@ -273,14 +271,12 @@ const product = await Product
 
 ```ts
 // Model join (INNER)
-await Product
-  .find()
+await Product.find()
   .join('store')
   .where({ store: { name: 'Acme' } });
 
 // Left join
-await Product
-  .find()
+await Product.find()
   .leftJoin('store')
   .where({ store: { name: 'Acme' } });
 
@@ -289,8 +285,7 @@ const productCounts = subquery(Product)
   .select(['store', (sb) => sb.count().as('productCount')])
   .groupBy(['store']);
 
-await Store
-  .find()
+await Store.find()
   .join(productCounts, 'stats', { on: { id: 'store' } })
   .sort('stats.productCount desc');
 ```
