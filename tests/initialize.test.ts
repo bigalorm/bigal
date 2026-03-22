@@ -3,8 +3,10 @@ import assert from 'node:assert';
 import { faker } from '@faker-js/faker';
 import { afterEach, beforeAll, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
-import type { IRepository, OnQueryEvent, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
-import { belongsTo, boolean as booleanColumn, initialize, hasMany, integer, serial, text, textArray, defineTable as table, createdAt, updatedAt } from '../src/index.js';
+import type { IRepository, OnQueryEvent, PoolLike, PoolQueryResult, QueryResultRow } from '../src/index.js';
+import { initialize, boolean as booleanColumn, serial, text, defineTable as table } from '../src/index.js';
+
+import { Category, modelBase, Product, ProductCategory, ProductWithLifecycleMethods as ProductWithHooks, ReadonlyProduct, SimpleWithStringCollection, Store } from './models/index.js';
 
 type PoolQueryFn = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
 
@@ -24,116 +26,6 @@ function getQueryResult<T extends QueryResultRow>(rows: T[] = []): PoolQueryResu
 }
 
 // ---------------------------------------------------------------------------
-// Table definitions using the new schema API
-// ---------------------------------------------------------------------------
-
-const modelBase = {
-  id: serial().primaryKey(),
-};
-
-const timestamps = {
-  createdAt: createdAt(),
-  updatedAt: updatedAt(),
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const tables: Record<string, TableDefinition<any, any>> = {};
-
-const storeSchema = {
-  ...modelBase,
-  ...timestamps,
-  name: text(),
-  products: hasMany(() => tables.Product!).via('store'),
-};
-const StoreDef = table('stores', storeSchema);
-tables.Store = StoreDef;
-
-const categorySchema = {
-  ...modelBase,
-  ...timestamps,
-  name: text().notNull(),
-  products: hasMany(() => tables.Product!)
-    .through(() => tables.ProductCategory!)
-    .via('category'),
-};
-const CategoryDef = table('categories', categorySchema);
-tables.Category = CategoryDef;
-
-const productSchema = {
-  ...modelBase,
-  ...timestamps,
-  name: text().notNull(),
-  sku: text(),
-  location: text(),
-  aliases: textArray({ name: 'alias_names' }).default([]),
-  store: belongsTo(() => tables.Store!),
-  categories: hasMany(() => tables.Category!)
-    .through(() => tables.ProductCategory!)
-    .via('product'),
-};
-const ProductDef = table('products', productSchema);
-tables.Product = ProductDef;
-
-const productCategorySchema = {
-  ...modelBase,
-  product: belongsTo(() => tables.Product!),
-  category: belongsTo(() => tables.Category!),
-  ordering: integer(),
-  isPrimary: booleanColumn(),
-};
-const ProductCategoryDef = table('product__category', productCategorySchema);
-tables.ProductCategory = ProductCategoryDef;
-
-const stringCollectionSchema = {
-  ...modelBase,
-  name: text().notNull(),
-  otherIds: textArray().default([]),
-};
-const SimpleWithStringCollectionDef = table('simple', stringCollectionSchema);
-
-// Model with hooks
-const hookedProductSchema = {
-  ...modelBase,
-  ...timestamps,
-  name: text().notNull(),
-  sku: text(),
-  location: text(),
-  aliases: textArray({ name: 'alias_names' }).default([]),
-  store: belongsTo(() => tables.Store!),
-  categories: hasMany(() => tables.Category!)
-    .through(() => tables.ProductCategory!)
-    .via('product'),
-};
-const ProductWithHooksDef = table('products', hookedProductSchema, {
-  hooks: {
-    async beforeCreate(values) {
-      return {
-        ...values,
-        name: `beforeCreate - ${values.name}`,
-      };
-    },
-    beforeUpdate(values) {
-      return {
-        ...values,
-        name: values.name ? `beforeUpdate - ${values.name}` : values.name,
-      };
-    },
-  },
-});
-
-// Readonly model
-const readonlyProductSchema = {
-  ...modelBase,
-  ...timestamps,
-  name: text().notNull(),
-  sku: text(),
-  location: text(),
-  aliases: textArray({ name: 'alias_names' }).default([]),
-  store: belongsTo(() => tables.Store!),
-};
-const ReadonlyProductDef = table('readonly_products', readonlyProductSchema, { readonly: true });
-
-// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -147,26 +39,26 @@ describe('initialize', () => {
     it('should throw if belongsTo references an unregistered model', () => {
       const pool = createMockPool();
       // Only register Product, not Store - the belongsTo on Product references Store
-      expect(() => initialize({ pool, models: [ProductDef] })).toThrow(/not registered/);
+      expect(() => initialize({ pool, models: [Product] })).toThrow(/not registered/);
     });
 
     it('should throw if hasMany references an unregistered model', () => {
       const pool = createMockPool();
       // Register Store but not Product - Store has hasMany to Product
-      expect(() => initialize({ pool, models: [StoreDef] })).toThrow(/not registered/);
+      expect(() => initialize({ pool, models: [Store] })).toThrow(/not registered/);
     });
 
     it('should throw if hasMany.through references an unregistered junction table', () => {
       const pool = createMockPool();
       // Register Product and Store but not ProductCategory
-      expect(() => initialize({ pool, models: [ProductDef, StoreDef, CategoryDef] })).toThrow(/not registered/);
+      expect(() => initialize({ pool, models: [Product, Store, Category] })).toThrow(/not registered/);
     });
 
     it('should successfully create when all relationships resolve', () => {
       const pool = createMockPool();
       const bigal = initialize({
         pool,
-        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+        models: [Product, Store, Category, ProductCategory],
       });
       expect(bigal).toBeDefined();
       expect(bigal.getRepository).toBeTypeOf('function');
@@ -178,7 +70,7 @@ describe('initialize', () => {
       // Use a standalone table with no relationships for this test
       const standaloneDef = table('standalone', { ...modelBase, name: text().notNull() });
       const bigal = initialize({ pool, models: [standaloneDef] });
-      expect(() => bigal.getRepository(ProductDef)).toThrow(/not found/);
+      expect(() => bigal.getRepository(Product)).toThrow(/not found/);
     });
 
     it('should handle custom connections', () => {
@@ -217,15 +109,15 @@ describe('initialize', () => {
   describe('Repository operations', () => {
     const mockedPool = createMockPool();
 
-    let ProductRepo: IRepository<typeof ProductDef.$inferSelect>;
+    let ProductRepo: IRepository<typeof Product.$inferSelect>;
 
     beforeAll(() => {
       const bigal = initialize({
         pool: mockedPool,
-        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef, SimpleWithStringCollectionDef],
+        models: [Product, Store, Category, ProductCategory, SimpleWithStringCollection],
       });
 
-      ProductRepo = bigal.getRepository(ProductDef);
+      ProductRepo = bigal.getRepository(Product);
     });
 
     beforeEach(() => {
@@ -468,16 +360,16 @@ describe('initialize', () => {
   describe('Hooks via table definition', () => {
     const mockedPool = createMockPool();
 
-    let HookedProductRepo: IRepository<typeof ProductWithHooksDef.$inferSelect>;
+    let HookedProductRepo: IRepository<typeof ProductWithHooks.$inferSelect>;
 
     beforeAll(() => {
       // Use a separate initialize instance for hooked models
       const bigal = initialize({
         pool: mockedPool,
-        models: [ProductWithHooksDef, StoreDef, CategoryDef, ProductCategoryDef],
+        models: [ProductWithHooks, Store, Category, ProductCategory],
       });
 
-      HookedProductRepo = bigal.getRepository(ProductWithHooksDef);
+      HookedProductRepo = bigal.getRepository(ProductWithHooks);
     });
 
     beforeEach(() => {
@@ -519,10 +411,10 @@ describe('initialize', () => {
     it('should return a readonly repository', () => {
       const bigal = initialize({
         pool: mockedPool,
-        models: [ReadonlyProductDef, ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+        models: [ReadonlyProduct, Product, Store, Category, ProductCategory],
       });
 
-      const repo = bigal.getReadonlyRepository(ReadonlyProductDef);
+      const repo = bigal.getReadonlyRepository(ReadonlyProduct);
       expect(repo).toBeDefined();
       expect(repo.model.readonly).toBe(true);
     });
@@ -929,8 +821,8 @@ describe('initialize', () => {
     const mockedPool = createMockPool();
 
     it('should return SQL and params from find() without executing', () => {
-      const bigal = initialize({ pool: mockedPool, models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef] });
-      const repo = bigal.getRepository(ProductDef);
+      const bigal = initialize({ pool: mockedPool, models: [Product, Store, Category, ProductCategory] });
+      const repo = bigal.getRepository(Product);
 
       const { sql, params } = repo.find().where({ name: 'Widget' }).sort('name asc').limit(10).toSQL();
 
@@ -944,8 +836,8 @@ describe('initialize', () => {
     });
 
     it('should return SQL and params from findOne() without executing', () => {
-      const bigal = initialize({ pool: mockedPool, models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef] });
-      const repo = bigal.getRepository(ProductDef);
+      const bigal = initialize({ pool: mockedPool, models: [Product, Store, Category, ProductCategory] });
+      const repo = bigal.getRepository(Product);
 
       const { sql, params } = repo.findOne().where({ id: 42 }).toSQL();
 
@@ -957,8 +849,8 @@ describe('initialize', () => {
     });
 
     it('should return SQL with select columns', () => {
-      const bigal = initialize({ pool: mockedPool, models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef] });
-      const repo = bigal.getRepository(ProductDef);
+      const bigal = initialize({ pool: mockedPool, models: [Product, Store, Category, ProductCategory] });
+      const repo = bigal.getRepository(Product);
 
       const { sql } = repo.find().select(['name', 'sku']).toSQL();
 
@@ -968,8 +860,8 @@ describe('initialize', () => {
     });
 
     it('should return SQL and params from create() without executing', () => {
-      const bigal = initialize({ pool: mockedPool, models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef] });
-      const repo = bigal.getRepository(ProductDef);
+      const bigal = initialize({ pool: mockedPool, models: [Product, Store, Category, ProductCategory] });
+      const repo = bigal.getRepository(Product);
 
       const { sql, params } = repo.create({ name: 'Widget', store: 1 }).toSQL();
 
@@ -980,8 +872,8 @@ describe('initialize', () => {
     });
 
     it('should return SQL and params from update() without executing', () => {
-      const bigal = initialize({ pool: mockedPool, models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef] });
-      const repo = bigal.getRepository(ProductDef);
+      const bigal = initialize({ pool: mockedPool, models: [Product, Store, Category, ProductCategory] });
+      const repo = bigal.getRepository(Product);
 
       const { sql, params } = repo.update({ id: 42 }, { name: 'Updated' }).toSQL();
 
@@ -993,8 +885,8 @@ describe('initialize', () => {
     });
 
     it('should return SQL and params from destroy() without executing', () => {
-      const bigal = initialize({ pool: mockedPool, models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef] });
-      const repo = bigal.getRepository(ProductDef);
+      const bigal = initialize({ pool: mockedPool, models: [Product, Store, Category, ProductCategory] });
+      const repo = bigal.getRepository(Product);
 
       const { sql, params } = repo.destroy({ id: 42 }).toSQL();
 
@@ -1016,17 +908,17 @@ describe('initialize', () => {
     it('should support destructuring typed repos from initialize result', async () => {
       const bigal = initialize({
         pool: mockedPool,
-        models: { Product: ProductDef, Store: StoreDef, Category: CategoryDef, ProductCategory: ProductCategoryDef },
+        models: { Product, Store, Category, ProductCategory },
       });
 
       // Destructured repos are typed
-      const { Product, Store } = bigal;
-      expect(Product).toBeDefined();
-      expect(Store).toBeDefined();
+      const { Product: ProductRepo, Store: StoreRepo } = bigal;
+      expect(ProductRepo).toBeDefined();
+      expect(StoreRepo).toBeDefined();
 
       // Repos work for queries
       mockedPool.query.mockResolvedValueOnce(getQueryResult([{ id: 1, name: 'Widget', sku: null, location: null, aliases: [], store: 1 }]));
-      const products = await Product.find().where({ name: 'Widget' });
+      const products = await ProductRepo.find().where({ name: 'Widget' });
       expect(products).toHaveLength(1);
       expect(products[0]!.name).toBe('Widget');
     });
@@ -1034,22 +926,22 @@ describe('initialize', () => {
     it('should still support getRepository with object-style models', () => {
       const bigal = initialize({
         pool: mockedPool,
-        models: { Product: ProductDef, Store: StoreDef, Category: CategoryDef, ProductCategory: ProductCategoryDef },
+        models: { Product, Store, Category, ProductCategory },
       });
 
-      const repo = bigal.getRepository(ProductDef);
+      const repo = bigal.getRepository(Product);
       expect(repo).toBeDefined();
     });
 
     it('should support both object and getRepository access on same instance', async () => {
       const bigal = initialize({
         pool: mockedPool,
-        models: { Product: ProductDef, Store: StoreDef, Category: CategoryDef, ProductCategory: ProductCategoryDef },
+        models: { Product, Store, Category, ProductCategory },
       });
 
       // Both access patterns should return the same repository
       const fromObject = bigal.Product;
-      const fromGetter = bigal.getRepository(ProductDef);
+      const fromGetter = bigal.getRepository(Product);
       expect(fromObject).toBe(fromGetter);
     });
   });
@@ -1057,15 +949,15 @@ describe('initialize', () => {
   describe('Populate', () => {
     const mockedPool = createMockPool();
 
-    let ProductRepo: IRepository<typeof ProductDef.$inferSelect>;
+    let ProductRepo: IRepository<typeof Product.$inferSelect>;
 
     beforeAll(() => {
       const bigal = initialize({
         pool: mockedPool,
-        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+        models: [Product, Store, Category, ProductCategory],
       });
 
-      ProductRepo = bigal.getRepository(ProductDef);
+      ProductRepo = bigal.getRepository(Product);
     });
 
     beforeEach(() => {
@@ -1118,18 +1010,18 @@ describe('initialize', () => {
     const mockedPool = createMockPool();
     const events: OnQueryEvent[] = [];
 
-    let ProductRepo: IRepository<typeof ProductDef.$inferSelect>;
+    let ProductRepo: IRepository<typeof Product.$inferSelect>;
 
     beforeAll(() => {
       const bigal = initialize({
         pool: mockedPool,
-        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+        models: [Product, Store, Category, ProductCategory],
         onQuery(event) {
           events.push(event);
         },
       });
 
-      ProductRepo = bigal.getRepository(ProductDef);
+      ProductRepo = bigal.getRepository(Product);
     });
 
     beforeEach(() => {
@@ -1243,13 +1135,13 @@ describe('initialize', () => {
 
       const bigal = initialize({
         pool: throwingPool,
-        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+        models: [Product, Store, Category, ProductCategory],
         onQuery() {
           throw new Error('Callback exploded');
         },
       });
 
-      const repo = bigal.getRepository(ProductDef);
+      const repo = bigal.getRepository(Product);
       const results = await repo.find({});
 
       expect(results).toStrictEqual([]);
@@ -1261,10 +1153,10 @@ describe('initialize', () => {
 
       const bigal = initialize({
         pool: plainPool,
-        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+        models: [Product, Store, Category, ProductCategory],
       });
 
-      const repo = bigal.getRepository(ProductDef);
+      const repo = bigal.getRepository(Product);
 
       // Spy on performance.now to verify it is NOT called when onQuery is absent
       const performanceSpy = vi.spyOn(performance, 'now');
@@ -1297,10 +1189,10 @@ describe('initialize', () => {
 
       const bigal = initialize({
         pool: mockedPool,
-        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+        models: [Product, Store, Category, ProductCategory],
       });
 
-      const repo = bigal.getRepository(ProductDef);
+      const repo = bigal.getRepository(Product);
       await repo.find({});
 
       expect(consoleSpy).toHaveBeenCalledOnce();
@@ -1322,10 +1214,10 @@ describe('initialize', () => {
 
       const bigal = initialize({
         pool: mockedPool,
-        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+        models: [Product, Store, Category, ProductCategory],
       });
 
-      const repo = bigal.getRepository(ProductDef);
+      const repo = bigal.getRepository(Product);
       await repo.find({});
 
       expect(consoleSpy).not.toHaveBeenCalled();
@@ -1344,13 +1236,13 @@ describe('initialize', () => {
 
       const bigal = initialize({
         pool: mockedPool,
-        models: [ProductDef, StoreDef, CategoryDef, ProductCategoryDef],
+        models: [Product, Store, Category, ProductCategory],
         onQuery(event) {
           customEvents.push(event);
         },
       });
 
-      const repo = bigal.getRepository(ProductDef);
+      const repo = bigal.getRepository(Product);
       await repo.find({});
 
       expect(consoleSpy).not.toHaveBeenCalled();
