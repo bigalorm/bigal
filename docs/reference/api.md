@@ -17,7 +17,7 @@ Returns typed repositories directly via destructuring:
 ```ts
 import { initialize } from 'bigal';
 
-const { Product: productRepo, Store: storeRepo } = initialize({
+const { Product, Store } = initialize({
   pool,
   readonlyPool,
   models: { Product, Store, Category, ProductCategory },
@@ -40,7 +40,7 @@ const bigal = initialize({
   models: [Product, Store, Category, ProductCategory],
 });
 
-const productRepo = bigal.getRepository(Product);
+const Product = bigal.getRepository(Product);
 ```
 
 **Parameters:**
@@ -61,7 +61,7 @@ a model not included in `models`, `initialize()` throws immediately.
 Returns a typed read-write repository for a table definition.
 
 ```ts
-const ProductRepo = bigal.getRepository(Product);
+const Product = bigal.getRepository(Product);
 // Type: IRepository<InferSelect<typeof Product.schema>>
 ```
 
@@ -359,7 +359,7 @@ Returns the generated SQL and parameters without executing the query. Available 
 `create`, `update`, and `destroy`:
 
 ```ts
-const { sql, params } = productRepo.find().where({ name: 'Widget' }).toSQL();
+const { sql, params } = Product.find().where({ name: 'Widget' }).toSQL();
 ```
 
 ### filters()
@@ -368,10 +368,10 @@ Override global filters defined on the table:
 
 ```ts
 // Disable all filters
-productRepo.find().where({}).filters(false);
+Product.find().where({}).filters(false);
 
 // Disable a specific filter
-productRepo.find().where({}).filters({ active: false });
+Product.find().where({}).filters({ active: false });
 ```
 
 ## subquery()

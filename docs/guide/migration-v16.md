@@ -280,20 +280,20 @@ import { initialize } from 'bigal';
 import type { IRepository } from 'bigal';
 
 const repos = initialize({ models: [Product, Store], pool });
-const ProductRepo = repos.Product as IRepository<Product>;
+const Product = repos.Product as IRepository<Product>;
 
 // v16 -- object style (typed destructuring, recommended)
 import { initialize } from 'bigal';
 
-const { Product: ProductRepo, Store: StoreRepo } = initialize({
+const { Product, Store } = initialize({
   pool,
   models: { Product, Store, Category, ProductCategory },
 });
-// ProductRepo is fully typed -- no assertion needed
+// Product is fully typed -- no assertion needed
 
 // v16 -- array style (use getRepository)
 const bigal = initialize({ pool, models: [Product, Store, Category, ProductCategory] });
-const ProductRepo = bigal.getRepository(Product);
+const Product = bigal.getRepository(Product);
 ```
 
 `initialize()` validates all relationship references at construction time. If a `belongsTo` or
@@ -330,10 +330,10 @@ In v16, all results are plain objects. There is no `.toJSON()` method and no cla
 
 ```ts
 // v15
-const product = await ProductRepo.findOne().where({ id: 42 }).toJSON();
+const product = await Product.findOne().where({ id: 42 }).toJSON();
 
 // v16
-const product = await ProductRepo.findOne().where({ id: 42 });
+const product = await Product.findOne().where({ id: 42 });
 // Already a plain object -- no .toJSON() needed
 ```
 
@@ -462,8 +462,8 @@ const Product = table(
 );
 
 // Override per query
-await productRepo.find().where({}).filters(false);
-await productRepo.find().where({}).filters({ active: false });
+await Product.find().where({}).filters(false);
+await Product.find().where({}).filters({ active: false });
 ```
 
 ### toSQL()
@@ -471,7 +471,7 @@ await productRepo.find().where({}).filters({ active: false });
 Inspect the generated SQL without executing on any query operation:
 
 ```ts
-const { sql, params } = productRepo.find().where({ name: 'Widget' }).toSQL();
+const { sql, params } = Product.find().where({ name: 'Widget' }).toSQL();
 // sql: 'SELECT ... FROM "products" WHERE "name"=$1'
 // params: ['Widget']
 ```
@@ -534,7 +534,7 @@ v16 adds a structured `onQuery` callback:
 
 ```ts
 // v16
-const { Product: ProductRepo } = initialize({
+const { Product } = initialize({
   pool,
   models: { Product, Store },
   onQuery({ sql, params, duration, error, model, operation }) {
@@ -566,28 +566,28 @@ The fluent query builder API is identical in v16. All of these work exactly as b
 
 ```ts
 // find with where, sort, limit
-const products = await ProductRepo.find()
+const products = await Product.find()
   .where({ name: { contains: 'widget' } })
   .sort('name')
   .limit(10);
 
 // findOne with populate
-const product = await ProductRepo.findOne().where({ id: 42 }).populate('store');
+const product = await Product.findOne().where({ id: 42 }).populate('store');
 
 // count
-const count = await ProductRepo.count().where({ isActive: true });
+const count = await Product.count().where({ isActive: true });
 
 // create
-const newProduct = await ProductRepo.create({ name: 'Widget', priceCents: 999, store: 1 });
+const newProduct = await Product.create({ name: 'Widget', priceCents: 999, store: 1 });
 
 // update
-const updated = await ProductRepo.update({ id: 42 }, { name: 'Super Widget' });
+const updated = await Product.update({ id: 42 }, { name: 'Super Widget' });
 
 // destroy
-await ProductRepo.destroy({ id: 42 });
+await Product.destroy({ id: 42 });
 
 // upsert
-await ProductRepo.create({ name: 'Widget', sku: 'WDG-001', priceCents: 999 }, { onConflict: { action: 'merge', targets: ['sku'], merge: ['priceCents'] } });
+await Product.create({ name: 'Widget', sku: 'WDG-001', priceCents: 999 }, { onConflict: { action: 'merge', targets: ['sku'], merge: ['priceCents'] } });
 ```
 
 ## Migration checklist

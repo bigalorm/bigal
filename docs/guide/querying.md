@@ -13,7 +13,7 @@ can `await` them directly.
 Returns a single record or `null`:
 
 ```ts
-const product = await productRepository.findOne().where({ id: 42 });
+const product = await Product.findOne().where({ id: 42 });
 ```
 
 ### Query projection
@@ -21,7 +21,7 @@ const product = await productRepository.findOne().where({ id: 42 });
 Select specific columns:
 
 ```ts
-const product = await productRepository
+const product = await Product
   .findOne({
     select: ['name', 'sku'],
   })
@@ -33,7 +33,7 @@ const product = await productRepository
 Use an explicit connection pool:
 
 ```ts
-const product = await productRepository
+const product = await Product
   .findOne({
     pool: poolOverride,
   })
@@ -45,7 +45,7 @@ const product = await productRepository
 Returns an array of records:
 
 ```ts
-const products = await productRepository.find().where({ store: storeId });
+const products = await Product.find().where({ store: storeId });
 ```
 
 ## count
@@ -53,7 +53,7 @@ const products = await productRepository.find().where({ store: storeId });
 Returns the number of matching records:
 
 ```ts
-const count = await productRepository.count().where({
+const count = await Product.count().where({
   name: { like: 'Widget%' },
 });
 ```
@@ -72,10 +72,10 @@ All string operators use case-insensitive matching (`ILIKE`) and accept arrays f
 | `endsWith`   | Suffix match      | `%value`    |
 
 ```ts
-await productRepository.find().where({ name: { contains: 'widget' } });
+await Product.find().where({ name: { contains: 'widget' } });
 // SQL: WHERE name ILIKE '%widget%'
 
-await productRepository.find().where({ name: { startsWith: 'Pro' } });
+await Product.find().where({ name: { startsWith: 'Pro' } });
 // SQL: WHERE name ILIKE 'Pro%'
 ```
 
@@ -89,10 +89,10 @@ await productRepository.find().where({ name: { startsWith: 'Pro' } });
 | `>=`     | Greater than or equal |
 
 ```ts
-await productRepository.find().where({ price: { '>=': 100 } });
+await Product.find().where({ price: { '>=': 100 } });
 
 // Multiple operators on same field (AND)
-await productRepository.find().where({
+await Product.find().where({
   createdAt: { '>=': startDate, '<': endDate },
 });
 ```
@@ -107,13 +107,13 @@ await personRepository.find().where({ age: [22, 23, 24] });
 ### Negation (`!`)
 
 ```ts
-await productRepository.find().where({ status: { '!': 'discontinued' } });
+await Product.find().where({ status: { '!': 'discontinued' } });
 // SQL: WHERE status <> $1
 
-await productRepository.find().where({ status: { '!': ['a', 'b'] } });
+await Product.find().where({ status: { '!': ['a', 'b'] } });
 // SQL: WHERE status NOT IN ($1, $2)
 
-await productRepository.find().where({ deletedAt: { '!': null } });
+await Product.find().where({ deletedAt: { '!': null } });
 // SQL: WHERE deleted_at IS NOT NULL
 ```
 
@@ -205,15 +205,15 @@ await repo.find().where({
 ### String syntax
 
 ```ts
-await productRepository.find().where({}).sort('name asc');
-await productRepository.find().where({}).sort('name asc, createdAt desc');
+await Product.find().where({}).sort('name asc');
+await Product.find().where({}).sort('name asc, createdAt desc');
 ```
 
 ### Object syntax
 
 ```ts
-await productRepository.find().where({}).sort({ name: 1 }); // ASC
-await productRepository.find().where({}).sort({ name: 1, createdAt: -1 }); // ASC, DESC
+await Product.find().where({}).sort({ name: 1 }); // ASC
+await Product.find().where({}).sort({ name: 1, createdAt: -1 }); // ASC, DESC
 ```
 
 ## Vector distance queries
@@ -265,7 +265,7 @@ const nearby = await documentRepo
 ### skip and limit
 
 ```ts
-await productRepository.find().where({}).skip(20).limit(10);
+await Product.find().where({}).skip(20).limit(10);
 ```
 
 ### paginate
@@ -273,7 +273,7 @@ await productRepository.find().where({}).skip(20).limit(10);
 ```ts
 const page = 2;
 const pageSize = 25;
-await productRepository.find().where({}).paginate(page, pageSize);
+await Product.find().where({}).paginate(page, pageSize);
 ```
 
 ### withCount
@@ -281,7 +281,7 @@ await productRepository.find().where({}).paginate(page, pageSize);
 Get paginated results with total count in a single query using `COUNT(*) OVER()`:
 
 ```ts
-const { results, totalCount } = await productRepository.find().where({ store: storeId }).sort('name').limit(10).skip(20).withCount();
+const { results, totalCount } = await Product.find().where({ store: storeId }).sort('name').limit(10).skip(20).withCount();
 
 const totalPages = Math.ceil(totalCount / 10);
 ```
@@ -292,7 +292,7 @@ PostgreSQL's `DISTINCT ON` returns one row per unique combination of columns:
 
 ```ts
 // Most recently created product per store
-const latest = await productRepository.find().distinctOn(['store']).sort('store').sort('createdAt desc');
+const latest = await Product.find().distinctOn(['store']).sort('store').sort('createdAt desc');
 ```
 
 Requirements:
@@ -307,10 +307,10 @@ they are automatically applied to every `find` and `findOne` query. Override the
 
 ```ts
 // Disable all filters for this query
-await productRepo.find().where({}).filters(false);
+await Product.find().where({}).filters(false);
 
 // Disable a specific filter
-await productRepo.find().where({}).filters({ active: false });
+await Product.find().where({}).filters({ active: false });
 ```
 
 Filters are not applied to `count()` queries.
@@ -320,7 +320,7 @@ Filters are not applied to `count()` queries.
 Inspect the generated SQL and parameters without executing the query:
 
 ```ts
-const { sql, params } = productRepo
+const { sql, params } = Product
   .find()
   .where({ name: { contains: 'widget' } })
   .sort('name')
@@ -338,7 +338,7 @@ and testing SQL generation.
 Load related entities:
 
 ```ts
-const product = await productRepository
+const product = await Product
   .findOne()
   .where({ id: 42 })
   .populate('store', { select: ['name'] });

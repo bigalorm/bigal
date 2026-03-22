@@ -140,7 +140,7 @@ const StoreRepo = bigal.register(Store);
 Or auto-registration by passing schemas directly:
 
 ```typescript
-const { Product: ProductRepo, Store: StoreRepo } = createBigAl({
+const { Product, Store } = createBigAl({
   pool,
   models: [Product, Store],
 });

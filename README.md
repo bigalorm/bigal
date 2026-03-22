@@ -56,23 +56,23 @@ const Store = table('stores', {
 
 // Initialize with typed destructuring -- no type assertions needed
 const pool = new Pool('postgres://localhost/mydb');
-const { Product: productRepo, Store: storeRepo } = initialize({
+const { Product, Store } = initialize({
   pool,
   models: { Product, Store },
 });
 
 // Fluent queries -- just await the chain
-const products = await productRepo
+const products = await Product
   .find()
   .where({ priceCents: { '>=': 1000 }, name: { contains: 'widget' } })
   .sort('name asc')
   .limit(10);
 
 // Upserts with ON CONFLICT
-await productRepo.create({ name: 'Widget', priceCents: 999, store: 1 }, { onConflict: { action: 'merge', targets: ['name'], merge: ['priceCents'] } });
+await Product.create({ name: 'Widget', priceCents: 999, store: 1 }, { onConflict: { action: 'merge', targets: ['name'], merge: ['priceCents'] } });
 
 // Inspect generated SQL without executing
-const { sql, params } = productRepo.find().where({ name: 'Widget' }).toSQL();
+const { sql, params } = Product.find().where({ name: 'Widget' }).toSQL();
 ```
 
 ## Documentation

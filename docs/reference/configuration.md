@@ -18,7 +18,7 @@ const pool = new Pool({
   connectionString: 'postgres://user:pass@localhost/mydb',
 });
 
-const { Product: productRepo } = initialize({ models: { Product }, pool });
+const { Product } = initialize({ models: { Product }, pool });
 ```
 
 ### node-postgres (pg)
@@ -31,7 +31,7 @@ const pool = new pg.Pool({
   connectionString: 'postgres://user:pass@localhost/mydb',
 });
 
-const { Product: productRepo } = initialize({ models: { Product }, pool });
+const { Product } = initialize({ models: { Product }, pool });
 ```
 
 ### Neon serverless
@@ -44,7 +44,7 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
-const { Product: productRepo } = initialize({ models: { Product }, pool });
+const { Product } = initialize({ models: { Product }, pool });
 ```
 
 ## Read replicas
@@ -55,7 +55,7 @@ Separate read and write pools by passing `readonlyPool`:
 const pool = new Pool('postgres://localhost/mydb');
 const readonlyPool = new Pool('postgres://readonly-host/mydb');
 
-const { Product: productRepo } = initialize({
+const { Product } = initialize({
   models: { Product },
   pool,
   readonlyPool,
@@ -68,7 +68,7 @@ const { Product: productRepo } = initialize({
 Individual queries can override the pool:
 
 ```ts
-const product = await productRepo
+const product = await Product
   .findOne({
     pool: writePool,
   })
@@ -88,7 +88,7 @@ const AuditLog = table(
   { connection: 'audit' },
 );
 
-const { Product: productRepo, AuditLog: auditRepo } = initialize({
+const { Product, AuditLog } = initialize({
   models: { Product, AuditLog },
   pool: mainPool,
   connections: {
@@ -111,7 +111,7 @@ Models without a `connection` option use the top-level `pool`.
 Returns typed repositories directly via destructuring. No type assertions needed:
 
 ```ts
-const { Product: productRepo, Store: storeRepo } = initialize({
+const { Product, Store } = initialize({
   pool,
   models: { Product, Store, Category, ProductCategory },
 });
@@ -127,8 +127,8 @@ const bigal = initialize({
   models: [Product, Store, Category, ProductCategory],
 });
 
-const productRepo = bigal.getRepository(Product);
-const summaryRepo = bigal.getReadonlyRepository(ProductSummary);
+const Product = bigal.getRepository(Product);
+const ProductSummary = bigal.getReadonlyRepository(ProductSummary);
 ```
 
 ## Global filters
@@ -155,10 +155,10 @@ Filters can be static objects or functions that return a where clause dynamicall
 
 ```ts
 // Disable all filters
-await productRepo.find().where({}).filters(false);
+await Product.find().where({}).filters(false);
 
 // Disable a specific filter
-await productRepo.find().where({}).filters({ active: false });
+await Product.find().where({}).filters({ active: false });
 ```
 
 ## Query observability
@@ -168,7 +168,7 @@ await productRepo.find().where({}).filters({ active: false });
 Pass an `onQuery` callback to `initialize()` for structured query logging:
 
 ```ts
-const { Product: productRepo } = initialize({
+const { Product } = initialize({
   pool,
   models: { Product },
   onQuery({ sql, params, duration, error, model, operation }) {

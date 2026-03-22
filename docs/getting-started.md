@@ -26,16 +26,16 @@ npm install @neondatabase/serverless
 ## Define a table
 
 Tables are defined with the `table()` function and PostgreSQL-native column builders. Types are
-inferred from the schema definition.
+inferred from the schema definition. Column names are auto-derived from property keys using snakeCase.
 
 ```ts
 import { createdAt, defineTable as table, integer, serial, text, updatedAt, varchar } from 'bigal';
 
 export const Product = table('products', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  sku: varchar('sku', { length: 100 }),
-  priceCents: integer('price_cents').notNull(),
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  sku: varchar({ length: 100 }),
+  priceCents: integer().notNull(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -43,22 +43,20 @@ export const Product = table('products', {
 
 ## Initialize repositories
 
-Pass your table definitions and a connection pool to `createBigAl()`, then use `getRepository()` to
-get a typed repository.
+Pass your table definitions and a connection pool to `initialize()`. The object-style models option
+gives you typed repositories directly via destructuring:
 
 ```ts
-import { createBigAl } from 'bigal';
+import { initialize } from 'bigal';
 import { Pool } from 'postgres-pool';
 import { Product } from './Product';
 
 const pool = new Pool('postgres://localhost/mydb');
 
-const bigal = createBigAl({
-  models: [Product],
+const { Product } = initialize({
+  models: { Product },
   pool,
 });
-
-const productRepository = bigal.getRepository(Product);
 ```
 
 ## Run your first query
@@ -67,17 +65,17 @@ Queries use a fluent builder and are `PromiseLike` -- just `await` the chain.
 
 ```ts
 // Find all products with price >= 1000 cents, sorted by name
-const products = await productRepository
+const products = await Product
   .find()
   .where({ priceCents: { '>=': 1000 } })
   .sort('name asc')
   .limit(10);
 
 // Find one product by ID
-const product = await productRepository.findOne().where({ id: 42 });
+const product = await Product.findOne().where({ id: 42 });
 
 // Count matching records
-const count = await productRepository.count().where({ sku: { '!': null } });
+const count = await Product.count().where({ sku: { '!': null } });
 ```
 
 ## Using with AI assistants

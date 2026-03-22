@@ -129,7 +129,7 @@ When you query entities, BigAl returns `QueryResult<T>` which narrows relationsh
 automatically:
 
 ```ts
-const product = await productRepository.findOne().where({ id: 1 });
+const product = await Product.findOne().where({ id: 1 });
 
 // product.store is `number`, not a union type
 console.log(product.store); // number (the foreign key ID)

@@ -73,26 +73,26 @@ const repos = initialize({
   models: [Product, Store],
   pool: new Pool('postgres://localhost/mydb'),
 });
-const productRepo = repos.Product as Repository<Product>;
+const Product = repos.Product as Repository<Product>;
 
 // Fluent queries — just await the chain
-const products = await productRepo
+const products = await Product
   .find()
   .where({ priceCents: { '>': 1000 }, name: { contains: 'widget' } })
   .sort('name asc')
   .limit(10);
 
 // Joins and subqueries
-const expensiveProducts = await productRepo
+const expensiveProducts = await Product
   .find()
   .join('store')
   .where({
     store: { name: 'Acme' },
-    price: { '>': subquery(productRepo).avg('price') },
+    price: { '>': subquery(Product).avg('price') },
   });
 
 // Upserts with ON CONFLICT
-await productRepo.create({ name: 'Widget', sku: 'WDG-001', priceCents: 999 }, { onConflict: { action: 'merge', targets: ['sku'], merge: ['priceCents'] } });
+await Product.create({ name: 'Widget', sku: 'WDG-001', priceCents: 999 }, { onConflict: { action: 'merge', targets: ['sku'], merge: ['priceCents'] } });
 ```
 
 </div>

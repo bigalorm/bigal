@@ -11,10 +11,10 @@ on query results after calling `.populate()`:
 
 ```ts
 // categories is NOT on the result type
-const product = await productRepository.findOne().where({ id: 42 });
+const product = await Product.findOne().where({ id: 42 });
 
 // categories IS on the result type after populate
-const populated = await productRepository.findOne().where({ id: 42 }).populate('categories');
+const populated = await Product.findOne().where({ id: 42 }).populate('categories');
 ```
 
 ## Query observability
@@ -22,7 +22,7 @@ const populated = await productRepository.findOne().where({ id: 42 }).populate('
 Use the `onQuery` callback in `initialize()` for structured query logging:
 
 ```ts
-const { Product: productRepo } = initialize({
+const { Product } = initialize({
   pool,
   models: { Product },
   onQuery({ sql, params, duration, error, model, operation }) {

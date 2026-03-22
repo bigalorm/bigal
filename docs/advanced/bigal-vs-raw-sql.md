@@ -31,29 +31,29 @@ Drop to raw SQL (via your pool directly) when:
 
 | SQL                                                   | BigAl                                                        |
 | ----------------------------------------------------- | ------------------------------------------------------------ |
-| `SELECT * FROM products WHERE id = 1`                 | `productRepo.findOne().where({ id: 1 })`                     |
-| `SELECT name FROM products WHERE id = 1`              | `productRepo.findOne({ select: ['name'] }).where({ id: 1 })` |
-| `SELECT * FROM products WHERE name ILIKE '%widget%'`  | `productRepo.find().where({ name: { contains: 'widget' } })` |
-| `SELECT * FROM products WHERE price >= 100`           | `productRepo.find().where({ price: { '>=': 100 } })`         |
-| `SELECT * FROM products WHERE status IN ('a','b')`    | `productRepo.find().where({ status: ['a', 'b'] })`           |
-| `SELECT * FROM products WHERE status <> 'x'`          | `productRepo.find().where({ status: { '!': 'x' } })`         |
-| `SELECT * FROM products WHERE deleted_at IS NOT NULL` | `productRepo.find().where({ deletedAt: { '!': null } })`     |
-| `SELECT * FROM products ORDER BY name LIMIT 10`       | `productRepo.find().where({}).sort('name asc').limit(10)`    |
-| `SELECT COUNT(*) FROM products WHERE active = true`   | `productRepo.count().where({ active: true })`                |
+| `SELECT * FROM products WHERE id = 1`                 | `Product.findOne().where({ id: 1 })`                     |
+| `SELECT name FROM products WHERE id = 1`              | `Product.findOne({ select: ['name'] }).where({ id: 1 })` |
+| `SELECT * FROM products WHERE name ILIKE '%widget%'`  | `Product.find().where({ name: { contains: 'widget' } })` |
+| `SELECT * FROM products WHERE price >= 100`           | `Product.find().where({ price: { '>=': 100 } })`         |
+| `SELECT * FROM products WHERE status IN ('a','b')`    | `Product.find().where({ status: ['a', 'b'] })`           |
+| `SELECT * FROM products WHERE status <> 'x'`          | `Product.find().where({ status: { '!': 'x' } })`         |
+| `SELECT * FROM products WHERE deleted_at IS NOT NULL` | `Product.find().where({ deletedAt: { '!': null } })`     |
+| `SELECT * FROM products ORDER BY name LIMIT 10`       | `Product.find().where({}).sort('name asc').limit(10)`    |
+| `SELECT COUNT(*) FROM products WHERE active = true`   | `Product.count().where({ active: true })`                |
 
 ### CRUD
 
 | SQL                                                         | BigAl                                          |
 | ----------------------------------------------------------- | ---------------------------------------------- |
-| `INSERT INTO products (name) VALUES ('Widget') RETURNING *` | `productRepo.create({ name: 'Widget' })`       |
-| `UPDATE products SET name = 'X' WHERE id = 1 RETURNING *`   | `productRepo.update({ id: 1 }, { name: 'X' })` |
-| `DELETE FROM products WHERE id = 1 RETURNING *`             | `productRepo.destroy({ id: 1 })`               |
+| `INSERT INTO products (name) VALUES ('Widget') RETURNING *` | `Product.create({ name: 'Widget' })`       |
+| `UPDATE products SET name = 'X' WHERE id = 1 RETURNING *`   | `Product.update({ id: 1 }, { name: 'X' })` |
+| `DELETE FROM products WHERE id = 1 RETURNING *`             | `Product.destroy({ id: 1 })`               |
 
 ### Subqueries, joins, and advanced
 
 | SQL                                                                      | BigAl                                                                                   |
 | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `WHERE store_id IN (SELECT id FROM stores WHERE active)`                 | `.where({ store: { in: subquery(storeRepo).select(['id']).where({ active: true }) } })` |
+| `WHERE store_id IN (SELECT id FROM stores WHERE active)`                 | `.where({ store: { in: subquery(Store).select(['id']).where({ active: true }) } })` |
 | `INNER JOIN stores s ON p.store_id = s.id WHERE s.name = 'Acme'`         | `.join('store').where({ store: { name: 'Acme' } })`                                     |
 | `SELECT DISTINCT ON (store_id) * ... ORDER BY store_id, created_at DESC` | `.distinctOn(['store']).sort('store').sort('createdAt desc')`                           |
 | `ON CONFLICT (sku) DO NOTHING`                                           | `{ onConflict: { action: 'ignore', targets: ['sku'] } }`                                |

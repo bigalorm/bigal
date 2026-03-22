@@ -465,10 +465,10 @@ Override filters per query:
 
 ```ts
 // Disable all filters
-await productRepo.find().where({}).filters(false);
+await Product.find().where({}).filters(false);
 
 // Disable a specific filter
-await productRepo.find().where({}).filters({ active: false });
+await Product.find().where({}).filters({ active: false });
 ```
 
 See [Querying > Global filters](/guide/querying#global-filters) for more details.

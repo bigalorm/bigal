@@ -5,74 +5,121 @@ description: Migrates BigAl projects from v15 decorator-based models to v16 func
 
 # Upgrading to BigAl v16
 
-## Instructions
+## Quick Start
 
-Follow these steps in order. Run the codemod first for mechanical
-conversions, then review and fix up the output.
+v16 replaces decorators with function-based schema definitions. No classes,
+no `experimentalDecorators`, no `extends Entity`.
 
-### Step 1: Run the codemod
-
-Find all decorator-based model files and run the codemod on them:
-
-```bash
-npx tsx node_modules/bigal/scripts/migrate-v16.ts 'src/models/**/*.ts'
-```
-
-Review the dry-run output. If it looks correct, apply the changes:
-
-```bash
-npx tsx node_modules/bigal/scripts/migrate-v16.ts 'src/models/**/*.ts' --write
-```
-
-The codemod handles:
-
-- `@table` + `@column` decorators → `table()` with column builders
-- `@primaryColumn` → `serial().primaryKey()` or `integer().primaryKey()`
-- `@createDateColumn` / `@updateDateColumn` → `createdAt()` / `updatedAt()`
-- `@column({ model: 'Store' })` → `belongsTo('Store')`
-- `@column({ collection: ..., via: ... })` → `hasMany('...').via('...')`
-- `@column({ collection: ..., through: ..., via: ... })` → `hasMany('...').through('...').via('...')`
-- Readonly tables → `view()` instead of `table()` with readonly option
-
-The codemod does NOT handle:
-
-- Base class extraction (you must create shared column objects manually)
-- Lifecycle hooks (marked with TODO comments)
-- Instance methods (marked with TODO comments)
-- Complex inheritance hierarchies
-
-### Step 2: Extract shared base columns
-
-If your models extended a base class, create shared column objects:
+**Before (v15):**
 
 ```typescript
-// base.ts
-import { serial, createdAt, updatedAt } from 'bigal';
+import { column, primaryColumn, table, Entity, initialize } from 'bigal';
 
-export const modelBase = { id: serial().primaryKey() };
-export const timestamps = { createdAt: createdAt(), updatedAt: updatedAt() };
+@table({ name: 'products' })
+class Product extends Entity {
+  @primaryColumn({ type: 'integer' })
+  public id!: number;
+
+  @column({ type: 'string', required: true })
+  public name!: string;
+
+  @column({ model: 'Store', name: 'store_id' })
+  public store!: Store | number;
+}
+
+const repos = initialize({ models: [Product, Store], pool });
+const Product = repos.Product as Repository<Product>;
 ```
 
-Then spread into each model:
+**After (v16):**
 
 ```typescript
-import { table, text, belongsTo } from 'bigal';
-import { modelBase, timestamps } from './base';
+import { defineTable as table, serial, text, belongsTo, initialize } from 'bigal';
+import type { Repository } from 'bigal';
 
-export const Product = table('products', {
-  ...modelBase,
-  ...timestamps,
+const Product = table('products', {
+  id: serial().primaryKey(),
   name: text().notNull(),
   store: belongsTo('Store'),
 });
+
+const { Product } = initialize({ pool, models: { Product, Store } });
+// Product is Repository<typeof Product> -- fully typed, no assertion needed
 ```
 
-### Step 3: Migrate lifecycle hooks
+## Migration Steps
 
-Move static `beforeCreate`/`beforeUpdate` methods to table options:
+### Step 1: Convert model files
+
+For each model class, create a `table()` call:
+
+| v15 Decorator | v16 Builder |
+| --- | --- |
+| `@primaryColumn({ type: 'integer' })` | `serial().primaryKey()` |
+| `@column({ type: 'string', required: true })` | `text().notNull()` |
+| `@column({ type: 'string' })` | `text()` |
+| `@column({ type: 'integer' })` | `integer()` |
+| `@column({ type: 'float' })` | `real()` |
+| `@column({ type: 'boolean' })` | `boolean()` |
+| `@column({ type: 'json' })` | `jsonb()` |
+| `@column({ type: 'datetime' })` | `timestamptz()` |
+| `@column({ type: 'date' })` | `date()` |
+| `@column({ type: 'uuid' })` | `uuid()` |
+| `@column({ type: 'binary' })` | `bytea()` |
+| `@column({ type: 'string[]' })` | `textArray()` |
+| `@column({ type: 'integer[]' })` | `integerArray()` |
+| `@column({ type: 'boolean[]' })` | `booleanArray()` |
+| `@createDateColumn()` | `createdAt()` |
+| `@updateDateColumn()` | `updatedAt()` |
+| `@versionColumn()` | `integer().notNull()` |
+| `@column({ model: 'Store', name: 'store_id' })` | `belongsTo('Store')` |
+| `@column({ collection: 'Product', via: 'store' })` | `hasMany('Product').via('store')` |
+| `@column({ collection: 'Cat', through: 'PC', via: 'p' })` | `hasMany('Cat').through('PC').via('p')` |
+
+Column names auto-derive from property keys via snakeCase. Only specify
+a name when the convention doesn't match:
 
 ```typescript
-export const Product = table(
+aliases: textArray({ name: 'alias_names' }).default([]),
+```
+
+### Step 2: Extract shared base columns
+
+Replace class inheritance with object spread:
+
+```typescript
+// Before
+abstract class ModelBase extends Entity {
+  @primaryColumn({ type: 'integer' }) public id!: number;
+}
+class Product extends ModelBase { ... }
+
+// After
+const modelBase = { id: serial().primaryKey() };
+const timestamps = { createdAt: createdAt(), updatedAt: updatedAt() };
+
+const Product = table('products', {
+  ...modelBase,
+  ...timestamps,
+  name: text().notNull(),
+});
+```
+
+### Step 3: Convert hooks
+
+Move static `beforeCreate`/`beforeUpdate` methods to table options.
+v16 supports all 7 lifecycle hooks:
+
+```typescript
+// Before
+class Product extends Entity {
+  static override beforeCreate(values) {
+    return { ...values, slug: slugify(values.name) };
+  }
+}
+
+// After
+const Product = table(
   'products',
   { ...columns },
   {
@@ -88,83 +135,85 @@ export const Product = table(
 Available hooks: `beforeCreate`, `afterCreate`, `beforeUpdate`,
 `afterUpdate`, `beforeDestroy`, `afterDestroy`, `afterFind`.
 
-Instance methods should become `afterFind` hooks or standalone functions.
-
-### Step 4: Update initialization
+### Step 4: Convert initialization
 
 ```typescript
 // Before
 const repos = initialize({ models: [Product, Store], pool });
-const ProductRepo = repos.Product as Repository<Product>;
+const Product = repos.Product as Repository<Product>;
 
-// After — object style with typed destructuring
-const { Product: ProductRepo, Store: StoreRepo } = initialize({
+// After -- object style (typed destructuring, recommended)
+const { Product, Store } = initialize({
   pool,
   models: { Product, Store },
 });
+
+// After -- array style (use getRepository)
+const bigal = initialize({ pool, models: [Product, Store] });
+const Product = bigal.getRepository(Product);
 ```
 
-### Step 5: Update type references
+### Step 5: Remove old imports and config
+
+- Remove `extends Entity` from all classes
+- Remove `import { Entity, column, primaryColumn, ... } from 'bigal'`
+- Remove `experimentalDecorators: true` from tsconfig.json
+- Remove `useDefineForClassFields: false` from tsconfig.json
+- Remove `.toJSON()` calls -- results are always plain objects
+- Remove `NotEntity<T>` wrappers -- no longer needed
+
+### Step 6: Update type references
 
 ```typescript
 // Before
-let repo: Repository<Product>;
+let product: Product;
+let params: CreateUpdateParams<Product>;
 
-// After
-import type { Repository } from 'bigal';
-let repo: Repository<typeof Product>;
+// After -- types inferred from table definition
+import type { InferSelect, InferInsert, Repository } from 'bigal';
+
+type ProductRow = InferSelect<(typeof Product)['schema']>;
+type ProductInsert = InferInsert<(typeof Product)['schema']>;
+
+// For repository type annotations:
+function getProducts(repo: Repository<typeof Product>) { /* ... */ }
 ```
 
-### Step 6: Clean up
+## Removed Exports
 
-- Remove `experimentalDecorators: true` from tsconfig.json
-- Remove `useDefineForClassFields: false` from tsconfig.json
-- Remove `.toJSON()` calls — results are always plain objects
-- Remove `NotEntity<T>` wrappers — no longer needed
-- Remove `import { Entity }` — no longer exists
+These v15 exports no longer exist:
 
-### Step 7: Verify
+- `Entity`, `EntityStatic`, `NotEntity`, `NotEntityBrand`
+- `column`, `primaryColumn`, `createDateColumn`, `updateDateColumn`,
+  `versionColumn` (decorators)
+- `table` decorator (replaced by `table` function, exported as
+  `defineTable`)
+- `getMetadataStorage`, `MetadataStorage`
 
-```bash
-npm run build
-npm test
-```
+## New Features in v16
 
-## Column type mapping reference
+- `view()` -- define readonly models backed by PostgreSQL views
+- `toSQL()` -- inspect generated SQL without executing on any operation
+- `onQuery` -- observability callback on `initialize()`
+- Global filters -- auto-applied where clauses (soft delete,
+  multi-tenancy)
+- All 7 lifecycle hooks -- `beforeCreate`, `afterCreate`,
+  `beforeUpdate`, `afterUpdate`, `beforeDestroy`, `afterDestroy`,
+  `afterFind`
+- String references -- `belongsTo('Store')` instead of arrow functions
+- Auto-derived names -- column names from property keys, model names
+  from table names
+- pgvector -- `vector({ dimensions })` with nearest-neighbor sort and
+  distance filtering
+- `Repository<typeof Product>` -- type alias for typed repository
+  annotations
 
-| v15 Decorator                                 | v16 Builder             |
-| --------------------------------------------- | ----------------------- |
-| `@primaryColumn({ type: 'integer' })`         | `serial().primaryKey()` |
-| `@column({ type: 'string', required: true })` | `text().notNull()`      |
-| `@column({ type: 'string' })`                 | `text()`                |
-| `@column({ type: 'integer' })`                | `integer()`             |
-| `@column({ type: 'float' })`                  | `real()`                |
-| `@column({ type: 'boolean' })`                | `boolean()`             |
-| `@column({ type: 'json' })`                   | `jsonb()`               |
-| `@column({ type: 'datetime' })`               | `timestamptz()`         |
-| `@column({ type: 'date' })`                   | `date()`                |
-| `@column({ type: 'uuid' })`                   | `uuid()`                |
-| `@column({ type: 'binary' })`                 | `bytea()`               |
-| `@column({ type: 'string[]' })`               | `textArray()`           |
-| `@column({ type: 'integer[]' })`              | `integerArray()`        |
-| `@column({ type: 'boolean[]' })`              | `booleanArray()`        |
-| `@createDateColumn()`                         | `createdAt()`           |
-| `@updateDateColumn()`                         | `updatedAt()`           |
+## Guidelines
 
-Column names auto-derive from property keys via snakeCase. Only
-specify a name when the convention doesn't match:
-
-```typescript
-aliases: textArray({ name: 'alias_names' }).default([]),
-```
-
-## New features in v16
-
-- `Repository<typeof Product>` / `ReadonlyRepository<typeof Product>` type aliases
-- `view()` for readonly PostgreSQL views
-- `toSQL()` on find, findOne, create, update, destroy
-- `onQuery` observability callback
-- Global filters with per-query override
-- `afterFind` hook for result transformation
-- String references for relationships
-- pgvector support: `vector({ dimensions })` with distance queries
+- Run the codemod first for mechanical conversions:
+  `npx tsx scripts/migrate-v16.ts 'src/models/**/*.ts'`
+- Convert one model at a time and verify tests pass
+- Instance methods on Entity classes should become `afterFind` hooks or
+  standalone functions
+- The query API (`find`, `findOne`, `create`, `update`, `destroy`,
+  `populate`, `where`, `sort`) is unchanged
