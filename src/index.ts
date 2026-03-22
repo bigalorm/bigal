@@ -72,8 +72,32 @@ export type {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any TableDefinition
 type AnyTableDef = TableDefinition<string, any>;
 
-/** A typed read-write repository for a model: `Repository<typeof Product>` */
+/**
+ * A typed read-write repository for a model. Provides find, findOne, create,
+ * update, destroy, and populate operations with full type safety.
+ *
+ * @example
+ * ```typescript
+ * import type { Repository } from 'bigal';
+ *
+ * function processProducts(repo: Repository<typeof Product>) {
+ *   const products = await repo.find().where({ name: 'Widget' });
+ * }
+ * ```
+ */
 export type Repository<T extends AnyTableDef> = T extends TableDefinition<string, infer TSchema> ? IRepository<InferSelect<TSchema>> : never;
 
-/** A typed read-only repository for a model: `ReadonlyRepository<typeof StoreSummary>` */
+/**
+ * A typed read-only repository for a model backed by a PostgreSQL view.
+ * Provides find, findOne, and count operations.
+ *
+ * @example
+ * ```typescript
+ * import type { ReadonlyRepository } from 'bigal';
+ *
+ * function readSummary(repo: ReadonlyRepository<typeof StoreSummary>) {
+ *   const summary = await repo.findOne().where({ id: 1 });
+ * }
+ * ```
+ */
 export type ReadonlyRepository<T extends AnyTableDef> = T extends TableDefinition<string, infer TSchema> ? IReadonlyRepository<InferSelect<TSchema>> : never;
