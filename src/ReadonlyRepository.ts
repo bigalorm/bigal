@@ -1057,7 +1057,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
       sort: populate.sort,
       pool: populate.pool,
     } as FindArgs<AnyRecord>);
-    const populateResults = populate.asPlainObjects ? await findQuery.toJSON() : await findQuery;
+    const populateResults = await findQuery;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const populateResultsById = keyBy(populateResults, populateRepository.model.primaryKeyColumn.propertyName) as Record<number | string, any>;
 
@@ -1092,7 +1092,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
       limit: populate.limit,
       pool: populate.pool,
     } as FindArgs<AnyRecord>);
-    const populateResults = populate.asPlainObjects ? await findQuery.toJSON() : await findQuery;
+    const populateResults = await findQuery;
 
     if (entities.length === 1) {
       for (const entity of entities) {
@@ -1188,7 +1188,7 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
       limit: populate.limit,
       pool: populate.pool,
     } as FindArgs<AnyRecord>);
-    const populateResults = populate.asPlainObjects ? await findQuery.toJSON() : await findQuery;
+    const populateResults = await findQuery;
 
     const populateResultsById = keyBy(populateResults, populateModelPrimaryKeyPropertyName as string) as Record<PrimaryId, AnyRecord>;
 
