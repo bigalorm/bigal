@@ -1,7 +1,0 @@
-{
-  "database": "dolt",
-  "backend": "dolt",
-  "dolt_mode": "server",
-  "dolt_database": "bigal",
-  "project_id": "2579bc99-b118-41d1-824c-1b572e7ec3b1"
-}
