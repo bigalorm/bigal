@@ -1,5 +1,5 @@
 ---
-description: Complete API reference for BigAl -- initialize(), table(), column builders, relationships, repository methods, query builder, and types.
+description: Complete API reference for BigAl - initialize(), table(), column builders, relationships, repository methods, query builder, and types.
 ---
 
 # API Reference
@@ -8,7 +8,7 @@ All public exports from `bigal`.
 
 ## initialize()
 
-Creates a BigAl instance with typed repositories for all provided table definitions.
+Creates a BigAl instance with typed repositories for all provided models.
 
 ### Object-style models (recommended)
 
@@ -49,27 +49,27 @@ const Product = bigal.getRepository(Product);
 | -------------- | ------------------------------------------ | -------- | --------------------------------------------- |
 | `pool`         | `PoolLike`                                 | Yes      | Primary connection pool                       |
 | `readonlyPool` | `PoolLike`                                 | No       | Pool for read operations (defaults to `pool`) |
-| `models`       | `Record<string, TableDefinition>` or array | Yes      | All table definitions                         |
+| `models`       | `Record<string, TableDefinition>` or array | Yes      | All model definitions                         |
 | `connections`  | `Record<string, IConnection>`              | No       | Named connections for multi-database setups   |
 | `onQuery`      | `OnQueryCallback`                          | No       | Query observability callback                  |
 
-All relationships are validated eagerly at construction time. If a `belongsTo` or `hasMany` references
-a model not included in `models`, `initialize()` throws immediately.
+All relationships are validated at startup. If a `belongsTo` or `hasMany` references a model not
+included in `models`, `initialize()` throws immediately.
 
 ## getRepository()
 
-Returns a typed read-write repository for a table definition.
+Returns a typed read-write repository for a model.
 
 ```ts
 const Product = bigal.getRepository(Product);
 // Type: IRepository<InferSelect<typeof Product.schema>>
 ```
 
-Throws if the table was not included in the `models` array.
+Throws if the model was not included in `models`.
 
 ## getReadonlyRepository()
 
-Returns a typed read-only repository for a table definition.
+Returns a typed read-only repository for a model.
 
 ```ts
 const ViewRepo = bigal.getReadonlyRepository(StoreSummary);
@@ -78,8 +78,8 @@ const ViewRepo = bigal.getReadonlyRepository(StoreSummary);
 
 ## table()
 
-Creates a table definition with column metadata and inferred types. Exported as `defineTable` from the
-main `'bigal'` package to avoid naming conflicts.
+Creates a model with column metadata and inferred types. Exported as `defineTable` from the main
+`'bigal'` package to avoid naming conflicts.
 
 ```ts
 import { defineTable as table, serial, text } from 'bigal';
@@ -147,7 +147,7 @@ The returned object exposes:
 
 ## view()
 
-Defines a read-only table definition backed by a PostgreSQL view. Equivalent to
+Defines a read-only model backed by a PostgreSQL view. Equivalent to
 `table(name, schema, { readonly: true, ...options })`.
 
 ```ts

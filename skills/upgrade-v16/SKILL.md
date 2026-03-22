@@ -71,7 +71,7 @@ For each model class, create a `table()` call:
 | `@column({ type: 'boolean[]' })`                          | `booleanArray()`                        |
 | `@createDateColumn()`                                     | `createdAt()`                           |
 | `@updateDateColumn()`                                     | `updatedAt()`                           |
-| `@versionColumn()`                                        | `integer().notNull()`                   |
+| `@versionColumn()`                                        | `integer().version()`                   |
 | `@column({ model: 'Store', name: 'store_id' })`           | `belongsTo('Store')`                    |
 | `@column({ collection: 'Product', via: 'store' })`        | `hasMany('Product').via('store')`       |
 | `@column({ collection: 'Cat', through: 'PC', via: 'p' })` | `hasMany('Cat').through('PC').via('p')` |
@@ -159,7 +159,7 @@ const Product = bigal.getRepository(Product);
 - Remove `import { Entity, column, primaryColumn, ... } from 'bigal'`
 - Remove `experimentalDecorators: true` from tsconfig.json
 - Remove `useDefineForClassFields: false` from tsconfig.json
-- Remove `NotEntity<T>` wrappers -- no longer needed
+- Remove `NotEntity<T>` wrappers - no longer needed
 
 ### Step 6: Update type references
 
@@ -193,20 +193,20 @@ These v15 exports no longer exist:
 
 ## New Features in v16
 
-- `view()` -- define readonly models backed by PostgreSQL views
-- `toSQL()` -- inspect generated SQL without executing on any operation
-- `onQuery` -- observability callback on `initialize()`
-- Global filters -- auto-applied where clauses (soft delete,
+- `view()` - define readonly models backed by PostgreSQL views
+- `toSQL()` - inspect generated SQL without executing on any operation
+- `onQuery` - observability callback on `initialize()`
+- Global filters - auto-applied where clauses (soft delete,
   multi-tenancy)
-- All 7 lifecycle hooks -- `beforeCreate`, `afterCreate`,
+- All 7 lifecycle hooks - `beforeCreate`, `afterCreate`,
   `beforeUpdate`, `afterUpdate`, `beforeDestroy`, `afterDestroy`,
   `afterFind`
-- String references -- `belongsTo('Store')` instead of arrow functions
-- Auto-derived names -- column names from property keys, model names
+- String references - `belongsTo('Store')` instead of arrow functions
+- Auto-derived names - column names from property keys, model names
   from table names
-- pgvector -- `vector({ dimensions })` with nearest-neighbor sort and
+- pgvector - `vector({ dimensions })` with nearest-neighbor sort and
   distance filtering
-- `Repository<typeof Product>` -- type alias for typed repository
+- `Repository<typeof Product>` - type alias for typed repository
   annotations
 
 ## Guidelines

@@ -2,7 +2,7 @@
 layout: home
 hero:
   text: PostgreSQL-optimized TypeScript ORM
-  tagline: Built exclusively for Postgres. Type-safe fluent query builder, decorator-based models, and queries tuned for Postgres performance.
+  tagline: Built exclusively for Postgres. Type-safe fluent query builder, function-based models, and queries tuned for Postgres performance.
   actions:
     - theme: brand
       text: Get Started
@@ -15,10 +15,10 @@ features:
     details: Built exclusively for Postgres, not a lowest-common-denominator abstraction. Queries are tuned for Postgres performance. JSONB, DISTINCT ON, subquery joins, and ON CONFLICT upserts work out of the box.
   - title: Fluent builder pattern
     details: Chain .where(), .sort(), .limit(), .join(), and .populate() calls. Each method returns a new immutable instance.
-  - title: Decorator-based models
-    details: Define tables, columns, and relationships with TypeScript decorators. Inheritance and schema support built in.
+  - title: Function-based models
+    details: Define models with table() and view(), PostgreSQL-native column builders, and relationship helpers. Types are inferred from the schema definition.
   - title: Type-safe queries
-    details: WhereQuery types narrow automatically — relationship fields resolve to foreign keys or populated entities without type assertions.
+    details: WhereQuery types narrow automatically - relationship fields resolve to foreign keys or populated entities without type assertions.
 ---
 
 <!-- markdownlint-disable MD013 MD033 MD041 -->
@@ -48,32 +48,24 @@ features:
 <div class="code-showcase">
 
 <h2>What it looks like</h2>
-<p class="subtitle">Define a model, query it — that's it.</p>
+<p class="subtitle">Define a model, query it - that's it.</p>
 
 ```ts
-import { column, primaryColumn, table, Entity, initialize } from 'bigal';
+import { defineTable as table, serial, text, integer, belongsTo, initialize, subquery } from 'bigal';
 import { Pool } from 'postgres-pool';
 
-@table({ name: 'products' })
-class Product extends Entity {
-  @primaryColumn({ type: 'integer' })
-  public id!: number;
+const Product = table('products', {
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  priceCents: integer().notNull(),
+  sku: text(),
+  store: belongsTo('Store'),
+});
 
-  @column({ type: 'string', required: true })
-  public name!: string;
-
-  @column({ type: 'integer', required: true })
-  public priceCents!: number;
-
-  @column({ model: () => 'Store', name: 'store_id' })
-  public store!: number | Store;
-}
-
-const repos = initialize({
-  models: [Product, Store],
+const { Product, Store } = initialize({
+  models: { Product, Store },
   pool: new Pool('postgres://localhost/mydb'),
 });
-const Product = repos.Product as Repository<Product>;
 
 // Fluent queries — just await the chain
 const products = await Product.find()
@@ -86,7 +78,7 @@ const expensiveProducts = await Product.find()
   .join('store')
   .where({
     store: { name: 'Acme' },
-    price: { '>': subquery(Product).avg('price') },
+    priceCents: { '>': subquery(Product).avg('priceCents') },
   });
 
 // Upserts with ON CONFLICT

@@ -131,8 +131,7 @@ const ProductSummary = bigal.getReadonlyRepository(ProductSummary);
 
 ## Global filters
 
-Define named filters on table definitions that are automatically applied to every `find` and `findOne`
-query:
+Define named filters on models that are automatically applied to every `find` and `findOne` query:
 
 ```ts
 const Product = table(
@@ -189,7 +188,7 @@ The callback receives an `OnQueryEvent` for every query:
 | `model`     | `string`             | Model name                                            |
 | `operation` | `string`             | One of: find, findOne, count, create, update, destroy |
 
-The callback is wrapped in a try/catch internally -- exceptions in `onQuery` will not crash your
+The callback is wrapped in a try/catch internally - exceptions in `onQuery` will not crash your
 queries. When no `onQuery` is provided, there is zero overhead.
 
 **Note:** `params` may contain sensitive data (user input, passwords, etc.). Use appropriate care when

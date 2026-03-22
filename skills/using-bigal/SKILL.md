@@ -2,7 +2,7 @@
 name: using-bigal
 description: >-
   Type-safe PostgreSQL ORM guidance for BigAl. Use when importing BigAl,
-  defining Entity models with decorators, writing WhereQuery filters,
+  defining models with table() or view(), writing WhereQuery filters,
   using Repository patterns, or deciding between BigAl and raw SQL.
   Covers model definition, fluent query building, joins, subqueries,
   pagination, JSONB querying, and common gotchas.
@@ -10,29 +10,25 @@ description: >-
 
 # Using BigAl
 
-BigAl is a PostgreSQL-optimized, type-safe TypeScript ORM. It uses decorator-based models, a fluent builder pattern for queries, and the Repository pattern for CRUD operations.
+BigAl is a PostgreSQL-optimized, type-safe TypeScript ORM. It uses function-based models, a fluent
+builder pattern for queries, and the Repository pattern for CRUD operations. All results are plain
+objects.
 
 ## Quick Start
 
 ```ts
-import { column, primaryColumn, table, Entity, initialize, Repository } from 'bigal';
+import { defineTable as table, serial, text, integer, belongsTo, initialize, subquery } from 'bigal';
 import { Pool } from 'postgres-pool';
 
-@table({ name: 'products' })
-class Product extends Entity {
-  @primaryColumn({ type: 'integer' })
-  public id!: number;
-
-  @column({ type: 'string', required: true })
-  public name!: string;
-
-  @column({ type: 'integer', required: true, name: 'price_cents' })
-  public priceCents!: number;
-}
+const Product = table('products', {
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  priceCents: integer().notNull(),
+  store: belongsTo('Store'),
+});
 
 const pool = new Pool('postgres://localhost/mydb');
-const repos = initialize({ models: [Product], pool });
-const Product = repos.Product as Repository<Product>;
+const { Product, Store } = initialize({ models: { Product, Store }, pool });
 
 const products = await Product.find()
   .where({ priceCents: { '>=': 1000 } })
@@ -60,7 +56,7 @@ const products = await Product.find()
 - Bulk operations with custom locking (SELECT FOR UPDATE)
 - Database-specific features BigAl does not wrap
 
-BigAl wraps your existing connection pool — `postgres-pool`, `pg`, or `@neondatabase/serverless`.
+BigAl wraps your existing connection pool - `postgres-pool`, `pg`, or `@neondatabase/serverless`.
 The pool is always accessible for raw queries, so you can eject to SQL at any point:
 
 ```ts
@@ -105,90 +101,205 @@ Use BigAl for the 90% of queries that fit its fluent API, and raw SQL for the re
 
 ## Model Definition
 
-### Decorators
+### Defining a model
 
-Every model extends `Entity` and uses decorators:
+Models are defined with the `table()` function and PostgreSQL-native column builders. Types are
+inferred from the schema definition. Column names are auto-derived from property keys using snakeCase.
 
 ```ts
-import { column, primaryColumn, createDateColumn, updateDateColumn, versionColumn, table, Entity } from 'bigal';
+import { defineTable as table, serial, text, varchar, integer, boolean, jsonb, createdAt, updatedAt, belongsTo, hasMany } from 'bigal';
 
-@table({ name: 'products', schema: 'public' })
-class Product extends Entity {
-  @primaryColumn({ type: 'integer' })
-  public id!: number;
-
-  @column({ type: 'string', required: true })
-  public name!: string;
-
-  @column({ type: 'string' })
-  public sku?: string;
-
-  @column({ type: 'integer', required: true, name: 'price_cents' })
-  public priceCents!: number;
-
-  @column({ type: 'json' })
-  public metadata?: Record<string, unknown>;
-
-  @createDateColumn()
-  public createdAt!: Date;
-
-  @updateDateColumn()
-  public updatedAt!: Date;
-
-  @versionColumn()
-  public version!: number;
-}
+export const Product = table('products', {
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  sku: varchar({ length: 100 }),
+  priceCents: integer().notNull(),
+  isActive: boolean().notNull().default(true),
+  metadata: jsonb<{ color?: string }>(),
+  store: belongsTo('Store'),
+  categories: hasMany('Category').through('ProductCategory').via('product'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
 ```
 
 ### Column types
 
-`'string'`, `'integer'`, `'float'`, `'boolean'`, `'date'`, `'datetime'`, `'json'`, `'string[]'`, `'integer[]'`, `'float[]'`, `'boolean[]'`
+| Builder                  | PostgreSQL type  | TypeScript type     |
+| ------------------------ | ---------------- | ------------------- |
+| `serial()`               | SERIAL           | `number`            |
+| `bigserial()`            | BIGSERIAL        | `number`            |
+| `text()`                 | TEXT             | `string \| null`    |
+| `varchar({ length })`    | VARCHAR(n)       | `string \| null`    |
+| `integer()`              | INTEGER          | `number \| null`    |
+| `bigint()`               | BIGINT           | `number \| null`    |
+| `smallint()`             | SMALLINT         | `number \| null`    |
+| `real()`                 | REAL             | `number \| null`    |
+| `doublePrecision()`      | DOUBLE PRECISION | `number \| null`    |
+| `boolean()`              | BOOLEAN          | `boolean \| null`   |
+| `timestamptz()`          | TIMESTAMPTZ      | `Date \| null`      |
+| `date()`                 | DATE             | `Date \| null`      |
+| `jsonb<T>()`             | JSONB            | `T \| null`         |
+| `uuid()`                 | UUID             | `string \| null`    |
+| `bytea()`                | BYTEA            | `Buffer \| null`    |
+| `textArray()`            | TEXT[]           | `string[] \| null`  |
+| `integerArray()`         | INTEGER[]        | `number[] \| null`  |
+| `booleanArray()`         | BOOLEAN[]        | `boolean[] \| null` |
+| `vector({ dimensions })` | VECTOR(n)        | `number[] \| null`  |
+| `createdAt()`            | TIMESTAMPTZ      | `Date`              |
+| `updatedAt()`            | TIMESTAMPTZ      | `Date`              |
+
+### Column modifiers
+
+```ts
+name: text().notNull(),                         // removes null from type
+isActive: boolean().notNull().default(true),     // optional on insert
+id: serial().primaryKey(),                       // notNull + optional on insert
+email: text().notNull().unique(),                // UNIQUE constraint
+```
 
 ### Relationships
 
-**Many-to-one** — current entity holds the foreign key:
+**Many-to-one** - this model holds the foreign key:
 
 ```ts
-@column({ model: () => 'Store', name: 'store_id' })
-public store!: number | Store;
+store: belongsTo('Store'),
+// FK column auto-derived as store_id
+
+store: belongsTo('Store', { name: 'shop_id' }),
+// Override FK column name
 ```
 
-**One-to-many** — inverse side (must be optional):
+**One-to-many** - inverse side:
 
 ```ts
-@column({ collection: () => 'Product', via: 'store' })
-public products?: Product[];
+products: hasMany('Product').via('store'),
 ```
 
-**Many-to-many** — requires a join table Entity:
+**Many-to-many** - via junction model:
 
 ```ts
-@column({
-  collection: () => 'Category',
-  through: () => 'ProductCategory',
-  via: 'product',
-})
-public categories?: Category[];
+categories: hasMany('Category').through('ProductCategory').via('product'),
 ```
 
-Reference model names by string (`'Store'`, not `Store`) to avoid circular imports. Model names are case-insensitive.
+Reference model names by string (`'Store'`, not `Store`) to avoid circular imports.
+
+### Shared columns
+
+```ts
+const modelBase = { id: serial().primaryKey() };
+const timestamps = { createdAt: createdAt(), updatedAt: updatedAt() };
+
+export const Product = table('products', {
+  ...modelBase,
+  ...timestamps,
+  name: text().notNull(),
+});
+```
 
 ### Readonly models (views)
 
 ```ts
-@table({ name: 'product_summaries', readonly: true })
-class ProductSummary extends Entity {
+import { view, serial, text, integer } from 'bigal';
+
+export const ProductSummary = view('product_summaries', {
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  storeName: text().notNull(),
+  categoryCount: integer().notNull(),
+});
+```
+
+`initialize()` returns a `ReadonlyRepository` which exposes only `find()`, `findOne()`, and `count()`.
+
+### Hooks
+
+```ts
+export const Product = table(
+  'products',
+  { id: serial().primaryKey(), name: text().notNull(), slug: text().notNull() },
+  {
+    hooks: {
+      beforeCreate(values) {
+        return { ...values, slug: slugify(values.name) };
+      },
+      afterFind(results) {
+        return results;
+      },
+    },
+  },
+);
+```
+
+Available hooks: `beforeCreate`, `afterCreate`, `beforeUpdate`, `afterUpdate`, `beforeDestroy`,
+`afterDestroy`, `afterFind`.
+
+### Global filters
+
+```ts
+const Product = table(
+  'products',
+  {
+    /* columns */
+  },
+  {
+    filters: {
+      active: { isActive: true },
+      notDeleted: () => ({ deletedAt: null }),
+    },
+  },
+);
+
+// Override per query
+await Product.find().where({}).filters(false); // disable all
+await Product.find().where({}).filters({ active: false }); // disable specific
+```
+
+### Type inference
+
+```ts
+import type { InferSelect, InferInsert, Repository, ReadonlyRepository } from 'bigal';
+
+type ProductRow = InferSelect<(typeof Product)['schema']>;
+type ProductInsert = InferInsert<(typeof Product)['schema']>;
+
+function processProducts(repo: Repository<typeof Product>) {
+  /* ... */
+}
+function readSummary(repo: ReadonlyRepository<typeof ProductSummary>) {
   /* ... */
 }
 ```
 
-`initialize()` returns a `ReadonlyRepository` which omits `create`, `update`, and `destroy`.
+## Initialization
+
+```ts
+import { initialize } from 'bigal';
+
+// Object-style (recommended) -- typed destructuring
+const { Product, Store } = initialize({
+  models: { Product, Store, Category, ProductCategory },
+  pool,
+  readonlyPool, // optional: separate pool for reads
+  connections: {
+    // optional: multi-database
+    audit: { pool: auditPool },
+  },
+  onQuery({ sql, params, duration, error, model, operation }) {
+    logger.debug({ sql, params, duration, model, operation });
+  },
+});
+
+// Array-style -- use getRepository()
+const bigal = initialize({ pool, models: [Product, Store] });
+const ProductRepo = bigal.getRepository(Product);
+```
 
 ## Query Patterns
 
 ### Fluent builder
 
-Every query method returns a new immutable instance. Queries are `PromiseLike` — just `await` the chain.
+Every query method returns a new immutable instance. Queries are `PromiseLike` - just `await` the chain.
 
 ```ts
 // Find multiple
@@ -302,7 +413,7 @@ ORDER BY must start with the DISTINCT ON columns. Cannot combine with `withCount
 ### Create
 
 ```ts
-// Single record — returns the created record
+// Single record -- returns the created record
 const product = await Product.create({ name: 'Widget', priceCents: 999 });
 
 // Multiple records
@@ -355,41 +466,43 @@ const hasProducts = subquery(Product).where({ name: { like: 'Widget%' } });
 await Store.find().where({ exists: hasProducts });
 
 // Scalar comparison
-const avgPrice = subquery(Product).avg('price');
-await Product.find().where({ price: { '>': avgPrice } });
+const avgPrice = subquery(Product).avg('priceCents');
+await Product.find().where({ priceCents: { '>': avgPrice } });
+```
+
+### toSQL()
+
+Inspect generated SQL without executing:
+
+```ts
+const { sql, params } = Product.find().where({ name: 'Widget' }).toSQL();
+const { sql, params } = Product.create({ name: 'Widget', priceCents: 999 }).toSQL();
+const { sql, params } = Product.update({ id: 42 }, { name: 'X' }).toSQL();
+const { sql, params } = Product.destroy({ id: 42 }).toSQL();
+```
+
+### Vector distance queries
+
+```ts
+import { vector } from 'bigal';
+
+// In model definition
+embedding: vector({ dimensions: 1536 }),
+
+// Sort by similarity
+const similar = await Document.find()
+  .where({})
+  .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
+  .limit(10);
+
+// Filter by distance
+const nearby = await Document.find()
+  .where({ embedding: { nearestTo: queryVector, metric: 'cosine', distance: { '<': 0.5 } } })
+  .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
+  .limit(10);
 ```
 
 ## Gotchas
-
-### Collections must be optional
-
-Collection properties (one-to-many, many-to-many) must use `?`, not `!`. They are only present after `.populate()`:
-
-```ts
-// Correct
-@column({ collection: () => 'Product', via: 'store' })
-public products?: Product[];
-
-// Wrong — causes QueryResult type errors
-@column({ collection: () => 'Product', via: 'store' })
-public products!: Product[];
-```
-
-### NotEntity for JSON objects with id fields
-
-If a JSON column contains objects with an `id` property, wrap the type with `NotEntity<T>` to prevent BigAl's type system from treating them as entities:
-
-```ts
-import type { NotEntity } from 'bigal';
-
-interface IMyJsonType {
-  id: string;
-  foo: string;
-}
-
-@column({ type: 'json' })
-public metadata?: NotEntity<IMyJsonType>;
-```
 
 ### Query state is immutable
 
@@ -401,7 +514,7 @@ const query = Product.find().where({ store: storeId });
 const sorted = query.sort('name asc');
 const results = await sorted.limit(10);
 
-// Wrong — .sort() result is discarded
+// Wrong -- .sort() result is discarded
 const query = Product.find().where({ store: storeId });
 query.sort('name asc'); // This does nothing to `query`
 const results = await query;
@@ -409,21 +522,21 @@ const results = await query;
 
 ### QueryResult narrows relationship types
 
-`QueryResult<T>` automatically narrows `number | Store` to `number`. Use `QueryResult<T>` (not `T`) for derived types:
+`QueryResult<T>` automatically narrows belongsTo fields to the FK type. Use `QueryResult<T>` for
+derived types:
 
 ```ts
-import type { QueryResult } from 'bigal';
+import type { QueryResult, InferSelect } from 'bigal';
+
+type ProductRow = InferSelect<(typeof Product)['schema']>;
 
 // Correct: store is `number`
-type ProductSummary = Pick<QueryResult<Product>, 'id' | 'name' | 'store'>;
-
-// Wrong: store is `number | Store`
-type ProductSummaryWrong = Pick<Product, 'id' | 'name' | 'store'>;
+type ProductSummary = Pick<QueryResult<ProductRow>, 'id' | 'name' | 'store'>;
 ```
 
 ### Debugging SQL
 
-Set `DEBUG_BIGAL=true` to log all generated SQL and parameter values:
+Use `onQuery` for structured logging, or set `DEBUG_BIGAL=true` for console output:
 
 ```sh
 DEBUG_BIGAL=true node app.js
@@ -433,26 +546,25 @@ DEBUG_BIGAL=true node app.js
 
 After applying this skill, verify:
 
-- [ ] Models extend `Entity` and use `@table()`, `@primaryColumn()`, `@column()` decorators
+- [ ] Models use `table()` with column builders (not decorators)
+- [ ] Initialize uses object-style `models` with destructuring
 - [ ] Queries use the fluent builder pattern (not raw SQL strings)
 - [ ] CRUD uses Repository methods: `create()`, `update()`, `destroy()`
 - [ ] Query chains are awaited (not fire-and-forget)
 - [ ] Query state is treated as immutable (return values are used)
-- [ ] Collection properties are optional (`?`)
-- [ ] JSON column types with `id` fields use `NotEntity<T>`
-- [ ] Model names in decorators are strings (`'Store'`) to avoid circular imports
+- [ ] Model names in relationships are strings (`'Store'`) to avoid circular imports
 - [ ] `QueryResult<T>` is used for derived types involving relationships
 
 ## Further Reading
 
-- [Getting Started](https://bigalorm.github.io/bigal/getting-started) — install, first model, first query
-- [Models](https://bigalorm.github.io/bigal/guide/models) — decorators, column options, relationships
-- [Querying](https://bigalorm.github.io/bigal/guide/querying) — operators, pagination, JSONB, DISTINCT ON
-- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) — create, update, destroy, upserts
-- [Relationships](https://bigalorm.github.io/bigal/guide/relationships) — many-to-one, one-to-many, many-to-many, QueryResult
-- [Subqueries and Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) — subquery builder, aggregates, GROUP BY
-- [Views](https://bigalorm.github.io/bigal/guide/views) — readonly models and ReadonlyRepository
-- [API Reference](https://bigalorm.github.io/bigal/reference/api) — all exports and method signatures
-- [Configuration](https://bigalorm.github.io/bigal/reference/configuration) — pools, read replicas, multi-database
-- [BigAl vs Raw SQL](https://bigalorm.github.io/bigal/advanced/bigal-vs-raw-sql) — decision framework
-- [Known Issues](https://bigalorm.github.io/bigal/advanced/known-issues) — workarounds and debugging
+- [Getting Started](https://bigalorm.github.io/bigal/getting-started) - install, first model, first query
+- [Models](https://bigalorm.github.io/bigal/guide/models) - table(), column types, relationships, hooks, filters
+- [Querying](https://bigalorm.github.io/bigal/guide/querying) - operators, pagination, JSONB, DISTINCT ON
+- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) - create, update, destroy, upserts
+- [Relationships](https://bigalorm.github.io/bigal/guide/relationships) - belongsTo, hasMany, QueryResult
+- [Subqueries and Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) - subquery builder, aggregates, GROUP BY
+- [Views](https://bigalorm.github.io/bigal/guide/views) - readonly models and ReadonlyRepository
+- [API Reference](https://bigalorm.github.io/bigal/reference/api) - all exports and method signatures
+- [Configuration](https://bigalorm.github.io/bigal/reference/configuration) - pools, read replicas, multi-database
+- [BigAl vs Raw SQL](https://bigalorm.github.io/bigal/advanced/bigal-vs-raw-sql) - decision framework
+- [Known Issues](https://bigalorm.github.io/bigal/advanced/known-issues) - workarounds and debugging

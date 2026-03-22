@@ -1,5 +1,5 @@
 ---
-description: Known issues and workarounds -- hasMany collections with populate, and query observability.
+description: Known issues and workarounds - hasMany collections with populate, and query observability.
 ---
 
 # Known Issues

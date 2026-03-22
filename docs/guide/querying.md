@@ -1,11 +1,11 @@
 ---
-description: Fluent query builder for find, findOne, and count with WHERE operators, JSONB querying, pagination, sorting, vector distance, global filters, toSQL, and populate.
+description: Fluent query builder for find, findOne, and count with WHERE operators, JSONB querying, pagination, sorting, vector distance, global filters, toSQL, and populate. All results are plain objects.
 ---
 
 # Querying
 
 BigAl provides `findOne()`, `find()`, and `count()` methods on repositories. Queries use a fluent
-builder pattern -- each method returns a new immutable instance, and queries are `PromiseLike` so you
+builder pattern - each method returns a new immutable instance, and queries are `PromiseLike` so you
 can `await` them directly.
 
 ## findOne
@@ -178,10 +178,10 @@ await repo.find().where({ bar: { theme: { '!': null } } });
 ```
 
 Note that `IS NULL` on a JSONB property is true both when the key is missing from the object and when
-it is explicitly set to `null`. This matches PostgreSQL's behavior -- the `->>` operator returns
+it is explicitly set to `null`. This matches PostgreSQL's behavior - the `->>` operator returns
 `NULL` in both cases.
 
-Properties set to `undefined` in a where clause are silently ignored (standard JavaScript --
+Properties set to `undefined` in a where clause are silently ignored (standard JavaScript -
 `undefined` values are dropped by `Object.entries`). To query for missing or null properties, always
 use `null` explicitly.
 
@@ -341,4 +341,4 @@ const product = await Product.findOne()
 console.log(product.store.name);
 ```
 
-All query results are plain objects -- no `.toJSON()` conversion needed.
+All query results are plain objects - no `.toJSON()` conversion needed.

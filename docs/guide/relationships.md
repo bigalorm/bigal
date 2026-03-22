@@ -46,7 +46,7 @@ export const Store = table('stores', {
 ```
 
 - `.via('store')` references the property name on the related table (not the database column)
-- `hasMany` columns are excluded from the select and insert types -- they only exist after
+- `hasMany` columns are excluded from the select and insert types - they only exist after
   `.populate()`
 
 ## Many-to-many (through)
@@ -192,7 +192,7 @@ const compilation = await compilationRepository
 
 ## Best practices
 
-1. **Use `QueryResult<T>` for return types** -- avoids union type ambiguity
-2. **Use string references for model relationships** -- avoids circular import issues
-3. **All relationships are validated at startup** -- `initialize()` throws if a referenced model is
+1. **Use `QueryResult<T>` for return types** - avoids union type ambiguity
+2. **Use string references for model relationships** - avoids circular import issues
+3. **All relationships are validated at startup** - `initialize()` throws if a referenced model is
    missing from the `models` object/array

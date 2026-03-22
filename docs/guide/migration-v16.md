@@ -6,7 +6,7 @@ description: Step-by-step guide for upgrading from BigAl v15 (decorators) to v16
 
 BigAl v16 replaces the decorator-based model system with a function-based schema API. Models are now
 plain objects defined with `table()` and PostgreSQL-native column builders. Types are inferred from the
-schema definition -- no separate interfaces, no `extends Entity`, no `experimentalDecorators`.
+schema definition - no separate interfaces, no `extends Entity`, no `experimentalDecorators`.
 
 ## Requirements
 
@@ -96,7 +96,7 @@ Key differences:
 
 - No class, no `extends Entity`
 - Column types are PostgreSQL-native (`text`, `integer`, `boolean`) instead of abstract (`'string'`, `'integer'`)
-- Column names auto-derive from property keys -- no explicit column name argument needed
+- Column names auto-derive from property keys - no explicit column name argument needed
 - Nullability and defaults are expressed through chain methods (`.notNull()`, `.default()`)
 - Types are inferred from the schema; no manual interface required
 - Use `InferSelect` / `InferInsert` utility types (no `$inferSelect` / `$inferInsert` phantom types)
@@ -155,7 +155,7 @@ inheritance chains.
 
 ## Column types
 
-Each v15 column type maps to a PostgreSQL-native builder in v16. Builders take no arguments -- column
+Each v15 column type maps to a PostgreSQL-native builder in v16. Builders take no arguments - column
 names auto-derive from property keys:
 
 | v15 decorator                         | v16 builder                            |
@@ -186,7 +186,7 @@ Additional v16 builders with no v15 equivalent: `bigserial`, `bigint`, `smallint
 | `@createDateColumn()` | `createdAt()` convenience |
 | `@updateDateColumn()` | `updatedAt()` convenience |
 
-`serial()` and `bigserial()` imply `.notNull()` and `.default()` automatically -- they always produce
+`serial()` and `bigserial()` imply `.notNull()` and `.default()` automatically - they always produce
 a non-null number on select and are optional on insert.
 
 `.primaryKey()` implies `.notNull()` and makes the column optional on insert (database assigns the
@@ -553,11 +553,11 @@ logging.
 
 The following exports no longer exist in v16:
 
-- `Entity`, `EntityStatic` -- no base class needed
-- `NotEntity`, `NotEntityBrand` -- structural typing workaround no longer needed
+- `Entity`, `EntityStatic` - no base class needed
+- `NotEntity`, `NotEntityBrand` - structural typing workaround no longer needed
 - `@table()`, `@column()`, `@primaryColumn()`, `@createDateColumn()`, `@updateDateColumn()`,
   `@versionColumn()` decorators
-- `.toJSON()` on query results -- results are already plain objects
+- `.toJSON()` on query results - results are already plain objects
 - `FindResultJSON`, `FindOneResultJSON`, `CreateResultJSON`, `UpdateResultJSON`, `DestroyResultJSON`
 
 ## Query API is unchanged
@@ -604,4 +604,4 @@ await Product.create({ name: 'Widget', sku: 'WDG-001', priceCents: 999 }, { onCo
 10. Replace `Entity` / `EntityStatic` type imports with `InferSelect` / `InferInsert`
 11. Replace `Repository<T>` type assertions with `Repository<typeof Model>`
 12. Replace static lifecycle hooks with `hooks` option in `table()`
-13. Replace `DEBUG_BIGAL` usage with `onQuery` callback (optional -- env var still works)
+13. Replace `DEBUG_BIGAL` usage with `onQuery` callback (optional - env var still works)

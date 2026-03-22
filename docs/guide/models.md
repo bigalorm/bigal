@@ -1,16 +1,16 @@
 ---
-description: Define PostgreSQL tables with the table() function and PostgreSQL-native column builders for type-safe schema definitions.
+description: Define models with the table() function and PostgreSQL-native column builders for type-safe schema definitions.
 ---
 
 # Models
 
 Models define the shape of your PostgreSQL tables. Each model is created with the `table()` function and
 a set of column builders that map directly to PostgreSQL column types. Types are inferred from the schema
-definition -- no separate interfaces required.
+definition - no separate interfaces required.
 
-## Defining a table
+## Defining a model
 
-Use `table()` (exported as `defineTable` from `'bigal'`) to create a table definition:
+Use `table()` (exported as `defineTable` from `'bigal'`) to create a model:
 
 ```ts
 import { defineTable as table, serial, text, integer, boolean, createdAt, updatedAt } from 'bigal';
@@ -26,16 +26,16 @@ export const Product = table('products', {
 ```
 
 The first argument is the database table name. The second is an object mapping property names to column
-builders. Column builders take no arguments by default -- the database column name is auto-derived from
+builders. Column builders take no arguments by default - the database column name is auto-derived from
 the property key using snakeCase (e.g., `priceCents` becomes `price_cents`).
 
 ### Auto-derived names
 
 BigAl automatically derives two names from your definitions:
 
-- **Column names** -- property keys are converted to snake_case for the database column name.
+- **Column names** - property keys are converted to snake_case for the database column name.
   `priceCents` becomes `price_cents`, `isActive` becomes `is_active`.
-- **Model names** -- the table name is singularized and PascalCased for relationship lookups.
+- **Model names** - the table name is singularized and PascalCased for relationship lookups.
   `products` becomes `Product`, `product__category` becomes `ProductCategory`.
 
 Override either when the convention does not match:
@@ -77,7 +77,7 @@ const AuditLog = table(
 
 ## Column types
 
-Each builder maps to a PostgreSQL column type. All columns are nullable by default -- use `.notNull()`
+Each builder maps to a PostgreSQL column type. All columns are nullable by default - use `.notNull()`
 to make them required. Column builders take no arguments; pass `{ name: 'custom_name' }` only when the
 auto-derived snake_case name does not match your database column.
 

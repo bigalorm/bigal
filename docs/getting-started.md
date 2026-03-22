@@ -1,5 +1,5 @@
 ---
-description: Install BigAl, define your first table, create a repository, and run type-safe PostgreSQL queries.
+description: Install BigAl, define your first model, create a repository, and run type-safe PostgreSQL queries.
 ---
 
 # Getting Started
@@ -23,9 +23,9 @@ npm install pg
 npm install @neondatabase/serverless
 ```
 
-## Define a table
+## Define a model
 
-Tables are defined with the `table()` function and PostgreSQL-native column builders. Types are
+Models are defined with the `table()` function and PostgreSQL-native column builders. Types are
 inferred from the schema definition. Column names are auto-derived from property keys using snakeCase.
 
 ```ts
@@ -43,8 +43,8 @@ export const Product = table('products', {
 
 ## Initialize repositories
 
-Pass your table definitions and a connection pool to `initialize()`. The object-style models option
-gives you typed repositories directly via destructuring:
+Pass your models and a connection pool to `initialize()`. The object-style models option gives you
+typed repositories directly via destructuring:
 
 ```ts
 import { initialize } from 'bigal';
@@ -61,7 +61,7 @@ const { Product } = initialize({
 
 ## Run your first query
 
-Queries use a fluent builder and are `PromiseLike` -- just `await` the chain.
+Queries use a fluent builder and are `PromiseLike` - just `await` the chain.
 
 ```ts
 // Find all products with price >= 1000 cents, sorted by name
@@ -88,13 +88,13 @@ npx skills add bigalorm/bigal
 
 Machine-readable documentation is also available:
 
-- [llms.txt](/llms.txt) -- structured overview
-- [llms-full.txt](/llms-full.txt) -- complete documentation in a single file
+- [llms.txt](/llms.txt) - structured overview
+- [llms-full.txt](/llms-full.txt) - complete documentation in a single file
 
 ## Next steps
 
-- [Models](/guide/models) -- table definitions, column types, relationships
-- [Querying](/guide/querying) -- operators, pagination, JSONB, and more
-- [CRUD Operations](/guide/crud-operations) -- create, update, and destroy
-- [API Reference](/reference/api) -- all exports and method signatures
-- [Migrating from v15](/guide/migration-v16) -- upgrade from decorators to the new API
+- [Models](/guide/models) - table definitions, column types, relationships
+- [Querying](/guide/querying) - operators, pagination, JSONB, and more
+- [CRUD Operations](/guide/crud-operations) - create, update, and destroy
+- [API Reference](/reference/api) - all exports and method signatures
+- [Migrating from v15](/guide/migration-v16) - upgrade from decorators to the new API

@@ -1,11 +1,11 @@
 ---
-description: Map PostgreSQL views to readonly models with view() and ReadonlyRepository. Supports schema options and all query features.
+description: Define readonly models backed by PostgreSQL views with view() and ReadonlyRepository. Supports schema options and all query features.
 ---
 
 # Views and Readonly Repositories
 
 BigAl provides a `view()` function for defining models backed by PostgreSQL views. The `view()`
-function is equivalent to `table()` with `readonly: true` -- it produces a `ReadonlyRepository`
+function is equivalent to `table()` with `readonly: true` - it produces a `ReadonlyRepository`
 that omits `create`, `update`, and `destroy` methods, catching accidental writes at compile time.
 
 BigAl does not create or manage views. Create them in PostgreSQL via your migration tool.
@@ -101,8 +101,8 @@ export const ReportSummary = view(
 
 ## Initializing the repository
 
-Include the view model in `initialize()`. BigAl creates a `ReadonlyRepository` automatically for
-models defined with `view()` or `table()` with `readonly: true`:
+Include the model in `initialize()`. BigAl creates a `ReadonlyRepository` automatically for models
+defined with `view()` or `table()` with `readonly: true`:
 
 ```ts
 import { initialize } from 'bigal';

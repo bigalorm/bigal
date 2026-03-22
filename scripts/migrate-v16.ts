@@ -206,7 +206,7 @@ function generateColumnBuilder(col: ColumnInfo): string {
     return explicitDbName ? `updatedAt({ name: '${explicitDbName}' })` : 'updatedAt()';
   }
   if (col.decoratorName === 'versionColumn') {
-    return 'integer().notNull() // TODO: version column';
+    return 'integer().version()';
   }
   if (col.model) {
     const modelName = capitalize(col.model);
