@@ -40,7 +40,44 @@ import {
 } from '../models/index.js';
 
 // ---------------------------------------------------------------------------
-// Re-export table definitions with Def suffix (used by test files)
+// Select types derived from table definitions
+// ---------------------------------------------------------------------------
+
+export type CategorySelect = typeof Category.$inferSelect;
+export type ClassroomSelect = typeof Classroom.$inferSelect;
+export type KitchenSinkSelect = typeof KitchenSink.$inferSelect;
+export type LevelOneSelect = typeof LevelOne.$inferSelect;
+export type LevelTwoSelect = typeof LevelTwo.$inferSelect;
+export type LevelThreeSelect = typeof LevelThree.$inferSelect;
+export type ParkingLotSelect = typeof ParkingLot.$inferSelect;
+export type ParkingSpaceSelect = typeof ParkingSpace.$inferSelect;
+export type ProductSelect = typeof Product.$inferSelect;
+export type ProductCategorySelect = typeof ProductCategory.$inferSelect;
+export type ReadonlyProductSelect = typeof ReadonlyProduct.$inferSelect;
+export type SimpleWithJsonSelect = typeof SimpleWithJson.$inferSelect;
+export type SimpleWithOptionalEnumSelect = typeof SimpleWithOptionalEnum.$inferSelect;
+export type SimpleWithRelationAndJsonSelect = typeof SimpleWithRelationAndJson.$inferSelect;
+export type SimpleWithSelfReferenceSelect = typeof SimpleWithSelfReference.$inferSelect;
+export type SimpleWithStringCollectionSelect = typeof SimpleWithStringCollection.$inferSelect;
+export type SimpleWithStringIdSelect = typeof SimpleWithStringId.$inferSelect;
+export type SimpleWithUnionSelect = typeof SimpleWithUnion.$inferSelect;
+export type StoreSelect = typeof Store.$inferSelect;
+export type TeacherSelect = typeof Teacher.$inferSelect;
+export type TeacherClassroomSelect = typeof TeacherClassroom.$inferSelect;
+export type ImportedItemSelect = typeof ImportedItem.$inferSelect;
+export type ProductWithCreatedAtSelect = typeof ProductWithCreatedAt.$inferSelect;
+export type RequiredPropertyWithDefaultValueSelect = typeof RequiredPropertyWithDefaultValue.$inferSelect;
+export type RequiredPropertyWithDefaultValueFunctionSelect = typeof RequiredPropertyWithDefaultValueFunction.$inferSelect;
+export type SimpleWithCollectionsSelect = typeof SimpleWithCollections.$inferSelect;
+export type SimpleWithCreatedAtSelect = typeof SimpleWithCreatedAt.$inferSelect;
+export type SimpleWithCreatedAtAndUpdatedAtSelect = typeof SimpleWithCreatedAtAndUpdatedAt.$inferSelect;
+export type SimpleWithSchemaSelect = typeof SimpleWithSchema.$inferSelect;
+export type SimpleWithUUIDSelect = typeof SimpleWithUUID.$inferSelect;
+export type SimpleWithUpdatedAtSelect = typeof SimpleWithUpdatedAt.$inferSelect;
+export type SimpleWithVersionSelect = typeof SimpleWithVersion.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Re-export models (used by test files)
 // ---------------------------------------------------------------------------
 
 export {
@@ -81,43 +118,6 @@ export {
   Teacher as TeacherDef,
   TeacherClassroom as TeacherClassroomDef,
 };
-
-// ---------------------------------------------------------------------------
-// Select types derived from table definitions
-// ---------------------------------------------------------------------------
-
-export type CategorySelect = typeof Category.$inferSelect;
-export type ClassroomSelect = typeof Classroom.$inferSelect;
-export type ImportedItemSelect = typeof ImportedItem.$inferSelect;
-export type KitchenSinkSelect = typeof KitchenSink.$inferSelect;
-export type LevelOneSelect = typeof LevelOne.$inferSelect;
-export type LevelTwoSelect = typeof LevelTwo.$inferSelect;
-export type LevelThreeSelect = typeof LevelThree.$inferSelect;
-export type ParkingLotSelect = typeof ParkingLot.$inferSelect;
-export type ParkingSpaceSelect = typeof ParkingSpace.$inferSelect;
-export type ProductSelect = typeof Product.$inferSelect;
-export type ProductCategorySelect = typeof ProductCategory.$inferSelect;
-export type ProductWithCreatedAtSelect = typeof ProductWithCreatedAt.$inferSelect;
-export type ReadonlyProductSelect = typeof ReadonlyProduct.$inferSelect;
-export type RequiredPropertyWithDefaultValueSelect = typeof RequiredPropertyWithDefaultValue.$inferSelect;
-export type RequiredPropertyWithDefaultValueFunctionSelect = typeof RequiredPropertyWithDefaultValueFunction.$inferSelect;
-export type SimpleWithCollectionsSelect = typeof SimpleWithCollections.$inferSelect;
-export type SimpleWithCreatedAtSelect = typeof SimpleWithCreatedAt.$inferSelect;
-export type SimpleWithCreatedAtAndUpdatedAtSelect = typeof SimpleWithCreatedAtAndUpdatedAt.$inferSelect;
-export type SimpleWithJsonSelect = typeof SimpleWithJson.$inferSelect;
-export type SimpleWithOptionalEnumSelect = typeof SimpleWithOptionalEnum.$inferSelect;
-export type SimpleWithRelationAndJsonSelect = typeof SimpleWithRelationAndJson.$inferSelect;
-export type SimpleWithSchemaSelect = typeof SimpleWithSchema.$inferSelect;
-export type SimpleWithSelfReferenceSelect = typeof SimpleWithSelfReference.$inferSelect;
-export type SimpleWithStringCollectionSelect = typeof SimpleWithStringCollection.$inferSelect;
-export type SimpleWithStringIdSelect = typeof SimpleWithStringId.$inferSelect;
-export type SimpleWithUUIDSelect = typeof SimpleWithUUID.$inferSelect;
-export type SimpleWithUnionSelect = typeof SimpleWithUnion.$inferSelect;
-export type SimpleWithUpdatedAtSelect = typeof SimpleWithUpdatedAt.$inferSelect;
-export type SimpleWithVersionSelect = typeof SimpleWithVersion.$inferSelect;
-export type StoreSelect = typeof Store.$inferSelect;
-export type TeacherSelect = typeof Teacher.$inferSelect;
-export type TeacherClassroomSelect = typeof TeacherClassroom.$inferSelect;
 
 // ---------------------------------------------------------------------------
 // Factory functions for test data
