@@ -7,7 +7,7 @@
 A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js. BigAl uses a fluent builder
 pattern for queries, function-based schema definitions with PostgreSQL-native column builders,
 and immutable query state. Built exclusively for Postgres with native support for JSONB,
-DISTINCT ON, subquery joins, and ON CONFLICT upserts.
+DISTINCT ON, subquery joins, ON CONFLICT upserts, and pgvector.
 
 ## Install
 
@@ -33,35 +33,35 @@ Requires Node.js >= 22.
 ## Quick Start
 
 ```ts
-import { createBigAl, defineTable as table, serial, text, integer, belongsTo, hasMany, createdAt, updatedAt } from 'bigal';
-import type { InferSelect } from 'bigal';
+import { initialize, defineTable as table, serial, text, integer, belongsTo, hasMany, createdAt, updatedAt } from 'bigal';
+import type { Repository } from 'bigal';
 import { Pool } from 'postgres-pool';
 
 // Define models with PostgreSQL-native column builders
+// Column names auto-derive from property keys (priceCents -> price_cents)
 const Product = table('products', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  priceCents: integer('price_cents').notNull(),
-  store: belongsTo(() => Store, 'store_id'),
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  priceCents: integer().notNull(),
+  store: belongsTo('Store'),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
 
 const Store = table('stores', {
-  id: serial('id').primaryKey(),
-  name: text('name'),
-  products: hasMany(() => Product).via('store'),
+  id: serial().primaryKey(),
+  name: text(),
+  products: hasMany('Product').via('store'),
 });
 
-// Types inferred from schema — no separate interface needed
-type ProductRow = InferSelect<typeof Product._schema>;
-
-// Initialize and get typed repositories
+// Initialize with typed destructuring -- no type assertions needed
 const pool = new Pool('postgres://localhost/mydb');
-const bigal = createBigAl({ pool, models: [Product, Store] });
-const productRepo = bigal.getRepository(Product);
+const { Product: productRepo, Store: storeRepo } = initialize({
+  pool,
+  models: { Product, Store },
+});
 
-// Fluent queries — just await the chain
+// Fluent queries -- just await the chain
 const products = await productRepo
   .find()
   .where({ priceCents: { '>=': 1000 }, name: { contains: 'widget' } })
@@ -70,18 +70,21 @@ const products = await productRepo
 
 // Upserts with ON CONFLICT
 await productRepo.create({ name: 'Widget', priceCents: 999, store: 1 }, { onConflict: { action: 'merge', targets: ['name'], merge: ['priceCents'] } });
+
+// Inspect generated SQL without executing
+const { sql, params } = productRepo.find().where({ name: 'Widget' }).toSQL();
 ```
 
 ## Documentation
 
 Full documentation is available at **[bigalorm.github.io/bigal](https://bigalorm.github.io/bigal/)**.
 
-- [Getting Started](https://bigalorm.github.io/bigal/getting-started) — install, first model, first query
-- [Models](https://bigalorm.github.io/bigal/guide/models) — decorators, column options, relationships
-- [Querying](https://bigalorm.github.io/bigal/guide/querying) — operators, pagination, JSONB, DISTINCT ON
-- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) — create, update, destroy, upserts
-- [Subqueries & Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) — subquery builder, aggregates
-- [API Reference](https://bigalorm.github.io/bigal/reference/api) — all exports and method signatures
+- [Getting Started](https://bigalorm.github.io/bigal/getting-started) -- install, first model, first query
+- [Models](https://bigalorm.github.io/bigal/guide/models) -- table definitions, column types, relationships
+- [Querying](https://bigalorm.github.io/bigal/guide/querying) -- operators, pagination, JSONB, DISTINCT ON
+- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) -- create, update, destroy, upserts
+- [Subqueries & Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) -- subquery builder, aggregates
+- [API Reference](https://bigalorm.github.io/bigal/reference/api) -- all exports and method signatures
 
 ## Machine-Readable Documentation
 
@@ -103,7 +106,7 @@ npx skills add bigalorm/bigal
 ## Compatibility
 
 - [PostgreSQL](http://www.postgresql.org/) 14 or above
-- Node.js 20.11.0 or above
+- Node.js 22 or above
 
 ## License
 

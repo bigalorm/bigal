@@ -16,17 +16,37 @@ Use `table()` (exported as `defineTable` from `'bigal'`) to create a table defin
 import { defineTable as table, serial, text, integer, boolean, createdAt, updatedAt } from 'bigal';
 
 export const Product = table('products', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  priceCents: integer('price_cents').notNull(),
-  isActive: boolean('is_active').notNull().default(true),
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  priceCents: integer().notNull(),
+  isActive: boolean().notNull().default(true),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
 ```
 
 The first argument is the database table name. The second is an object mapping property names to column
-builders. Each column builder takes the database column name as its first argument.
+builders. Column builders take no arguments by default -- the database column name is auto-derived from
+the property key using snakeCase (e.g., `priceCents` becomes `price_cents`).
+
+### Auto-derived names
+
+BigAl automatically derives two names from your definitions:
+
+- **Column names** -- property keys are converted to snake_case for the database column name.
+  `priceCents` becomes `price_cents`, `isActive` becomes `is_active`.
+- **Model names** -- the table name is singularized and PascalCased for relationship lookups.
+  `products` becomes `Product`, `product__category` becomes `ProductCategory`.
+
+Override either when the convention does not match:
+
+```ts
+// Override column name
+aliases: textArray({ name: 'alias_names' }).default([]),
+
+// Override model name
+const Product = table('items', { /* ... */ }, { modelName: 'Product' });
+```
 
 ### Table options
 
@@ -46,25 +66,29 @@ const AuditLog = table(
 );
 ```
 
-| Option       | Type      | Description                                           |
-| ------------ | --------- | ----------------------------------------------------- |
-| `schema`     | `string`  | PostgreSQL schema (default: `public`)                 |
-| `readonly`   | `boolean` | If `true`, `getRepository()` returns read-only access |
-| `connection` | `string`  | Named connection key (for multi-database setups)      |
+| Option       | Type      | Description                                              |
+| ------------ | --------- | -------------------------------------------------------- |
+| `schema`     | `string`  | PostgreSQL schema (default: `public`)                    |
+| `readonly`   | `boolean` | If `true`, `initialize()` returns a read-only repository |
+| `connection` | `string`  | Named connection key (for multi-database setups)         |
+| `modelName`  | `string`  | Override auto-derived model name                         |
+| `hooks`      | `object`  | Lifecycle hooks (see [Hooks](#hooks))                    |
+| `filters`    | `object`  | Global filters (see [Global filters](#global-filters))   |
 
 ## Column types
 
 Each builder maps to a PostgreSQL column type. All columns are nullable by default -- use `.notNull()`
-to make them required.
+to make them required. Column builders take no arguments; pass `{ name: 'custom_name' }` only when the
+auto-derived snake_case name does not match your database column.
 
 ### String types
 
 ```ts
 import { text, varchar, uuid } from 'bigal';
 
-name: text('name'),                       // TEXT -- string | null
-sku: varchar('sku', { length: 100 }),      // VARCHAR(100) -- string | null
-externalId: uuid('external_id'),           // UUID -- string | null
+name: text(),                                 // TEXT -- string | null
+sku: varchar({ length: 100 }),                // VARCHAR(100) -- string | null
+externalId: uuid(),                           // UUID -- string | null
 ```
 
 ### Numeric types
@@ -72,13 +96,13 @@ externalId: uuid('external_id'),           // UUID -- string | null
 ```ts
 import { serial, bigserial, integer, bigint, smallint, real, doublePrecision } from 'bigal';
 
-id: serial('id').primaryKey(),             // SERIAL -- number (notNull + default implied)
-bigId: bigserial('big_id'),                // BIGSERIAL -- number (notNull + default implied)
-quantity: integer('quantity'),              // INTEGER -- number | null
-views: bigint('views'),                    // BIGINT -- number | null
-rank: smallint('rank'),                    // SMALLINT -- number | null
-score: real('score'),                      // REAL -- number | null
-precise: doublePrecision('precise'),       // DOUBLE PRECISION -- number | null
+id: serial().primaryKey(),                    // SERIAL -- number (notNull + default implied)
+bigId: bigserial(),                           // BIGSERIAL -- number (notNull + default implied)
+quantity: integer(),                          // INTEGER -- number | null
+views: bigint(),                              // BIGINT -- number | null
+rank: smallint(),                             // SMALLINT -- number | null
+score: real(),                                // REAL -- number | null
+precise: doublePrecision(),                   // DOUBLE PRECISION -- number | null
 ```
 
 `serial()` and `bigserial()` automatically imply `.notNull()` and `.default()`. They are always
@@ -89,9 +113,9 @@ precise: doublePrecision('precise'),       // DOUBLE PRECISION -- number | null
 ```ts
 import { boolean } from 'bigal';
 
-isActive: boolean('is_active'),                         // BOOLEAN -- boolean | null
-isPublished: boolean('is_published').notNull(),          // BOOLEAN -- boolean
-isArchived: boolean('is_archived').notNull().default(false), // BOOLEAN -- boolean (optional on insert)
+isActive: boolean(),                                       // BOOLEAN -- boolean | null
+isPublished: boolean().notNull(),                          // BOOLEAN -- boolean
+isArchived: boolean().notNull().default(false),            // BOOLEAN -- boolean (optional on insert)
 ```
 
 ### Date and time
@@ -99,23 +123,23 @@ isArchived: boolean('is_archived').notNull().default(false), // BOOLEAN -- boole
 ```ts
 import { date, timestamp, timestamptz, createdAt, updatedAt } from 'bigal';
 
-birthDate: date('birth_date'),             // DATE -- Date | null
-occurredAt: timestamp('occurred_at'),      // TIMESTAMP -- Date | null
-scheduledFor: timestamptz('scheduled_for'), // TIMESTAMPTZ -- Date | null
-createdAt: createdAt(),                    // TIMESTAMPTZ -- Date (notNull, auto-set on insert)
-updatedAt: updatedAt(),                    // TIMESTAMPTZ -- Date (notNull, auto-set on insert/update)
+birthDate: date(),                            // DATE -- Date | null
+occurredAt: timestamp(),                      // TIMESTAMP -- Date | null
+scheduledFor: timestamptz(),                  // TIMESTAMPTZ -- Date | null
+createdAt: createdAt(),                       // TIMESTAMPTZ -- Date (notNull, auto-set on insert)
+updatedAt: updatedAt(),                       // TIMESTAMPTZ -- Date (notNull, auto-set on insert/update)
 ```
 
 `createdAt()` and `updatedAt()` default to column names `created_at` and `updated_at`. Pass a custom
-name if needed: `createdAt('creation_time')`.
+name if needed: `createdAt({ name: 'creation_time' })`.
 
 ### JSON
 
 ```ts
 import { json, jsonb } from 'bigal';
 
-settings: json<{ theme: string }>('settings'),           // JSON -- { theme: string } | null
-metadata: jsonb<{ color?: string }>('metadata'),          // JSONB -- { color?: string } | null
+settings: json<{ theme: string }>(),                      // JSON -- { theme: string } | null
+metadata: jsonb<{ color?: string }>(),                     // JSONB -- { color?: string } | null
 ```
 
 The generic parameter controls the TypeScript type. If omitted, it defaults to
@@ -126,7 +150,7 @@ The generic parameter controls the TypeScript type. If omitted, it defaults to
 ```ts
 import { bytea } from 'bigal';
 
-data: bytea('data'),                       // BYTEA -- Buffer | null
+data: bytea(),                                // BYTEA -- Buffer | null
 ```
 
 ### Array types
@@ -134,10 +158,21 @@ data: bytea('data'),                       // BYTEA -- Buffer | null
 ```ts
 import { textArray, integerArray, booleanArray } from 'bigal';
 
-tags: textArray('tags'),                   // TEXT[] -- string[] | null
-scores: integerArray('scores'),            // INTEGER[] -- number[] | null
-flags: booleanArray('flags'),              // BOOLEAN[] -- boolean[] | null
+tags: textArray(),                            // TEXT[] -- string[] | null
+scores: integerArray(),                       // INTEGER[] -- number[] | null
+flags: booleanArray(),                        // BOOLEAN[] -- boolean[] | null
 ```
+
+### Vector (pgvector)
+
+```ts
+import { vector } from 'bigal';
+
+embedding: vector({ dimensions: 1536 }),      // VECTOR(1536) -- number[] | null
+```
+
+The `dimensions` option is required. See [Querying > Vector distance](/guide/querying#vector-distance-queries)
+for sorting and filtering by similarity.
 
 ## Column modifiers
 
@@ -149,7 +184,7 @@ compose naturally.
 Removes `null` from the TypeScript type. Maps to a `NOT NULL` constraint.
 
 ```ts
-name: text('name').notNull(),   // string (not string | null)
+name: text().notNull(),   // string (not string | null)
 ```
 
 ### .default(value)
@@ -157,8 +192,8 @@ name: text('name').notNull(),   // string (not string | null)
 Makes the column optional on insert. The value is used as the TypeScript default hint.
 
 ```ts
-isActive: boolean('is_active').notNull().default(true),  // boolean, optional on insert
-aliases: textArray('aliases').default([]),                // string[] | null, optional on insert
+isActive: boolean().notNull().default(true),               // boolean, optional on insert
+aliases: textArray().default([]),                           // string[] | null, optional on insert
 ```
 
 ### .primaryKey()
@@ -167,8 +202,8 @@ Marks the column as the primary key. Implies `.notNull()` and makes the column o
 (the database assigns the value).
 
 ```ts
-id: serial('id').primaryKey(),             // number, optional on insert
-id: uuid('id').primaryKey(),               // string, optional on insert
+id: serial().primaryKey(),                    // number, optional on insert
+id: uuid().primaryKey(),                      // string, optional on insert
 ```
 
 ### .unique()
@@ -176,7 +211,7 @@ id: uuid('id').primaryKey(),               // string, optional on insert
 Adds a UNIQUE constraint. No effect on the TypeScript type.
 
 ```ts
-email: text('email').notNull().unique(),   // string, must be unique
+email: text().notNull().unique(),             // string, must be unique
 ```
 
 ### Chaining
@@ -184,37 +219,38 @@ email: text('email').notNull().unique(),   // string, must be unique
 Modifiers compose in any order:
 
 ```ts
-email: text('email').notNull().unique(),
-isActive: boolean('is_active').notNull().default(true),
-score: integer('score').default(0),
+email: text().notNull().unique(),
+isActive: boolean().notNull().default(true),
+score: integer().default(0),
 ```
 
 ## Complete column reference
 
-| Builder                     | PostgreSQL type  | TypeScript type     | Notes                                 |
-| --------------------------- | ---------------- | ------------------- | ------------------------------------- |
-| `serial(name)`              | SERIAL           | `number`            | notNull + default implied             |
-| `bigserial(name)`           | BIGSERIAL        | `number`            | notNull + default implied             |
-| `text(name)`                | TEXT             | `string \| null`    |                                       |
-| `varchar(name, { length })` | VARCHAR(n)       | `string \| null`    |                                       |
-| `integer(name)`             | INTEGER          | `number \| null`    |                                       |
-| `bigint(name)`              | BIGINT           | `number \| null`    |                                       |
-| `smallint(name)`            | SMALLINT         | `number \| null`    |                                       |
-| `real(name)`                | REAL             | `number \| null`    |                                       |
-| `doublePrecision(name)`     | DOUBLE PRECISION | `number \| null`    |                                       |
-| `boolean(name)`             | BOOLEAN          | `boolean \| null`   |                                       |
-| `timestamp(name)`           | TIMESTAMP        | `Date \| null`      |                                       |
-| `timestamptz(name)`         | TIMESTAMPTZ      | `Date \| null`      |                                       |
-| `date(name)`                | DATE             | `Date \| null`      |                                       |
-| `json<T>(name)`             | JSON             | `T \| null`         | Defaults to `Record<string, unknown>` |
-| `jsonb<T>(name)`            | JSONB            | `T \| null`         | Defaults to `Record<string, unknown>` |
-| `uuid(name)`                | UUID             | `string \| null`    |                                       |
-| `bytea(name)`               | BYTEA            | `Buffer \| null`    |                                       |
-| `textArray(name)`           | TEXT[]           | `string[] \| null`  |                                       |
-| `integerArray(name)`        | INTEGER[]        | `number[] \| null`  |                                       |
-| `booleanArray(name)`        | BOOLEAN[]        | `boolean[] \| null` |                                       |
-| `createdAt(name?)`          | TIMESTAMPTZ      | `Date`              | notNull, auto-set on insert           |
-| `updatedAt(name?)`          | TIMESTAMPTZ      | `Date`              | notNull, auto-set on insert/update    |
+| Builder                  | PostgreSQL type  | TypeScript type     | Notes                                 |
+| ------------------------ | ---------------- | ------------------- | ------------------------------------- |
+| `serial()`               | SERIAL           | `number`            | notNull + default implied             |
+| `bigserial()`            | BIGSERIAL        | `number`            | notNull + default implied             |
+| `text()`                 | TEXT             | `string \| null`    |                                       |
+| `varchar({ length })`    | VARCHAR(n)       | `string \| null`    |                                       |
+| `integer()`              | INTEGER          | `number \| null`    |                                       |
+| `bigint()`               | BIGINT           | `number \| null`    |                                       |
+| `smallint()`             | SMALLINT         | `number \| null`    |                                       |
+| `real()`                 | REAL             | `number \| null`    |                                       |
+| `doublePrecision()`      | DOUBLE PRECISION | `number \| null`    |                                       |
+| `boolean()`              | BOOLEAN          | `boolean \| null`   |                                       |
+| `timestamp()`            | TIMESTAMP        | `Date \| null`      |                                       |
+| `timestamptz()`          | TIMESTAMPTZ      | `Date \| null`      |                                       |
+| `date()`                 | DATE             | `Date \| null`      |                                       |
+| `json<T>()`              | JSON             | `T \| null`         | Defaults to `Record<string, unknown>` |
+| `jsonb<T>()`             | JSONB            | `T \| null`         | Defaults to `Record<string, unknown>` |
+| `uuid()`                 | UUID             | `string \| null`    |                                       |
+| `bytea()`                | BYTEA            | `Buffer \| null`    |                                       |
+| `textArray()`            | TEXT[]           | `string[] \| null`  |                                       |
+| `integerArray()`         | INTEGER[]        | `number[] \| null`  |                                       |
+| `booleanArray()`         | BOOLEAN[]        | `boolean[] \| null` |                                       |
+| `vector({ dimensions })` | VECTOR(n)        | `number[] \| null`  | Requires pgvector extension           |
+| `createdAt()`            | TIMESTAMPTZ      | `Date`              | notNull, auto-set on insert           |
+| `updatedAt()`            | TIMESTAMPTZ      | `Date`              | notNull, auto-set on insert/update    |
 
 ## Relationships
 
@@ -225,13 +261,19 @@ Use `belongsTo` when this table holds the foreign key:
 ```ts
 import { belongsTo } from 'bigal';
 
-store: belongsTo(() => Store, 'store_id'),
+store: belongsTo('Store'),
 ```
 
-The first argument is an arrow function returning the related table definition. The second is the
-database column name for the foreign key.
+The argument is the model name of the related table. The FK column name is auto-derived as
+`snakeCase(propertyKey) + '_id'` (e.g., `store` becomes `store_id`).
 
-In `$inferSelect`, a `belongsTo` column is typed as the FK value (typically `number`). After
+Override the FK column name when the convention does not match:
+
+```ts
+store: belongsTo('Store', { name: 'shop_id' }),
+```
+
+In the inferred select type, a `belongsTo` column is typed as the FK value (typically `number`). After
 `.populate('store')`, the type changes to the full related entity.
 
 ### One-to-many (hasMany)
@@ -241,7 +283,7 @@ Use `hasMany` for the inverse side of a relationship:
 ```ts
 import { hasMany } from 'bigal';
 
-products: hasMany(() => Product).via('store'),
+products: hasMany('Product').via('store'),
 ```
 
 `.via()` specifies the property name on the related table that holds the foreign key back to this
@@ -252,12 +294,12 @@ table.
 Use `.through()` for relationships via a junction table:
 
 ```ts
-categories: hasMany(() => Category)
-  .through(() => ProductCategory)
+categories: hasMany('Category')
+  .through('ProductCategory')
   .via('product'),
 ```
 
-`hasMany` columns are excluded from both `$inferSelect` and `$inferInsert`. They are only present
+`hasMany` columns are excluded from both the select and insert types. They are only present
 after `.populate()`.
 
 See [Relationships](/guide/relationships) for complete examples.
@@ -268,7 +310,7 @@ Define reusable column sets as plain objects and spread them into schema definit
 
 ```ts
 const modelBase = {
-  id: serial('id').primaryKey(),
+  id: serial().primaryKey(),
 };
 
 const timestamps = {
@@ -279,41 +321,53 @@ const timestamps = {
 export const Product = table('products', {
   ...modelBase,
   ...timestamps,
-  name: text('name').notNull(),
+  name: text().notNull(),
 });
 
 export const Store = table('stores', {
   ...modelBase,
   ...timestamps,
-  name: text('name'),
+  name: text(),
 });
 ```
 
 ## Type inference
 
-Every table definition exposes `$inferSelect` and `$inferInsert` phantom types:
+Use the `InferSelect` and `InferInsert` utility types to extract row and insert types from a table
+definition's schema:
 
 ```ts
-// The row type returned by find/findOne/create/update
-type ProductRow = typeof Product.$inferSelect;
+import type { InferSelect, InferInsert } from 'bigal';
+
+type ProductRow = InferSelect<(typeof Product)['schema']>;
 // { id: number; name: string; priceCents: number; isActive: boolean;
 //   metadata: { color?: string } | null; createdAt: Date; updatedAt: Date }
 
-// The insert type accepted by create()
-type ProductInsert = typeof Product.$inferInsert;
+type ProductInsert = InferInsert<(typeof Product)['schema']>;
 // { name: string; priceCents: number;           <-- required
 //   id?: number; isActive?: boolean;             <-- optional (has default or primary key)
 //   metadata?: { color?: string } | null; }      <-- optional (nullable)
 ```
 
-You can also use the `InferSelect` and `InferInsert` utility types if you have the schema object:
+### Repository and ReadonlyRepository type aliases
+
+When you need to annotate a function parameter or variable with a repository type, use the
+`Repository` and `ReadonlyRepository` type aliases:
 
 ```ts
-import type { InferSelect, InferInsert } from 'bigal';
+import type { Repository, ReadonlyRepository } from 'bigal';
 
-type ProductRow = InferSelect<typeof productSchema>;
-type ProductInsert = InferInsert<typeof productSchema>;
+function processProducts(repo: Repository<typeof Product>) {
+  return repo.find().where({ name: { contains: 'widget' } });
+}
+
+function readSummary(repo: ReadonlyRepository<typeof StoreSummary>) {
+  return repo.findOne().where({ id: 1 });
+}
 ```
+
+These accept `typeof YourTableDef` and resolve to the correctly typed `IRepository` or
+`IReadonlyRepository`.
 
 ### Insert type rules
 
@@ -331,20 +385,23 @@ Columns are **optional** on insert when any of the following is true:
 
 ## Hooks
 
-Define lifecycle hooks as the third argument to `table()`:
+Define lifecycle hooks in the third argument to `table()`:
 
 ```ts
 export const Product = table(
   'products',
   {
-    id: serial('id').primaryKey(),
-    name: text('name').notNull(),
-    slug: text('slug').notNull(),
+    id: serial().primaryKey(),
+    name: text().notNull(),
+    slug: text().notNull(),
   },
   {
     hooks: {
       beforeCreate(values) {
         return { ...values, slug: slugify(values.name) };
+      },
+      afterCreate(result) {
+        audit.log('product.created', result.id);
       },
       beforeUpdate(values) {
         if (values.name) {
@@ -352,14 +409,66 @@ export const Product = table(
         }
         return values;
       },
+      afterUpdate(result) {
+        audit.log('product.updated', result.id);
+      },
+      beforeDestroy(where) {
+        return where;
+      },
+      afterDestroy({ rowCount }) {
+        audit.log('product.destroyed', rowCount);
+      },
+      afterFind(results) {
+        return results;
+      },
     },
   },
 );
 ```
 
-| Hook           | Called          | Receives              | Returns                |
-| -------------- | --------------- | --------------------- | ---------------------- |
-| `beforeCreate` | Before `INSERT` | Insert values         | Modified insert values |
-| `beforeUpdate` | Before `UPDATE` | Partial update values | Modified update values |
+| Hook            | Called          | Receives               | Returns                |
+| --------------- | --------------- | ---------------------- | ---------------------- |
+| `beforeCreate`  | Before `INSERT` | Insert values          | Modified insert values |
+| `afterCreate`   | After `INSERT`  | Created record         | void                   |
+| `beforeUpdate`  | Before `UPDATE` | Partial update values  | Modified update values |
+| `afterUpdate`   | After `UPDATE`  | Updated record         | void                   |
+| `beforeDestroy` | Before `DELETE` | Where clause object    | Modified where clause  |
+| `afterDestroy`  | After `DELETE`  | `{ rowCount: number }` | void                   |
+| `afterFind`     | After `SELECT`  | Array of results       | Modified results array |
 
-Hook parameters are fully typed based on the schema definition.
+All hook parameters are fully typed based on the schema definition. Hooks can be synchronous or
+return a Promise.
+
+## Global filters
+
+Define named filters that are automatically applied to every `find` and `findOne` query:
+
+```ts
+const Product = table(
+  'products',
+  {
+    /* columns */
+  },
+  {
+    filters: {
+      active: { isActive: true },
+      notDeleted: () => ({ deletedAt: null }),
+    },
+  },
+);
+```
+
+Filters can be static objects or functions that return a where clause dynamically. They are merged
+into every query's WHERE clause.
+
+Override filters per query:
+
+```ts
+// Disable all filters
+await productRepo.find().where({}).filters(false);
+
+// Disable a specific filter
+await productRepo.find().where({}).filters({ active: false });
+```
+
+See [Querying > Global filters](/guide/querying#global-filters) for more details.

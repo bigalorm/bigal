@@ -20,11 +20,11 @@ schema definition -- no separate interfaces, no `extends Entity`, no `experiment
 | ------------------------------------- | -------------------------------------------- |
 | `class Product extends Entity`        | `const Product = table('products', { ... })` |
 | `@table()`, `@column()` decorators    | `table()`, `text()`, `integer()`, etc.       |
-| `@primaryColumn({ type: 'integer' })` | `serial('id').primaryKey()`                  |
-| `@column({ model: () => 'Store' })`   | `belongsTo(() => Store, 'store_id')`         |
-| `@column({ collection: ... })`        | `hasMany(() => Product).via('store')`        |
-| `initialize({ models, pool })`        | `createBigAl({ pool, models })`              |
-| `repos.Product as Repository<T>`      | `bigal.getRepository(Product)`               |
+| `@primaryColumn({ type: 'integer' })` | `serial().primaryKey()`                      |
+| `@column({ model: () => 'Store' })`   | `belongsTo('Store')`                         |
+| `@column({ collection: ... })`        | `hasMany('Product').via('store')`            |
+| `initialize({ models, pool })`        | `initialize({ pool, models: { ... } })`      |
+| `repos.Product as Repository<T>`      | Typed destructuring or `getRepository()`     |
 | `Entity`, `EntityStatic`              | `InferSelect<T>`, `InferInsert<T>`           |
 | `NotEntity<T>`                        | Removed (no longer needed)                   |
 | `.toJSON()`                           | Removed (results are always plain objects)   |
@@ -67,34 +67,39 @@ export class Product extends Entity {
 }
 ```
 
-v16 uses function-based schema definitions:
+v16 uses function-based schema definitions. Column names are auto-derived from property keys
+(snakeCase), so you no longer pass column names as arguments:
 
 ```ts
 // v16
 import { boolean, createdAt, defineTable as table, integer, jsonb, serial, text, updatedAt, varchar } from 'bigal';
 
 export const Product = table('products', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  sku: varchar('sku', { length: 100 }),
-  priceCents: integer('price_cents').notNull(),
-  isActive: boolean('is_active').notNull().default(true),
-  metadata: jsonb<{ color?: string }>('metadata'),
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  sku: varchar({ length: 100 }),
+  priceCents: integer().notNull(),
+  isActive: boolean().notNull().default(true),
+  metadata: jsonb<{ color?: string }>(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
 
 // Types are inferred -- no separate interface needed
-type ProductRow = typeof Product.$inferSelect;
-type ProductInsert = typeof Product.$inferInsert;
+import type { InferSelect, InferInsert } from 'bigal';
+
+type ProductRow = InferSelect<(typeof Product)['schema']>;
+type ProductInsert = InferInsert<(typeof Product)['schema']>;
 ```
 
 Key differences:
 
 - No class, no `extends Entity`
 - Column types are PostgreSQL-native (`text`, `integer`, `boolean`) instead of abstract (`'string'`, `'integer'`)
+- Column names auto-derive from property keys -- no explicit column name argument needed
 - Nullability and defaults are expressed through chain methods (`.notNull()`, `.default()`)
 - Types are inferred from the schema; no manual interface required
+- Use `InferSelect` / `InferInsert` utility types (no `$inferSelect` / `$inferInsert` phantom types)
 
 ## Base class and shared columns
 
@@ -126,7 +131,7 @@ v16 uses plain objects with spread:
 import { createdAt, serial, updatedAt } from 'bigal';
 
 export const modelBase = {
-  id: serial('id').primaryKey(),
+  id: serial().primaryKey(),
 };
 
 export const timestamps = {
@@ -141,7 +146,7 @@ import { modelBase, timestamps } from './shared';
 export const Product = table('products', {
   ...modelBase,
   ...timestamps,
-  name: text('name').notNull(),
+  name: text().notNull(),
 });
 ```
 
@@ -150,24 +155,25 @@ inheritance chains.
 
 ## Column types
 
-Each v15 column type maps to a PostgreSQL-native builder in v16:
+Each v15 column type maps to a PostgreSQL-native builder in v16. Builders take no arguments -- column
+names auto-derive from property keys:
 
-| v15 decorator                         | v16 builder                                                  |
-| ------------------------------------- | ------------------------------------------------------------ |
-| `@column({ type: 'string' })`         | `text('col_name')` or `varchar('col_name', { length: 100 })` |
-| `@column({ type: 'integer' })`        | `integer('col_name')`                                        |
-| `@column({ type: 'float' })`          | `real('col_name')` or `doublePrecision('col_name')`          |
-| `@column({ type: 'boolean' })`        | `boolean('col_name')`                                        |
-| `@column({ type: 'date' })`           | `date('col_name')`                                           |
-| `@column({ type: 'datetime' })`       | `timestamptz('col_name')`                                    |
-| `@column({ type: 'json' })`           | `json('col_name')` or `jsonb('col_name')`                    |
-| `@column({ type: 'string[]' })`       | `textArray('col_name')`                                      |
-| `@column({ type: 'integer[]' })`      | `integerArray('col_name')`                                   |
-| `@column({ type: 'boolean[]' })`      | `booleanArray('col_name')`                                   |
-| `@primaryColumn({ type: 'integer' })` | `serial('col_name').primaryKey()`                            |
+| v15 decorator                         | v16 builder                            |
+| ------------------------------------- | -------------------------------------- |
+| `@column({ type: 'string' })`         | `text()` or `varchar({ length: 100 })` |
+| `@column({ type: 'integer' })`        | `integer()`                            |
+| `@column({ type: 'float' })`          | `real()` or `doublePrecision()`        |
+| `@column({ type: 'boolean' })`        | `boolean()`                            |
+| `@column({ type: 'date' })`           | `date()`                               |
+| `@column({ type: 'datetime' })`       | `timestamptz()`                        |
+| `@column({ type: 'json' })`           | `json()` or `jsonb()`                  |
+| `@column({ type: 'string[]' })`       | `textArray()`                          |
+| `@column({ type: 'integer[]' })`      | `integerArray()`                       |
+| `@column({ type: 'boolean[]' })`      | `booleanArray()`                       |
+| `@primaryColumn({ type: 'integer' })` | `serial().primaryKey()`                |
 
 Additional v16 builders with no v15 equivalent: `bigserial`, `bigint`, `smallint`, `uuid`, `bytea`,
-`timestamp` (without timezone).
+`timestamp` (without timezone), `vector({ dimensions })`.
 
 ### Column modifiers
 
@@ -188,6 +194,8 @@ value).
 
 ## Relationships
 
+v16 uses string model references. The FK column name is auto-derived from the property key.
+
 ### Many-to-one (belongsTo)
 
 ```ts
@@ -195,11 +203,11 @@ value).
 @column({ model: () => 'Store', name: 'store_id' })
 public store!: number | Store;
 
-// v16
-store: belongsTo(() => Store, 'store_id'),
+// v16 -- FK column auto-derived as store_id
+store: belongsTo('Store'),
 ```
 
-The `$inferSelect` type for a `belongsTo` column is the FK type (typically `number`), not a union.
+The inferred select type for a `belongsTo` column is the FK type (typically `number`), not a union.
 After `.populate('store')`, the type changes to the related entity.
 
 ### One-to-many (hasMany)
@@ -210,10 +218,10 @@ After `.populate('store')`, the type changes to the related entity.
 public products?: Product[];
 
 // v16
-products: hasMany(() => Product).via('store'),
+products: hasMany('Product').via('store'),
 ```
 
-`hasMany` columns are excluded from both `$inferSelect` and `$inferInsert`. They only appear after
+`hasMany` columns are excluded from both the select and insert types. They only appear after
 `.populate()`.
 
 ### Many-to-many (hasMany with through)
@@ -228,21 +236,29 @@ products: hasMany(() => Product).via('store'),
 public categories?: Category[];
 
 // v16
-categories: hasMany(() => Category)
-  .through(() => ProductCategory)
+categories: hasMany('Category')
+  .through('ProductCategory')
   .via('product'),
 ```
 
 ### Circular references
 
-Arrow functions in `belongsTo` and `hasMany` defer evaluation, allowing circular references between
-tables. If you have tables that reference each other, use a registry pattern:
+Arrow functions are still supported for circular references between tables. String references avoid
+the circular import problem entirely in most cases:
+
+```ts
+// String references -- no circular import needed
+store: belongsTo('Store'),
+products: hasMany('Product').via('store'),
+```
+
+If you need a registry for complex cases:
 
 ```ts
 const tables: Record<string, TableDefinition<any, any>> = {};
 
 const Product = table('products', {
-  store: belongsTo(() => tables.Store!, 'store_id'),
+  store: belongsTo(() => tables.Store!),
   // ...
 });
 tables.Product = Product;
@@ -256,6 +272,8 @@ tables.Store = Store;
 
 ## Initialization
 
+v16 uses `initialize()` with two calling styles:
+
 ```ts
 // v15
 import { initialize } from 'bigal';
@@ -264,30 +282,44 @@ import type { IRepository } from 'bigal';
 const repos = initialize({ models: [Product, Store], pool });
 const ProductRepo = repos.Product as IRepository<Product>;
 
-// v16
-import { createBigAl } from 'bigal';
+// v16 -- object style (typed destructuring, recommended)
+import { initialize } from 'bigal';
 
-const bigal = createBigAl({
+const { Product: ProductRepo, Store: StoreRepo } = initialize({
   pool,
-  models: [Product, Store, Category, ProductCategory],
+  models: { Product, Store, Category, ProductCategory },
 });
-
-const ProductRepo = bigal.getRepository(Product);
 // ProductRepo is fully typed -- no assertion needed
+
+// v16 -- array style (use getRepository)
+const bigal = initialize({ pool, models: [Product, Store, Category, ProductCategory] });
+const ProductRepo = bigal.getRepository(Product);
 ```
 
-`createBigAl()` validates all relationship references at construction time. If a `belongsTo` or
-`hasMany` points to a table not in the `models` array, it throws immediately.
+`initialize()` validates all relationship references at construction time. If a `belongsTo` or
+`hasMany` points to a model not in the `models` object/array, it throws immediately.
 
-### createBigAl options
+### Repository type aliases
 
-| Option         | Type                          | Description                                   |
-| -------------- | ----------------------------- | --------------------------------------------- |
-| `pool`         | `PoolLike`                    | Primary connection pool                       |
-| `readonlyPool` | `PoolLike`                    | Pool for read operations (defaults to `pool`) |
-| `models`       | `TableDefinition[]`           | All table definitions                         |
-| `connections`  | `Record<string, IConnection>` | Named connections for multi-database setups   |
-| `onQuery`      | `OnQueryCallback`             | Query observability callback                  |
+Use `Repository<typeof Product>` and `ReadonlyRepository<typeof Product>` for type annotations:
+
+```ts
+import type { Repository, ReadonlyRepository } from 'bigal';
+
+function processProducts(repo: Repository<typeof Product>) {
+  return repo.find().where({ name: { contains: 'widget' } });
+}
+```
+
+### initialize options
+
+| Option         | Type                                       | Description                                   |
+| -------------- | ------------------------------------------ | --------------------------------------------- |
+| `pool`         | `PoolLike`                                 | Primary connection pool                       |
+| `readonlyPool` | `PoolLike`                                 | Pool for read operations (defaults to `pool`) |
+| `models`       | `Record<string, TableDefinition>` or array | All table definitions                         |
+| `connections`  | `Record<string, IConnection>`              | Named connections for multi-database setups   |
+| `onQuery`      | `OnQueryCallback`                          | Query observability callback                  |
 
 ## Results are always plain objects
 
@@ -327,7 +359,7 @@ to distinguish relationships from data columns:
 interface IPayload { id: string; message: string; }
 
 // In the schema definition:
-payload: jsonb<IPayload>('payload'),
+payload: jsonb<IPayload>(),
 ```
 
 ## Type imports
@@ -338,15 +370,19 @@ import { Entity } from 'bigal';
 import type { EntityStatic, QueryResult } from 'bigal';
 
 // v16
-import type { InferSelect, InferInsert } from 'bigal';
+import type { InferSelect, InferInsert, Repository } from 'bigal';
 
-type ProductRow = typeof Product.$inferSelect;
-// or equivalently:
-type ProductRow = InferSelect<typeof productSchema>;
+type ProductRow = InferSelect<(typeof Product)['schema']>;
+
+// For repository type annotations:
+function getProducts(repo: Repository<typeof Product>) {
+  /* ... */
+}
 ```
 
-`Entity` and `EntityStatic` are no longer needed for the new API. Use `$inferSelect` on the table
-definition to get the row type, and `$inferInsert` for the insert type.
+`Entity` and `EntityStatic` are no longer needed. Use `InferSelect` on the table definition's `schema`
+property to get the row type, and `InferInsert` for the insert type. Use `Repository<typeof Model>` and
+`ReadonlyRepository<typeof Model>` for repository type annotations.
 
 ## Lifecycle hooks
 
@@ -366,7 +402,7 @@ export class Product extends Entity {
 }
 ```
 
-v16 uses the `hooks` option in `table()`:
+v16 uses the `hooks` option in `table()` with all 7 lifecycle hooks:
 
 ```ts
 // v16
@@ -380,8 +416,23 @@ export const Product = table(
       beforeCreate(values) {
         return { ...values, slug: slugify(values.name) };
       },
+      afterCreate(result) {
+        audit.log('product.created', result.id);
+      },
       beforeUpdate(values) {
         return { ...values, updatedBy: getCurrentUserId() };
+      },
+      afterUpdate(result) {
+        audit.log('product.updated', result.id);
+      },
+      beforeDestroy(where) {
+        return where;
+      },
+      afterDestroy({ rowCount }) {
+        audit.log('product.destroyed', rowCount);
+      },
+      afterFind(results) {
+        return results;
       },
     },
   },
@@ -389,6 +440,86 @@ export const Product = table(
 ```
 
 The `values` parameter is fully typed based on the schema definition.
+
+## New features in v16
+
+### Global filters
+
+Automatically apply WHERE clauses to every `find` and `findOne` query:
+
+```ts
+const Product = table(
+  'products',
+  {
+    /* columns */
+  },
+  {
+    filters: {
+      active: { isActive: true },
+      notDeleted: () => ({ deletedAt: null }),
+    },
+  },
+);
+
+// Override per query
+await productRepo.find().where({}).filters(false);
+await productRepo.find().where({}).filters({ active: false });
+```
+
+### toSQL()
+
+Inspect the generated SQL without executing on any query operation:
+
+```ts
+const { sql, params } = productRepo.find().where({ name: 'Widget' }).toSQL();
+// sql: 'SELECT ... FROM "products" WHERE "name"=$1'
+// params: ['Widget']
+```
+
+Available on `find`, `findOne`, `create`, `update`, and `destroy`.
+
+### pgvector support
+
+Store and query vector embeddings with `vector({ dimensions })`:
+
+```ts
+import { vector } from 'bigal';
+
+embedding: vector({ dimensions: 1536 }),
+```
+
+Query with nearest-neighbor sort:
+
+```ts
+await repo
+  .find()
+  .where({})
+  .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } });
+```
+
+### view()
+
+Define read-only models backed by PostgreSQL views:
+
+```ts
+import { view } from 'bigal';
+
+export const ProductSummary = view('product_summaries', {
+  /* columns */
+});
+```
+
+### String references
+
+Use model name strings instead of arrow functions for relationships:
+
+```ts
+store: belongsTo('Store'),
+products: hasMany('Product').via('store'),
+categories: hasMany('Category').through('ProductCategory').via('product'),
+```
+
+Model names are auto-derived from table names (`products` becomes `Product`).
 
 ## Logging and observability
 
@@ -403,9 +534,9 @@ v16 adds a structured `onQuery` callback:
 
 ```ts
 // v16
-const bigal = createBigAl({
+const { Product: ProductRepo } = initialize({
   pool,
-  models: [Product, Store],
+  models: { Product, Store },
   onQuery({ sql, params, duration, error, model, operation }) {
     logger.debug({ sql, params, duration, model, operation });
   },
@@ -426,7 +557,6 @@ The following exports no longer exist in v16:
 - `NotEntity`, `NotEntityBrand` -- structural typing workaround no longer needed
 - `@table()`, `@column()`, `@primaryColumn()`, `@createDateColumn()`, `@updateDateColumn()`,
   `@versionColumn()` decorators
-- `initialize()` -- replaced by `createBigAl()`
 - `.toJSON()` on query results -- results are already plain objects
 - `FindResultJSON`, `FindOneResultJSON`, `CreateResultJSON`, `UpdateResultJSON`, `DestroyResultJSON`
 
@@ -464,13 +594,14 @@ await ProductRepo.create({ name: 'Widget', sku: 'WDG-001', priceCents: 999 }, { 
 
 1. Update Node.js to v22 or later
 2. Remove `experimentalDecorators` and `useDefineForClassFields` from `tsconfig.json`
-3. Convert each model class to a `table()` call with column builders
+3. Convert each model class to a `table()` call with no-arg column builders
 4. Replace `extends Entity` / abstract base classes with shared column objects using spread
-5. Replace `@column({ model: ... })` with `belongsTo()`
-6. Replace `@column({ collection: ... })` with `hasMany()`
-7. Replace `initialize()` with `createBigAl()` and `getRepository()`
+5. Replace `@column({ model: ... })` with `belongsTo('ModelName')`
+6. Replace `@column({ collection: ... })` with `hasMany('ModelName')`
+7. Update `initialize()` call to use object-style models for typed destructuring
 8. Remove `NotEntity<T>` wrappers from JSON column types
 9. Remove `.toJSON()` calls from queries
-10. Replace `Entity` / `EntityStatic` type imports with `$inferSelect` / `$inferInsert`
-11. Replace static lifecycle hooks with `hooks` option in `table()`
-12. Replace `DEBUG_BIGAL` usage with `onQuery` callback (optional -- env var still works)
+10. Replace `Entity` / `EntityStatic` type imports with `InferSelect` / `InferInsert`
+11. Replace `Repository<T>` type assertions with `Repository<typeof Model>`
+12. Replace static lifecycle hooks with `hooks` option in `table()`
+13. Replace `DEBUG_BIGAL` usage with `onQuery` callback (optional -- env var still works)

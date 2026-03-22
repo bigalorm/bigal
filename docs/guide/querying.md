@@ -1,5 +1,5 @@
 ---
-description: Fluent query builder for find, findOne, and count with WHERE operators, JSONB querying, pagination, sorting, DISTINCT ON, and populate.
+description: Fluent query builder for find, findOne, and count with WHERE operators, JSONB querying, pagination, sorting, vector distance, global filters, toSQL, and populate.
 ---
 
 # Querying
@@ -126,7 +126,7 @@ await personRepository.find().where({
 // SQL: WHERE (first_name = $1) OR (last_name = $2)
 ```
 
-### AND with nested OR
+### Nested AND / OR
 
 ```ts
 await personRepository.find().where({
@@ -181,11 +181,13 @@ await repo.find().where({ bar: { theme: { '!': null } } });
 // SQL: WHERE "bar"->>'theme' IS NOT NULL
 ```
 
-Note that `IS NULL` on a JSONB property is true both when the key is missing from the object and when it is
-explicitly set to `null`. This matches PostgreSQL's behavior — the `->>` operator returns `NULL` in both cases.
+Note that `IS NULL` on a JSONB property is true both when the key is missing from the object and when
+it is explicitly set to `null`. This matches PostgreSQL's behavior -- the `->>` operator returns
+`NULL` in both cases.
 
-Properties set to `undefined` in a where clause are silently ignored (standard JavaScript — `undefined` values are
-dropped by `Object.entries`). To query for missing or null properties, always use `null` explicitly.
+Properties set to `undefined` in a where clause are silently ignored (standard JavaScript --
+`undefined` values are dropped by `Object.entries`). To query for missing or null properties, always
+use `null` explicitly.
 
 ### JSONB containment
 
@@ -212,6 +214,50 @@ await productRepository.find().where({}).sort('name asc, createdAt desc');
 ```ts
 await productRepository.find().where({}).sort({ name: 1 }); // ASC
 await productRepository.find().where({}).sort({ name: 1, createdAt: -1 }); // ASC, DESC
+```
+
+## Vector distance queries
+
+BigAl supports nearest-neighbor queries on `vector()` columns using pgvector. Four distance metrics
+are available: `cosine`, `l2`, `l1`, and `innerProduct`.
+
+### Sorting by distance
+
+Use the `nearestTo` sort to order results by vector similarity:
+
+```ts
+const similar = await documentRepo
+  .find()
+  .where({})
+  .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
+  .limit(10);
+```
+
+The `metric` option defaults to `'cosine'` if omitted.
+
+| Metric         | PostgreSQL operator | Description               |
+| -------------- | ------------------- | ------------------------- |
+| `cosine`       | `<=>`               | Cosine distance (default) |
+| `l2`           | `<->`               | Euclidean distance        |
+| `l1`           | `<+>`               | Manhattan distance        |
+| `innerProduct` | `<#>`               | Negative inner product    |
+
+### Filtering by distance
+
+Combine `nearestTo` in the where clause with a distance threshold:
+
+```ts
+const nearby = await documentRepo
+  .find()
+  .where({
+    embedding: {
+      nearestTo: queryVector,
+      metric: 'cosine',
+      distance: { '<': 0.5 },
+    },
+  })
+  .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
+  .limit(10);
 ```
 
 ## Pagination
@@ -253,6 +299,39 @@ Requirements:
 
 - `ORDER BY` is required and must start with the `DISTINCT ON` columns
 - Cannot be combined with `withCount()`
+
+## Global filters
+
+When a table defines named filters (see [Models > Global filters](/guide/models#global-filters)),
+they are automatically applied to every `find` and `findOne` query. Override them per query:
+
+```ts
+// Disable all filters for this query
+await productRepo.find().where({}).filters(false);
+
+// Disable a specific filter
+await productRepo.find().where({}).filters({ active: false });
+```
+
+Filters are not applied to `count()` queries.
+
+## toSQL()
+
+Inspect the generated SQL and parameters without executing the query:
+
+```ts
+const { sql, params } = productRepo
+  .find()
+  .where({ name: { contains: 'widget' } })
+  .sort('name')
+  .toSQL();
+
+console.log(sql); // SELECT ... FROM "products" WHERE "name" ILIKE $1 ORDER BY ...
+console.log(params); // ['%widget%']
+```
+
+Available on `find`, `findOne`, `create`, `update`, and `destroy`. Useful for debugging, logging,
+and testing SQL generation.
 
 ## Populate
 

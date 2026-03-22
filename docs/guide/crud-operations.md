@@ -1,5 +1,5 @@
 ---
-description: Create, update, and destroy records with RETURNING support, query projection, and ON CONFLICT upserts.
+description: Create, update, and destroy records with RETURNING support, query projection, toSQL, and ON CONFLICT upserts.
 ---
 
 # CRUD Operations
@@ -158,21 +158,37 @@ const products = await productRepository.destroy({ id: [42, 43] }, { returnSelec
 
 > The primary key is always included. Pass an empty array to return only the primary key.
 
+## toSQL() on mutations
+
+All mutation operations support `toSQL()` to inspect the generated SQL without executing:
+
+```ts
+// Create
+const { sql, params } = productRepository.create({ name: 'Widget', priceCents: 999 }).toSQL();
+
+// Update
+const { sql, params } = productRepository.update({ id: 42 }, { name: 'Super Widget' }).toSQL();
+
+// Destroy
+const { sql, params } = productRepository.destroy({ id: 42 }).toSQL();
+```
+
+This is useful for debugging, logging, and testing SQL generation.
+
 ## Initialization example
 
 ```ts
-import { createBigAl, defineTable as table, serial, text, integer, createdAt, updatedAt } from 'bigal';
+import { initialize, defineTable as table, serial, text, integer, createdAt, updatedAt } from 'bigal';
 import { Pool } from 'postgres-pool';
 
 const Product = table('products', {
-  id: serial('id').primaryKey(),
-  name: text('name').notNull(),
-  priceCents: integer('price_cents').notNull(),
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  priceCents: integer().notNull(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
 
 const pool = new Pool('postgres://localhost/mydb');
-const bigal = createBigAl({ models: [Product], pool });
-const productRepository = bigal.getRepository(Product);
+const { Product: productRepository } = initialize({ models: { Product }, pool });
 ```

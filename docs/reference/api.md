@@ -1,22 +1,26 @@
 ---
-description: Complete API reference for BigAl -- createBigAl(), table(), column builders, relationships, repository methods, query builder, and types.
+description: Complete API reference for BigAl -- initialize(), table(), column builders, relationships, repository methods, query builder, and types.
 ---
 
 # API Reference
 
 All public exports from `bigal`.
 
-## createBigAl()
+## initialize()
 
 Creates a BigAl instance with typed repositories for all provided table definitions.
 
-```ts
-import { createBigAl } from 'bigal';
+### Object-style models (recommended)
 
-const bigal = createBigAl({
+Returns typed repositories directly via destructuring:
+
+```ts
+import { initialize } from 'bigal';
+
+const { Product: productRepo, Store: storeRepo } = initialize({
   pool,
   readonlyPool,
-  models: [Product, Store, Category, ProductCategory],
+  models: { Product, Store, Category, ProductCategory },
   connections: {
     audit: { pool: auditPool },
   },
@@ -26,20 +30,31 @@ const bigal = createBigAl({
 });
 ```
 
-**Parameters:** `BigAlOptions`
+### Array-style models
 
-| Option         | Type                          | Required | Description                                   |
-| -------------- | ----------------------------- | -------- | --------------------------------------------- |
-| `pool`         | `PoolLike`                    | Yes      | Primary connection pool                       |
-| `readonlyPool` | `PoolLike`                    | No       | Pool for read operations (defaults to `pool`) |
-| `models`       | `TableDefinition[]`           | Yes      | All table definitions                         |
-| `connections`  | `Record<string, IConnection>` | No       | Named connections for multi-database setups   |
-| `onQuery`      | `OnQueryCallback`             | No       | Query observability callback                  |
+Returns an object with `getRepository()` and `getReadonlyRepository()` methods:
 
-**Returns:** `BigAlInstance`
+```ts
+const bigal = initialize({
+  pool,
+  models: [Product, Store, Category, ProductCategory],
+});
+
+const productRepo = bigal.getRepository(Product);
+```
+
+**Parameters:**
+
+| Option         | Type                                       | Required | Description                                   |
+| -------------- | ------------------------------------------ | -------- | --------------------------------------------- |
+| `pool`         | `PoolLike`                                 | Yes      | Primary connection pool                       |
+| `readonlyPool` | `PoolLike`                                 | No       | Pool for read operations (defaults to `pool`) |
+| `models`       | `Record<string, TableDefinition>` or array | Yes      | All table definitions                         |
+| `connections`  | `Record<string, IConnection>`              | No       | Named connections for multi-database setups   |
+| `onQuery`      | `OnQueryCallback`                          | No       | Query observability callback                  |
 
 All relationships are validated eagerly at construction time. If a `belongsTo` or `hasMany` references
-a table not included in `models`, `createBigAl()` throws immediately.
+a model not included in `models`, `initialize()` throws immediately.
 
 ## getRepository()
 
@@ -47,7 +62,7 @@ Returns a typed read-write repository for a table definition.
 
 ```ts
 const ProductRepo = bigal.getRepository(Product);
-// Type: IRepository<typeof Product.$inferSelect>
+// Type: IRepository<InferSelect<typeof Product.schema>>
 ```
 
 Throws if the table was not included in the `models` array.
@@ -58,7 +73,7 @@ Returns a typed read-only repository for a table definition.
 
 ```ts
 const ViewRepo = bigal.getReadonlyRepository(StoreSummary);
-// Type: IReadonlyRepository<typeof StoreSummary.$inferSelect>
+// Type: IReadonlyRepository<InferSelect<typeof StoreSummary.schema>>
 ```
 
 ## table()
@@ -72,17 +87,19 @@ import { defineTable as table, serial, text } from 'bigal';
 export const Product = table(
   'products',
   {
-    id: serial('id').primaryKey(),
-    name: text('name').notNull(),
+    id: serial().primaryKey(),
+    name: text().notNull(),
   },
   {
     schema: 'public',
     readonly: false,
-    connection: undefined,
     hooks: {
       beforeCreate(v) {
         return v;
       },
+    },
+    filters: {
+      active: { isActive: true },
     },
   },
 );
@@ -100,35 +117,54 @@ export const Product = table(
 
 ### TableOptions
 
-| Option       | Type         | Description                             |
-| ------------ | ------------ | --------------------------------------- |
-| `schema`     | `string`     | PostgreSQL schema (default: `public`)   |
-| `readonly`   | `boolean`    | If `true`, returns read-only repository |
-| `connection` | `string`     | Named connection key                    |
-| `hooks`      | `ModelHooks` | Lifecycle hooks                         |
+| Option       | Type                               | Description                                        |
+| ------------ | ---------------------------------- | -------------------------------------------------- |
+| `schema`     | `string`                           | PostgreSQL schema (default: `public`)              |
+| `readonly`   | `boolean`                          | If `true`, returns read-only repository            |
+| `connection` | `string`                           | Named connection key                               |
+| `modelName`  | `string`                           | Override auto-derived model name                   |
+| `hooks`      | `ModelHooks`                       | Lifecycle hooks                                    |
+| `filters`    | `Record<string, FilterDefinition>` | Named filters auto-applied to find/findOne queries |
 
 ### TableDefinition
 
 The returned object exposes:
 
-| Property                | Type                             | Description                       |
-| ----------------------- | -------------------------------- | --------------------------------- |
-| `tableName`             | `string`                         | Database table name               |
-| `dbSchema`              | `string \| undefined`            | PostgreSQL schema                 |
-| `isReadonly`            | `boolean`                        | Whether this is a read-only model |
-| `connection`            | `string \| undefined`            | Named connection key              |
-| `schema`                | `SchemaDefinition`               | The column definitions            |
-| `hooks`                 | `ModelHooks \| undefined`        | Lifecycle hooks                   |
-| `columns`               | `ColumnMetadata[]`               | All column metadata               |
-| `primaryKeyColumn`      | `ColumnMetadata`                 | Primary key column metadata       |
-| `columnsByPropertyName` | `Record<string, ColumnMetadata>` | Lookup by property name           |
-| `columnsByColumnName`   | `Record<string, ColumnMetadata>` | Lookup by database column name    |
-| `$inferSelect`          | Phantom type                     | Row type for queries              |
-| `$inferInsert`          | Phantom type                     | Insert parameter type             |
+| Property                | Type                               | Description                       |
+| ----------------------- | ---------------------------------- | --------------------------------- |
+| `tableName`             | `string`                           | Database table name               |
+| `modelName`             | `string`                           | Auto-derived or overridden name   |
+| `dbSchema`              | `string \| undefined`              | PostgreSQL schema                 |
+| `isReadonly`            | `boolean`                          | Whether this is a read-only model |
+| `connection`            | `string \| undefined`              | Named connection key              |
+| `schema`                | `SchemaDefinition`                 | The column definitions            |
+| `hooks`                 | `ModelHooks \| undefined`          | Lifecycle hooks                   |
+| `filters`               | `Record<string, ...> \| undefined` | Global filters                    |
+| `columns`               | `ColumnMetadata[]`                 | All column metadata               |
+| `primaryKeyColumn`      | `ColumnMetadata`                   | Primary key column metadata       |
+| `columnsByPropertyName` | `Record<string, ColumnMetadata>`   | Lookup by property name           |
+| `columnsByColumnName`   | `Record<string, ColumnMetadata>`   | Lookup by database column name    |
+
+## view()
+
+Defines a read-only table definition backed by a PostgreSQL view. Equivalent to
+`table(name, schema, { readonly: true, ...options })`.
+
+```ts
+import { view, serial, text, integer } from 'bigal';
+
+export const ProductSummary = view('product_summaries', {
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  storeName: text().notNull(),
+  categoryCount: integer().notNull(),
+});
+```
 
 ## Column builders
 
-All column builders accept a database column name and return a `ColumnBuilder` with chain methods.
+All column builders accept an optional `{ name: 'column_name' }` options object. When omitted, the
+database column name is auto-derived from the property key using snakeCase conversion.
 
 ### Chain methods
 
@@ -141,40 +177,53 @@ All column builders accept a database column name and return a `ColumnBuilder` w
 
 ### Builder functions
 
-| Function                  | PostgreSQL type  | TypeScript type     |
-| ------------------------- | ---------------- | ------------------- |
-| `serial(name)`            | SERIAL           | `number`            |
-| `bigserial(name)`         | BIGSERIAL        | `number`            |
-| `text(name)`              | TEXT             | `string \| null`    |
-| `varchar(name, options?)` | VARCHAR(n)       | `string \| null`    |
-| `integer(name)`           | INTEGER          | `number \| null`    |
-| `bigint(name)`            | BIGINT           | `number \| null`    |
-| `smallint(name)`          | SMALLINT         | `number \| null`    |
-| `real(name)`              | REAL             | `number \| null`    |
-| `doublePrecision(name)`   | DOUBLE PRECISION | `number \| null`    |
-| `boolean(name)`           | BOOLEAN          | `boolean \| null`   |
-| `timestamp(name)`         | TIMESTAMP        | `Date \| null`      |
-| `timestamptz(name)`       | TIMESTAMPTZ      | `Date \| null`      |
-| `date(name)`              | DATE             | `Date \| null`      |
-| `json<T>(name)`           | JSON             | `T \| null`         |
-| `jsonb<T>(name)`          | JSONB            | `T \| null`         |
-| `uuid(name)`              | UUID             | `string \| null`    |
-| `bytea(name)`             | BYTEA            | `Buffer \| null`    |
-| `textArray(name)`         | TEXT[]           | `string[] \| null`  |
-| `integerArray(name)`      | INTEGER[]        | `number[] \| null`  |
-| `booleanArray(name)`      | BOOLEAN[]        | `boolean[] \| null` |
-| `createdAt(name?)`        | TIMESTAMPTZ      | `Date`              |
-| `updatedAt(name?)`        | TIMESTAMPTZ      | `Date`              |
+| Function                 | PostgreSQL type  | TypeScript type     |
+| ------------------------ | ---------------- | ------------------- |
+| `serial()`               | SERIAL           | `number`            |
+| `bigserial()`            | BIGSERIAL        | `number`            |
+| `text()`                 | TEXT             | `string \| null`    |
+| `varchar(options?)`      | VARCHAR(n)       | `string \| null`    |
+| `integer()`              | INTEGER          | `number \| null`    |
+| `bigint()`               | BIGINT           | `number \| null`    |
+| `smallint()`             | SMALLINT         | `number \| null`    |
+| `real()`                 | REAL             | `number \| null`    |
+| `doublePrecision()`      | DOUBLE PRECISION | `number \| null`    |
+| `boolean()`              | BOOLEAN          | `boolean \| null`   |
+| `timestamp()`            | TIMESTAMP        | `Date \| null`      |
+| `timestamptz()`          | TIMESTAMPTZ      | `Date \| null`      |
+| `date()`                 | DATE             | `Date \| null`      |
+| `json<T>()`              | JSON             | `T \| null`         |
+| `jsonb<T>()`             | JSONB            | `T \| null`         |
+| `uuid()`                 | UUID             | `string \| null`    |
+| `bytea()`                | BYTEA            | `Buffer \| null`    |
+| `textArray()`            | TEXT[]           | `string[] \| null`  |
+| `integerArray()`         | INTEGER[]        | `number[] \| null`  |
+| `booleanArray()`         | BOOLEAN[]        | `boolean[] \| null` |
+| `vector({ dimensions })` | VECTOR(n)        | `number[] \| null`  |
+| `createdAt()`            | TIMESTAMPTZ      | `Date`              |
+| `updatedAt()`            | TIMESTAMPTZ      | `Date`              |
 
 `serial()` and `bigserial()` imply `.notNull()` and `.default()`.
 
 `createdAt()` defaults to column name `created_at`. `updatedAt()` defaults to `updated_at`.
 
+`vector()` requires the `dimensions` option. Requires the pgvector PostgreSQL extension.
+
 ### VarcharOptions
 
 ```ts
 interface VarcharOptions {
+  name?: string;
   length?: number;
+}
+```
+
+### VectorOptions
+
+```ts
+interface VectorOptions {
+  name?: string;
+  dimensions: number;
 }
 ```
 
@@ -187,15 +236,16 @@ Defines a many-to-one relationship where this table holds the foreign key.
 ```ts
 import { belongsTo } from 'bigal';
 
-store: belongsTo(() => Store, 'store_id'),
+store: belongsTo('Store'),
+store: belongsTo('Store', { name: 'shop_id' }),
 ```
 
 **Parameters:**
 
-| Parameter      | Type                    | Description                                |
-| -------------- | ----------------------- | ------------------------------------------ |
-| `modelFn`      | `() => TableDefinition` | Arrow function returning the related table |
-| `fkColumnName` | `string`                | Database column name for the FK            |
+| Parameter  | Type                           | Description                                             |
+| ---------- | ------------------------------ | ------------------------------------------------------- |
+| `modelRef` | `string` or `() => TableDef`   | Model name string or arrow function returning table def |
+| `options`  | `string` or `{ name: string }` | FK column name (auto-derived as `snakeCase(key)_id`)    |
 
 **Select type:** the FK type (typically `number`).
 
@@ -209,11 +259,11 @@ Defines a one-to-many or many-to-many relationship.
 import { hasMany } from 'bigal';
 
 // One-to-many
-products: hasMany(() => Product).via('store'),
+products: hasMany('Product').via('store'),
 
 // Many-to-many
-categories: hasMany(() => Category)
-  .through(() => ProductCategory)
+categories: hasMany('Category')
+  .through('ProductCategory')
   .via('product'),
 ```
 
@@ -222,13 +272,13 @@ categories: hasMany(() => Category)
 | Method               | Description                               |
 | -------------------- | ----------------------------------------- |
 | `.via(propertyName)` | Property on the related table with the FK |
-| `.through(modelFn)`  | Junction table for many-to-many           |
+| `.through(modelRef)` | Junction table for many-to-many           |
 
-`hasMany` columns are excluded from both `$inferSelect` and `$inferInsert`.
+`hasMany` columns are excluded from both the select and insert types.
 
 ## Repository
 
-Full CRUD repository returned by `getRepository()`.
+Full CRUD repository returned by `getRepository()` or object-style destructuring.
 
 ### find()
 
@@ -288,18 +338,41 @@ Exposes `find()`, `findOne()`, and `count()` only.
 
 All query types support fluent chaining. Each method returns a new immutable instance.
 
-| Method                             | Available on         | Description                      |
-| ---------------------------------- | -------------------- | -------------------------------- |
-| `.where(query)`                    | find, findOne, count | Filter records                   |
-| `.sort(value)`                     | find, findOne        | Order results                    |
-| `.limit(n)`                        | find                 | Limit rows returned              |
-| `.skip(n)`                         | find                 | Skip rows                        |
-| `.paginate(page, pageSize)`        | find                 | Shorthand for skip + limit       |
-| `.withCount()`                     | find                 | Return `{ results, totalCount }` |
-| `.populate(relation, options?)`    | find, findOne        | Load related entities            |
-| `.join(relation, alias?, on?)`     | find, findOne        | INNER JOIN                       |
-| `.leftJoin(relation, alias?, on?)` | find, findOne        | LEFT JOIN                        |
-| `.distinctOn(columns)`             | find                 | PostgreSQL DISTINCT ON           |
+| Method                             | Available on         | Description                       |
+| ---------------------------------- | -------------------- | --------------------------------- |
+| `.where(query)`                    | find, findOne, count | Filter records                    |
+| `.sort(value)`                     | find, findOne        | Order results                     |
+| `.limit(n)`                        | find                 | Limit rows returned               |
+| `.skip(n)`                         | find                 | Skip rows                         |
+| `.paginate(page, pageSize)`        | find                 | Shorthand for skip + limit        |
+| `.withCount()`                     | find                 | Return `{ results, totalCount }`  |
+| `.populate(relation, options?)`    | find, findOne        | Load related entities             |
+| `.join(relation, alias?, on?)`     | find, findOne        | INNER JOIN                        |
+| `.leftJoin(relation, alias?, on?)` | find, findOne        | LEFT JOIN                         |
+| `.distinctOn(columns)`             | find                 | PostgreSQL DISTINCT ON            |
+| `.filters(value)`                  | find, findOne        | Override global filters           |
+| `.toSQL()`                         | all operations       | Get generated SQL without running |
+
+### toSQL()
+
+Returns the generated SQL and parameters without executing the query. Available on `find`, `findOne`,
+`create`, `update`, and `destroy`:
+
+```ts
+const { sql, params } = productRepo.find().where({ name: 'Widget' }).toSQL();
+```
+
+### filters()
+
+Override global filters defined on the table:
+
+```ts
+// Disable all filters
+productRepo.find().where({}).filters(false);
+
+// Disable a specific filter
+productRepo.find().where({}).filters({ active: false });
+```
 
 ## subquery()
 
@@ -317,15 +390,67 @@ Scalar aggregate shortcuts: `sub.count()`, `sub.sum(col)`, `sub.avg(col)`, `sub.
 
 ## Types
 
+### Repository\<T\>
+
+Type alias for a typed read-write repository. Accepts `typeof YourTableDef`:
+
+```ts
+import type { Repository } from 'bigal';
+
+function process(repo: Repository<typeof Product>) {
+  /* ... */
+}
+```
+
+### ReadonlyRepository\<T\>
+
+Type alias for a typed read-only repository:
+
+```ts
+import type { ReadonlyRepository } from 'bigal';
+
+function read(repo: ReadonlyRepository<typeof ProductSummary>) {
+  /* ... */
+}
+```
+
 ### InferSelect\<TSchema\>
 
-Mapped type that extracts the row type from a schema definition. Equivalent to
-`typeof tableDef.$inferSelect`.
+Mapped type that extracts the row type from a schema definition:
+
+```ts
+type ProductRow = InferSelect<(typeof Product)['schema']>;
+```
 
 ### InferInsert\<TSchema\>
 
-Mapped type that extracts the insert parameter type from a schema definition. Equivalent to
-`typeof tableDef.$inferInsert`.
+Mapped type that extracts the insert parameter type from a schema definition:
+
+```ts
+type ProductInsert = InferInsert<(typeof Product)['schema']>;
+```
+
+### ModelHooks\<TInsert, TSelect\>
+
+```ts
+interface ModelHooks<TInsert, TSelect = TInsert> {
+  beforeCreate?: (values: TInsert) => Promise<TInsert> | TInsert;
+  afterCreate?: (result: TSelect) => Promise<void> | void;
+  beforeUpdate?: (values: Partial<TInsert>) => Partial<TInsert> | Promise<Partial<TInsert>>;
+  afterUpdate?: (result: TSelect) => Promise<void> | void;
+  beforeDestroy?: (where: Record<string, unknown>) => Promise<Record<string, unknown>> | Record<string, unknown>;
+  afterDestroy?: (result: { rowCount: number }) => Promise<void> | void;
+  afterFind?: (results: TSelect[]) => Promise<TSelect[]> | TSelect[];
+}
+```
+
+### FilterDefinition
+
+```ts
+type FilterDefinition = (() => Record<string, unknown>) | Record<string, unknown>;
+```
+
+A static where clause object or a function that returns one dynamically.
 
 ### OnQueryCallback
 
@@ -344,6 +469,23 @@ interface OnQueryEvent {
   model: string;
   operation: 'count' | 'create' | 'destroy' | 'find' | 'findOne' | 'update';
 }
+```
+
+### VectorDistanceSort
+
+```ts
+interface VectorDistanceSort {
+  nearestTo: number[];
+  metric?: 'cosine' | 'innerProduct' | 'l1' | 'l2';
+}
+```
+
+Used in `.sort()` for nearest-neighbor queries on vector columns.
+
+### VectorDistanceMetric
+
+```ts
+type VectorDistanceMetric = 'cosine' | 'innerProduct' | 'l1' | 'l2';
 ```
 
 ### QueryResult\<T\>
@@ -376,12 +518,3 @@ Interface for full CRUD repositories.
 ### IReadonlyRepository\<T\>
 
 Interface for read-only repositories.
-
-### ModelHooks\<TInsert\>
-
-```ts
-interface ModelHooks<TInsert> {
-  beforeCreate?: (values: TInsert) => Promise<TInsert> | TInsert;
-  beforeUpdate?: (values: Partial<TInsert>) => Partial<TInsert> | Promise<Partial<TInsert>>;
-}
-```

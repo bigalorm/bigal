@@ -6,7 +6,7 @@ description: Known issues and workarounds -- hasMany collections with populate, 
 
 ## hasMany collections require populate
 
-`hasMany` relationships are excluded from `$inferSelect` and `$inferInsert`. They are only present
+`hasMany` relationships are excluded from the select and insert types. They are only present
 on query results after calling `.populate()`:
 
 ```ts
@@ -19,12 +19,12 @@ const populated = await productRepository.findOne().where({ id: 42 }).populate('
 
 ## Query observability
 
-Use the `onQuery` callback in `createBigAl()` for structured query logging:
+Use the `onQuery` callback in `initialize()` for structured query logging:
 
 ```ts
-const bigal = createBigAl({
+const { Product: productRepo } = initialize({
   pool,
-  models,
+  models: { Product },
   onQuery({ sql, params, duration, error, model, operation }) {
     logger.debug({ sql, params, duration, model, operation });
   },
