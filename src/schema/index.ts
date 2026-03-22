@@ -38,4 +38,4 @@ export type { HasManyConfig, HasManyThroughIntermediate } from './HasManyBuilder
 export type { InferInsert, InferSelect, OptionalInsertKeys, RequiredInsertKeys, SchemaDefinition, SchemaEntry, SelectKeys } from './InferTypes.js';
 
 export { table, view } from './TableDefinition.js';
-export type { BelongsToEntry, HasManyEntry, ModelHooks, TableDefinition, TableOptions } from './TableDefinition.js';
+export type { BelongsToEntry, FilterDefinition, HasManyEntry, ModelHooks, TableDefinition, TableOptions } from './TableDefinition.js';

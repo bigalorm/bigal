@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { faker } from '@faker-js/faker';
 import { afterEach, beforeAll, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
-import type { IRepository, OnQueryEvent, PoolLike, PoolQueryResult, QueryResultRow } from '../src/index.js';
+import type { OnQueryEvent, PoolLike, PoolQueryResult, QueryResultRow, Repository } from '../src/index.js';
 import { initialize, boolean as booleanColumn, serial, text, defineTable as table } from '../src/index.js';
 
 import { Category, modelBase, Product, ProductCategory, ProductWithLifecycleMethods as ProductWithHooks, ReadonlyProduct, SimpleWithStringCollection, Store } from './models/index.js';
@@ -109,7 +109,7 @@ describe('initialize', () => {
   describe('Repository operations', () => {
     const mockedPool = createMockPool();
 
-    let ProductRepo: IRepository<typeof Product.$inferSelect>;
+    let ProductRepo: Repository<typeof Product>;
 
     beforeAll(() => {
       const bigal = initialize({
@@ -360,7 +360,7 @@ describe('initialize', () => {
   describe('Hooks via table definition', () => {
     const mockedPool = createMockPool();
 
-    let HookedProductRepo: IRepository<typeof ProductWithHooks.$inferSelect>;
+    let HookedProductRepo: Repository<typeof ProductWithHooks>;
 
     beforeAll(() => {
       // Use a separate initialize instance for hooked models
@@ -700,7 +700,7 @@ describe('initialize', () => {
       },
     );
 
-    let repo: IRepository<typeof SoftDeleteProduct.$inferSelect>;
+    let repo: Repository<typeof SoftDeleteProduct>;
 
     beforeAll(() => {
       const bigal = initialize({ pool: mockedPool, models: [SoftDeleteProduct] });
@@ -949,7 +949,7 @@ describe('initialize', () => {
   describe('Populate', () => {
     const mockedPool = createMockPool();
 
-    let ProductRepo: IRepository<typeof Product.$inferSelect>;
+    let ProductRepo: Repository<typeof Product>;
 
     beforeAll(() => {
       const bigal = initialize({
@@ -1010,7 +1010,7 @@ describe('initialize', () => {
     const mockedPool = createMockPool();
     const events: OnQueryEvent[] = [];
 
-    let ProductRepo: IRepository<typeof Product.$inferSelect>;
+    let ProductRepo: Repository<typeof Product>;
 
     beforeAll(() => {
       const bigal = initialize({

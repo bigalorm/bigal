@@ -1,3 +1,8 @@
+import type { IReadonlyRepository } from './IReadonlyRepository.js';
+import type { IRepository } from './IRepository.js';
+import type { InferSelect } from './schema/InferTypes.js';
+import type { TableDefinition } from './schema/TableDefinition.js';
+
 export * from './initialize.js';
 export * from './errors/index.js';
 export * from './metadata/index.js';
@@ -5,12 +10,7 @@ export * from './query/index.js';
 export * from './types/index.js';
 export * from './IReadonlyRepository.js';
 export * from './IRepository.js';
-export * from './ReadonlyRepository.js';
-export * from './Repository.js';
 
-// Schema module: selectively export to avoid conflicts with decorator-based API
-// The `table` function and `TableOptions` type conflict with the decorator equivalents.
-// Consumers of the new API can import directly from 'bigal/schema' or use these named exports.
 export {
   belongsTo,
   BelongsToBuilder,
@@ -51,6 +51,7 @@ export type {
   ColumnBuilderConfig,
   ColumnBuilderRuntimeConfig,
   ColumnOptions,
+  FilterDefinition,
   HasManyConfig,
   HasManyEntry,
   HasManyThroughIntermediate,
@@ -67,3 +68,12 @@ export type {
   TableOptions as SchemaTableOptions,
   VarcharOptions,
 } from './schema/index.js';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- accepts any TableDefinition
+type AnyTableDef = TableDefinition<string, any>;
+
+/** A typed read-write repository for a model: `Repository<typeof Product>` */
+export type Repository<T extends AnyTableDef> = T extends TableDefinition<string, infer TSchema> ? IRepository<InferSelect<TSchema>> : never;
+
+/** A typed read-only repository for a model: `ReadonlyRepository<typeof StoreSummary>` */
+export type ReadonlyRepository<T extends AnyTableDef> = T extends TableDefinition<string, infer TSchema> ? IReadonlyRepository<InferSelect<TSchema>> : never;

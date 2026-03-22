@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { faker } from '@faker-js/faker';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { IRepository, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
+import type { InferSelect, IRepository, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
 import { belongsTo, boolean as booleanColumn, initialize, hasMany, integer, serial, text, textArray, defineTable as table } from '../src/index.js';
 
 import { pick } from './utils/pick.js';
@@ -110,9 +110,9 @@ const SimpleWithStringCollectionDef = table('simple', stringCollectionSchema);
 // Types
 // ---------------------------------------------------------------------------
 
-type ProductSelect = typeof ProductDef.$inferSelect;
-type ProductCategorySelect = typeof ProductCategoryDef.$inferSelect;
-type StoreSelect = typeof StoreDef.$inferSelect;
+type ProductSelect = InferSelect<(typeof ProductDef)['schema']>;
+type ProductCategorySelect = InferSelect<(typeof ProductCategoryDef)['schema']>;
+type StoreSelect = InferSelect<(typeof StoreDef)['schema']>;
 
 // ---------------------------------------------------------------------------
 // Generators (plain objects)
@@ -137,7 +137,7 @@ function generateProduct(args: Partial<ProductSelect> & Pick<ProductSelect, 'sto
   };
 }
 
-function generateCategory(args?: Partial<typeof CategoryDef.$inferSelect>): typeof CategoryDef.$inferSelect {
+function generateCategory(args?: Partial<InferSelect<(typeof CategoryDef)['schema']>>): InferSelect<(typeof CategoryDef)['schema']> {
   return {
     id: faker.number.int(),
     name: `Category - ${faker.string.uuid()}`,
@@ -145,7 +145,7 @@ function generateCategory(args?: Partial<typeof CategoryDef.$inferSelect>): type
   };
 }
 
-function generateProductCategory(productInput: Pick<ProductSelect, 'id'> | number, categoryInput: Pick<typeof CategoryDef.$inferSelect, 'id'> | number): ProductCategorySelect {
+function generateProductCategory(productInput: Pick<ProductSelect, 'id'> | number, categoryInput: Pick<InferSelect<(typeof CategoryDef)['schema']>, 'id'> | number): ProductCategorySelect {
   return {
     id: faker.number.int(),
     product: typeof productInput === 'number' ? productInput : productInput.id,
@@ -155,7 +155,7 @@ function generateProductCategory(productInput: Pick<ProductSelect, 'id'> | numbe
   };
 }
 
-function generateSimpleWithStringCollection(args?: Partial<typeof SimpleWithStringCollectionDef.$inferSelect>): typeof SimpleWithStringCollectionDef.$inferSelect {
+function generateSimpleWithStringCollection(args?: Partial<InferSelect<(typeof SimpleWithStringCollectionDef)['schema']>>): InferSelect<(typeof SimpleWithStringCollectionDef)['schema']> {
   return {
     id: faker.number.int(),
     name: `WithStringCollection - ${faker.string.uuid()}`,
@@ -173,9 +173,9 @@ describe('Repository', () => {
 
   let ProductRepository: IRepository<ProductSelect>;
   let ProductCategoryRepository: IRepository<ProductCategorySelect>;
-  let SimpleWithStringCollectionRepository: IRepository<typeof SimpleWithStringCollectionDef.$inferSelect>;
+  let SimpleWithStringCollectionRepository: IRepository<InferSelect<(typeof SimpleWithStringCollectionDef)['schema']>>;
   let StoreRepository: IRepository<StoreSelect>;
-  let ProductWithHooksRepository: IRepository<typeof ProductWithHooksDef.$inferSelect>;
+  let ProductWithHooksRepository: IRepository<InferSelect<(typeof ProductWithHooksDef)['schema']>>;
 
   beforeAll(() => {
     const bigal = initialize({
