@@ -102,27 +102,6 @@ export const Category = table('categories', {
 
 String references are resolved at `initialize()` time, so there is no circular import issue.
 
-## Arrow functions vs string references
-
-Both approaches work for `belongsTo` and `hasMany`:
-
-```ts
-// String references (preferred) - no imports needed, works for self-references
-store: belongsTo('Store'),
-products: hasMany('Product').via('store'),
-categories: hasMany('Category').through('ProductCategory').via('product'),
-parent: belongsTo('Category'),  // self-reference works with strings
-
-// Arrow functions - useful when you need to reference the TableDefinition directly
-store: belongsTo(() => Store),
-products: hasMany(() => Product).via('store'),
-```
-
-String references use the model name, which is auto-derived from the table name. They are resolved
-at `initialize()` time, so self-references and cross-file references work without issues. Arrow
-functions defer evaluation and are only needed when you want to reference the `TableDefinition`
-object directly.
-
 ## QueryResult type narrowing
 
 When you query entities, BigAl returns `QueryResult<T>` which narrows relationship fields
