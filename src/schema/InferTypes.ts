@@ -18,13 +18,18 @@ export type SchemaDefinition = Record<string, SchemaEntry>;
 // Key filtering helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Extracts keys whose value is a ColumnBuilder or BelongsToBuilder (i.e., actual database columns).
- * HasMany entries are excluded because they don't correspond to columns on this table.
- */
-type SelectKeys<TSchema extends SchemaDefinition> = {
+/** Keys for columns and belongsTo (actual database columns) */
+type ColumnKeys<TSchema extends SchemaDefinition> = {
   [K in keyof TSchema]: TSchema[K] extends HasManyBuilder ? never : K;
 }[keyof TSchema];
+
+/** Keys for hasMany relationships (collections, available for populate) */
+type CollectionKeys<TSchema extends SchemaDefinition> = {
+  [K in keyof TSchema]: TSchema[K] extends HasManyBuilder ? K : never;
+}[keyof TSchema];
+
+/** All keys from the schema (columns + collections). Used for external consumers. */
+type SelectKeys<TSchema extends SchemaDefinition> = keyof TSchema & string;
 
 /**
  * Keys that are required on insert: notNull columns that have no default, are not primary keys, and are not auto-set.
@@ -52,7 +57,7 @@ type RequiredInsertKeys<TSchema extends SchemaDefinition> = {
  * Keys that are optional on insert: nullable columns, columns with defaults, primary keys, and auto-set columns.
  * HasMany keys are excluded entirely.
  */
-type OptionalInsertKeys<TSchema extends SchemaDefinition> = Exclude<SelectKeys<TSchema>, RequiredInsertKeys<TSchema>>;
+type OptionalInsertKeys<TSchema extends SchemaDefinition> = Exclude<ColumnKeys<TSchema>, RequiredInsertKeys<TSchema>>;
 
 // ---------------------------------------------------------------------------
 // Value type extraction
@@ -80,12 +85,14 @@ type InferInsertColumn<TEntry extends SchemaEntry> =
 // ---------------------------------------------------------------------------
 
 /**
- * Infers the select (read) type from a schema definition.
- * HasMany relationships are excluded. BelongsTo resolves to its FK type.
- * Nullable columns include `| null` in their type.
+ * Infers the full model type from a schema definition.
+ * Includes hasMany as optional `Record<string, unknown>[]` for populate support.
+ * Use `QueryResult` to narrow for query results (strips hasMany, narrows belongsTo to FK).
  */
 export type InferSelect<TSchema extends SchemaDefinition> = {
-  [K in SelectKeys<TSchema>]: InferSelectColumn<TSchema[K]>;
+  [K in ColumnKeys<TSchema>]: InferSelectColumn<TSchema[K]>;
+} & {
+  [K in CollectionKeys<TSchema>]?: Record<string, unknown>[];
 };
 
 /**
@@ -117,8 +124,8 @@ export type HasManyKeys<TSchema extends SchemaDefinition> = {
 /** Keys in the schema that are any relationship (belongsTo or hasMany) */
 export type RelationshipKeys<TSchema extends SchemaDefinition> = BelongsToKeys<TSchema> | HasManyKeys<TSchema>;
 
-/** Keys that are populate-able (both belongsTo and hasMany) */
-export type PopulatableKeys<TSchema extends SchemaDefinition> = RelationshipKeys<TSchema>;
+/** Keys that are populate-able (both belongsTo and hasMany). Falls back to all string keys when schema is default. */
+export type PopulatableKeys<TSchema extends SchemaDefinition> = SchemaDefinition extends TSchema ? string : RelationshipKeys<TSchema>;
 
 /** Extracts the branded model name string from a schema entry */
 export type ModelNameOf<TEntry extends SchemaEntry> = TEntry extends BelongsToBuilder<unknown, infer TName> ? TName : TEntry extends HasManyBuilder<infer TName> ? TName : never;

@@ -14,9 +14,17 @@ import type {
 } from './query/index.js';
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
 import type { SchemaDefinition } from './schema/InferTypes.js';
-import type { CreateUpdateParams } from './types/index.js';
+import type { TableDefinition } from './schema/TableDefinition.js';
+import type { CreateUpdateParams, DefaultModelsMap } from './types/index.js';
 
-export interface IRepository<T extends Record<string, unknown>, TSchema extends SchemaDefinition = SchemaDefinition> extends IReadonlyRepository<T, TSchema> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- variance
+type AnyModel = TableDefinition<string, any>;
+
+export interface IRepository<
+  T extends Record<string, unknown>,
+  TSchema extends SchemaDefinition = SchemaDefinition,
+  TModels extends Record<string, AnyModel> = DefaultModelsMap,
+> extends IReadonlyRepository<T, TSchema, TModels> {
   /**
    * Creates an object using the specified values
    * @param {object} values - Values to insert as multiple new objects.

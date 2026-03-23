@@ -14,7 +14,6 @@ import type {
   JoinDefinition,
   OrderBy,
   PaginateOptions,
-  PopulateArgs,
   Sort,
   SortObject,
   SortObjectValue,
@@ -23,7 +22,7 @@ import type {
   WhereQuery,
 } from './query/index.js';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
-import type { GetValueType, OmitFunctions, PickAsType, PickByValueType, PickFunctions, PoolLike, Populated, QueryResult } from './types/index.js';
+import type { OmitFunctions, PickAsType, PickByValueType, PickFunctions, PoolLike, QueryResult } from './types/index.js';
 import { groupBy, keyBy } from './utils/index.js';
 
 type FieldValue = boolean[] | Date | number[] | Record<string, unknown> | string[] | boolean | number | string | unknown | null;
@@ -63,7 +62,8 @@ interface Populate {
 
 type PrimaryId = number | string;
 
-export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyRepository<T> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- implementation class uses runtime metadata; interfaces provide type safety
+export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyRepository<T, any, any> {
   private readonly _modelMetadata: ModelMetadata<T>;
 
   protected _pool: PoolLike;
@@ -169,7 +169,10 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
    * @param {string|object} [args.sort] - Property name(s) to sort by
    * @returns Database record or null
    */
-  public findOne<K extends string & keyof T, TReturn = QueryResult<Pick<T, K | keyof PickFunctions<T> | 'id'>>>(args: FindOneArgs<T, K> | WhereQuery<T> = {}): FindOneResult<T, TReturn> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime; IReadonlyRepository interface provides typed generics
+  public findOne<K extends string & keyof T, TReturn = QueryResult<Pick<T, K | keyof PickFunctions<T> | 'id'>>>(
+    args: FindOneArgs<T, K> | WhereQuery<T> = {},
+  ): FindOneResult<T, TReturn, any, any, any> {
     const { stack } = new Error(`${this.model.name}.findOne()`);
 
     let select: Set<string> | undefined;
@@ -263,10 +266,8 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
        * @param {string|number} [options.limit] - Number of results to return
        * @returns Query instance
        */
-      populate<TProperty extends string & keyof PickByValueType<T, AnyRecord> & keyof T, TPopulateType extends GetValueType<T[TProperty], AnyRecord>, TPopulateSelectKeys extends keyof TPopulateType>(
-        propertyName: TProperty,
-        options?: PopulateArgs<TPopulateType, TPopulateSelectKeys>,
-      ): FindOneResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>> {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime; FindOneResult interface provides type safety for consumers
+      populate(propertyName: string, options?: any): any {
         // Add the column if the property is a single relation and not included in the list of select columns
         if (select && !select.has(propertyName)) {
           for (const column of modelInstance.model.columns) {
@@ -287,7 +288,8 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
           through: options?.through,
         });
 
-        return this as FindOneResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>>;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime implementation; interface provides type safety
+        return this as any;
       },
       join(propertyName: string, alias?: string): FindOneResult<T, TReturn> {
         joins.push({
@@ -434,7 +436,8 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
    * @param {string|number} [args.limit] - Number of results to return
    * @returns Database records
    */
-  public find<K extends string & keyof T, TReturn = QueryResult<Pick<T, K | keyof PickFunctions<T> | 'id'>>>(args: FindArgs<T, K> | WhereQuery<T> = {}): FindResult<T, TReturn> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime; IReadonlyRepository interface provides typed generics
+  public find<K extends string & keyof T, TReturn = QueryResult<Pick<T, K | keyof PickFunctions<T> | 'id'>>>(args: FindArgs<T, K> | WhereQuery<T> = {}): FindResult<T, TReturn, any, any, any> {
     const { stack } = new Error(`${this.model.name}.find()`);
 
     let select: Set<string> | undefined;
@@ -534,11 +537,8 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
        * @param {string|number} [options.limit] - Number of results to return
        * @returns Query instance
        */
-      populate<
-        TProperty extends string & keyof PickByValueType<T, AnyRecord> & keyof T,
-        TPopulateType extends GetValueType<T[TProperty], AnyRecord>,
-        TPopulateSelectKeys extends string & keyof TPopulateType,
-      >(propertyName: TProperty, options?: PopulateArgs<TPopulateType, TPopulateSelectKeys>): FindResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>> {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime; FindResult interface provides type safety for consumers
+      populate(propertyName: string, options?: any): any {
         // Add the column if the property is a single relation and not included in the list of select columns
         if (select && !select.has(propertyName)) {
           for (const column of modelInstance.model.columns) {
@@ -559,7 +559,8 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
           through: options?.through,
         });
 
-        return this as unknown as FindResult<T, Omit<TReturn, TProperty> & Populated<T, TProperty, TPopulateType, TPopulateSelectKeys>>;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime implementation; interface provides type safety
+        return this as any;
       },
       join(propertyNameOrSubquery: SubqueryBuilderLike | string, aliasOrUndefined?: string, options?: { on: SubqueryJoinOnCondition }): FindResult<T, TReturn> {
         if (typeof propertyNameOrSubquery === 'string') {
