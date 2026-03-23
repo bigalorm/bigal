@@ -160,6 +160,9 @@ const Product = bigal.getRepository(Product);
 - Remove `experimentalDecorators: true` from tsconfig.json
 - Remove `useDefineForClassFields: false` from tsconfig.json
 - Remove `NotEntity<T>` wrappers - no longer needed
+- Remove redundant `{ name: '...' }` options where the column name matches the auto-derived
+  snakeCase (e.g., `priceCents: integer({ name: 'price_cents' })` should be just
+  `priceCents: integer()`)
 
 ### Step 6: Update type references
 
