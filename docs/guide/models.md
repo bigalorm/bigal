@@ -333,20 +333,20 @@ export const Store = table('stores', {
 
 ## Type inference
 
-Use the `InferSelect` and `InferInsert` utility types to extract row and insert types from a table
-definition's schema:
+Use `QueryResult` to extract the row type from a model, and `InferInsert` for insert parameters:
 
 ```ts
-import type { InferSelect, InferInsert } from 'bigal';
+import type { QueryResult, InferInsert } from 'bigal';
 
-type ProductRow = InferSelect<(typeof Product)['schema']>;
+type ProductRow = QueryResult<typeof Product>;
 // { id: number; name: string; priceCents: number; isActive: boolean;
-//   metadata: { color?: string } | null; createdAt: Date; updatedAt: Date }
+//   store: number; metadata: { color?: string } | null; createdAt: Date; updatedAt: Date }
+// hasMany collections (categories) are excluded
 
 type ProductInsert = InferInsert<(typeof Product)['schema']>;
-// { name: string; priceCents: number;           <-- required
-//   id?: number; isActive?: boolean;             <-- optional (has default or primary key)
-//   metadata?: { color?: string } | null; }      <-- optional (nullable)
+// { name: string; priceCents: number; store: number;  <-- required
+//   id?: number; isActive?: boolean;                   <-- optional (has default or primary key)
+//   metadata?: { color?: string } | null; }            <-- optional (nullable)
 ```
 
 ### Repository and ReadonlyRepository type aliases

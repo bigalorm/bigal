@@ -490,8 +490,17 @@ type VectorDistanceMetric = 'cosine' | 'innerProduct' | 'l1' | 'l2';
 
 ### QueryResult\<T\>
 
-Narrows relationship fields from union types to foreign key types. See
-[Relationships > QueryResult](/guide/relationships#queryresult-type-narrowing).
+Produces the row type for query results. Accepts a `TableDefinition` directly or a row type:
+
+```ts
+// From a TableDefinition - excludes hasMany, narrows FKs
+type ProductRow = QueryResult<typeof Product>;
+
+// From a row type - passthrough
+type Row = QueryResult<{ id: number; name: string }>;
+```
+
+See [Relationships > QueryResult](/guide/relationships#queryresult-type-narrowing).
 
 ### TypedAggregateExpression\<Alias\>
 

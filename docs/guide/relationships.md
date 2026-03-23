@@ -123,28 +123,16 @@ The narrowing rules:
 
 ### Using QueryResult in type definitions
 
-Use `Pick<QueryResult<T>, ...>` instead of `Pick<T, ...>` for derived types:
+`QueryResult` accepts a `TableDefinition` directly - no need to manually call `InferSelect`:
 
 ```ts
-import type { QueryResult, InferSelect } from 'bigal';
+import type { QueryResult } from 'bigal';
 
-type ProductRow = InferSelect<(typeof Product)['schema']>;
+// store is `number`, categories (hasMany) is excluded
+type ProductRow = QueryResult<typeof Product>;
 
-// store is `number`
-type ProductSummary = Pick<QueryResult<ProductRow>, 'id' | 'name' | 'store'>;
-```
-
-## QueryResultPopulated
-
-For type safety with populated relations:
-
-```ts
-import type { QueryResultPopulated, InferSelect } from 'bigal';
-
-type ProductRow = InferSelect<(typeof Product)['schema']>;
-
-// store is QueryResult<StoreRow>
-type ProductWithStore = QueryResultPopulated<ProductRow, 'store'>;
+// Pick specific fields
+type ProductSummary = Pick<QueryResult<typeof Product>, 'id' | 'name' | 'store'>;
 ```
 
 ## Populate with junction table filtering
@@ -171,7 +159,7 @@ const compilation = await compilationRepository
 
 ## Best practices
 
-1. **Use `QueryResult<T>` for return types** - avoids union type ambiguity
+1. **Use `QueryResult<typeof Model>` for return types** - excludes hasMany, narrows FK types
 2. **Use string references for model relationships** - avoids circular import issues
 3. **All relationships are validated at startup** - `initialize()` throws if a referenced model is
    missing from the `models` object/array

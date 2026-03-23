@@ -5,6 +5,8 @@ import type { SchemaDefinition } from './schema/InferTypes.js';
 import type { QueryResult } from './types/index.js';
 
 export interface IReadonlyRepository<T extends Record<string, unknown>, TSchema extends SchemaDefinition = SchemaDefinition> {
+  /** @internal Phantom property for type-level schema extraction */
+  readonly _schema?: TSchema;
   readonly model: ModelMetadata<T>;
 
   /**

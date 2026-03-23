@@ -56,6 +56,31 @@ describe('QueryResult', () => {
     expectTypeOf<StoreResult>().toEqualTypeOf<Omit<StoreRow & { products: unknown[] }, 'products'>>();
   });
 
+  it('should accept TableDefinition directly and exclude hasMany', () => {
+    type ProductResult = QueryResult<typeof Product>;
+    // Should have id, name, sku, location, aliases, store - but NOT categories
+    expectTypeOf<ProductResult>().toHaveProperty('id');
+    expectTypeOf<ProductResult>().toHaveProperty('name');
+    expectTypeOf<ProductResult>().toHaveProperty('store');
+    expectTypeOf<ProductResult>().not.toHaveProperty('categories');
+  });
+
+  it('should accept TableDefinition and match InferSelect minus hasMany', () => {
+    type StoreResult = QueryResult<typeof Store>;
+    // Should have id, name - but NOT products (hasMany)
+    expectTypeOf<StoreResult>().toHaveProperty('id');
+    expectTypeOf<StoreResult>().toHaveProperty('name');
+    expectTypeOf<StoreResult>().not.toHaveProperty('products');
+  });
+
+  it('should accept repository type and exclude hasMany', () => {
+    type ProductRepo = IRepository<ProductRow, ProductSchema>;
+    type ProductResult = QueryResult<ProductRepo>;
+    expectTypeOf<ProductResult>().toHaveProperty('id');
+    expectTypeOf<ProductResult>().toHaveProperty('store');
+    expectTypeOf<ProductResult>().not.toHaveProperty('categories');
+  });
+
   it('should be identity without schema (backward compat)', () => {
     type PlainResult = QueryResult<ProductRow>;
     expectTypeOf<PlainResult>().toEqualTypeOf<ProductRow>();

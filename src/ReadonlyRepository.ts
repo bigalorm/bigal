@@ -1006,16 +1006,16 @@ export class ReadonlyRepository<T extends AnyRecord> implements IReadonlyReposit
           populateQueries.push(
             this.populateManyManyCollection(
               entities,
-              primaryKeyColumn.propertyName as keyof T,
+              primaryKeyColumn.propertyName as keyof QueryResult<T>,
               Array.from(entityIds),
-              populateModelPrimaryKeyColumn.propertyName as keyof T,
+              populateModelPrimaryKeyColumn.propertyName as keyof QueryResult<T>,
               populate,
               collectionColumn,
               populateRepository,
             ),
           );
         } else {
-          populateQueries.push(this.populateOneManyCollection(entities, primaryKeyColumn.propertyName as keyof T, Array.from(entityIds), populate, collectionColumn, populateRepository));
+          populateQueries.push(this.populateOneManyCollection(entities, primaryKeyColumn.propertyName as keyof QueryResult<T>, Array.from(entityIds), populate, collectionColumn, populateRepository));
         }
       }
     }

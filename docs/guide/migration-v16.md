@@ -370,9 +370,9 @@ import { Entity } from 'bigal';
 import type { EntityStatic, QueryResult } from 'bigal';
 
 // v16
-import type { InferSelect, InferInsert, Repository } from 'bigal';
+import type { QueryResult, InferInsert, Repository } from 'bigal';
 
-type ProductRow = InferSelect<(typeof Product)['schema']>;
+type ProductRow = QueryResult<typeof Product>;
 
 // For repository type annotations:
 function getProducts(repo: Repository<typeof Product>) {
@@ -380,8 +380,8 @@ function getProducts(repo: Repository<typeof Product>) {
 }
 ```
 
-`Entity` and `EntityStatic` are no longer needed. Use `InferSelect` on the table definition's `schema`
-property to get the row type, and `InferInsert` for the insert type. Use `Repository<typeof Model>` and
+`Entity` and `EntityStatic` are no longer needed. Use `QueryResult<typeof Model>` to get the row type
+(excludes hasMany, narrows FKs), and `InferInsert` for the insert type. Use `Repository<typeof Model>` and
 `ReadonlyRepository<typeof Model>` for repository type annotations.
 
 ## Lifecycle hooks

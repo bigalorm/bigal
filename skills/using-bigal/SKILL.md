@@ -520,18 +520,15 @@ query.sort('name asc'); // This does nothing to `query`
 const results = await query;
 ```
 
-### QueryResult narrows relationship types
+### QueryResult accepts TableDefinition directly
 
-`QueryResult<T>` automatically narrows belongsTo fields to the FK type. Use `QueryResult<T>` for
-derived types:
+`QueryResult<typeof Model>` produces the row type with hasMany excluded and FKs narrowed:
 
 ```ts
-import type { QueryResult, InferSelect } from 'bigal';
+import type { QueryResult } from 'bigal';
 
-type ProductRow = InferSelect<(typeof Product)['schema']>;
-
-// Correct: store is `number`
-type ProductSummary = Pick<QueryResult<ProductRow>, 'id' | 'name' | 'store'>;
+type ProductRow = QueryResult<typeof Product>;
+type ProductSummary = Pick<QueryResult<typeof Product>, 'id' | 'name' | 'store'>;
 ```
 
 ### Debugging SQL
@@ -553,7 +550,7 @@ After applying this skill, verify:
 - [ ] Query chains are awaited (not fire-and-forget)
 - [ ] Query state is treated as immutable (return values are used)
 - [ ] Model names in relationships are strings (`'Store'`) to avoid circular imports
-- [ ] `QueryResult<T>` is used for derived types involving relationships
+- [ ] `QueryResult<typeof Model>` is used for derived types involving relationships
 
 ## Further Reading
 
