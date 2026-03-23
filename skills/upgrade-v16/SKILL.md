@@ -179,14 +179,16 @@ const Product = bigal.getRepository(Product);
 ### Step 6: Update type references
 
 ```typescript
-// Before
+// Before (v15)
 let product: Product;
 let params: CreateUpdateParams<Product>;
+let result: QueryResult<Product>;
 
-// After -- types inferred from table definition
-import type { InferSelect, InferInsert, Repository } from 'bigal';
+// After (v16) - pass the model definition directly
+import type { QueryResult, CreateUpdateParams, InferInsert, Repository } from 'bigal';
 
-type ProductRow = InferSelect<(typeof Product)['schema']>;
+type ProductRow = QueryResult<typeof Product>;
+type ProductParams = CreateUpdateParams<ProductRow>;
 type ProductInsert = InferInsert<(typeof Product)['schema']>;
 
 // For repository type annotations:
@@ -194,6 +196,13 @@ function getProducts(repo: Repository<typeof Product>) {
   /* ... */
 }
 ```
+
+`QueryResult<typeof Product>` replaces both `Product` (as a row type) and
+`QueryResult<Product>` from v15. It narrows belongsTo to FK values and excludes
+hasMany collections.
+
+`CreateUpdateParams<ProductRow>` works with a single type argument. BelongsTo
+fields automatically accept both FK values and entity objects via `EntityOrId`.
 
 ## Removed Exports
 
