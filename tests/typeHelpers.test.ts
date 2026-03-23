@@ -54,7 +54,7 @@ describe('Schema-level key helpers', () => {
 describe('ModelRelationshipKeys', () => {
   it('should return only relationship keys with concrete schema', () => {
     type ProductRelKeys = ModelRelationshipKeys<ProductRow, ProductSchema>;
-    expectTypeOf<ProductRelKeys>().toEqualTypeOf<'store'>();
+    expectTypeOf<ProductRelKeys>().toEqualTypeOf<'categories' | 'store'>();
   });
 
   it('should fall back to all string keys without schema', () => {

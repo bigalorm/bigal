@@ -229,9 +229,10 @@ describe('Schema builder type inference', () => {
         expectTypeOf<ProductSelect['store']>().toEqualTypeOf<EntityOrId<number>>();
       });
 
-      it('categories excluded (hasMany not in select)', () => {
+      it('categories is optional Record<string, unknown>[] (hasMany)', () => {
         type HasCategories = 'categories' extends keyof ProductSelect ? true : false;
-        expectTypeOf<HasCategories>().toEqualTypeOf<false>();
+        expectTypeOf<HasCategories>().toEqualTypeOf<true>();
+        expectTypeOf<ProductSelect['categories']>().toEqualTypeOf<Record<string, unknown>[] | undefined>();
       });
 
       it('createdAt is Date (auto-set, notNull)', () => {
@@ -252,9 +253,10 @@ describe('Schema builder type inference', () => {
         expectTypeOf<StoreSelect['name']>().toEqualTypeOf<string | null>();
       });
 
-      it('products excluded (hasMany)', () => {
+      it('products is optional Record<string, unknown>[] (hasMany)', () => {
         type HasProducts = 'products' extends keyof StoreSelect ? true : false;
-        expectTypeOf<HasProducts>().toEqualTypeOf<false>();
+        expectTypeOf<HasProducts>().toEqualTypeOf<true>();
+        expectTypeOf<StoreSelect['products']>().toEqualTypeOf<Record<string, unknown>[] | undefined>();
       });
     });
 
@@ -291,9 +293,10 @@ describe('Schema builder type inference', () => {
         expectTypeOf<SelfRefSelect['parent']>().toEqualTypeOf<EntityOrId<number>>();
       });
 
-      it('children excluded (hasMany)', () => {
+      it('children is optional Record<string, unknown>[] (hasMany)', () => {
         type HasChildren = 'children' extends keyof SelfRefSelect ? true : false;
-        expectTypeOf<HasChildren>().toEqualTypeOf<false>();
+        expectTypeOf<HasChildren>().toEqualTypeOf<true>();
+        expectTypeOf<SelfRefSelect['children']>().toEqualTypeOf<Record<string, unknown>[] | undefined>();
       });
     });
 
