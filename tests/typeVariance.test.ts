@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 
 import type { IReadonlyRepository, IRepository, WhereQuery } from '../src/index.js';
 
-import type { ProductSelect, SimpleWithJsonSelect } from './utils/testModels.js';
+import type { ProductSelect, SimpleWithJsonSelect } from './models/index.js';
 
 type ModelBase = Record<string, unknown> & { id: number };
 

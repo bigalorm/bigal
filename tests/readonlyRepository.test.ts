@@ -7,50 +7,30 @@ import type { IReadonlyRepository, IRepository, PoolLike, PoolQueryResult, Query
 import { initialize, subquery } from '../src/index.js';
 import type { SelectAggregateExpression, Sort, TypedAggregateExpression, WhereQuery } from '../src/query/index.js';
 
-import { pick } from './utils/pick.js';
 import {
-  CategoryDef,
-  ClassroomDef,
-  generateCategory,
-  generateClassroom,
-  generateLevelOne,
-  generateLevelThree,
-  generateLevelTwo,
-  generateParkingLot,
-  generateParkingSpace,
-  generateProduct,
-  generateProductCategory,
-  generateSimpleWithJson,
-  generateSimpleWithOptionalEnum,
-  generateSimpleWithRelationAndJson,
-  generateSimpleWithSelfReference,
-  generateSimpleWithStringCollection,
-  generateSimpleWithStringId,
-  generateSimpleWithUnion,
-  generateStore,
-  generateTeacher,
-  generateTeacherClassroom,
-  KitchenSinkDef,
-  LevelOneDef,
-  LevelThreeDef,
-  LevelTwoDef,
-  ParkingLotDef,
-  ParkingSpaceDef,
-  ProductCategoryDef,
-  ProductDef,
-  ReadonlyProductDef,
-  SimpleWithJsonDef,
-  SimpleWithOptionalEnumDef,
-  SimpleWithRelationAndJsonDef,
-  SimpleWithSelfReferenceDef,
-  SimpleWithStringCollectionDef,
-  SimpleWithUnionDef,
-  StoreDef,
-  StudentClassroomDef,
-  StudentDef,
-  TeacherClassroomDef,
-  TeacherDef,
-} from './utils/testModels.js';
+  Category,
+  Classroom,
+  KitchenSink,
+  LevelOne,
+  LevelThree,
+  LevelTwo,
+  ParkingLot,
+  ParkingSpace,
+  Product,
+  ProductCategory,
+  ReadonlyProduct,
+  SimpleWithJson,
+  SimpleWithOptionalEnum,
+  SimpleWithRelationAndJson,
+  SimpleWithSelfReference,
+  SimpleWithStringCollection,
+  SimpleWithUnion,
+  Store,
+  Student,
+  StudentClassroom,
+  Teacher,
+  TeacherClassroom,
+} from './models/index.js';
 import type {
   CategorySelect,
   ClassroomSelect,
@@ -72,7 +52,29 @@ import type {
   StoreSelect,
   TeacherClassroomSelect,
   TeacherSelect,
-} from './utils/testModels.js';
+} from './models/index.js';
+import {
+  generateCategory,
+  generateClassroom,
+  generateLevelOne,
+  generateLevelThree,
+  generateLevelTwo,
+  generateParkingLot,
+  generateParkingSpace,
+  generateProduct,
+  generateProductCategory,
+  generateSimpleWithJson,
+  generateSimpleWithOptionalEnum,
+  generateSimpleWithRelationAndJson,
+  generateSimpleWithSelfReference,
+  generateSimpleWithStringCollection,
+  generateSimpleWithStringId,
+  generateSimpleWithUnion,
+  generateStore,
+  generateTeacher,
+  generateTeacherClassroom,
+} from './utils/generator.js';
+import { pick } from './utils/pick.js';
 
 type PoolQueryFn = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
 
@@ -112,46 +114,46 @@ describe('ReadonlyRepository', () => {
   beforeAll(() => {
     const bigal = initialize({
       models: [
-        ClassroomDef,
-        CategoryDef,
-        KitchenSinkDef,
-        LevelOneDef,
-        LevelTwoDef,
-        LevelThreeDef,
-        ParkingLotDef,
-        ParkingSpaceDef,
-        ProductDef,
-        ProductCategoryDef,
-        ReadonlyProductDef,
-        SimpleWithJsonDef,
-        SimpleWithOptionalEnumDef,
-        SimpleWithRelationAndJsonDef,
-        SimpleWithSelfReferenceDef,
-        SimpleWithStringCollectionDef,
-        SimpleWithUnionDef,
-        StoreDef,
-        StudentDef,
-        StudentClassroomDef,
-        TeacherDef,
-        TeacherClassroomDef,
+        Classroom,
+        Category,
+        KitchenSink,
+        LevelOne,
+        LevelTwo,
+        LevelThree,
+        ParkingLot,
+        ParkingSpace,
+        Product,
+        ProductCategory,
+        ReadonlyProduct,
+        SimpleWithJson,
+        SimpleWithOptionalEnum,
+        SimpleWithRelationAndJson,
+        SimpleWithSelfReference,
+        SimpleWithStringCollection,
+        SimpleWithUnion,
+        Store,
+        Student,
+        StudentClassroom,
+        Teacher,
+        TeacherClassroom,
       ],
       pool: mockedPool,
     });
 
-    LevelOneRepository = bigal.getRepository(LevelOneDef);
-    LevelTwoRepository = bigal.getRepository(LevelTwoDef);
-    LevelThreeRepository = bigal.getRepository(LevelThreeDef);
-    ProductRepository = bigal.getRepository(ProductDef);
-    ReadonlyProductRepository = bigal.getReadonlyRepository(ReadonlyProductDef);
-    ReadonlyKitchenSinkRepository = bigal.getReadonlyRepository(KitchenSinkDef);
-    StoreRepository = bigal.getRepository(StoreDef);
-    SimpleWithJsonRepository = bigal.getRepository(SimpleWithJsonDef);
-    SimpleWithOptionalEnumRepository = bigal.getRepository(SimpleWithOptionalEnumDef);
-    SimpleWithRelationAndJsonRepository = bigal.getRepository(SimpleWithRelationAndJsonDef);
-    SimpleWithSelfReferenceRepository = bigal.getRepository(SimpleWithSelfReferenceDef);
-    SimpleWithStringCollectionRepository = bigal.getRepository(SimpleWithStringCollectionDef);
-    SimpleWithUnionRepository = bigal.getRepository(SimpleWithUnionDef);
-    TeacherRepository = bigal.getRepository(TeacherDef);
+    LevelOneRepository = bigal.getRepository(LevelOne);
+    LevelTwoRepository = bigal.getRepository(LevelTwo);
+    LevelThreeRepository = bigal.getRepository(LevelThree);
+    ProductRepository = bigal.getRepository(Product);
+    ReadonlyProductRepository = bigal.getReadonlyRepository(ReadonlyProduct);
+    ReadonlyKitchenSinkRepository = bigal.getReadonlyRepository(KitchenSink);
+    StoreRepository = bigal.getRepository(Store);
+    SimpleWithJsonRepository = bigal.getRepository(SimpleWithJson);
+    SimpleWithOptionalEnumRepository = bigal.getRepository(SimpleWithOptionalEnum);
+    SimpleWithRelationAndJsonRepository = bigal.getRepository(SimpleWithRelationAndJson);
+    SimpleWithSelfReferenceRepository = bigal.getRepository(SimpleWithSelfReference);
+    SimpleWithStringCollectionRepository = bigal.getRepository(SimpleWithStringCollection);
+    SimpleWithUnionRepository = bigal.getRepository(SimpleWithUnion);
+    TeacherRepository = bigal.getRepository(Teacher);
   });
 
   beforeEach(() => {
