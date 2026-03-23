@@ -1,4 +1,3 @@
-import type { Entity, EntityFieldValue } from './Entity.js';
 import { QueryError } from './errors/index.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
@@ -9,16 +8,11 @@ import type { OnConflictOptions } from './query/OnConflictOptions.js';
 import type { SelectAggregateExpression } from './query/SelectBuilder.js';
 import type { HavingCondition, SubqueryBuilderLike } from './query/Subquery.js';
 import { ScalarSubquery, SubqueryBuilder } from './query/Subquery.js';
-import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types/index.js';
+import type { CreateUpdateParams, OmitFunctions } from './types/index.js';
+import { assertValidSqlIdentifier } from './utils/index.js';
 
-// Valid PostgreSQL identifier: starts with letter or underscore, contains letters, digits, underscores, or dots (for alias.column notation)
-const VALID_SQL_IDENTIFIER = /^[A-Z_a-z][\w.]*$/;
-
-function assertValidSqlIdentifier(value: string, context: string): void {
-  if (!VALID_SQL_IDENTIFIER.test(value)) {
-    throw new Error(`Invalid SQL identifier for ${context}: "${value}". Identifiers must start with a letter or underscore and contain only letters, numbers, underscores, and dots.`);
-  }
-}
+type AnyRecord = Record<string, unknown>;
+type FieldValue = boolean[] | Date | number[] | Record<string, unknown> | string[] | boolean | number | string | unknown | null;
 
 interface QueryAndParams {
   query: string;
@@ -40,7 +34,7 @@ interface QueryAndParams {
  * @param {string[]} [args.distinctOn] - Column names for DISTINCT ON clause
  * @returns {{query: string, params: object[]}}
  */
-export function getSelectQueryAndParams<T extends Entity>({
+export function getSelectQueryAndParams<T extends AnyRecord>({
   repositoriesByModelNameLowered,
   model,
   select,
@@ -52,9 +46,9 @@ export function getSelectQueryAndParams<T extends Entity>({
   includeCount,
   distinctOn,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
-  select?: readonly (string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
+  select?: readonly (string & keyof OmitFunctions<T>)[];
   where?: WhereQuery<T>;
   sorts: readonly OrderBy<T>[];
   skip: number;
@@ -151,6 +145,7 @@ export function getSelectQueryAndParams<T extends Entity>({
     model,
     sorts,
     joins,
+    params,
   });
 
   if (orderStatement) {
@@ -181,11 +176,6 @@ export function getSelectQueryAndParams<T extends Entity>({
     query += ` OFFSET ${skip}`;
   }
 
-  if (process.env.DEBUG_BIGAL?.toLowerCase() === 'true') {
-    // eslint-disable-next-line no-console
-    console.log(`BigAl: ${query}`);
-  }
-
   return {
     query,
     params,
@@ -200,12 +190,12 @@ export function getSelectQueryAndParams<T extends Entity>({
  * @param {object} [args.where] - Object representing the where query
  * @returns {{query: string, params: object[]}}
  */
-export function getCountQueryAndParams<T extends Entity>({
+export function getCountQueryAndParams<T extends AnyRecord>({
   repositoriesByModelNameLowered,
   model,
   where,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
   where?: WhereQuery<T>;
 }): QueryAndParams {
@@ -238,7 +228,7 @@ export function getCountQueryAndParams<T extends Entity>({
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: object[]}}
  */
-export function getInsertQueryAndParams<T extends Entity, K extends string & keyof OmitFunctions<OmitEntityCollections<T>> = string & keyof OmitFunctions<OmitEntityCollections<T>>>({
+export function getInsertQueryAndParams<T extends AnyRecord, K extends string & keyof OmitFunctions<T> = string & keyof OmitFunctions<T>>({
   repositoriesByModelNameLowered,
   model,
   values,
@@ -246,7 +236,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
   returnSelect,
   onConflict,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
   values: CreateUpdateParams<T> | CreateUpdateParams<T>[];
   returnRecords?: boolean;
@@ -347,7 +337,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
 
     for (const [entityIndex, entity] of entitiesToInsert.entries()) {
       let value;
-      const entityValue = entity[column.propertyName as string & keyof CreateUpdateParams<T>] as EntityFieldValue;
+      const entityValue = entity[column.propertyName as string & keyof CreateUpdateParams<T>] as FieldValue;
       if (entityValue == null) {
         value = 'NULL';
       } else {
@@ -365,7 +355,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
             throw new QueryError(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`, model);
           }
 
-          const primaryKeyValue = (entityValue as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T> & keyof T] as EntityFieldValue;
+          const primaryKeyValue = (entityValue as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T> & keyof T] as FieldValue;
           if (primaryKeyValue == null) {
             throw new QueryError(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`, model);
           }
@@ -486,7 +476,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: object[]}}
  */
-export function getUpdateQueryAndParams<T extends Entity>({
+export function getUpdateQueryAndParams<T extends AnyRecord>({
   repositoriesByModelNameLowered,
   model,
   where,
@@ -494,12 +484,12 @@ export function getUpdateQueryAndParams<T extends Entity>({
   returnRecords = true,
   returnSelect,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
   where: WhereQuery<T>;
   values: CreateUpdateParams<T>;
   returnRecords?: boolean;
-  returnSelect?: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
+  returnSelect?: (string & keyof OmitFunctions<T>)[];
 }): QueryAndParams {
   for (const column of model.updateDateColumns) {
     if (values[column.propertyName as string & keyof CreateUpdateParams<T>] === undefined) {
@@ -551,7 +541,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
             throw new QueryError(`Unable to find primary key column for ${relatedModelName} when inserting ${model.name}.${column.propertyName} value.`, model);
           }
 
-          const primaryKeyValue = (value as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T> & keyof T] as EntityFieldValue;
+          const primaryKeyValue = (value as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof CreateUpdateParams<T> & keyof T] as FieldValue;
           if (primaryKeyValue == null) {
             throw new QueryError(`Undefined primary key value for hydrated object value for "${column.propertyName}" on "${model.name}"`, model);
           }
@@ -622,18 +612,18 @@ export function getUpdateQueryAndParams<T extends Entity>({
  * @param {string[]} [args.returnSelect] - Array of model property names to return from the query.
  * @returns {{query: string, params: object[]}}
  */
-export function getDeleteQueryAndParams<T extends Entity>({
+export function getDeleteQueryAndParams<T extends AnyRecord>({
   repositoriesByModelNameLowered,
   model,
   where,
   returnRecords = true,
   returnSelect,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
   where?: WhereQuery<T>;
   returnRecords?: boolean;
-  returnSelect?: readonly (string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
+  returnSelect?: readonly (string & keyof OmitFunctions<T>)[];
 }): QueryAndParams {
   let query = `DELETE FROM ${model.qualifiedTableName}`;
 
@@ -670,7 +660,7 @@ export function getDeleteQueryAndParams<T extends Entity>({
  * @private
  */
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
-export function getColumnsToSelect<T extends Entity, K extends string & keyof OmitFunctions<OmitEntityCollections<T>> = string & keyof OmitFunctions<OmitEntityCollections<T>>>({
+export function getColumnsToSelect<T extends AnyRecord, K extends string & keyof OmitFunctions<T> = string & keyof OmitFunctions<T>>({
   model,
   select,
 }: {
@@ -726,13 +716,13 @@ export function getColumnsToSelect<T extends Entity, K extends string & keyof Om
  * @param {unknown[]} args.params - Array to collect query parameters
  * @returns {string} SQL join clauses
  */
-export function buildJoinClauses<T extends Entity>({
+export function buildJoinClauses<T extends AnyRecord>({
   repositoriesByModelNameLowered,
   model,
   joins,
   params,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
   joins: readonly JoinDefinition[];
   params: unknown[];
@@ -760,7 +750,7 @@ export function buildJoinClauses<T extends Entity>({
   return joinSql;
 }
 
-function buildModelJoinClause<T extends Entity>({
+function buildModelJoinClause<T extends AnyRecord>({
   model,
   join,
   params,
@@ -769,7 +759,7 @@ function buildModelJoinClause<T extends Entity>({
   model: ModelMetadata<T>;
   join: ModelJoinDefinition;
   params: unknown[];
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
 }): string {
   const column = model.columnsByPropertyName[join.propertyName] as ColumnModelMetadata | undefined;
   if (!column) {
@@ -818,7 +808,7 @@ function buildModelJoinClause<T extends Entity>({
   return joinSql;
 }
 
-function buildSubqueryJoinClause<T extends Entity>({
+function buildSubqueryJoinClause<T extends AnyRecord>({
   model,
   join,
   params,
@@ -827,7 +817,7 @@ function buildSubqueryJoinClause<T extends Entity>({
   model: ModelMetadata<T>;
   join: SubqueryJoinDefinition;
   params: unknown[];
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
 }): string {
   assertValidSqlIdentifier(join.alias, 'subquery join alias');
 
@@ -860,9 +850,9 @@ function buildSubquerySelectSQL({
 }: {
   subquery: SubqueryBuilderLike;
   params: unknown[];
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
 }): string {
-  const repository = subquery._repository as IReadonlyRepository<Entity>;
+  const repository = subquery._repository as IReadonlyRepository<AnyRecord>;
   const subqueryModel = repository.model;
   const selectParts: string[] = [];
 
@@ -912,7 +902,7 @@ function buildSubquerySelectSQL({
     const { whereStatement } = buildWhereStatement({
       repositoriesByModelNameLowered,
       model: subqueryModel,
-      where: subquery._where as WhereQuery<Entity>,
+      where: subquery._where as WhereQuery<AnyRecord>,
       params,
     });
 
@@ -943,6 +933,7 @@ function buildSubquerySelectSQL({
       repositoriesByModelNameLowered,
       model: subqueryModel,
       sorts,
+      params,
     });
 
     if (orderStatement) {
@@ -962,13 +953,13 @@ function buildSubquerySelectSQL({
   return sql;
 }
 
-function buildAggregateSQL(expr: SelectAggregateExpression, model: ModelMetadata<Entity>): string {
+function buildAggregateSQL(expr: SelectAggregateExpression, model: ModelMetadata<AnyRecord>): string {
   assertValidSqlIdentifier(expr.alias, 'aggregate alias');
   const sql = buildAggregateSQLWithoutAlias(expr, model);
   return `${sql} AS "${expr.alias}"`;
 }
 
-function buildAggregateSQLWithoutAlias(expr: SelectAggregateExpression, model: ModelMetadata<Entity>): string {
+function buildAggregateSQLWithoutAlias(expr: SelectAggregateExpression, model: ModelMetadata<AnyRecord>): string {
   if (expr.fn === 'count' && !expr.column) {
     return 'COUNT(*)';
   }
@@ -989,7 +980,7 @@ function buildAggregateSQLWithoutAlias(expr: SelectAggregateExpression, model: M
 
 const VALID_HAVING_OPERATORS = new Set(['<', '<=', '>', '>=', '!=']);
 
-function buildHavingClause(having: HavingCondition, selectExpressions: SelectAggregateExpression[], model: ModelMetadata<Entity>): string {
+function buildHavingClause(having: HavingCondition, selectExpressions: SelectAggregateExpression[], model: ModelMetadata<AnyRecord>): string {
   const conditions: string[] = [];
 
   for (const [alias, condition] of Object.entries(having)) {
@@ -1044,14 +1035,14 @@ function buildHavingClause(having: HavingCondition, selectExpressions: SelectAgg
  * @returns {object} {{whereStatement?: string, params: Array}}
  * @private
  */
-export function buildWhereStatement<T extends Entity>({
+export function buildWhereStatement<T extends AnyRecord>({
   repositoriesByModelNameLowered,
   model,
   where,
   params = [],
   joins,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
   where?: WhereQuery<T>;
   params?: unknown[];
@@ -1086,16 +1077,18 @@ export function buildWhereStatement<T extends Entity>({
   };
 }
 
-export function buildOrderStatement<T extends Entity>({
+export function buildOrderStatement<T extends AnyRecord>({
   repositoriesByModelNameLowered,
   model,
   sorts,
   joins,
+  params,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
   sorts: readonly OrderBy<T>[];
   joins?: readonly JoinDefinition[];
+  params?: unknown[];
 }): string {
   if (!sorts.length) {
     return '';
@@ -1108,7 +1101,7 @@ export function buildOrderStatement<T extends Entity>({
       orderStatement += ',';
     }
 
-    const { propertyName, descending } = orderProperty;
+    const { propertyName, descending, vectorDistance } = orderProperty;
 
     const resolvedProperty = resolvePropertyPath({
       propertyPath: propertyName,
@@ -1117,15 +1110,25 @@ export function buildOrderStatement<T extends Entity>({
       repositoriesByModelNameLowered,
     });
 
+    let columnRef: string;
     if (resolvedProperty) {
-      orderStatement += `"${resolvedProperty.tableAlias}"."${resolvedProperty.column.name}"`;
+      columnRef = `"${resolvedProperty.tableAlias}"."${resolvedProperty.column.name}"`;
     } else {
       const column = model.columnsByPropertyName[propertyName];
       if (!column) {
         throw new QueryError(`Property (${propertyName}) not found in model (${model.name}).`, model);
       }
 
-      orderStatement += `"${column.name}"`;
+      columnRef = `"${column.name}"`;
+    }
+
+    if (vectorDistance && params) {
+      const operator = vectorDistanceOperator(vectorDistance.metric);
+      validateVectorArray(vectorDistance.vector, propertyName, model);
+      params.push(`[${vectorDistance.vector.join(',')}]`);
+      orderStatement += `${columnRef} ${operator} $${params.length}`;
+    } else {
+      orderStatement += columnRef;
     }
 
     if (descending) {
@@ -1150,7 +1153,7 @@ export function buildOrderStatement<T extends Entity>({
  * @returns {string} - Query text
  * @private
  */
-function buildWhere<T extends Entity>({
+function buildWhere<T extends AnyRecord>({
   repositoriesByModelNameLowered,
   model,
   propertyName,
@@ -1160,7 +1163,7 @@ function buildWhere<T extends Entity>({
   params,
   joins,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
   propertyName?: string;
   // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
@@ -1601,6 +1604,30 @@ function buildWhere<T extends Entity>({
           });
         }
 
+        // Vector distance constraint: { nearestTo: [...], metric: '...', distance: { '<': 0.5 } }
+        if (typeof value === 'object' && value !== null && 'nearestTo' in value) {
+          const vectorConstraint = value as unknown as { nearestTo: number[]; metric?: string; distance?: Record<string, number> };
+          const column = propertyName ? model.columnsByPropertyName[propertyName] : undefined;
+          if (!column || !propertyName) {
+            throw new QueryError(`Property name is required for vector distance constraint`, model);
+          }
+
+          const metric = validateVectorMetric(vectorConstraint.metric ?? 'cosine', model);
+          const operator = vectorDistanceOperator(metric);
+          validateVectorArray(vectorConstraint.nearestTo, column.propertyName, model);
+          params.push(`[${vectorConstraint.nearestTo.join(',')}]`);
+          const vectorParamIndex = params.length;
+
+          if (vectorConstraint.distance) {
+            const [distanceOp, threshold] = Object.entries(vectorConstraint.distance)[0]!;
+            validateDistanceOperator(distanceOp, model);
+            params.push(threshold);
+            return `"${column.name}" ${operator} $${vectorParamIndex} ${distanceOp} $${params.length}`;
+          }
+
+          return `"${column.name}" ${operator} $${vectorParamIndex}`;
+        }
+
         const andValues: string[] = [];
         for (const [key, where] of Object.entries(value)) {
           if (typeof where === 'object' && where !== null && !Array.isArray(where) && !(where instanceof Date)) {
@@ -1685,7 +1712,7 @@ function buildWhere<T extends Entity>({
   }
 }
 
-function buildOrOperatorStatement<T extends Entity>({
+function buildOrOperatorStatement<T extends AnyRecord>({
   repositoriesByModelNameLowered,
   model,
   isNegated,
@@ -1693,7 +1720,7 @@ function buildOrOperatorStatement<T extends Entity>({
   params,
   joins,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
   isNegated: boolean;
   value: readonly WhereQuery<T>[];
@@ -1731,7 +1758,7 @@ function buildOrOperatorStatement<T extends Entity>({
   return '';
 }
 
-function buildAndOperatorStatement<T extends Entity>({
+function buildAndOperatorStatement<T extends AnyRecord>({
   repositoriesByModelNameLowered,
   model,
   isNegated,
@@ -1739,7 +1766,7 @@ function buildAndOperatorStatement<T extends Entity>({
   params,
   joins,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
   isNegated: boolean;
   value: readonly WhereQuery<T>[];
@@ -1777,8 +1804,8 @@ function buildAndOperatorStatement<T extends Entity>({
   return '';
 }
 
-interface ComparisonOperatorStatementParams<T extends Entity> {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+interface ComparisonOperatorStatementParams<T extends AnyRecord> {
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
   propertyName: string;
   // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
@@ -1789,11 +1816,11 @@ interface ComparisonOperatorStatementParams<T extends Entity> {
   joins?: readonly JoinDefinition[];
 }
 
-interface LikeOperatorStatementParams<T extends Entity> extends Omit<ComparisonOperatorStatementParams<T>, 'value'> {
+interface LikeOperatorStatementParams<T extends AnyRecord> extends Omit<ComparisonOperatorStatementParams<T>, 'value'> {
   value: string | readonly string[] | null;
 }
 
-interface JsonContainmentStatementParams<T extends Entity> extends Omit<ComparisonOperatorStatementParams<T>, 'value'> {
+interface JsonContainmentStatementParams<T extends AnyRecord> extends Omit<ComparisonOperatorStatementParams<T>, 'value'> {
   value: unknown;
 }
 
@@ -1802,8 +1829,8 @@ interface SingleValueStatementContext {
   tablePrefix: string;
 }
 
-interface ArrayOrSingleStatementParams<T extends Entity> {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+interface ArrayOrSingleStatementParams<T extends AnyRecord> {
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
   model: ModelMetadata<T>;
   propertyName: string;
   isNegated: boolean;
@@ -1818,7 +1845,7 @@ interface ResolvedProperty {
   tableAlias: string;
 }
 
-function resolvePropertyPath<T extends Entity>({
+function resolvePropertyPath<T extends AnyRecord>({
   propertyPath,
   model,
   joins,
@@ -1827,7 +1854,7 @@ function resolvePropertyPath<T extends Entity>({
   propertyPath: string;
   model: ModelMetadata<T>;
   joins?: readonly JoinDefinition[];
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
 }): ResolvedProperty | null {
   if (!propertyPath.includes('.')) {
     return null;
@@ -1878,7 +1905,7 @@ function resolvePropertyPath<T extends Entity>({
   };
 }
 
-function buildArrayOrSingleStatement<T extends Entity>({
+function buildArrayOrSingleStatement<T extends AnyRecord>({
   repositoriesByModelNameLowered,
   model,
   propertyName,
@@ -1955,11 +1982,11 @@ function buildArrayOrSingleStatement<T extends Entity>({
 }
 
 interface ResolvedJoin {
-  joinedModel: ModelMetadata<Entity>;
+  joinedModel: ModelMetadata<AnyRecord>;
   tableAlias: string;
 }
 
-function resolveJoinAlias<T extends Entity>({
+function resolveJoinAlias<T extends AnyRecord>({
   aliasOrPropertyName,
   model,
   joins,
@@ -1968,7 +1995,7 @@ function resolveJoinAlias<T extends Entity>({
   aliasOrPropertyName: string;
   model: ModelMetadata<T>;
   joins?: readonly JoinDefinition[];
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
 }): ResolvedJoin | null {
   if (!joins?.length) {
     return null;
@@ -2007,8 +2034,8 @@ function buildNestedJoinWhere({
   nestedWhere,
   params,
 }: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
-  joinedModel: ModelMetadata<Entity>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
+  joinedModel: ModelMetadata<AnyRecord>;
   tableAlias: string;
   nestedWhere: Record<string, unknown>;
   params: unknown[];
@@ -2136,7 +2163,7 @@ function buildNestedJoinWhere({
   return andClauses.join(' AND ');
 }
 
-function buildJsonContainmentStatement<T extends Entity>({ repositoriesByModelNameLowered, model, propertyName, isNegated, value, params, joins }: JsonContainmentStatementParams<T>): string {
+function buildJsonContainmentStatement<T extends AnyRecord>({ repositoriesByModelNameLowered, model, propertyName, isNegated, value, params, joins }: JsonContainmentStatementParams<T>): string {
   return buildArrayOrSingleStatement({
     repositoriesByModelNameLowered,
     model,
@@ -2262,7 +2289,7 @@ function buildJsonPropertyClause({
   return `${castAccessor}${isNegated ? '<>' : '='}$${params.length}`;
 }
 
-function buildLikeOperatorStatement<T extends Entity>({ repositoriesByModelNameLowered, model, propertyName, isNegated, value, params, joins }: LikeOperatorStatementParams<T>): string {
+function buildLikeOperatorStatement<T extends AnyRecord>({ repositoriesByModelNameLowered, model, propertyName, isNegated, value, params, joins }: LikeOperatorStatementParams<T>): string {
   return buildArrayOrSingleStatement({
     repositoriesByModelNameLowered,
     model,
@@ -2299,7 +2326,7 @@ function buildLikeOperatorStatement<T extends Entity>({ repositoriesByModelNameL
   });
 }
 
-function buildComparisonOperatorStatement<T extends Entity>({
+function buildComparisonOperatorStatement<T extends AnyRecord>({
   repositoriesByModelNameLowered,
   model,
   propertyName,
@@ -2425,14 +2452,14 @@ function isComparer(value: string): boolean {
   }
 }
 
-export function buildSubquerySQL<T extends Entity>({
+export function buildSubquerySQL<T extends AnyRecord>({
   subquery,
   params,
   repositoriesByModelNameLowered,
 }: {
   subquery: SubqueryBuilder<T>;
   params: unknown[];
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
 }): string {
   const model = subquery._repository.model;
 
@@ -2487,6 +2514,7 @@ export function buildSubquerySQL<T extends Entity>({
       repositoriesByModelNameLowered,
       model,
       sorts,
+      params,
     });
 
     if (orderStatement) {
@@ -2512,7 +2540,7 @@ export function buildScalarSubquerySQL({
 }: {
   scalarSubquery: ScalarSubquery<unknown>;
   params: unknown[];
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<AnyRecord> | IRepository<AnyRecord>>;
 }): string {
   const subquery = scalarSubquery._subquery;
   const model = subquery._repository.model;
@@ -2552,13 +2580,13 @@ export function buildScalarSubquerySQL({
   return sql;
 }
 
-function convertSortToOrderBy<T extends Entity>(sort: Record<string, unknown> | string): OrderBy<T>[] {
+function convertSortToOrderBy<T extends AnyRecord>(sort: Record<string, unknown> | string): OrderBy<T>[] {
   const result: OrderBy<T>[] = [];
 
   if (typeof sort === 'string') {
     for (const sortPart of sort.split(',')) {
       const parts = sortPart.trim().split(' ');
-      const propertyName = parts.shift() as string & keyof OmitFunctions<OmitEntityCollections<T>>;
+      const propertyName = parts.shift() as string & keyof OmitFunctions<T>;
       result.push({
         propertyName,
         descending: /desc/i.test(parts.join('')),
@@ -2566,17 +2594,78 @@ function convertSortToOrderBy<T extends Entity>(sort: Record<string, unknown> | 
     }
   } else if (typeof sort === 'object') {
     for (const [propertyName, orderValue] of Object.entries(sort)) {
-      let descending = false;
-      if (orderValue && (orderValue === -1 || (typeof orderValue === 'string' && /desc/i.test(orderValue)))) {
-        descending = true;
-      }
+      // Vector distance sort: { embedding: { nearestTo: [1,2,3], metric: 'cosine' } }
+      if (orderValue && typeof orderValue === 'object' && 'nearestTo' in orderValue) {
+        const vectorSort = orderValue as { nearestTo: number[]; metric?: string };
+        result.push({
+          propertyName: propertyName as string & keyof OmitFunctions<T>,
+          descending: false,
+          vectorDistance: {
+            vector: vectorSort.nearestTo,
+            metric: validateVectorMetric(vectorSort.metric ?? 'cosine'),
+          },
+        });
+      } else {
+        let descending = false;
+        if (orderValue && (orderValue === -1 || (typeof orderValue === 'string' && /desc/i.test(orderValue)))) {
+          descending = true;
+        }
 
-      result.push({
-        propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
-        descending,
-      });
+        result.push({
+          propertyName: propertyName as string & keyof OmitFunctions<T>,
+          descending,
+        });
+      }
     }
   }
 
   return result;
+}
+
+const VALID_DISTANCE_OPERATORS = new Set(['<', '<=', '>', '>=']);
+const VALID_VECTOR_METRICS = new Set(['cosine', 'innerProduct', 'l1', 'l2']);
+
+function validateDistanceOperator(operator: string, model: ModelMetadata<AnyRecord>): void {
+  if (!VALID_DISTANCE_OPERATORS.has(operator)) {
+    throw new QueryError(`Invalid vector distance operator: ${operator}`, model);
+  }
+}
+
+function validateVectorMetric(metric: string, model?: ModelMetadata<AnyRecord>): 'cosine' | 'innerProduct' | 'l1' | 'l2' {
+  if (!VALID_VECTOR_METRICS.has(metric)) {
+    const message = `Invalid vector distance metric: ${metric}. Must be one of: cosine, innerProduct, l1, l2`;
+    if (model) {
+      throw new QueryError(message, model);
+    }
+
+    throw new Error(message);
+  }
+
+  return metric as 'cosine' | 'innerProduct' | 'l1' | 'l2';
+}
+
+function validateVectorArray(vector: number[], propertyName: string, model?: ModelMetadata<AnyRecord>): void {
+  if (!Array.isArray(vector) || !vector.every((value) => typeof value === 'number' && Number.isFinite(value))) {
+    const message = `"${propertyName}" nearestTo must be an array of finite numbers`;
+    if (model) {
+      throw new QueryError(message, model);
+    }
+
+    throw new Error(message);
+  }
+}
+
+function vectorDistanceOperator(metric: 'cosine' | 'innerProduct' | 'l1' | 'l2'): string {
+  switch (metric) {
+    case 'l2':
+      return '<->';
+    case 'cosine':
+      return '<=>';
+    case 'innerProduct':
+      return '<#>';
+    case 'l1':
+      return '<+>';
+    default:
+      return '<=>';
+  }
 }

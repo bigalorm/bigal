@@ -1,10 +1,7 @@
-import type { Entity, NotEntityBrand } from '../Entity.js';
+import type { HasManyKeys, SchemaDefinition } from '../schema/InferTypes.js';
 
 /**
- * Removes all entity collection properties. To be used as a re-map key function
+ * Excludes hasMany collection keys from K when a concrete TSchema is provided.
+ * Falls back to passing through all keys when TSchema is the default.
  */
-export type ExcludeEntityCollections<T, K extends PropertyKey> = T extends NotEntityBrand[] | undefined
-  ? K // Return the key if collection is a NotEntityBrand array
-  : T extends Entity[] | undefined
-    ? never // If T is an entity array, remove
-    : K; // Otherwise, return the key
+export type ExcludeEntityCollections<K extends PropertyKey, TSchema extends SchemaDefinition = SchemaDefinition> = SchemaDefinition extends TSchema ? K : K extends HasManyKeys<TSchema> ? never : K;

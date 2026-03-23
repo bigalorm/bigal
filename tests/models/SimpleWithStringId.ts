@@ -1,20 +1,13 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { belongsTo, table, text } from '../../src/schema/index.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithStringId extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
+import { stringIdBase } from './base.js';
 
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-
-  @column({
-    model: () => SimpleWithStringId.name,
-  })
-  public otherId?: SimpleWithStringId | string;
-}
+export const SimpleWithStringId = table(
+  'simple',
+  {
+    ...stringIdBase,
+    name: text().notNull(),
+    otherId: belongsTo<string>('SimpleWithStringId', 'other_id'),
+  },
+  { modelName: 'SimpleWithStringId' },
+);

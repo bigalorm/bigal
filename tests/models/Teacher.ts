@@ -1,45 +1,12 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { belongsTo, booleanColumn, hasMany, table, text } from '../../src/schema/index.js';
 
-import { Classroom } from './Classroom.js';
-import { ParkingSpace } from './ParkingSpace.js';
-import { TeacherClassroom } from './TeacherClassroom.js';
+import { stringIdBase } from './base.js';
 
-@table({
-  name: 'teacher',
-})
-export class Teacher extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
-
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public firstName!: string;
-
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public lastName!: string;
-
-  @column({
-    model: () => ParkingSpace.name,
-    name: 'parking_space_id',
-  })
-  public parkingSpace?: ParkingSpace | string;
-
-  @column({
-    collection: () => Classroom.name,
-    through: () => TeacherClassroom.name,
-    via: 'teacher',
-  })
-  public classrooms?: Classroom[];
-
-  @column({
-    defaultsTo: true,
-    type: 'boolean',
-    name: 'is_active',
-  })
-  public isActive!: boolean;
-}
+export const Teacher = table('teacher', {
+  ...stringIdBase,
+  firstName: text().notNull(),
+  lastName: text().notNull(),
+  parkingSpace: belongsTo<string>('ParkingSpace'),
+  classrooms: hasMany('Classroom').through('TeacherClassroom').via('teacher'),
+  isActive: booleanColumn().default(true),
+});

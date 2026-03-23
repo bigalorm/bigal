@@ -1,39 +1,28 @@
 ---
-description: Map PostgreSQL views to readonly models with ReadonlyRepository. Supports inheritance, schema options, and all query features.
+description: Define readonly models backed by PostgreSQL views with view() and ReadonlyRepository. Supports schema options and all query features.
 ---
 
 # Views and Readonly Repositories
 
-BigAl does not distinguish between tables and views. Both use the `@table()` decorator. Setting `readonly: true` causes
-`initialize()` to return a `ReadonlyRepository` — which omits `create`, `update`, and `destroy` methods,
-catching accidental writes at compile time.
+BigAl provides a `view()` function for defining models backed by PostgreSQL views. The `view()`
+function is equivalent to `table()` with `readonly: true` - it produces a `ReadonlyRepository`
+that omits `create`, `update`, and `destroy` methods, catching accidental writes at compile time.
 
 BigAl does not create or manage views. Create them in PostgreSQL via your migration tool.
 
 ## Defining a view model
 
-### Standalone model
+### Using view()
 
 ```ts
-import { column, primaryColumn, table, Entity } from 'bigal';
+import { view, serial, text, integer } from 'bigal';
 
-@table({
-  name: 'product_summaries',
-  readonly: true,
-})
-export class ProductSummary extends Entity {
-  @primaryColumn({ type: 'integer' })
-  public id!: number;
-
-  @column({ type: 'string', required: true })
-  public name!: string;
-
-  @column({ type: 'string', required: true, name: 'store_name' })
-  public storeName!: string;
-
-  @column({ type: 'integer', required: true, name: 'category_count' })
-  public categoryCount!: number;
-}
+export const ProductSummary = view('product_summaries', {
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  storeName: text().notNull(),
+  categoryCount: integer().notNull(),
+});
 ```
 
 Corresponding view in PostgreSQL:
@@ -51,19 +40,47 @@ LEFT JOIN product_categories pc ON pc.product_id = p.id
 GROUP BY p.id, p.name, s.name;
 ```
 
-### Inheriting from an existing model
+### Using table() with readonly option
 
-If the view has the same columns as an existing table, extend the model to reuse column definitions:
+Alternatively, use `table()` with `readonly: true`:
 
 ```ts
-import { table } from 'bigal';
-import { Product } from './Product';
+import { defineTable as table, serial, text, integer } from 'bigal';
 
-@table({
-  name: 'readonly_products',
-  readonly: true,
-})
-export class ReadonlyProduct extends Product {}
+export const ProductSummary = table(
+  'product_summaries',
+  {
+    id: serial().primaryKey(),
+    name: text().notNull(),
+    storeName: text().notNull(),
+    categoryCount: integer().notNull(),
+  },
+  { readonly: true },
+);
+```
+
+### Sharing columns with a table
+
+If a view returns the same columns as a table (e.g., a filtered subset),
+share the column definitions:
+
+```ts
+import { table, view, serial, text, integer, boolean } from 'bigal';
+
+const productColumns = {
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  priceCents: integer().notNull(),
+  isActive: boolean().notNull(),
+};
+
+export const Product = table('products', {
+  ...productColumns,
+  store: belongsTo('Store'),
+});
+
+// View returns the same columns, just filtered to active products
+export const ActiveProduct = view('active_products', productColumns);
 ```
 
 ### Schema option
@@ -71,31 +88,42 @@ export class ReadonlyProduct extends Product {}
 For views in a non-default schema:
 
 ```ts
-@table({
-  schema: 'reporting',
-  name: 'product_summaries',
-  readonly: true,
-})
-export class ProductSummary extends Entity {
-  // ...
-}
+export const ReportSummary = view(
+  'product_summaries',
+  {
+    id: serial().primaryKey(),
+    storeName: text().notNull(),
+    totalRevenue: integer().notNull(),
+  },
+  { schema: 'reporting' },
+);
 ```
 
 ## Initializing the repository
 
-Include the view model in `initialize()`. BigAl creates a `ReadonlyRepository` automatically:
+Include the model in `initialize()`. BigAl creates a `ReadonlyRepository` automatically for models
+defined with `view()` or `table()` with `readonly: true`:
 
 ```ts
-import { initialize, ReadonlyRepository } from 'bigal';
+import { initialize } from 'bigal';
+import type { ReadonlyRepository } from 'bigal';
 import { Product, Store, ProductSummary } from './models';
 
-const repos = initialize({
-  models: [Product, Store, ProductSummary],
+const { Product, ProductSummary } = initialize({
+  models: { Product, Store, ProductSummary },
   pool,
   readonlyPool,
 });
 
-const productSummaryRepository = repos.ProductSummary as ReadonlyRepository<ProductSummary>;
+// ProductSummary only has find(), findOne(), and count()
+```
+
+For repository type annotations, use `ReadonlyRepository<typeof Model>`:
+
+```ts
+function getSummaries(repo: ReadonlyRepository<typeof ProductSummary>) {
+  return repo.find().where({ categoryCount: { '>': 5 } });
+}
 ```
 
 ## Querying
@@ -103,18 +131,18 @@ const productSummaryRepository = repos.ProductSummary as ReadonlyRepository<Prod
 Readonly repositories support the same query methods as regular repositories:
 
 ```ts
-const summaries = await productSummaryRepository
-  .find()
+const summaries = await ProductSummary.find()
   .where({ storeName: { contains: 'Acme' } })
   .sort('categoryCount desc')
   .limit(10);
 
-const summary = await productSummaryRepository.findOne().where({ id: 42 });
+const summary = await ProductSummary.findOne().where({ id: 42 });
 
-const count = await productSummaryRepository.count().where({ categoryCount: { '>': 5 } });
+const count = await ProductSummary.count().where({ categoryCount: { '>': 5 } });
 ```
 
-All query features work: `where` operators, `sort`, `skip`, `limit`, `paginate`, `populate`, `join`, `withCount`, and `distinctOn`.
+All query features work: `where` operators, `sort`, `skip`, `limit`, `paginate`, `populate`, `join`,
+`withCount`, and `distinctOn`.
 
 ## Available methods
 

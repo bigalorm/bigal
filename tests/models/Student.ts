@@ -1,31 +1,10 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { hasMany, table, text } from '../../src/schema/index.js';
 
-import { Classroom } from './Classroom.js';
-import { StudentClassroom } from './StudentClassroom.js';
+import { stringIdBase } from './base.js';
 
-@table({
-  name: 'student',
-})
-export class Student extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
-
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public firstName!: string;
-
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public lastName!: string;
-
-  @column({
-    collection: () => Classroom.name,
-    through: () => StudentClassroom.name,
-    via: 'student',
-  })
-  public classrooms?: Classroom[];
-}
+export const Student = table('student', {
+  ...stringIdBase,
+  firstName: text().notNull(),
+  lastName: text().notNull(),
+  classrooms: hasMany('Classroom').through('StudentClassroom').via('student'),
+});

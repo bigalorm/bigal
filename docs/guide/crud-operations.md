@@ -1,18 +1,19 @@
 ---
-description: Create, update, and destroy records with RETURNING support, query projection, and ON CONFLICT upserts.
+description: Create, update, and destroy records with RETURNING support, query projection, toSQL, and ON CONFLICT upserts.
 ---
 
 # CRUD Operations
 
-BigAl repositories provide `create()`, `update()`, and `destroy()` methods. All three return affected records
-by default (using `RETURNING *`), and all support `returnRecords` and `returnSelect` options.
+BigAl repositories provide `create()`, `update()`, and `destroy()` methods. All three return affected
+records by default (using `RETURNING *`), and all support `returnRecords` and `returnSelect` options.
+Results are always plain objects.
 
 ## Create
 
 ### Single record
 
 ```ts
-const product = await productRepository.create({
+const product = await Product.create({
   name: 'Widget',
   priceCents: 999,
 });
@@ -22,7 +23,7 @@ const product = await productRepository.create({
 ### Multiple records
 
 ```ts
-const products = await productRepository.create([
+const products = await Product.create([
   { name: 'Widget', priceCents: 999 },
   { name: 'Gadget', priceCents: 1499 },
 ]);
@@ -32,7 +33,7 @@ const products = await productRepository.create([
 ### Skip returning records
 
 ```ts
-await productRepository.create({ name: 'Widget', priceCents: 999 }, { returnRecords: false });
+await Product.create({ name: 'Widget', priceCents: 999 }, { returnRecords: false });
 ```
 
 ### Query projection (returnSelect)
@@ -40,14 +41,14 @@ await productRepository.create({ name: 'Widget', priceCents: 999 }, { returnReco
 Return only specific columns. The primary key is always included.
 
 ```ts
-const product = await productRepository.create({ name: 'Widget', priceCents: 999 }, { returnSelect: ['name'] });
+const product = await Product.create({ name: 'Widget', priceCents: 999 }, { returnSelect: ['name'] });
 // product = { id: 42, name: 'Widget' }
 ```
 
 Pass an empty array to return only the primary key:
 
 ```ts
-const product = await productRepository.create({ name: 'Widget', priceCents: 999 }, { returnSelect: [] });
+const product = await Product.create({ name: 'Widget', priceCents: 999 }, { returnSelect: [] });
 // product = { id: 42 }
 ```
 
@@ -58,7 +59,7 @@ Handle constraint violations with PostgreSQL's `ON CONFLICT` clause.
 ### Ignore (DO NOTHING)
 
 ```ts
-const product = await productRepository.create(
+const product = await Product.create(
   { name: 'Widget', sku: 'WDG-001' },
   {
     onConflict: {
@@ -72,7 +73,7 @@ const product = await productRepository.create(
 ### Merge (DO UPDATE) - all columns
 
 ```ts
-const product = await productRepository.create(
+const product = await Product.create(
   { name: 'Widget', sku: 'WDG-001', priceCents: 999 },
   {
     onConflict: {
@@ -86,7 +87,7 @@ const product = await productRepository.create(
 ### Merge - specific columns
 
 ```ts
-const product = await productRepository.create(
+const product = await Product.create(
   { name: 'Widget', sku: 'WDG-001', priceCents: 999 },
   {
     onConflict: {
@@ -104,11 +105,11 @@ const product = await productRepository.create(
 
 ```ts
 // Update a single record
-const products = await productRepository.update({ id: 42 }, { name: 'Super Widget' });
+const products = await Product.update({ id: 42 }, { name: 'Super Widget' });
 // products = [{ id: 42, name: 'Super Widget', ... }]
 
 // Update multiple records
-const products = await productRepository.update({ id: [42, 43] }, { priceCents: 1299 });
+const products = await Product.update({ id: [42, 43] }, { priceCents: 1299 });
 // products = [{ id: 42, ... }, { id: 43, ... }]
 ```
 
@@ -117,42 +118,74 @@ const products = await productRepository.update({ id: [42, 43] }, { priceCents: 
 Without returning records:
 
 ```ts
-await productRepository.update({ id: 42 }, { name: 'Super Widget' }, { returnRecords: false });
+await Product.update({ id: 42 }, { name: 'Super Widget' }, { returnRecords: false });
 ```
 
 With query projection:
 
 ```ts
-const products = await productRepository.update({ id: [42, 43] }, { priceCents: 1299 }, { returnSelect: ['id'] });
+const products = await Product.update({ id: [42, 43] }, { priceCents: 1299 }, { returnSelect: ['id'] });
 // products = [{ id: 42 }, { id: 43 }]
 ```
 
 ## Destroy
 
-`destroy()` takes a where clause object. Returns an array of deleted records.
+`destroy()` takes a where clause object. Returns `void` by default.
 
 ```ts
-// Delete a single record
-const products = await productRepository.destroy({ id: 42 });
-// products = [{ id: 42, name: 'Super Widget', ... }]
-
-// Delete multiple records
-const products = await productRepository.destroy({ id: [42, 43] });
+// Delete records (returns void)
+await Product.destroy({ id: 42 });
+await Product.destroy({ id: [42, 43] });
 ```
 
-> `destroy()` always returns an array, regardless of how many records were affected.
-
-Without returning records:
+With returning records:
 
 ```ts
-await productRepository.destroy({ id: 42 }, { returnRecords: false });
+const products = await Product.destroy({ id: 42 }, { returnRecords: true });
+// products = [{ id: 42, name: 'Super Widget', ... }]
 ```
 
 With query projection:
 
 ```ts
-const products = await productRepository.destroy({ id: [42, 43] }, { returnSelect: ['name'] });
+const products = await Product.destroy({ id: [42, 43] }, { returnSelect: ['name'] });
 // products = [{ id: 42, name: 'Widget' }, { id: 43, name: 'Gadget' }]
 ```
 
-> The primary key is always included. Pass an empty array to return only the primary key.
+> The primary key is always included when returning records. Pass an empty array to return only the
+> primary key.
+
+## toSQL() on mutations
+
+All mutation operations support `toSQL()` to inspect the generated SQL without executing:
+
+```ts
+// Create
+const { sql, params } = Product.create({ name: 'Widget', priceCents: 999 }).toSQL();
+
+// Update
+const { sql, params } = Product.update({ id: 42 }, { name: 'Super Widget' }).toSQL();
+
+// Destroy
+const { sql, params } = Product.destroy({ id: 42 }).toSQL();
+```
+
+This is useful for debugging, logging, and testing SQL generation.
+
+## Initialization example
+
+```ts
+import { initialize, defineTable as table, serial, text, integer, createdAt, updatedAt } from 'bigal';
+import { Pool } from 'postgres-pool';
+
+const Product = table('products', {
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  priceCents: integer().notNull(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+const pool = new Pool('postgres://localhost/mydb');
+const { Product } = initialize({ models: { Product }, pool });
+```

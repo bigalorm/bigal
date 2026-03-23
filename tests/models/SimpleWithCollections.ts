@@ -1,30 +1,14 @@
-import { column, table } from '../../src/index.js';
+import { hasMany, table, text } from '../../src/schema/index.js';
 
-import { Category } from './Category.js';
-import { ModelBase } from './ModelBase.js';
-import { Product } from './Product.js';
-import { ProductCategory } from './ProductCategory.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithCollections extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-
-  @column({
-    collection: () => Product.name,
-    via: 'store',
-  })
-  public products?: Product[];
-
-  @column({
-    collection: () => Category.name,
-    through: () => ProductCategory.name,
-    via: 'product',
-  })
-  public categories!: Category[];
-}
+export const SimpleWithCollections = table(
+  'simple',
+  {
+    ...modelBase,
+    name: text().notNull(),
+    products: hasMany('Product').via('store'),
+    categories: hasMany('Category').through('ProductCategory').via('product'),
+  },
+  { modelName: 'SimpleWithCollections' },
+);

@@ -1,23 +1,9 @@
-import { column, table } from '../../src/index.js';
+import { hasMany, table, text } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
-import { Product } from './Product.js';
-import { ProductCategory } from './ProductCategory.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'categories',
-})
-export class Category extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-
-  @column({
-    collection: () => Product.name,
-    through: () => ProductCategory.name,
-    via: 'category',
-  })
-  public products?: Product[];
-}
+export const Category = table('categories', {
+  ...modelBase,
+  name: text().notNull(),
+  products: hasMany('Product').through('ProductCategory').via('category'),
+});

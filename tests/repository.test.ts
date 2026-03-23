@@ -3,11 +3,9 @@ import assert from 'node:assert';
 import { faker } from '@faker-js/faker';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { type CreateUpdateParams, type PoolLike, type PoolQueryResult, type QueryResult, type QueryResultRow, type Repository } from '../src/index.js';
-import { initialize } from '../src/index.js';
+import type { InferSelect, IRepository, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
+import { belongsTo, boolean as booleanColumn, initialize, hasMany, integer, serial, text, textArray, defineTable as table } from '../src/index.js';
 
-import { Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store } from './models/index.js';
-import * as generator from './utils/generator.js';
 import { pick } from './utils/pick.js';
 
 type PoolQueryFn = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
@@ -27,26 +25,175 @@ function getQueryResult<T extends QueryResultRow>(rows: T[] = []): PoolQueryResu
   };
 }
 
+// ---------------------------------------------------------------------------
+// Table definitions matching the OLD decorator models (no timestamps on Product/Store)
+// ---------------------------------------------------------------------------
+
+const modelBase = {
+  id: serial().primaryKey(),
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const tables: Record<string, TableDefinition<any, any>> = {};
+
+const storeSchema = {
+  ...modelBase,
+  name: text(),
+  products: hasMany(() => tables.Product!).via('store'),
+};
+const StoreDef = table('stores', storeSchema);
+tables.Store = StoreDef;
+
+const categorySchema = {
+  ...modelBase,
+  name: text().notNull(),
+  products: hasMany(() => tables.Product!)
+    .through(() => tables.ProductCategory!)
+    .via('category'),
+};
+const CategoryDef = table('categories', categorySchema);
+tables.Category = CategoryDef;
+
+const productSchema = {
+  ...modelBase,
+  name: text().notNull(),
+  sku: text(),
+  location: text(),
+  aliases: textArray({ name: 'alias_names' }).default([]),
+  store: belongsTo(() => tables.Store!),
+  categories: hasMany(() => tables.Category!)
+    .through(() => tables.ProductCategory!)
+    .via('product'),
+};
+const ProductDef = table('products', productSchema);
+tables.Product = ProductDef;
+
+const productCategorySchema = {
+  ...modelBase,
+  product: belongsTo(() => tables.Product!),
+  category: belongsTo(() => tables.Category!),
+  ordering: integer(),
+  isPrimary: booleanColumn(),
+};
+const ProductCategoryDef = table('product__category', productCategorySchema);
+tables.ProductCategory = ProductCategoryDef;
+
+const hookedProductSchema = {
+  ...productSchema,
+};
+const ProductWithHooksDef = table('products', hookedProductSchema, {
+  hooks: {
+    async beforeCreate(values) {
+      await Promise.resolve();
+      return {
+        ...values,
+        name: `beforeCreate - ${values.name}`,
+      };
+    },
+    beforeUpdate(values) {
+      return {
+        ...values,
+        name: `beforeUpdate - ${values.name}`,
+      };
+    },
+  },
+});
+
+const stringCollectionSchema = {
+  ...modelBase,
+  name: text().notNull(),
+  otherIds: textArray().default([]),
+};
+const SimpleWithStringCollectionDef = table('simple', stringCollectionSchema);
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type ProductSelect = InferSelect<(typeof ProductDef)['schema']>;
+type ProductCategorySelect = InferSelect<(typeof ProductCategoryDef)['schema']>;
+type StoreSelect = InferSelect<(typeof StoreDef)['schema']>;
+
+// ---------------------------------------------------------------------------
+// Generators (plain objects)
+// ---------------------------------------------------------------------------
+
+function generateStore(args?: Partial<StoreSelect>): StoreSelect {
+  return {
+    id: faker.number.int(),
+    name: `Store - ${faker.string.uuid()}`,
+    ...args,
+  };
+}
+
+function generateProduct(args: Partial<ProductSelect> & Pick<ProductSelect, 'store'>): ProductSelect {
+  return {
+    id: faker.number.int(),
+    name: `Product - ${faker.string.uuid()}`,
+    sku: null,
+    location: null,
+    aliases: null,
+    ...args,
+  };
+}
+
+function generateCategory(args?: Partial<InferSelect<(typeof CategoryDef)['schema']>>): InferSelect<(typeof CategoryDef)['schema']> {
+  return {
+    id: faker.number.int(),
+    name: `Category - ${faker.string.uuid()}`,
+    ...args,
+  };
+}
+
+function generateProductCategory(productInput: Pick<ProductSelect, 'id'> | number, categoryInput: Pick<InferSelect<(typeof CategoryDef)['schema']>, 'id'> | number): ProductCategorySelect {
+  return {
+    id: faker.number.int(),
+    product: typeof productInput === 'number' ? productInput : productInput.id,
+    category: typeof categoryInput === 'number' ? categoryInput : categoryInput.id,
+    ordering: null,
+    isPrimary: null,
+  };
+}
+
+function generateSimpleWithStringCollection(args?: Partial<InferSelect<(typeof SimpleWithStringCollectionDef)['schema']>>): InferSelect<(typeof SimpleWithStringCollectionDef)['schema']> {
+  return {
+    id: faker.number.int(),
+    name: `WithStringCollection - ${faker.string.uuid()}`,
+    otherIds: [faker.string.uuid(), faker.string.uuid()],
+    ...args,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe('Repository', () => {
   const mockedPool = createMockPool();
 
-  let ProductRepository: Repository<Product>;
-  let ProductCategoryRepository: Repository<ProductCategory>;
-  let SimpleWithStringCollectionRepository: Repository<SimpleWithStringCollection>;
-  let StoreRepository: Repository<Store>;
-  let ProductWithCreateUpdateDateTrackingRepository: Repository<ProductWithCreateUpdateDateTracking>;
+  let ProductRepository: IRepository<ProductSelect>;
+  let ProductCategoryRepository: IRepository<ProductCategorySelect>;
+  let SimpleWithStringCollectionRepository: IRepository<InferSelect<(typeof SimpleWithStringCollectionDef)['schema']>>;
+  let StoreRepository: IRepository<StoreSelect>;
+  let ProductWithHooksRepository: IRepository<InferSelect<(typeof ProductWithHooksDef)['schema']>>;
 
   beforeAll(() => {
-    const repositoriesByModelName = initialize({
-      models: [Category, Product, ProductCategory, ProductWithCreateUpdateDateTracking, SimpleWithStringCollection, Store],
+    const bigal = initialize({
+      models: [CategoryDef, ProductDef, ProductCategoryDef, SimpleWithStringCollectionDef, StoreDef],
       pool: mockedPool,
     });
 
-    ProductRepository = repositoriesByModelName.Product as Repository<Product>;
-    ProductCategoryRepository = repositoriesByModelName.ProductCategory as Repository<ProductCategory>;
-    SimpleWithStringCollectionRepository = repositoriesByModelName.SimpleWithStringCollection as Repository<SimpleWithStringCollection>;
-    StoreRepository = repositoriesByModelName.Store as Repository<Store>;
-    ProductWithCreateUpdateDateTrackingRepository = repositoriesByModelName.ProductWithCreateUpdateDateTracking as Repository<ProductWithCreateUpdateDateTracking>;
+    ProductRepository = bigal.getRepository(ProductDef);
+    ProductCategoryRepository = bigal.getRepository(ProductCategoryDef);
+    SimpleWithStringCollectionRepository = bigal.getRepository(SimpleWithStringCollectionDef);
+    StoreRepository = bigal.getRepository(StoreDef);
+
+    // Separate instance for hooked models since they share the 'products' table name
+    const hookedBigal = initialize({
+      models: [ProductWithHooksDef, StoreDef, CategoryDef, ProductCategoryDef],
+      pool: mockedPool,
+    });
+    ProductWithHooksRepository = hookedBigal.getRepository(ProductWithHooksDef);
   });
 
   beforeEach(() => {
@@ -54,10 +201,10 @@ describe('Repository', () => {
   });
 
   describe('#create()', () => {
-    let store: QueryResult<Store>;
+    let store: StoreSelect;
 
     beforeEach(() => {
-      store = generator.store();
+      store = generateStore();
     });
 
     it('should execute beforeCreate if defined as a schema method', async () => {
@@ -69,19 +216,20 @@ describe('Repository', () => {
         ]),
       );
 
-      await ProductWithCreateUpdateDateTrackingRepository.create({
+      await ProductWithHooksRepository.create({
         name: 'foo',
+        store: 1,
       });
 
       expect(mockedPool.query).toHaveBeenCalledOnce();
       const [, params] = mockedPool.query.mock.calls[0]!;
 
       assert(params);
-      expect(params).toStrictEqual(['beforeCreate - foo', []]);
+      expect(params).toStrictEqual(['beforeCreate - foo', [], 1]);
     });
 
     it('should return single object result if single value is specified', async () => {
-      const product = generator.product({
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -103,7 +251,7 @@ describe('Repository', () => {
     });
 
     it('should return single object result if single value is specified - Promise.all', async () => {
-      const product = generator.product({
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -127,7 +275,7 @@ describe('Repository', () => {
     });
 
     it('should return void if single value is specified and returnRecords=false', async () => {
-      const product = generator.product({
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -153,7 +301,7 @@ describe('Repository', () => {
     });
 
     it('should support ignoring on conflict', async () => {
-      const product = generator.product({
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -185,7 +333,7 @@ describe('Repository', () => {
     });
 
     it('should support ignoring on conflict with returnRecords=false', async () => {
-      const product = generator.product({
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -214,7 +362,7 @@ describe('Repository', () => {
     });
 
     it('should support ignoring on conflict with specified returnSelect', async () => {
-      const product = generator.product({
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -238,8 +386,7 @@ describe('Repository', () => {
 
       expect(mockedPool.query).toHaveBeenCalledOnce();
       expect(result).toBeDefined();
-      // eslint-disable-next-line vitest-js/prefer-strict-equal
-      expect(result).toEqual(returnValue);
+      expect(result).toStrictEqual(returnValue);
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
       expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO NOTHING RETURNING "id","name"');
@@ -248,7 +395,7 @@ describe('Repository', () => {
     });
 
     it('should support merge on conflict', async () => {
-      const product = generator.product({
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -281,7 +428,7 @@ describe('Repository', () => {
     });
 
     it('should support merging on conflict with returnRecords=false', async () => {
-      const product = generator.product({
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -313,7 +460,7 @@ describe('Repository', () => {
     });
 
     it('should support merging on conflict with specified returnSelect', async () => {
-      const product = generator.product({
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -338,8 +485,7 @@ describe('Repository', () => {
 
       expect(mockedPool.query).toHaveBeenCalledOnce();
       expect(result).toBeDefined();
-      // eslint-disable-next-line vitest-js/prefer-strict-equal
-      expect(result).toEqual(returnValue);
+      expect(result).toStrictEqual(returnValue);
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
       expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) ON CONFLICT ("name") DO UPDATE SET "name"=EXCLUDED."name" RETURNING "id","name"');
@@ -359,10 +505,10 @@ describe('Repository', () => {
 
     it('should return object array results if multiple values are specified', async () => {
       const products = [
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
       ];
@@ -391,10 +537,10 @@ describe('Repository', () => {
 
     it('should return void if multiple values are specified and returnRecords=false', async () => {
       const products = [
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
       ];
@@ -422,8 +568,8 @@ describe('Repository', () => {
       expect(params).toStrictEqual([products[0]!.name, products[1]!.name, [], [], products[0]!.store, products[1]!.store]);
     });
 
-    it('should allow populated value parameters', async () => {
-      const product = generator.product({
+    it('should allow populated value parameters by passing the id directly', async () => {
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -431,7 +577,7 @@ describe('Repository', () => {
 
       const result = await ProductRepository.create({
         name: product.name,
-        store,
+        store: store.id,
       });
 
       expect(mockedPool.query).toHaveBeenCalledOnce();
@@ -444,50 +590,23 @@ describe('Repository', () => {
       expect(params).toStrictEqual([product.name, [], store.id]);
     });
 
-    it('should allow populated (QueryResult) value parameters', async () => {
-      const product = generator.product({
+    it('should allow partial object (omitting some required fields) as a value parameter', async () => {
+      const category = generateCategory();
+      const product: Pick<ProductSelect, 'id' | 'name'> = generateProduct({
         store: store.id,
       });
-
-      const storeAsQueryResult: QueryResult<Store> = {
-        ...store,
-      };
-
-      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
-
-      const result = await ProductRepository.create({
-        name: product.name,
-        store: storeAsQueryResult,
-      });
-
-      expect(mockedPool.query).toHaveBeenCalledOnce();
-      expect(result).toBeDefined();
-      expect(result).toStrictEqual(product);
-
-      const [query, params] = mockedPool.query.mock.calls[0]!;
-      expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
-      assert(params);
-      expect(params).toStrictEqual([product.name, [], store.id]);
-    });
-
-    it('should allow partial Entity (omitting some required fields) as a value parameter', async () => {
-      const category = generator.category();
-      const product: Pick<Product, 'id' | 'name'> = generator.product({
-        store: store.id,
-      });
-      const productCategory = generator.productCategory(product, category);
+      const productCategory = generateProductCategory(product, category);
 
       mockedPool.query.mockResolvedValueOnce(getQueryResult([productCategory]));
 
       const result = await ProductCategoryRepository.create({
-        product,
-        category,
+        product: product.id,
+        category: category.id,
       });
 
       expect(mockedPool.query).toHaveBeenCalledOnce();
       expect(result).toBeDefined();
-      // eslint-disable-next-line vitest-js/prefer-strict-equal
-      expect(result).toEqual(productCategory);
+      expect(result).toStrictEqual(productCategory);
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
       expect(query).toBe(
@@ -497,38 +616,12 @@ describe('Repository', () => {
       expect(params).toStrictEqual([product.id, category.id]);
     });
 
-    it(`should allow populated (Pick<T, 'id'>) value parameters`, async () => {
-      const product = generator.product({
-        store: store.id,
-      });
-
-      const storeAsPickId: Pick<Store, 'id'> = {
-        id: store.id,
-      };
-
-      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
-
-      const result = await ProductRepository.create({
-        name: product.name,
-        store: storeAsPickId,
-      });
-
-      expect(mockedPool.query).toHaveBeenCalledOnce();
-      expect(result).toBeDefined();
-      expect(result).toStrictEqual(product);
-
-      const [query, params] = mockedPool.query.mock.calls[0]!;
-      expect(query).toBe('INSERT INTO "products" ("name","alias_names","store_id") VALUES ($1,$2,$3) RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
-      assert(params);
-      expect(params).toStrictEqual([product.name, [], store.id]);
-    });
-
     it('should insert with string array value parameter', async () => {
-      const item = generator.simpleWithStringCollection();
+      const item = generateSimpleWithStringCollection();
 
       mockedPool.query.mockResolvedValueOnce(getQueryResult([item]));
 
-      const createParams: CreateUpdateParams<SimpleWithStringCollection> = {
+      const createParams: Record<string, unknown> = {
         name: item.name,
       };
       createParams.otherIds = item.otherIds;
@@ -546,10 +639,9 @@ describe('Repository', () => {
     });
 
     it('should ignore one-to-many collection values', async () => {
-      const product: Product = generator.product({
+      const product = generateProduct({
         store: store.id,
       });
-      product.categories = [];
 
       mockedPool.query.mockResolvedValueOnce(getQueryResult([store]));
       // Excess property check is bypassed via variable to test that collection values are ignored at runtime
@@ -567,8 +659,8 @@ describe('Repository', () => {
     });
 
     it('should ignore many-to-many collection values', async () => {
-      const category = generator.category();
-      const product: Product = generator.product({
+      const category = generateCategory();
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -587,66 +679,13 @@ describe('Repository', () => {
       assert(params);
       expect(params).toStrictEqual([product.name, [], product.store]);
     });
-
-    describe('toJSON()', () => {
-      it('should return plain object without prototype chain for single create', async () => {
-        const product = generator.product({
-          store: store.id,
-        });
-
-        mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
-
-        const result = await ProductRepository.create({
-          name: product.name,
-          store: store.id,
-        }).toJSON();
-
-        expect(result).toBeDefined();
-        expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
-        expect(result.name).toBe(product.name);
-      });
-
-      it('should return plain objects without prototype chain for array create', async () => {
-        const products = [generator.product({ store: store.id }), generator.product({ store: store.id })];
-
-        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
-
-        const result = await ProductRepository.create([
-          { name: products[0]!.name, store: store.id },
-          { name: products[1]!.name, store: store.id },
-        ]).toJSON();
-
-        expect(result).toHaveLength(2);
-        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
-        expect(Object.getPrototypeOf(result[1]!)).toBe(Object.prototype);
-      });
-
-      it('should work with returnSelect option', async () => {
-        const product = generator.product({
-          store: store.id,
-        });
-
-        mockedPool.query.mockResolvedValueOnce(getQueryResult([{ id: product.id, name: product.name }]));
-
-        const result = await ProductRepository.create(
-          {
-            name: product.name,
-            store: store.id,
-          },
-          { returnSelect: ['name'] },
-        ).toJSON();
-
-        expect(result).toBeDefined();
-        expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
-      });
-    });
   });
 
   describe('#update()', () => {
-    let store: QueryResult<Store>;
+    let store: StoreSelect;
 
     beforeEach(() => {
-      store = generator.store();
+      store = generateStore();
     });
 
     it('should execute beforeUpdate if defined as a schema method', async () => {
@@ -660,7 +699,7 @@ describe('Repository', () => {
 
       const id = faker.number.int();
 
-      await ProductWithCreateUpdateDateTrackingRepository.update(
+      await ProductWithHooksRepository.update(
         {
           id,
         },
@@ -677,7 +716,7 @@ describe('Repository', () => {
     });
 
     it('should return array of updated objects if second parameter is not defined', async () => {
-      const product: Product = generator.product({
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -703,7 +742,7 @@ describe('Repository', () => {
     });
 
     it('should return array of updated objects if second parameter is not defined - Promise.all', async () => {
-      const product: Product = generator.product({
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -731,7 +770,7 @@ describe('Repository', () => {
     });
 
     it('should return void if returnRecords=false', async () => {
-      const product: Product = generator.product({
+      const product = generateProduct({
         store: store.id,
       });
 
@@ -759,14 +798,10 @@ describe('Repository', () => {
       expect(params).toStrictEqual([product.name, product.store, product.id]);
     });
 
-    it('should allow populated (QueryResult) value parameters', async () => {
-      const product = generator.product({
+    it('should allow update with foreign key id values', async () => {
+      const product = generateProduct({
         store: store.id,
       });
-
-      const storeAsQueryResult: QueryResult<Store> = {
-        ...store,
-      };
 
       mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
 
@@ -776,7 +811,7 @@ describe('Repository', () => {
         },
         {
           name: product.name,
-          store: storeAsQueryResult,
+          store: store.id,
         },
       );
 
@@ -789,42 +824,12 @@ describe('Repository', () => {
       expect(params).toStrictEqual([product.name, store.id, product.id]);
     });
 
-    it(`should allow populated (Pick<T, 'id'>) value parameters`, async () => {
-      const product = generator.product({
+    it('should allow partial object (omitting some required fields) as a value parameter', async () => {
+      const category = generateCategory();
+      const product: Pick<ProductSelect, 'id' | 'name'> = generateProduct({
         store: store.id,
       });
-
-      const storeAsPickId: Pick<Store, 'id'> = {
-        id: store.id,
-      };
-
-      mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
-
-      const results = await ProductRepository.update(
-        {
-          id: product,
-        },
-        {
-          name: product.name,
-          store: storeAsPickId,
-        },
-      );
-
-      expect(mockedPool.query).toHaveBeenCalledOnce();
-      expect(results).toStrictEqual([product]);
-
-      const [query, params] = mockedPool.query.mock.calls[0]!;
-      expect(query).toBe('UPDATE "products" SET "name"=$1,"store_id"=$2 WHERE "id"=$3 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
-      assert(params);
-      expect(params).toStrictEqual([product.name, store.id, product.id]);
-    });
-
-    it('should allow partial Entity (omitting some required fields) as a value parameter', async () => {
-      const category = generator.category();
-      const product: Pick<Product, 'id' | 'name'> = generator.product({
-        store: store.id,
-      });
-      const productCategory = generator.productCategory(product, category);
+      const productCategory = generateProductCategory(product, category);
 
       mockedPool.query.mockResolvedValueOnce(getQueryResult([productCategory]));
 
@@ -833,14 +838,13 @@ describe('Repository', () => {
           id: productCategory.id,
         },
         {
-          product,
-          category,
+          product: product.id,
+          category: category.id,
         },
       );
 
       expect(mockedPool.query).toHaveBeenCalledOnce();
-      // eslint-disable-next-line vitest-js/prefer-strict-equal
-      expect(results).toEqual([productCategory]);
+      expect(results).toStrictEqual([productCategory]);
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
       expect(query).toBe(
@@ -849,46 +853,21 @@ describe('Repository', () => {
       assert(params);
       expect(params).toStrictEqual([product.id, category.id, productCategory.id]);
     });
-
-    describe('toJSON()', () => {
-      it('should return plain objects without prototype chain', async () => {
-        const products = [generator.product({ store: store.id }), generator.product({ store: store.id })];
-
-        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
-
-        const result = await ProductRepository.update({ store: store.id }, { name: 'updated' }).toJSON();
-
-        expect(result).toHaveLength(2);
-        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
-        expect(Object.getPrototypeOf(result[1]!)).toBe(Object.prototype);
-      });
-
-      it('should work with returnSelect option', async () => {
-        const products = [{ id: 1, name: 'updated' }];
-
-        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
-
-        const result = await ProductRepository.update({ id: 1 }, { name: 'updated' }, { returnSelect: ['name'] }).toJSON();
-
-        expect(result).toHaveLength(1);
-        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
-      });
-    });
   });
 
   describe('#destroy()', () => {
-    let store: QueryResult<Store>;
+    let store: StoreSelect;
 
     beforeEach(() => {
-      store = generator.store();
+      store = generateStore();
     });
 
     it('should delete all records and return void if there are no constraints', async () => {
       const products = [
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
       ];
@@ -906,10 +885,10 @@ describe('Repository', () => {
 
     it('should delete all records if empty constraint and return all data if returnRecords=true', async () => {
       const products = [
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
       ];
@@ -928,10 +907,10 @@ describe('Repository', () => {
 
     it('should delete all records if empty constraint and return specific columns if returnSelect is specified', async () => {
       const products = [
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
       ];
@@ -950,10 +929,10 @@ describe('Repository', () => {
 
     it('should delete all records if empty constraint and return id column if returnSelect is empty', async () => {
       const products = [
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
       ];
@@ -972,10 +951,10 @@ describe('Repository', () => {
 
     it('should support call constraints as a parameter', async () => {
       const products = [
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
       ];
@@ -984,7 +963,7 @@ describe('Repository', () => {
 
       const result = await ProductRepository.destroy({
         id: products.map((item) => item.id),
-        store,
+        store: store.id,
       });
       expect(result).toBeUndefined();
 
@@ -996,10 +975,10 @@ describe('Repository', () => {
 
     it('should support call constraints as a parameter if returnRecords=true', async () => {
       const products = [
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
       ];
@@ -1009,7 +988,7 @@ describe('Repository', () => {
       const result = await ProductRepository.destroy(
         {
           id: products.map((item) => item.id),
-          store,
+          store: store.id,
         },
         { returnRecords: true },
       );
@@ -1023,16 +1002,7 @@ describe('Repository', () => {
     });
 
     it('should support call with chained where constraints', async () => {
-      const products = [
-        generator.product({
-          store: store.id,
-        }),
-        generator.product({
-          store: store.id,
-        }),
-      ];
-
-      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
 
       const result = await ProductRepository.destroy().where({
         store: store.id,
@@ -1047,10 +1017,7 @@ describe('Repository', () => {
 
     it('should support call with chained where constraints if returnRecords=true', async () => {
       const products = [
-        generator.product({
-          store: store.id,
-        }),
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
       ];
@@ -1069,16 +1036,7 @@ describe('Repository', () => {
     });
 
     it('should support call with chained where constraints - Promise.all', async () => {
-      const products = [
-        generator.product({
-          store: store.id,
-        }),
-        generator.product({
-          store: store.id,
-        }),
-      ];
-
-      mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
       const [result] = await Promise.all([
         ProductRepository.destroy().where({
           store: store.id,
@@ -1094,10 +1052,7 @@ describe('Repository', () => {
 
     it('should support call with chained where constraints if returnRecords=true - Promise.all', async () => {
       const products = [
-        generator.product({
-          store: store.id,
-        }),
-        generator.product({
+        generateProduct({
           store: store.id,
         }),
       ];
@@ -1115,53 +1070,6 @@ describe('Repository', () => {
       expect(query).toBe('DELETE FROM "products" WHERE "store_id"=$1 RETURNING "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store"');
       assert(params);
       expect(params).toStrictEqual([store.id]);
-    });
-
-    describe('toJSON()', () => {
-      it('should return plain objects without prototype chain when returnRecords is true', async () => {
-        const products = [generator.product({ store: store.id }), generator.product({ store: store.id })];
-
-        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
-
-        const result = await ProductRepository.destroy({}, { returnRecords: true }).toJSON();
-
-        expect(result).toHaveLength(2);
-        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
-        expect(Object.getPrototypeOf(result[1]!)).toBe(Object.prototype);
-      });
-
-      it('should work with where clause', async () => {
-        const products = [generator.product({ store: store.id })];
-
-        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
-
-        const result = await ProductRepository.destroy({ store: store.id }, { returnRecords: true }).toJSON();
-
-        expect(result).toHaveLength(1);
-        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
-      });
-
-      it('should work with chained where', async () => {
-        const products = [generator.product({ store: store.id })];
-
-        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
-
-        const result = await ProductRepository.destroy({}, { returnRecords: true }).where({ store: store.id }).toJSON();
-
-        expect(result).toHaveLength(1);
-        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
-      });
-
-      it('should work with returnSelect option', async () => {
-        const products = [{ id: 1, name: 'deleted' }];
-
-        mockedPool.query.mockResolvedValueOnce(getQueryResult(products));
-
-        const result = await ProductRepository.destroy({}, { returnSelect: ['name'] }).toJSON();
-
-        expect(result).toHaveLength(1);
-        expect(Object.getPrototypeOf(result[0]!)).toBe(Object.prototype);
-      });
     });
   });
 });

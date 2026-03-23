@@ -1,9 +1,5 @@
-import { table } from '../../src/index.js';
+import { view } from '../../src/schema/index.js';
 
-import { Product } from './Product.js';
+import { productColumns } from './Product.js';
 
-@table({
-  name: 'readonly_products',
-  readonly: true,
-})
-export class ReadonlyProduct extends Product {}
+export const ReadonlyProduct = view('readonly_products', productColumns);

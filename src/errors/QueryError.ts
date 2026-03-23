@@ -1,8 +1,7 @@
-import type { Entity } from '../Entity.js';
 import type { ModelMetadata } from '../metadata/index.js';
 import type { WhereQuery } from '../query/index.js';
 
-export class QueryError<T extends Entity> extends Error {
+export class QueryError<T extends Record<string, unknown>> extends Error {
   public model: ModelMetadata<T>;
 
   public where: WhereQuery<T> | undefined;

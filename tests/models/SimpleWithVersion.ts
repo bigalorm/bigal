@@ -1,20 +1,9 @@
-import { column, table, versionColumn } from '../../src/index.js';
+import { integer, table, text } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple_with_version',
-})
-export class SimpleWithVersion extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-
-  @versionColumn({
-    type: 'integer',
-    required: true,
-  })
-  public version!: number;
-}
+export const SimpleWithVersion = table('simple_with_version', {
+  ...modelBase,
+  name: text().notNull(),
+  version: integer().version(),
+});

@@ -1,17 +1,13 @@
-import { column, table, updateDateColumn } from '../../src/index.js';
+import { table, text, updatedAt } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithUpdatedAt extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-
-  @updateDateColumn()
-  public updatedAt!: Date;
-}
+export const SimpleWithUpdatedAt = table(
+  'simple',
+  {
+    ...modelBase,
+    name: text().notNull(),
+    updatedAt: updatedAt(),
+  },
+  { modelName: 'SimpleWithUpdatedAt' },
+);

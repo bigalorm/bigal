@@ -1,17 +1,10 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { table, text, uuid } from '../../src/schema/index.js';
 
-@table({
-  name: 'simple_with_uuid',
-})
-export class SimpleWithUUID extends Entity {
-  @primaryColumn({
-    type: 'uuid',
-  })
-  public id!: string;
-
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-}
+export const SimpleWithUUID = table(
+  'simple_with_uuid',
+  {
+    id: uuid().primaryKey(),
+    name: text().notNull(),
+  },
+  { modelName: 'SimpleWithUUID' },
+);
