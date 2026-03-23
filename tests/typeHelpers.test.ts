@@ -122,9 +122,8 @@ describe('EntityOrId and InferSelect', () => {
 });
 
 describe('CreateUpdateParams', () => {
-  it('should accept FK value for belongsTo with concrete schema', () => {
-    type ProductParams = CreateUpdateParams<ProductRow, ProductSchema>;
-    // Both FK value and hydrated object should be assignable
+  it('should accept FK value for belongsTo', () => {
+    type ProductParams = CreateUpdateParams<ProductRow>;
     const withFk: ProductParams = { store: 5 };
     const withObject: ProductParams = { store: { id: 5, name: 'Acme' } };
     void withFk;
@@ -132,15 +131,15 @@ describe('CreateUpdateParams', () => {
   });
 
   it('should not widen non-FK columns', () => {
-    type ProductParams = CreateUpdateParams<ProductRow, ProductSchema>;
+    type ProductParams = CreateUpdateParams<ProductRow>;
     // @ts-expect-error - name is string, not widened to accept objects
     const bad: ProductParams = { name: { not: 'a string' } };
     void bad;
   });
 
-  it('should be simple Partial without schema (backward compat)', () => {
-    type PlainParams = CreateUpdateParams<ProductRow>;
-    expectTypeOf<PlainParams>().toEqualTypeOf<Partial<ProductRow>>();
+  it('should be Partial<T>', () => {
+    type ProductParams = CreateUpdateParams<ProductRow>;
+    expectTypeOf<ProductParams>().toEqualTypeOf<Partial<ProductRow>>();
   });
 });
 

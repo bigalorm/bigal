@@ -222,8 +222,9 @@ public products?: Product[];
 products: hasMany('Product').via('store'),
 ```
 
-`hasMany` columns are excluded from both the select and insert types. They only appear after
-`.populate()`.
+`hasMany` columns appear in `InferSelect` as optional `Record<string, unknown>[]` to support
+populate. `QueryResult` strips them from results, so they only appear after `.populate()`.
+They are excluded from the insert type entirely.
 
 ### Many-to-many (hasMany with through)
 
@@ -244,32 +245,17 @@ categories: hasMany('Category')
 
 ### Circular references
 
-Arrow functions are still supported for circular references between tables. String references avoid
-the circular import problem entirely in most cases:
+String references avoid the circular import problem entirely. `belongsTo` and `hasMany` accept only
+string model names - arrow functions are not supported:
 
 ```ts
-// String references -- no circular import needed
+// String references - no circular import needed
 store: belongsTo('Store'),
 products: hasMany('Product').via('store'),
 ```
 
-If you need a registry for complex cases:
-
-```ts
-const tables: Record<string, TableDefinition<any, any>> = {};
-
-const Product = table('products', {
-  store: belongsTo(() => tables.Store!),
-  // ...
-});
-tables.Product = Product;
-
-const Store = table('stores', {
-  products: hasMany(() => tables.Product!).via('store'),
-  // ...
-});
-tables.Store = Store;
-```
+Model names are resolved at `initialize()` time. All referenced models must be included in the
+`models` object or array.
 
 ## Initialization
 
@@ -512,7 +498,7 @@ export const ProductSummary = view('product_summaries', {
 
 ### String references
 
-Use model name strings instead of arrow functions for relationships:
+Relationships use string model names. Arrow functions are not supported:
 
 ```ts
 store: belongsTo('Store'),

@@ -38,14 +38,14 @@ const storeSchema = {
   name: text(),
   products: hasMany('Product').via('store'),
 };
-const StoreDef = table('stores', storeSchema);
+const StoreModel = table('stores', storeSchema);
 
 const categorySchema = {
   ...modelBase,
   name: text().notNull(),
   products: hasMany('Product').through('ProductCategory').via('category'),
 };
-const CategoryDef = table('categories', categorySchema);
+const CategoryModel = table('categories', categorySchema);
 
 const productSchema = {
   ...modelBase,
@@ -56,7 +56,7 @@ const productSchema = {
   store: belongsTo('Store'),
   categories: hasMany('Category').through('ProductCategory').via('product'),
 };
-const ProductDef = table('products', productSchema);
+const ProductModel = table('products', productSchema);
 
 const productCategorySchema = {
   ...modelBase,
@@ -65,12 +65,12 @@ const productCategorySchema = {
   ordering: integer(),
   isPrimary: booleanColumn(),
 };
-const ProductCategoryDef = table('product__category', productCategorySchema);
+const ProductCategoryModel = table('product__category', productCategorySchema);
 
 const hookedProductSchema = {
   ...productSchema,
 };
-const ProductWithHooksDef = table('products', hookedProductSchema, {
+const ProductWithHooksModel = table('products', hookedProductSchema, {
   hooks: {
     async beforeCreate(values) {
       await Promise.resolve();
@@ -93,15 +93,15 @@ const stringCollectionSchema = {
   name: text().notNull(),
   otherIds: textArray().default([]),
 };
-const SimpleWithStringCollectionDef = table('simple', stringCollectionSchema);
+const SimpleWithStringCollectionModel = table('simple', stringCollectionSchema);
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type ProductSelect = InferSelect<(typeof ProductDef)['schema']>;
-type ProductCategorySelect = InferSelect<(typeof ProductCategoryDef)['schema']>;
-type StoreSelect = InferSelect<(typeof StoreDef)['schema']>;
+type ProductSelect = InferSelect<(typeof ProductModel)['schema']>;
+type ProductCategorySelect = InferSelect<(typeof ProductCategoryModel)['schema']>;
+type StoreSelect = InferSelect<(typeof StoreModel)['schema']>;
 
 // ---------------------------------------------------------------------------
 // Generators (plain objects)
@@ -126,7 +126,7 @@ function generateProduct(args: Partial<ProductSelect> & Pick<ProductSelect, 'sto
   };
 }
 
-function generateCategory(args?: Partial<InferSelect<(typeof CategoryDef)['schema']>>): InferSelect<(typeof CategoryDef)['schema']> {
+function generateCategory(args?: Partial<InferSelect<(typeof CategoryModel)['schema']>>): InferSelect<(typeof CategoryModel)['schema']> {
   return {
     id: faker.number.int(),
     name: `Category - ${faker.string.uuid()}`,
@@ -134,7 +134,7 @@ function generateCategory(args?: Partial<InferSelect<(typeof CategoryDef)['schem
   };
 }
 
-function generateProductCategory(productInput: Pick<ProductSelect, 'id'> | number, categoryInput: Pick<InferSelect<(typeof CategoryDef)['schema']>, 'id'> | number): ProductCategorySelect {
+function generateProductCategory(productInput: Pick<ProductSelect, 'id'> | number, categoryInput: Pick<InferSelect<(typeof CategoryModel)['schema']>, 'id'> | number): ProductCategorySelect {
   return {
     id: faker.number.int(),
     product: typeof productInput === 'number' ? productInput : productInput.id,
@@ -144,7 +144,7 @@ function generateProductCategory(productInput: Pick<ProductSelect, 'id'> | numbe
   };
 }
 
-function generateSimpleWithStringCollection(args?: Partial<InferSelect<(typeof SimpleWithStringCollectionDef)['schema']>>): InferSelect<(typeof SimpleWithStringCollectionDef)['schema']> {
+function generateSimpleWithStringCollection(args?: Partial<InferSelect<(typeof SimpleWithStringCollectionModel)['schema']>>): InferSelect<(typeof SimpleWithStringCollectionModel)['schema']> {
   return {
     id: faker.number.int(),
     name: `WithStringCollection - ${faker.string.uuid()}`,
@@ -162,27 +162,27 @@ describe('Repository', () => {
 
   let ProductRepository: IRepository<ProductSelect>;
   let ProductCategoryRepository: IRepository<ProductCategorySelect>;
-  let SimpleWithStringCollectionRepository: IRepository<InferSelect<(typeof SimpleWithStringCollectionDef)['schema']>>;
+  let SimpleWithStringCollectionRepository: IRepository<InferSelect<(typeof SimpleWithStringCollectionModel)['schema']>>;
   let StoreRepository: IRepository<StoreSelect>;
-  let ProductWithHooksRepository: IRepository<InferSelect<(typeof ProductWithHooksDef)['schema']>>;
+  let ProductWithHooksRepository: IRepository<InferSelect<(typeof ProductWithHooksModel)['schema']>>;
 
   beforeAll(() => {
     const bigal = initialize({
-      models: [CategoryDef, ProductDef, ProductCategoryDef, SimpleWithStringCollectionDef, StoreDef],
+      models: [CategoryModel, ProductModel, ProductCategoryModel, SimpleWithStringCollectionModel, StoreModel],
       pool: mockedPool,
     });
 
-    ProductRepository = bigal.getRepository(ProductDef);
-    ProductCategoryRepository = bigal.getRepository(ProductCategoryDef);
-    SimpleWithStringCollectionRepository = bigal.getRepository(SimpleWithStringCollectionDef);
-    StoreRepository = bigal.getRepository(StoreDef);
+    ProductRepository = bigal.getRepository(ProductModel);
+    ProductCategoryRepository = bigal.getRepository(ProductCategoryModel);
+    SimpleWithStringCollectionRepository = bigal.getRepository(SimpleWithStringCollectionModel);
+    StoreRepository = bigal.getRepository(StoreModel);
 
     // Separate instance for hooked models since they share the 'products' table name
     const hookedBigal = initialize({
-      models: [ProductWithHooksDef, StoreDef, CategoryDef, ProductCategoryDef],
+      models: [ProductWithHooksModel, StoreModel, CategoryModel, ProductCategoryModel],
       pool: mockedPool,
     });
-    ProductWithHooksRepository = hookedBigal.getRepository(ProductWithHooksDef);
+    ProductWithHooksRepository = hookedBigal.getRepository(ProductWithHooksModel);
   });
 
   beforeEach(() => {

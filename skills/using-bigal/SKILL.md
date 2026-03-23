@@ -380,11 +380,13 @@ const { results, totalCount } = await Product
 
 ### Populate (eager loading)
 
+With object-style `initialize({ models: { Product, Store } })`, populate results are fully typed.
+
 ```ts
 const product = await Product.findOne()
   .where({ id: 42 })
   .populate('store', { select: ['name'] });
-// product.store is the full Store entity
+// product.store is typed as the full Store entity
 ```
 
 ### Joins
@@ -531,7 +533,7 @@ const results = await query;
 
 ### QueryResult accepts TableDefinition directly
 
-`QueryResult<typeof Model>` produces the row type with hasMany excluded and FKs narrowed:
+`QueryResult<typeof Model>` produces the row type with hasMany stripped and FKs narrowed:
 
 ```ts
 import type { QueryResult } from 'bigal';

@@ -313,8 +313,9 @@ categories: hasMany('Category')
   .via('product'),
 ```
 
-`hasMany` columns are excluded from both the select and insert types. They are only present
-after `.populate()`.
+`hasMany` columns appear in `InferSelect` as optional `Record<string, unknown>[]` to support
+populate. `QueryResult` strips them from results, so they only appear after `.populate()`.
+They are excluded from the insert type entirely.
 
 See [Relationships](/guide/relationships) for complete examples.
 
@@ -352,7 +353,7 @@ import type { QueryResult, InferInsert } from 'bigal';
 type ProductRow = QueryResult<typeof Product>;
 // { id: number; name: string; priceCents: number; isActive: boolean;
 //   store: number; metadata: { color?: string } | null; createdAt: Date; updatedAt: Date }
-// hasMany collections (categories) are excluded
+// hasMany collections (categories) are stripped by QueryResult
 
 type ProductInsert = InferInsert<(typeof Product)['schema']>;
 // { name: string; priceCents: number; store: number;  <-- required

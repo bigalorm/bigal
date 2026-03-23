@@ -225,7 +225,7 @@ These v15 exports no longer exist:
 - All 7 lifecycle hooks - `beforeCreate`, `afterCreate`,
   `beforeUpdate`, `afterUpdate`, `beforeDestroy`, `afterDestroy`,
   `afterFind`
-- String references - `belongsTo('Store')` instead of arrow functions
+- String references - `belongsTo('Store')` with model name strings only
 - Auto-derived names - column names from property keys, model names
   from table names
 - pgvector - `vector({ dimensions })` with nearest-neighbor sort and

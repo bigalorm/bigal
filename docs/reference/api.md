@@ -243,10 +243,10 @@ store: belongsTo('Store', { name: 'shop_id' }),
 
 **Parameters:**
 
-| Parameter  | Type                           | Description                                             |
-| ---------- | ------------------------------ | ------------------------------------------------------- |
-| `modelRef` | `string` or `() => TableDef`   | Model name string or arrow function returning table def |
-| `options`  | `string` or `{ name: string }` | FK column name (auto-derived as `snakeCase(key)_id`)    |
+| Parameter   | Type                           | Description                                          |
+| ----------- | ------------------------------ | ---------------------------------------------------- |
+| `modelName` | `string`                       | Model name string (e.g., `'Store'`)                  |
+| `options`   | `string` or `{ name: string }` | FK column name (auto-derived as `snakeCase(key)_id`) |
 
 **Select type:** the FK type (typically `number`).
 
@@ -275,7 +275,8 @@ categories: hasMany('Category')
 | `.via(propertyName)` | Property on the related table with the FK |
 | `.through(modelRef)` | Junction table for many-to-many           |
 
-`hasMany` columns are excluded from both the select and insert types.
+`hasMany` columns appear in `InferSelect` as optional `Record<string, unknown>[]` to support
+populate. `QueryResult` strips them from query results, so they only appear after `.populate()`.
 
 ## Repository
 
@@ -491,10 +492,12 @@ type VectorDistanceMetric = 'cosine' | 'innerProduct' | 'l1' | 'l2';
 
 ### QueryResult\<T\>
 
-Produces the row type for query results. Accepts a `TableDefinition` directly or a row type:
+Produces the row type for query results. Accepts a `TableDefinition` directly or a row type.
+Strips hasMany collections (which appear in `InferSelect` as optional arrays) and narrows
+belongsTo FK types:
 
 ```ts
-// From a TableDefinition - excludes hasMany, narrows FKs
+// From a TableDefinition - strips hasMany, narrows FKs
 type ProductRow = QueryResult<typeof Product>;
 
 // From a row type - passthrough
