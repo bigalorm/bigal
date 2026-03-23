@@ -1,3 +1,5 @@
+import type { EntityOrId } from '../types/EntityOrId.js';
+
 import type { BelongsToBuilder, BelongsToConfig } from './BelongsToBuilder.js';
 import type { ColumnBuilder, ColumnBuilderConfig } from './ColumnBuilder.js';
 import type { HasManyBuilder } from './HasManyBuilder.js';
@@ -58,20 +60,20 @@ type OptionalInsertKeys<TSchema extends SchemaDefinition> = Exclude<SelectKeys<T
 
 /**
  * Extracts the TypeScript select type for a single schema entry.
- * - ColumnBuilder: `TData` if notNull is true, otherwise `TData | null`
- * - BelongsToBuilder: the FK type (typically `number`)
+ * - ColumnBuilder: `TData` if notNull, otherwise `TData | null`
+ * - BelongsToBuilder: `EntityOrId<TFk>` - accepts FK value or entity object with matching id.
+ *   Use `QueryResult` to narrow back to just the FK type for query results.
  * - HasManyBuilder: never (excluded at the key level)
  */
 type InferSelectColumn<TEntry extends SchemaEntry> =
-  TEntry extends ColumnBuilder<infer TConf> ? (TConf extends { notNull: true } ? TConf['data'] : TConf['data'] | null) : TEntry extends BelongsToBuilder<infer TFk> ? TFk : never;
+  TEntry extends ColumnBuilder<infer TConf> ? (TConf extends { notNull: true } ? TConf['data'] : TConf['data'] | null) : TEntry extends BelongsToBuilder<infer TFk> ? EntityOrId<TFk> : never;
 
 /**
  * Extracts the TypeScript insert type for a single schema entry.
- * Same as select type: the insert value for a column is the same TS type,
- * but whether the key is required or optional is handled by RequiredInsertKeys/OptionalInsertKeys.
+ * Same widening as select: belongsTo accepts FK value or entity object.
  */
 type InferInsertColumn<TEntry extends SchemaEntry> =
-  TEntry extends ColumnBuilder<infer TConf> ? (TConf extends { notNull: true } ? TConf['data'] : TConf['data'] | null) : TEntry extends BelongsToBuilder<infer TFk> ? TFk : never;
+  TEntry extends ColumnBuilder<infer TConf> ? (TConf extends { notNull: true } ? TConf['data'] : TConf['data'] | null) : TEntry extends BelongsToBuilder<infer TFk> ? EntityOrId<TFk> : never;
 
 // ---------------------------------------------------------------------------
 // Public mapped types

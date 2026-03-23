@@ -1,6 +1,18 @@
 import { describe, expectTypeOf, it } from 'vitest';
 
-import type { BelongsToKeys, CreateUpdateParams, HasManyKeys, IRepository, InferSelect, ModelRelationshipKeys, QueryResult, RelationshipKeys, Repository, WhereQuery } from '../src/index.js';
+import type {
+  BelongsToKeys,
+  CreateUpdateParams,
+  EntityOrId,
+  HasManyKeys,
+  IRepository,
+  InferSelect,
+  ModelRelationshipKeys,
+  QueryResult,
+  RelationshipKeys,
+  Repository,
+  WhereQuery,
+} from '../src/index.js';
 import { serial, table, text, varchar } from '../src/schema/index.js';
 
 import { Product } from './models/Product.js';
@@ -85,6 +97,27 @@ describe('QueryResult', () => {
   it('should be identity without schema (backward compat)', () => {
     type PlainResult = QueryResult<ProductRow>;
     expectTypeOf<PlainResult>().toEqualTypeOf<ProductRow>();
+  });
+});
+
+describe('EntityOrId and InferSelect', () => {
+  it('should widen belongsTo to EntityOrId in InferSelect', () => {
+    expectTypeOf<ProductRow['store']>().toEqualTypeOf<EntityOrId<number>>();
+  });
+
+  it('should accept FK value for belongsTo', () => {
+    const row: Pick<ProductRow, 'store'> = { store: 5 };
+    void row;
+  });
+
+  it('should accept entity object with id for belongsTo', () => {
+    const row: Pick<ProductRow, 'store'> = { store: { id: 5, name: 'Acme' } };
+    void row;
+  });
+
+  it('should narrow belongsTo back to FK type in QueryResult', () => {
+    type ProductResult = QueryResult<typeof Product>;
+    expectTypeOf<ProductResult['store']>().toEqualTypeOf<number>();
   });
 });
 

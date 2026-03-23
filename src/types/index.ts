@@ -1,5 +1,6 @@
 export * from './PoolLike.js';
 export * from './CreateUpdateParams.js';
+export * from './EntityOrId.js';
 export * from './ExcludeEntityCollections.js';
 export * from './ExcludeFunctions.js';
 export * from './GetValueType.js';

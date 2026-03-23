@@ -29,6 +29,7 @@ import {
   uuid,
   varchar,
 } from '../src/schema/index.js';
+import type { EntityOrId } from '../src/types/index.js';
 
 // ---------------------------------------------------------------------------
 // Shared base column definitions
@@ -236,8 +237,8 @@ describe('Schema builder type inference', () => {
         expectTypeOf<ProductSelect['metadata']>().toEqualTypeOf<{ color?: string } | null>();
       });
 
-      it('store is number (belongsTo FK)', () => {
-        expectTypeOf<ProductSelect['store']>().toEqualTypeOf<number>();
+      it('store is EntityOrId<number> (belongsTo FK)', () => {
+        expectTypeOf<ProductSelect['store']>().toEqualTypeOf<EntityOrId<number>>();
       });
 
       it('categories excluded (hasMany not in select)', () => {
@@ -270,12 +271,12 @@ describe('Schema builder type inference', () => {
     });
 
     describe('ProductCategory (junction table)', () => {
-      it('product is number (belongsTo FK)', () => {
-        expectTypeOf<ProductCategorySelect['product']>().toEqualTypeOf<number>();
+      it('product is EntityOrId<number> (belongsTo FK)', () => {
+        expectTypeOf<ProductCategorySelect['product']>().toEqualTypeOf<EntityOrId<number>>();
       });
 
-      it('category is number (belongsTo FK)', () => {
-        expectTypeOf<ProductCategorySelect['category']>().toEqualTypeOf<number>();
+      it('category is EntityOrId<number> (belongsTo FK)', () => {
+        expectTypeOf<ProductCategorySelect['category']>().toEqualTypeOf<EntityOrId<number>>();
       });
 
       it('ordering is number | null', () => {
@@ -298,8 +299,8 @@ describe('Schema builder type inference', () => {
     });
 
     describe('SelfReferential model', () => {
-      it('parent is number (belongsTo FK)', () => {
-        expectTypeOf<SelfRefSelect['parent']>().toEqualTypeOf<number>();
+      it('parent is EntityOrId<number> (belongsTo FK)', () => {
+        expectTypeOf<SelfRefSelect['parent']>().toEqualTypeOf<EntityOrId<number>>();
       });
 
       it('children excluded (hasMany)', () => {
@@ -410,7 +411,7 @@ describe('Schema builder type inference', () => {
       });
 
       it('requires store (belongsTo FK)', () => {
-        expectTypeOf<Pick<Required<ProductInsert>, 'store'>>().toEqualTypeOf<{ store: number }>();
+        expectTypeOf<Pick<Required<ProductInsert>, 'store'>>().toEqualTypeOf<{ store: EntityOrId<number> }>();
       });
 
       it('accepts minimal insert with only required fields', () => {
