@@ -88,40 +88,40 @@ export const ProductCategory = table('product__category', {
 
 ## Self-referencing relationships
 
-Tables can reference themselves for hierarchical data. Use arrow functions when the table references
-itself:
+Models can reference themselves for hierarchical data. Use the model name string (auto-derived
+from the table name, or set via `modelName` option):
 
 ```ts
-const tables: Record<string, TableDefinition<any, any>> = {};
-
 export const Category = table('categories', {
   id: serial().primaryKey(),
   name: text().notNull(),
-  parent: belongsTo(() => tables.Category!),
-  children: hasMany(() => tables.Category!).via('parent'),
+  parent: belongsTo('Category'),
+  children: hasMany('Category').via('parent'),
 });
-tables.Category = Category;
 ```
 
-Use a registry object with arrow functions to handle the circular reference.
+String references are resolved at `initialize()` time, so there is no circular import issue.
 
 ## Arrow functions vs string references
 
 Both approaches work for `belongsTo` and `hasMany`:
 
 ```ts
-// String references (preferred) -- no imports needed
+// String references (preferred) - no imports needed, works for self-references
 store: belongsTo('Store'),
 products: hasMany('Product').via('store'),
 categories: hasMany('Category').through('ProductCategory').via('product'),
+parent: belongsTo('Category'),  // self-reference works with strings
 
-// Arrow functions -- useful for self-references or explicit table definition refs
+// Arrow functions - useful when you need to reference the TableDefinition directly
 store: belongsTo(() => Store),
 products: hasMany(() => Product).via('store'),
 ```
 
-String references use the model name, which is auto-derived from the table name. Arrow functions
-defer evaluation, which can help with circular imports.
+String references use the model name, which is auto-derived from the table name. They are resolved
+at `initialize()` time, so self-references and cross-file references work without issues. Arrow
+functions defer evaluation and are only needed when you want to reference the `TableDefinition`
+object directly.
 
 ## QueryResult type narrowing
 
