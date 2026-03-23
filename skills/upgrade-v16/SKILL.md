@@ -184,12 +184,12 @@ let product: Product;
 let params: CreateUpdateParams<Product>;
 let result: QueryResult<Product>;
 
-// After (v16) - pass the model definition directly
+// After (v16) - use typeof Model everywhere
 import type { QueryResult, CreateUpdateParams, InferInsert, Repository } from 'bigal';
 
-type ProductRow = QueryResult<typeof Product>;
-type ProductParams = CreateUpdateParams<ProductRow>;
-type ProductInsert = InferInsert<(typeof Product)['schema']>;
+let product: QueryResult<typeof Product>;
+let params: CreateUpdateParams<QueryResult<typeof Product>>;
+let insert: InferInsert<(typeof Product)['schema']>;
 
 // For repository type annotations:
 function getProducts(repo: Repository<typeof Product>) {
@@ -197,12 +197,12 @@ function getProducts(repo: Repository<typeof Product>) {
 }
 ```
 
-`QueryResult<typeof Product>` replaces both `Product` (as a row type) and
-`QueryResult<Product>` from v15. It narrows belongsTo to FK values and excludes
-hasMany collections.
+Use `typeof Product` as the single source of truth for all type references:
 
-`CreateUpdateParams<ProductRow>` works with a single type argument. BelongsTo
-fields automatically accept both FK values and entity objects via `EntityOrId`.
+- `QueryResult<typeof Product>` - row type for query results (narrows FKs, excludes hasMany)
+- `CreateUpdateParams<QueryResult<typeof Product>>` - partial type for create/update
+- `Repository<typeof Product>` - typed repository
+- `InferInsert<(typeof Product)['schema']>` - insert params with required/optional awareness
 
 ## Removed Exports
 
