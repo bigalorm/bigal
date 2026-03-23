@@ -189,14 +189,20 @@ Reference model names by string (`'Store'`, not `Store`) to avoid circular impor
 
 ### Shared columns
 
+Extract a shared base only for universal columns (id + timestamps). Keep domain-specific
+columns inline in each model - avoid creating hierarchies of base objects.
+
 ```ts
-const modelBase = { id: serial().primaryKey() };
-const timestamps = { createdAt: createdAt(), updatedAt: updatedAt() };
+const modelBase = {
+  id: serial().primaryKey(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+};
 
 export const Product = table('products', {
   ...modelBase,
-  ...timestamps,
   name: text().notNull(),
+  store: belongsTo('Store'),
 });
 ```
 

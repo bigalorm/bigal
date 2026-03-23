@@ -320,27 +320,24 @@ See [Relationships](/guide/relationships) for complete examples.
 
 ## Shared columns
 
-Define reusable column sets as plain objects and spread them into schema definitions:
+Extract a shared base only for columns that appear in every model (typically `id` + timestamps).
+Domain-specific columns like relationships should stay inline in each model.
 
 ```ts
 const modelBase = {
   id: serial().primaryKey(),
-};
-
-const timestamps = {
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 };
 
 export const Product = table('products', {
   ...modelBase,
-  ...timestamps,
   name: text().notNull(),
+  store: belongsTo('Store'),
 });
 
 export const Store = table('stores', {
   ...modelBase,
-  ...timestamps,
   name: text(),
 });
 ```

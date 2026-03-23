@@ -83,27 +83,39 @@ a name when the convention doesn't match:
 aliases: textArray({ name: 'alias_names' }).default([]),
 ```
 
-### Step 2: Extract shared base columns
+### Step 2: Replace class inheritance with spread
 
-Replace class inheritance with object spread:
+Only extract a shared base for columns that genuinely appear in every model (typically
+`id` + timestamps). Domain-specific columns like `organization: belongsTo(...)` should
+stay inline in each model, even if repeated. A bit of repetition is better than a hierarchy
+of base objects that becomes hard to maintain.
 
 ```typescript
 // Before
 abstract class ModelBase extends Entity {
   @primaryColumn({ type: 'integer' }) public id!: number;
+  @createDateColumn() public createdAt!: Date;
+  @updateDateColumn() public updatedAt!: Date;
 }
 class Product extends ModelBase { ... }
 
-// After
-const modelBase = { id: serial().primaryKey() };
-const timestamps = { createdAt: createdAt(), updatedAt: updatedAt() };
+// After - one shared base for universal columns
+const modelBase = {
+  id: serial().primaryKey(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+};
 
 const Product = table('products', {
   ...modelBase,
-  ...timestamps,
   name: text().notNull(),
+  organization: belongsTo<string>('Organization'),
 });
 ```
+
+**Avoid** creating a hierarchy of base objects like `orgBase`, `accountingBase`, etc.
+Each model should declare its own relationships and domain columns inline. Use
+`QueryResult<typeof Product>` for the row type instead of creating separate base row types.
 
 ### Step 3: Convert hooks
 
