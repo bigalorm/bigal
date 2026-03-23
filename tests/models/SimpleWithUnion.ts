@@ -7,7 +7,7 @@ export const SimpleWithUnion = table(
   {
     ...modelBase,
     name: text().notNull(),
-    status: text().notNull().default('Foo'),
+    status: text<'Bar' | 'Foo' | 'Foobar'>().notNull().default('Foo'),
   },
   { modelName: 'SimpleWithUnion' },
 );

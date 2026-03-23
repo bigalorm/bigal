@@ -266,7 +266,7 @@ export function generateSimpleWithUnion(overrides: Partial<SimpleWithUnionSelect
   return {
     id: faker.number.int(),
     name: faker.lorem.word(),
-    status: faker.helpers.arrayElement(['Foo', 'Bar']),
+    status: faker.helpers.arrayElement(['Foo', 'Bar', 'Foobar'] as const),
     ...overrides,
   };
 }
