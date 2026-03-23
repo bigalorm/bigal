@@ -1,3 +1,13 @@
+## [16.0.0-beta.1](https://github.com/bigalorm/bigal/compare/v15.11.4...v16.0.0-beta.1) (2026-03-23)
+
+### ⚠ BREAKING CHANGES
+
+- Function-based schema API
+
+### Features
+
+- Function-based schema API ([5b67b83](https://github.com/bigalorm/bigal/commit/5b67b83c29cfe7b53b725415c0eeff175445ffac))
+
 ## [15.11.4](https://github.com/bigalorm/bigal/compare/v15.11.3...v15.11.4) (2026-03-12)
 
 ## [15.11.3](https://github.com/bigalorm/bigal/compare/v15.11.2...v15.11.3) (2026-03-12)
