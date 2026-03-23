@@ -1015,11 +1015,7 @@ describe('initialize', () => {
         ]),
       );
 
-      // Populate works at runtime through column metadata, but the current type system
-      // requires T extends Entity properties for populate(). The full type migration in Phase 1
-      // will fix this. For now, test the runtime behavior.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (ProductRepo as any).findOne({}).where({ id: 42 }).populate('store');
+      const result = await ProductRepo.findOne({}).where({ id: 42 }).populate('store');
 
       expect(result).toBeDefined();
       expect(mockedPool.query).toHaveBeenCalledTimes(2);

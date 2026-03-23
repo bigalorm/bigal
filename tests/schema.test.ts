@@ -134,7 +134,7 @@ tables.SelfRef = SelfRef;
 
 type SelfRefSelect = InferSelect<typeof selfRefSchema>;
 
-// JSON column with id property (the old NotEntity case)
+// JSON column with id property (should not be confused with a relationship)
 interface IJsonPayload {
   id: string;
   message: string;
@@ -309,7 +309,7 @@ describe('Schema builder type inference', () => {
       });
     });
 
-    describe('JSON column with id property (old NotEntity case)', () => {
+    describe('JSON column with id property', () => {
       it('payload is IJsonPayload | null (not confused with a relationship)', () => {
         expectTypeOf<JsonWithIdSelect['payload']>().toEqualTypeOf<IJsonPayload | null>();
       });
