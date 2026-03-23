@@ -15,3 +15,4 @@ export * from './PickFunctions.js';
 export * from './Populated.js';
 export * from './QueryResult.js';
 export * from './QueryResultPopulated.js';
+export * from './ResolveModel.js';

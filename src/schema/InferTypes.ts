@@ -117,6 +117,12 @@ export type HasManyKeys<TSchema extends SchemaDefinition> = {
 /** Keys in the schema that are any relationship (belongsTo or hasMany) */
 export type RelationshipKeys<TSchema extends SchemaDefinition> = BelongsToKeys<TSchema> | HasManyKeys<TSchema>;
 
+/** Keys that are populate-able (both belongsTo and hasMany) */
+export type PopulatableKeys<TSchema extends SchemaDefinition> = RelationshipKeys<TSchema>;
+
+/** Extracts the branded model name string from a schema entry */
+export type ModelNameOf<TEntry extends SchemaEntry> = TEntry extends BelongsToBuilder<unknown, infer TName> ? TName : TEntry extends HasManyBuilder<infer TName> ? TName : never;
+
 // Re-export the key helpers for external use in type-level tests
 export type { OptionalInsertKeys, RequiredInsertKeys, SelectKeys };
 
