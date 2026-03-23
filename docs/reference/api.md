@@ -168,12 +168,13 @@ database column name is auto-derived from the property key using snakeCase conve
 
 ### Chain methods
 
-| Method            | Description                              |
-| ----------------- | ---------------------------------------- |
-| `.notNull()`      | Removes `null` from the type             |
-| `.default(value)` | Makes column optional on insert          |
-| `.primaryKey()`   | Implies `.notNull()`, optional on insert |
-| `.unique()`       | UNIQUE constraint (no type-level effect) |
+| Method            | Description                                                         |
+| ----------------- | ------------------------------------------------------------------- |
+| `.notNull()`      | Removes `null` from the type                                        |
+| `.default(value)` | Makes column optional on insert                                     |
+| `.primaryKey()`   | Implies `.notNull()`, optional on insert                            |
+| `.unique()`       | UNIQUE constraint (no type-level effect)                            |
+| `.version()`      | Optimistic locking; implies `.notNull()`, auto-increments on update |
 
 ### Builder functions
 

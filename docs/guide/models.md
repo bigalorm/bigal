@@ -214,6 +214,15 @@ Adds a UNIQUE constraint. No effect on the TypeScript type.
 email: text().notNull().unique(),             // string, must be unique
 ```
 
+### .version()
+
+Marks the column for optimistic locking. Implies `.notNull()`. BigAl automatically increments the
+value on each update.
+
+```ts
+revision: integer().version(),               // number, auto-incremented on update
+```
+
 ### Chaining
 
 Modifiers compose in any order:

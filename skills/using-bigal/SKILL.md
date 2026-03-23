@@ -137,8 +137,10 @@ export const Product = table('products', {
 | `float()` / `real()`     | REAL             | `number \| null`    |
 | `double()`               | DOUBLE PRECISION | `number \| null`    |
 | `boolean()`              | BOOLEAN          | `boolean \| null`   |
+| `timestamp()`            | TIMESTAMP        | `Date \| null`      |
 | `timestamptz()`          | TIMESTAMPTZ      | `Date \| null`      |
 | `date()`                 | DATE             | `Date \| null`      |
+| `json<T>()`              | JSON             | `T \| null`         |
 | `jsonb<T>()`             | JSONB            | `T \| null`         |
 | `uuid()`                 | UUID             | `string \| null`    |
 | `bytea()`                | BYTEA            | `Buffer \| null`    |
@@ -156,6 +158,7 @@ name: text().notNull(),                         // removes null from type
 isActive: boolean().notNull().default(true),     // optional on insert
 id: serial().primaryKey(),                       // notNull + optional on insert
 email: text().notNull().unique(),                // UNIQUE constraint
+revision: integer().version(),                   // optimistic locking, auto-increments on update
 ```
 
 ### Relationships

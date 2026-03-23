@@ -185,6 +185,7 @@ Additional v16 builders with no v15 equivalent: `bigserial`, `bigint`, `smallint
 | (no equivalent)       | `.unique()`               |
 | `@createDateColumn()` | `createdAt()` convenience |
 | `@updateDateColumn()` | `updatedAt()` convenience |
+| `@versionColumn()`    | `integer().version()`     |
 
 `serial()` and `bigserial()` imply `.notNull()` and `.default()` automatically - they always produce
 a non-null number on select and are optional on insert.

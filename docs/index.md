@@ -51,23 +51,29 @@ features:
 <p class="subtitle">Define a model, query it - that's it.</p>
 
 ```ts
-import { defineTable as table, serial, text, integer, belongsTo, initialize, subquery } from 'bigal';
-import { Pool } from 'postgres-pool';
+// models/Product.ts
+import { defineTable as table, serial, text, integer, belongsTo } from 'bigal';
 
-const Product = table('products', {
+export const Product = table('products', {
   id: serial().primaryKey(),
   name: text().notNull(),
   priceCents: integer().notNull(),
   sku: text(),
   store: belongsTo('Store'),
 });
+```
+
+```ts
+// app.ts
+import { initialize, subquery } from 'bigal';
+import { Pool } from 'postgres-pool';
 
 const { Product, Store } = initialize({
   models: { Product, Store },
   pool: new Pool('postgres://localhost/mydb'),
 });
 
-// Fluent queries — just await the chain
+// Fluent queries - just await the chain
 const products = await Product.find()
   .where({ priceCents: { '>': 1000 }, name: { contains: 'widget' } })
   .sort('name asc')

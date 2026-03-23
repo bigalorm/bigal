@@ -130,23 +130,19 @@ const products = await Product.update({ id: [42, 43] }, { priceCents: 1299 }, { 
 
 ## Destroy
 
-`destroy()` takes a where clause object. Returns an array of deleted records.
+`destroy()` takes a where clause object. Returns `void` by default.
 
 ```ts
-// Delete a single record
-const products = await Product.destroy({ id: 42 });
-// products = [{ id: 42, name: 'Super Widget', ... }]
-
-// Delete multiple records
-const products = await Product.destroy({ id: [42, 43] });
+// Delete records (returns void)
+await Product.destroy({ id: 42 });
+await Product.destroy({ id: [42, 43] });
 ```
 
-> `destroy()` always returns an array, regardless of how many records were affected.
-
-Without returning records:
+With returning records:
 
 ```ts
-await Product.destroy({ id: 42 }, { returnRecords: false });
+const products = await Product.destroy({ id: 42 }, { returnRecords: true });
+// products = [{ id: 42, name: 'Super Widget', ... }]
 ```
 
 With query projection:
@@ -156,7 +152,8 @@ const products = await Product.destroy({ id: [42, 43] }, { returnSelect: ['name'
 // products = [{ id: 42, name: 'Widget' }, { id: 43, name: 'Gadget' }]
 ```
 
-> The primary key is always included. Pass an empty array to return only the primary key.
+> The primary key is always included when returning records. Pass an empty array to return only the
+> primary key.
 
 ## toSQL() on mutations
 
@@ -181,7 +178,7 @@ This is useful for debugging, logging, and testing SQL generation.
 import { initialize, defineTable as table, serial, text, integer, createdAt, updatedAt } from 'bigal';
 import { Pool } from 'postgres-pool';
 
-const ProductModel = table('products', {
+const Product = table('products', {
   id: serial().primaryKey(),
   name: text().notNull(),
   priceCents: integer().notNull(),
@@ -190,5 +187,5 @@ const ProductModel = table('products', {
 });
 
 const pool = new Pool('postgres://localhost/mydb');
-const { Product } = initialize({ models: { ProductModel }, pool });
+const { Product } = initialize({ models: { Product }, pool });
 ```

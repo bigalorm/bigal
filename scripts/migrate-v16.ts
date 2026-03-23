@@ -20,8 +20,8 @@ const COLUMN_TYPE_MAP: Record<string, string> = {
   string: 'text',
   integer: 'integer',
   float: 'float',
-  boolean: 'booleanColumn',
-  date: 'dateColumn',
+  boolean: 'boolean',
+  date: 'date',
   datetime: 'timestamptz',
   json: 'jsonb',
   uuid: 'uuid',
@@ -29,7 +29,6 @@ const COLUMN_TYPE_MAP: Record<string, string> = {
   'string[]': 'textArray',
   'integer[]': 'integerArray',
   'boolean[]': 'booleanArray',
-  'float[]': 'realArray',
 };
 
 interface ColumnInfo {
