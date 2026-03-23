@@ -186,10 +186,23 @@ function capitalize(str: string): string {
 }
 
 function extractModelName(expr: string): string {
-  const arrowMatch = /=>\s*(\w+)\.name/.exec(expr);
-  if (arrowMatch) {
-    return arrowMatch[1]!;
+  // Match arrow functions: () => Foo.name, () => Foo, () => 'Foo'
+  const arrowNameMatch = /=>\s*(\w+)\.name\b/.exec(expr);
+  if (arrowNameMatch) {
+    return arrowNameMatch[1]!;
   }
+
+  const arrowIdentMatch = /=>\s*(\w+)\s*[,)]?$/.exec(expr);
+  if (arrowIdentMatch) {
+    return arrowIdentMatch[1]!;
+  }
+
+  const arrowStringMatch = /=>\s*['"](\w+)['"]/.exec(expr);
+  if (arrowStringMatch) {
+    return arrowStringMatch[1]!;
+  }
+
+  // Plain string: strip quotes
   const stripped = expr.replace(/['"]/g, '');
   return capitalize(stripped);
 }
@@ -208,7 +221,7 @@ function generateColumnBuilder(col: ColumnInfo): string {
     return 'integer().version()';
   }
   if (col.model) {
-    const modelName = capitalize(col.model);
+    const modelName = extractModelName(col.model);
     const derivedFk = `${toSnakeCase(col.propertyName)}_id`;
     const explicitFk = col.dbColumnName && col.dbColumnName !== derivedFk ? col.dbColumnName : undefined;
     return explicitFk ? `belongsTo('${modelName}', '${explicitFk}')` : `belongsTo('${modelName}')`;
