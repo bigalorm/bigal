@@ -13,7 +13,6 @@ export { Product } from './Product.js';
 export { ProductCategory } from './ProductCategory.js';
 export { ProductWithCreatedAt } from './ProductWithCreatedAt.js';
 export { ProductWithCreateUpdateDateTracking } from './ProductWithCreateUpdateDateTracking.js';
-export { ProductWithLifecycleMethods } from './ProductWithLifecycleMethods.js';
 export { ReadonlyProduct } from './ReadonlyProduct.js';
 export { RequiredPropertyWithDefaultValue } from './RequiredPropertyWithDefaultValue.js';
 export { RequiredPropertyWithDefaultValueFunction } from './RequiredPropertyWithDefaultValueFunction.js';
