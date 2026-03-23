@@ -186,7 +186,7 @@ database column name is auto-derived from the property key using snakeCase conve
 | `integer()`              | INTEGER          | `number \| null`    |
 | `bigint()`               | BIGINT           | `number \| null`    |
 | `smallint()`             | SMALLINT         | `number \| null`    |
-| `real()`                 | REAL             | `number \| null`    |
+| `float()` / `real()`     | REAL             | `number \| null`    |
 | `double()`               | DOUBLE PRECISION | `number \| null`    |
 | `boolean()`              | BOOLEAN          | `boolean \| null`   |
 | `timestamp()`            | TIMESTAMP        | `Date \| null`      |

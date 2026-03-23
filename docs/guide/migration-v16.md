@@ -162,7 +162,7 @@ names auto-derive from property keys:
 | ------------------------------------- | -------------------------------------- |
 | `@column({ type: 'string' })`         | `text()` or `varchar({ length: 100 })` |
 | `@column({ type: 'integer' })`        | `integer()`                            |
-| `@column({ type: 'float' })`          | `real()` or `double()`                 |
+| `@column({ type: 'float' })`          | `float()` or `double()`                |
 | `@column({ type: 'boolean' })`        | `boolean()`                            |
 | `@column({ type: 'date' })`           | `date()`                               |
 | `@column({ type: 'datetime' })`       | `timestamptz()`                        |

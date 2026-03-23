@@ -94,15 +94,15 @@ externalId: uuid(),                           // UUID -- string | null
 ### Numeric types
 
 ```ts
-import { serial, bigserial, integer, bigint, smallint, real, double } from 'bigal';
+import { serial, bigserial, integer, bigint, smallint, float, double } from 'bigal';
 
-id: serial().primaryKey(),                    // SERIAL -- number (notNull + default implied)
-bigId: bigserial(),                           // BIGSERIAL -- number (notNull + default implied)
-quantity: integer(),                          // INTEGER -- number | null
-views: bigint(),                              // BIGINT -- number | null
-rank: smallint(),                             // SMALLINT -- number | null
-score: real(),                                // REAL -- number | null
-precise: double(),                   // DOUBLE PRECISION -- number | null
+id: serial().primaryKey(),                    // SERIAL - number (notNull + default implied)
+bigId: bigserial(),                           // BIGSERIAL - number (notNull + default implied)
+quantity: integer(),                          // INTEGER - number | null
+views: bigint(),                              // BIGINT - number | null
+rank: smallint(),                             // SMALLINT - number | null
+score: float(),                               // REAL - number | null
+precise: double(),                            // DOUBLE PRECISION - number | null
 ```
 
 `serial()` and `bigserial()` automatically imply `.notNull()` and `.default()`. They are always
@@ -235,7 +235,7 @@ score: integer().default(0),
 | `integer()`              | INTEGER          | `number \| null`    |                                       |
 | `bigint()`               | BIGINT           | `number \| null`    |                                       |
 | `smallint()`             | SMALLINT         | `number \| null`    |                                       |
-| `real()`                 | REAL             | `number \| null`    |                                       |
+| `float()` / `real()`     | REAL             | `number \| null`    |                                       |
 | `double()`               | DOUBLE PRECISION | `number \| null`    |                                       |
 | `boolean()`              | BOOLEAN          | `boolean \| null`   |                                       |
 | `timestamp()`            | TIMESTAMP        | `Date \| null`      |                                       |

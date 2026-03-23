@@ -134,7 +134,7 @@ export const Product = table('products', {
 | `integer()`              | INTEGER          | `number \| null`    |
 | `bigint()`               | BIGINT           | `number \| null`    |
 | `smallint()`             | SMALLINT         | `number \| null`    |
-| `real()`                 | REAL             | `number \| null`    |
+| `float()` / `real()`     | REAL             | `number \| null`    |
 | `double()`               | DOUBLE PRECISION | `number \| null`    |
 | `boolean()`              | BOOLEAN          | `boolean \| null`   |
 | `timestamptz()`          | TIMESTAMPTZ      | `Date \| null`      |

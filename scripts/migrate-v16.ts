@@ -19,7 +19,7 @@ import type { CallExpression, ClassDeclaration, Decorator, ObjectLiteralExpressi
 const COLUMN_TYPE_MAP: Record<string, string> = {
   string: 'text',
   integer: 'integer',
-  float: 'real',
+  float: 'float',
   boolean: 'booleanColumn',
   date: 'dateColumn',
   datetime: 'timestamptz',

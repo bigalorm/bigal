@@ -59,7 +59,7 @@ For each model class, create a `table()` call:
 | `@column({ type: 'string', required: true })`             | `text().notNull()`                      |
 | `@column({ type: 'string' })`                             | `text()`                                |
 | `@column({ type: 'integer' })`                            | `integer()`                             |
-| `@column({ type: 'float' })`                              | `real()`                                |
+| `@column({ type: 'float' })`                              | `float()`                               |
 | `@column({ type: 'boolean' })`                            | `boolean()`                             |
 | `@column({ type: 'json' })`                               | `jsonb()`                               |
 | `@column({ type: 'datetime' })`                           | `timestamptz()`                         |
