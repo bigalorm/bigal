@@ -638,7 +638,6 @@ describe('ReadonlyRepository', () => {
     it('should support populating a single relation', async () => {
       mockedPool.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([store]));
 
-      // @ts-expect-error -- populate types require Entity migration (bigal-n8x)
       const result = await ProductRepository.findOne({}).populate('store');
       expect(mockedPool.query).toHaveBeenCalledTimes(2);
       assert(result);
@@ -665,7 +664,6 @@ describe('ReadonlyRepository', () => {
 
       const result = await ProductRepository.findOne({
         pool: poolOverride,
-        // @ts-expect-error -- populate types require Entity migration (bigal-n8x)
       }).populate('store');
 
       expect(mockedPool.query).not.toHaveBeenCalled();
@@ -693,7 +691,6 @@ describe('ReadonlyRepository', () => {
       mockedPool.query.mockResolvedValueOnce(getQueryResult([product]));
       storePool.query.mockResolvedValueOnce(getQueryResult([store]));
 
-      // @ts-expect-error -- populate types require Entity migration (bigal-n8x)
       const result = await ProductRepository.findOne({}).populate('store', {
         pool: storePool,
       });
@@ -723,7 +720,6 @@ describe('ReadonlyRepository', () => {
 
       const result = await ProductRepository.findOne({
         select: ['name'],
-        // @ts-expect-error -- populate types require Entity migration (bigal-n8x)
       }).populate('store', {
         select: ['name'],
       });
@@ -757,7 +753,6 @@ describe('ReadonlyRepository', () => {
 
       const result = await LevelOneRepository.findOne({
         select: ['one', 'levelTwo'],
-        // @ts-expect-error -- populate types require Entity migration (bigal-n8x)
       }).populate('levelTwo', {
         select: ['two', 'levelThree'],
       });
@@ -769,7 +764,6 @@ describe('ReadonlyRepository', () => {
         levelTwo: levelTwoResult,
       });
 
-      // @ts-expect-error -- populated levelTwo type not inferred without Entity migration
       expect(result.levelTwo.levelThree).toBe(levelThreeItem.id);
       // @ts-expect-error -- populated levelTwo type not inferred without Entity migration
       expect(result.levelTwo.levelThree.toUpperCase()).toBe(levelThreeItem.id.toUpperCase());
@@ -779,7 +773,6 @@ describe('ReadonlyRepository', () => {
       const storeResult = pick(store, 'id', 'name');
       mockedPool.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([store]));
 
-      // @ts-expect-error -- populate type constraint pending Entity migration
       const result = await ProductRepository.findOne({}).populate('store', {
         select: ['name'],
         sort: 'name',
@@ -1216,7 +1209,6 @@ describe('ReadonlyRepository', () => {
         .where({
           store: store.id,
         })
-        // @ts-expect-error -- populate type constraint pending Entity migration
         .populate('store', {
           where: {
             name: {
@@ -1726,21 +1718,16 @@ describe('ReadonlyRepository', () => {
         )
         .mockResolvedValueOnce(getQueryResult([store]));
 
-      // @ts-expect-error -- UNSAFE_withOriginalFieldType param not typed for inferred schemas
       const productResult = await ProductRepository.findOne({}).UNSAFE_withOriginalFieldType('store');
       assert(productResult);
       const storeResult = await StoreRepository.findOne({}).where({
-        id: productResult.store,
+        id: productResult.store as number,
       });
       assert(storeResult);
 
-      // @ts-expect-error -- UNSAFE manual populate: assigning entity object to FK field
       productResult.store = storeResult;
-      // @ts-expect-error -- store is typed as number, but manually populated above
       expect(productResult.store.id).toBe(store.id);
-      // @ts-expect-error -- store is typed as number, but manually populated above
       assert(productResult.store.name);
-      // @ts-expect-error -- store is typed as number, but manually populated above
       expect(productResult.store.name).toBe(store.name);
     });
 
@@ -1757,7 +1744,6 @@ describe('ReadonlyRepository', () => {
         )
         .mockResolvedValueOnce(getQueryResult([store]));
 
-      // @ts-expect-error -- UNSAFE: manually setting store to full entity object
       const productResult = await ProductRepository.findOne({}).UNSAFE_withFieldValue('store', store);
       assert(productResult);
 
@@ -1790,7 +1776,6 @@ describe('ReadonlyRepository', () => {
       it('should cascade to populated entities', async () => {
         mockedPool.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([store]));
 
-        // @ts-expect-error -- populate type constraint pending Entity migration
         const result = await ProductRepository.findOne({}).populate('store');
 
         expect(result).toBeDefined();
@@ -2318,26 +2303,21 @@ describe('ReadonlyRepository', () => {
 
       mockedPool.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([store]));
 
-      // @ts-expect-error -- UNSAFE_withOriginalFieldType type pending Entity migration
       const products = await ProductRepository.find({}).UNSAFE_withOriginalFieldType('store');
       expect(products.length).toBe(1);
       const [productResult] = products;
       assert(productResult);
 
       const stores = await StoreRepository.find({}).where({
-        id: productResult.store,
+        id: productResult.store as number,
       });
       expect(stores.length).toBe(1);
       const [storeResult] = stores;
       assert(storeResult);
 
-      // @ts-expect-error -- UNSAFE manual populate: assigning entity object to FK field
       productResult.store = storeResult;
-      // @ts-expect-error -- store is typed as number, but manually populated above
       expect(productResult.store.id).toBe(store.id);
-      // @ts-expect-error -- store is typed as number, but manually populated above
       assert(productResult.store.name);
-      // @ts-expect-error -- populated property type pending Entity migration
       expect(productResult.store.name).toBe(store.name);
     });
 
@@ -2426,7 +2406,6 @@ describe('ReadonlyRepository', () => {
         const result = await ProductRepository.find({})
           .join('store', 'primaryStore')
           .where({
-            // @ts-expect-error -- join alias keys are not yet typed in JoinedWhereQuery
             primaryStore: { name: 'Acme' },
           });
         assert(result);
@@ -3162,7 +3141,6 @@ describe('ReadonlyRepository', () => {
       it('should support populating a single relation - same/shared', async () => {
         mockedPool.query.mockResolvedValueOnce(getQueryResult([product1, product3])).mockResolvedValueOnce(getQueryResult([store1]));
 
-        // @ts-expect-error -- populate type constraint pending Entity migration
         const results = await ProductRepository.find({}).populate('store');
         expect(mockedPool.query).toHaveBeenCalledTimes(2);
         // eslint-disable-next-line vitest-js/prefer-strict-equal
@@ -3196,7 +3174,6 @@ describe('ReadonlyRepository', () => {
           ]),
         );
 
-        // @ts-expect-error -- populate type constraint pending Entity migration
         const results = await ProductRepository.find({}).populate('store');
         expect(mockedPool.query).toHaveBeenCalledTimes(2);
         // eslint-disable-next-line vitest-js/prefer-strict-equal
@@ -3228,7 +3205,6 @@ describe('ReadonlyRepository', () => {
 
         const results = await ProductRepository.find({
           pool: poolOverride,
-          // @ts-expect-error -- populate type constraint pending Entity migration
         }).populate('store');
 
         expect(mockedPool.query).not.toHaveBeenCalled();
@@ -3261,7 +3237,6 @@ describe('ReadonlyRepository', () => {
         mockedPool.query.mockResolvedValueOnce(getQueryResult([product1, product3]));
         storePool.query.mockResolvedValueOnce(getQueryResult([store1]));
 
-        // @ts-expect-error -- populate type constraint pending Entity migration
         const results = await ProductRepository.find({}).populate('store', {
           pool: storePool,
         });
@@ -3298,7 +3273,6 @@ describe('ReadonlyRepository', () => {
 
         const results = await LevelOneRepository.find({
           select: ['one', 'levelTwo'],
-          // @ts-expect-error -- populate type constraint pending Entity migration
         }).populate('levelTwo', {
           select: ['two', 'levelThree'],
         });
@@ -3311,7 +3285,6 @@ describe('ReadonlyRepository', () => {
           },
         ]);
 
-        // @ts-expect-error -- populated property type pending Entity migration
         expect(results[0]!.levelTwo.levelThree).toBe(levelThreeItem.id);
         // @ts-expect-error -- populated property type pending Entity migration
         expect(results[0]!.levelTwo.levelThree.toUpperCase()).toBe(levelThreeItem.id.toUpperCase());
@@ -3325,7 +3298,6 @@ describe('ReadonlyRepository', () => {
 
         const results = await LevelOneRepository.find({})
           .select(['one', 'levelTwo'])
-          // @ts-expect-error -- populate type constraint pending Entity migration
           .populate('levelTwo', {
             select: ['two', 'levelThree'],
           });
@@ -3338,7 +3310,6 @@ describe('ReadonlyRepository', () => {
           },
         ]);
 
-        // @ts-expect-error -- populated property type pending Entity migration
         expect(results[0]!.levelTwo.levelThree).toBe(levelThreeItem.id);
         // @ts-expect-error -- populated property type pending Entity migration
         expect(results[0]!.levelTwo.levelThree.toUpperCase()).toBe(levelThreeItem.id.toUpperCase());
@@ -3350,7 +3321,6 @@ describe('ReadonlyRepository', () => {
 
         mockedPool.query.mockResolvedValueOnce(getQueryResult([product1, product2])).mockResolvedValueOnce(getQueryResult([store1Result, store2Result]));
 
-        // @ts-expect-error -- populate type constraint pending Entity migration
         const results = await ProductRepository.find({}).populate('store', {
           select: ['id'],
           sort: 'name',
@@ -3388,7 +3358,6 @@ describe('ReadonlyRepository', () => {
 
         const results = await ProductRepository.find({
           select: ['name'],
-          // @ts-expect-error -- populate type constraint pending Entity migration
         }).populate('store', {
           select: ['id'],
         });
@@ -3784,7 +3753,6 @@ describe('ReadonlyRepository', () => {
           },
         ]);
         expect(mockedPool.query).toHaveBeenCalledTimes(4);
-        // @ts-expect-error -- populated property type pending Entity migration
         expect(results[0]!.store.id).toBe(store1.id);
         // @ts-expect-error -- populated property type pending Entity migration
         expect(results[0]!.categories.length).toBe(2);
@@ -3808,7 +3776,6 @@ describe('ReadonlyRepository', () => {
         assert(categoryQueryParams);
         expect(categoryQueryParams).toStrictEqual([[category1.id, category2.id]]);
 
-        // @ts-expect-error -- populated property type pending Entity migration
         expect(results[0]!.store.id).toBe(store1.id);
       });
 
@@ -3835,7 +3802,6 @@ describe('ReadonlyRepository', () => {
                 isActive: true,
               })
               .sort('lastName')
-              // @ts-expect-error -- populate type constraint pending Entity migration
               .populate('parkingSpace', {
                 select: ['name'],
               })
@@ -4184,7 +4150,6 @@ describe('ReadonlyRepository', () => {
 
         mockedPool.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([store]));
 
-        // @ts-expect-error -- populate type constraint pending Entity migration
         const result = await ProductRepository.find({}).populate('store').withCount();
 
         expect(result.totalCount).toBe(10);
@@ -4247,7 +4212,6 @@ describe('ReadonlyRepository', () => {
 
         mockedPool.query.mockResolvedValueOnce(getQueryResult([product])).mockResolvedValueOnce(getQueryResult([store]));
 
-        // @ts-expect-error -- populate type constraint pending Entity migration
         const result = await ProductRepository.find({}).populate('store');
 
         expect(result).toHaveLength(1);
