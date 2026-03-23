@@ -323,26 +323,20 @@ describe('pgvector support', () => {
       expect(params).toContain('[1e-10,20000000000,3]');
     });
 
-    it('should serialize NaN in vector (pgvector rejects server-side)', async () => {
-      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
-
-      await DocumentRepo.find()
-        .sort({ embedding: { nearestTo: [1, Number.NaN, 3], metric: 'l2' } })
-        .limit(5);
-
-      const [, params] = mockedPool.query.mock.calls[0]!;
-      expect(params).toContain('[1,NaN,3]');
+    it('should reject NaN in vector array', async () => {
+      await expect(
+        DocumentRepo.find()
+          .sort({ embedding: { nearestTo: [1, Number.NaN, 3], metric: 'l2' } })
+          .limit(5),
+      ).rejects.toThrow('nearestTo must be an array of finite numbers');
     });
 
-    it('should serialize Infinity in vector (pgvector rejects server-side)', async () => {
-      mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
-
-      await DocumentRepo.find()
-        .sort({ embedding: { nearestTo: [1, Number.POSITIVE_INFINITY, 3], metric: 'l2' } })
-        .limit(5);
-
-      const [, params] = mockedPool.query.mock.calls[0]!;
-      expect(params).toContain('[1,Infinity,3]');
+    it('should reject Infinity in vector array', async () => {
+      await expect(
+        DocumentRepo.find()
+          .sort({ embedding: { nearestTo: [1, Number.POSITIVE_INFINITY, 3], metric: 'l2' } })
+          .limit(5),
+      ).rejects.toThrow('nearestTo must be an array of finite numbers');
     });
 
     it('should handle float precision in vector values', async () => {

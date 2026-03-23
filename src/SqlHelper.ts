@@ -1124,6 +1124,7 @@ export function buildOrderStatement<T extends AnyRecord>({
 
     if (vectorDistance && params) {
       const operator = vectorDistanceOperator(vectorDistance.metric);
+      validateVectorArray(vectorDistance.vector, propertyName, model);
       params.push(`[${vectorDistance.vector.join(',')}]`);
       orderStatement += `${columnRef} ${operator} $${params.length}`;
     } else {
@@ -1611,13 +1612,15 @@ function buildWhere<T extends AnyRecord>({
             throw new QueryError(`Property name is required for vector distance constraint`, model);
           }
 
-          const metric = (vectorConstraint.metric ?? 'cosine') as 'cosine' | 'innerProduct' | 'l1' | 'l2';
+          const metric = validateVectorMetric(vectorConstraint.metric ?? 'cosine', model);
           const operator = vectorDistanceOperator(metric);
+          validateVectorArray(vectorConstraint.nearestTo, column.propertyName, model);
           params.push(`[${vectorConstraint.nearestTo.join(',')}]`);
           const vectorParamIndex = params.length;
 
           if (vectorConstraint.distance) {
             const [distanceOp, threshold] = Object.entries(vectorConstraint.distance)[0]!;
+            validateDistanceOperator(distanceOp, model);
             params.push(threshold);
             return `"${column.name}" ${operator} $${vectorParamIndex} ${distanceOp} $${params.length}`;
           }
@@ -2599,7 +2602,7 @@ function convertSortToOrderBy<T extends AnyRecord>(sort: Record<string, unknown>
           descending: false,
           vectorDistance: {
             vector: vectorSort.nearestTo,
-            metric: (vectorSort.metric ?? 'cosine') as 'cosine' | 'innerProduct' | 'l1' | 'l2',
+            metric: validateVectorMetric(vectorSort.metric ?? 'cosine'),
           },
         });
       } else {
@@ -2617,6 +2620,39 @@ function convertSortToOrderBy<T extends AnyRecord>(sort: Record<string, unknown>
   }
 
   return result;
+}
+
+const VALID_DISTANCE_OPERATORS = new Set(['<', '<=', '>', '>=']);
+const VALID_VECTOR_METRICS = new Set(['cosine', 'innerProduct', 'l1', 'l2']);
+
+function validateDistanceOperator(operator: string, model: ModelMetadata<AnyRecord>): void {
+  if (!VALID_DISTANCE_OPERATORS.has(operator)) {
+    throw new QueryError(`Invalid vector distance operator: ${operator}`, model);
+  }
+}
+
+function validateVectorMetric(metric: string, model?: ModelMetadata<AnyRecord>): 'cosine' | 'innerProduct' | 'l1' | 'l2' {
+  if (!VALID_VECTOR_METRICS.has(metric)) {
+    const message = `Invalid vector distance metric: ${metric}. Must be one of: cosine, innerProduct, l1, l2`;
+    if (model) {
+      throw new QueryError(message, model);
+    }
+
+    throw new Error(message);
+  }
+
+  return metric as 'cosine' | 'innerProduct' | 'l1' | 'l2';
+}
+
+function validateVectorArray(vector: number[], propertyName: string, model?: ModelMetadata<AnyRecord>): void {
+  if (!Array.isArray(vector) || !vector.every((value) => typeof value === 'number' && Number.isFinite(value))) {
+    const message = `"${propertyName}" nearestTo must be an array of finite numbers`;
+    if (model) {
+      throw new QueryError(message, model);
+    }
+
+    throw new Error(message);
+  }
 }
 
 function vectorDistanceOperator(metric: 'cosine' | 'innerProduct' | 'l1' | 'l2'): string {
