@@ -1,26 +1,18 @@
-import type { TableDefinition } from './TableDefinition.js';
-
-/**
- * A reference to another model — either a string model name (resolved at registration time)
- * or an arrow function returning a TableDefinition (for backward compatibility).
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- opaque type to break circular inference
-export type ModelReference = string | (() => TableDefinition<any, any>);
-
-export interface BelongsToConfig<TFkType = number> {
+export interface BelongsToConfig<TFkType = number, TModelName extends string = string> {
   brand: 'belongsTo';
   fkType: TFkType;
+  modelName: TModelName;
 }
 
-export class BelongsToBuilder<TFkType = number> {
-  declare public readonly _: BelongsToConfig<TFkType>;
+export class BelongsToBuilder<TFkType = number, TModelName extends string = string> {
+  declare public readonly _: BelongsToConfig<TFkType, TModelName>;
 
   /** Explicit FK column name, or empty string to auto-derive from property key */
   public dbColumnName: string;
 
-  public readonly modelRef: ModelReference;
+  public readonly modelRef: string;
 
-  public constructor(modelRef: ModelReference, dbColumnName?: string) {
+  public constructor(modelRef: string, dbColumnName?: string) {
     this.modelRef = modelRef;
     this.dbColumnName = dbColumnName ?? '';
   }
@@ -32,10 +24,10 @@ export class BelongsToBuilder<TFkType = number> {
  * The FK column name is auto-derived as `snakeCase(propertyKey) + '_id'` by `table()`.
  * Pass an explicit name to override: `belongsTo('Store', { name: 'shop_id' })`.
  *
- * @param {string | Function} modelRef - Model name string or arrow function returning a TableDefinition
+ * @param {string} modelRef - Model name string (resolved at initialize() time)
  * @param {string | object} [options] - FK column name string or options object with `name`
  */
-export function belongsTo<TFkType = number>(modelRef: ModelReference, options?: string | { name: string }): BelongsToBuilder<TFkType> {
+export function belongsTo<TFkType = number, TModelName extends string = string>(modelRef: TModelName, options?: string | { name: string }): BelongsToBuilder<TFkType, TModelName> {
   const fkColumnName = typeof options === 'string' ? options : options?.name;
-  return new BelongsToBuilder<TFkType>(modelRef, fkColumnName);
+  return new BelongsToBuilder<TFkType, TModelName>(modelRef, fkColumnName);
 }

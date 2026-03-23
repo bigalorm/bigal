@@ -3,7 +3,6 @@ import { ColumnModelMetadata } from '../metadata/ColumnModelMetadata.js';
 import { ColumnTypeMetadata } from '../metadata/ColumnTypeMetadata.js';
 import { assertValidSqlIdentifier, modelNameFromTable, snakeCase } from '../utils/index.js';
 
-import type { ModelReference } from './BelongsToBuilder.js';
 import { BelongsToBuilder } from './BelongsToBuilder.js';
 import { ColumnBuilder } from './ColumnBuilder.js';
 import { HasManyBuilder } from './HasManyBuilder.js';
@@ -89,18 +88,6 @@ export interface HasManyEntry {
 // Internal helpers for building metadata from schema entries
 // ---------------------------------------------------------------------------
 
-/**
- * Resolves a ModelReference to a model name string.
- * @param {ModelReference} ref - String name or arrow function returning a TableDefinition
- */
-function resolveModelName(ref: ModelReference): string {
-  if (typeof ref === 'string') {
-    return ref;
-  }
-
-  return ref().modelName;
-}
-
 function buildColumnTypeMetadata(entry: ColumnBuilder, propertyName: string, tableName: string): ColumnTypeMetadata {
   return new ColumnTypeMetadata(entry.toColumnTypeMetadataOptions(propertyName, tableName));
 }
@@ -110,7 +97,7 @@ function buildColumnModelMetadata(entry: BelongsToBuilder<unknown>, propertyName
     target: tableName,
     name: entry.dbColumnName,
     propertyName,
-    model: () => resolveModelName(entry.modelRef),
+    model: entry.modelRef,
   });
 }
 
@@ -122,9 +109,9 @@ function buildColumnCollectionMetadata(entry: HasManyBuilder, propertyName: stri
     required: false,
     insert: false,
     update: false,
-    collection: () => resolveModelName(entry.modelRef),
+    collection: entry.modelRef,
     via: entry.viaPropertyName ?? '',
-    through: entry.throughRef ? () => resolveModelName(entry.throughRef!) : undefined,
+    through: entry.throughRef ?? undefined,
   });
 }
 

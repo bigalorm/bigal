@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { faker } from '@faker-js/faker';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { InferSelect, IRepository, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
+import type { InferSelect, IRepository, PoolLike, PoolQueryResult, QueryResultRow } from '../src/index.js';
 import { belongsTo, boolean as booleanColumn, initialize, hasMany, integer, serial, text, textArray, defineTable as table } from '../src/index.js';
 
 import { pick } from './utils/pick.js';
@@ -33,26 +33,19 @@ const modelBase = {
   id: serial().primaryKey(),
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const tables: Record<string, TableDefinition<any, any>> = {};
-
 const storeSchema = {
   ...modelBase,
   name: text(),
-  products: hasMany(() => tables.Product!).via('store'),
+  products: hasMany('Product').via('store'),
 };
 const StoreDef = table('stores', storeSchema);
-tables.Store = StoreDef;
 
 const categorySchema = {
   ...modelBase,
   name: text().notNull(),
-  products: hasMany(() => tables.Product!)
-    .through(() => tables.ProductCategory!)
-    .via('category'),
+  products: hasMany('Product').through('ProductCategory').via('category'),
 };
 const CategoryDef = table('categories', categorySchema);
-tables.Category = CategoryDef;
 
 const productSchema = {
   ...modelBase,
@@ -60,23 +53,19 @@ const productSchema = {
   sku: text(),
   location: text(),
   aliases: textArray({ name: 'alias_names' }).default([]),
-  store: belongsTo(() => tables.Store!),
-  categories: hasMany(() => tables.Category!)
-    .through(() => tables.ProductCategory!)
-    .via('product'),
+  store: belongsTo('Store'),
+  categories: hasMany('Category').through('ProductCategory').via('product'),
 };
 const ProductDef = table('products', productSchema);
-tables.Product = ProductDef;
 
 const productCategorySchema = {
   ...modelBase,
-  product: belongsTo(() => tables.Product!),
-  category: belongsTo(() => tables.Category!),
+  product: belongsTo('Product'),
+  category: belongsTo('Category'),
   ordering: integer(),
   isPrimary: booleanColumn(),
 };
 const ProductCategoryDef = table('product__category', productCategorySchema);
-tables.ProductCategory = ProductCategoryDef;
 
 const hookedProductSchema = {
   ...productSchema,

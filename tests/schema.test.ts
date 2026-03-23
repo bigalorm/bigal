@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
-import type { InferInsert, InferSelect, TableDefinition } from '../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../src/schema/index.js';
 import {
   belongsTo,
   bigserial,
@@ -48,11 +48,6 @@ const timestamps = {
 // Test model definitions (using real builders against real code)
 // ---------------------------------------------------------------------------
 
-// Registry object for circular references. Arrow functions in belongsTo/hasMany
-// capture `tables` by reference, so they resolve correctly after all tables are assigned.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- opaque registry to break circular type inference
-const tables: Record<string, TableDefinition<any, any>> = {};
-
 const productSchema = {
   ...modelBase,
   ...timestamps,
@@ -63,13 +58,10 @@ const productSchema = {
   priceCents: integer().notNull(),
   isActive: boolean().notNull().default(true),
   metadata: jsonb<{ color?: string }>(),
-  store: belongsTo(() => tables.Store!),
-  categories: hasMany(() => tables.Category!)
-    .through(() => tables.ProductCategory!)
-    .via('product'),
+  store: belongsTo('Store'),
+  categories: hasMany('Category').through('ProductCategory').via('product'),
 };
 const Product = table('products', productSchema);
-tables.Product = Product;
 
 type ProductSelect = InferSelect<typeof productSchema>;
 type ProductInsert = InferInsert<typeof productSchema>;
@@ -78,10 +70,9 @@ const storeSchema = {
   ...modelBase,
   ...timestamps,
   name: text(),
-  products: hasMany(() => tables.Product!).via('store'),
+  products: hasMany('Product').via('store'),
 };
 const Store = table('stores', storeSchema);
-tables.Store = Store;
 
 type StoreSelect = InferSelect<typeof storeSchema>;
 type StoreInsert = InferInsert<typeof storeSchema>;
@@ -90,24 +81,21 @@ const categorySchema = {
   ...modelBase,
   ...timestamps,
   name: text().notNull(),
-  products: hasMany(() => tables.Product!)
-    .through(() => tables.ProductCategory!)
-    .via('category'),
+  products: hasMany('Product').through('ProductCategory').via('category'),
 };
-const Category = table('categories', categorySchema);
-tables.Category = Category;
+// Table definition exists for completeness; not directly referenced by tests.
+void table('categories', categorySchema);
 
 type CategorySelect = InferSelect<typeof categorySchema>;
 
 const productCategorySchema = {
   ...modelBase,
-  product: belongsTo(() => tables.Product!),
-  category: belongsTo(() => tables.Category!),
+  product: belongsTo('Product'),
+  category: belongsTo('Category'),
   ordering: integer(),
   isPrimary: booleanColumn(),
 };
 const ProductCategory = table('product__category', productCategorySchema);
-tables.ProductCategory = ProductCategory;
 
 type ProductCategorySelect = InferSelect<typeof productCategorySchema>;
 type ProductCategoryInsert = InferInsert<typeof productCategorySchema>;
@@ -126,11 +114,11 @@ type StringIdInsert = InferInsert<(typeof SimpleWithStringId)['schema']>;
 const selfRefSchema = {
   ...modelBase,
   name: text().notNull(),
-  parent: belongsTo(() => tables.SelfRef!),
-  children: hasMany(() => tables.SelfRef!).via('parent'),
+  parent: belongsTo('SelfRef'),
+  children: hasMany('SelfRef').via('parent'),
 };
-const SelfRef = table('self_ref', selfRefSchema);
-tables.SelfRef = SelfRef;
+// Table definition exists for completeness; not directly referenced by tests.
+void table('self_ref', selfRefSchema);
 
 type SelfRefSelect = InferSelect<typeof selfRefSchema>;
 
@@ -649,29 +637,27 @@ describe('Schema builder runtime behavior', () => {
 
   describe('Relationship builders', () => {
     it('belongsTo stores FK column name', () => {
-      const builder = belongsTo(() => Store, 'store_id');
+      const builder = belongsTo('Store', 'store_id');
       expect(builder.dbColumnName).toBe('store_id');
     });
 
     it('belongsTo accepts options object for FK column name', () => {
-      const builder = belongsTo(() => Store, { name: 'shop_id' });
+      const builder = belongsTo('Store', { name: 'shop_id' });
       expect(builder.dbColumnName).toBe('shop_id');
     });
 
     it('belongsTo auto-derives FK column name when omitted', () => {
-      const builder = belongsTo(() => Store);
+      const builder = belongsTo('Store');
       expect(builder.dbColumnName).toBe('');
     });
 
     it('hasMany stores via property name', () => {
-      const builder = hasMany(() => Product).via('store');
+      const builder = hasMany('Product').via('store');
       expect(builder.viaPropertyName).toBe('store');
     });
 
     it('hasMany with through stores through reference', () => {
-      const builder = hasMany(() => Category)
-        .through(() => ProductCategory)
-        .via('product');
+      const builder = hasMany('Category').through('ProductCategory').via('product');
       expect(builder.viaPropertyName).toBe('product');
       expect(builder.throughRef).toBeDefined();
     });

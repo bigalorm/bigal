@@ -194,30 +194,22 @@ export function initialize<TModels extends Record<string, AnyModel>>(options: In
   return instance;
 }
 
-function resolveModelName(ref: AnyModel['belongsToEntries'][number]['builder']['modelRef']): string {
-  if (typeof ref === 'string') {
-    return ref;
-  }
-
-  return ref().modelName;
-}
-
 function validateRelationships(model: AnyModel, repositoriesByModelNameLowered: Record<string, unknown>): void {
   for (const entry of model.belongsToEntries) {
-    const modelName = resolveModelName(entry.builder.modelRef);
+    const modelName = entry.builder.modelRef;
     if (!repositoriesByModelNameLowered[modelName.toLowerCase()]) {
       throw new Error(`belongsTo reference from "${model.modelName}.${entry.propertyName}" points to model "${modelName}" which is not registered`);
     }
   }
 
   for (const entry of model.hasManyEntries) {
-    const modelName = resolveModelName(entry.builder.modelRef);
+    const modelName = entry.builder.modelRef;
     if (!repositoriesByModelNameLowered[modelName.toLowerCase()]) {
       throw new Error(`hasMany reference from "${model.modelName}.${entry.propertyName}" points to model "${modelName}" which is not registered`);
     }
 
     if (entry.builder.throughRef) {
-      const throughName = resolveModelName(entry.builder.throughRef);
+      const throughName = entry.builder.throughRef;
       if (!repositoriesByModelNameLowered[throughName.toLowerCase()]) {
         throw new Error(`hasMany.through reference from "${model.modelName}.${entry.propertyName}" points to junction model "${throughName}" which is not registered`);
       }
