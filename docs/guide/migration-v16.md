@@ -158,19 +158,19 @@ inheritance chains.
 Each v15 column type maps to a PostgreSQL-native builder in v16. Builders take no arguments - column
 names auto-derive from property keys:
 
-| v15 decorator                         | v16 builder                            |
-| ------------------------------------- | -------------------------------------- |
-| `@column({ type: 'string' })`         | `text()` or `varchar({ length: 100 })` |
-| `@column({ type: 'integer' })`        | `integer()`                            |
-| `@column({ type: 'float' })`          | `float()` or `double()`                |
-| `@column({ type: 'boolean' })`        | `boolean()`                            |
-| `@column({ type: 'date' })`           | `date()`                               |
-| `@column({ type: 'datetime' })`       | `timestamptz()`                        |
-| `@column({ type: 'json' })`           | `json()` or `jsonb()`                  |
-| `@column({ type: 'string[]' })`       | `textArray()`                          |
-| `@column({ type: 'integer[]' })`      | `integerArray()`                       |
-| `@column({ type: 'boolean[]' })`      | `booleanArray()`                       |
-| `@primaryColumn({ type: 'integer' })` | `serial().primaryKey()`                |
+| v15 decorator                         | v16 builder                                |
+| ------------------------------------- | ------------------------------------------ |
+| `@column({ type: 'string' })`         | `text()` or `text<'a' \| 'b'>()` for enums |
+| `@column({ type: 'integer' })`        | `integer()`                                |
+| `@column({ type: 'float' })`          | `float()` or `double()`                    |
+| `@column({ type: 'boolean' })`        | `boolean()`                                |
+| `@column({ type: 'date' })`           | `date()`                                   |
+| `@column({ type: 'datetime' })`       | `timestamptz()`                            |
+| `@column({ type: 'json' })`           | `json()` or `jsonb()`                      |
+| `@column({ type: 'string[]' })`       | `textArray()`                              |
+| `@column({ type: 'integer[]' })`      | `integerArray()`                           |
+| `@column({ type: 'boolean[]' })`      | `booleanArray()`                           |
+| `@primaryColumn({ type: 'integer' })` | `serial().primaryKey()`                    |
 
 Additional v16 builders with no v15 equivalent: `bigserial`, `bigint`, `smallint`, `uuid`, `bytea`,
 `timestamp` (without timezone), `vector({ dimensions })`.

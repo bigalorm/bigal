@@ -220,7 +220,7 @@ export function generateSimpleWithOptionalEnum(overrides: Partial<SimpleWithOpti
   return {
     id: faker.number.int(),
     name: faker.lorem.word(),
-    status: faker.helpers.arrayElement(['active', 'inactive']),
+    status: faker.helpers.arrayElement(['active', 'inactive'] as const),
     ...overrides,
   };
 }

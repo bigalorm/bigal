@@ -86,10 +86,15 @@ auto-derived snake_case name does not match your database column.
 ```ts
 import { text, varchar, uuid } from 'bigal';
 
-name: text(),                                 // TEXT -- string | null
-sku: varchar({ length: 100 }),                // VARCHAR(100) -- string | null
-externalId: uuid(),                           // UUID -- string | null
+name: text(),                                 // TEXT - string | null
+sku: varchar({ length: 100 }),                // VARCHAR(100) - string | null
+externalId: uuid(),                           // UUID - string | null
+status: text<'active' | 'inactive'>(),        // TEXT - 'active' | 'inactive' | null
+role: varchar<'admin' | 'user'>({ length: 50 }).notNull(), // VARCHAR(50) - 'admin' | 'user'
 ```
+
+`text()` and `varchar()` accept an optional generic to narrow the type to a string literal union.
+This is useful for columns that store enum-like values.
 
 ### Numeric types
 
@@ -235,31 +240,31 @@ score: integer().default(0),
 
 ## Complete column reference
 
-| Builder                  | PostgreSQL type  | TypeScript type     | Notes                                 |
-| ------------------------ | ---------------- | ------------------- | ------------------------------------- |
-| `serial()`               | SERIAL           | `number`            | notNull + default implied             |
-| `bigserial()`            | BIGSERIAL        | `number`            | notNull + default implied             |
-| `text()`                 | TEXT             | `string \| null`    |                                       |
-| `varchar({ length })`    | VARCHAR(n)       | `string \| null`    |                                       |
-| `integer()`              | INTEGER          | `number \| null`    |                                       |
-| `bigint()`               | BIGINT           | `number \| null`    |                                       |
-| `smallint()`             | SMALLINT         | `number \| null`    |                                       |
-| `float()` / `real()`     | REAL             | `number \| null`    |                                       |
-| `double()`               | DOUBLE PRECISION | `number \| null`    |                                       |
-| `boolean()`              | BOOLEAN          | `boolean \| null`   |                                       |
-| `timestamp()`            | TIMESTAMP        | `Date \| null`      |                                       |
-| `timestamptz()`          | TIMESTAMPTZ      | `Date \| null`      |                                       |
-| `date()`                 | DATE             | `Date \| null`      |                                       |
-| `json<T>()`              | JSON             | `T \| null`         | Defaults to `Record<string, unknown>` |
-| `jsonb<T>()`             | JSONB            | `T \| null`         | Defaults to `Record<string, unknown>` |
-| `uuid()`                 | UUID             | `string \| null`    |                                       |
-| `bytea()`                | BYTEA            | `Buffer \| null`    |                                       |
-| `textArray()`            | TEXT[]           | `string[] \| null`  |                                       |
-| `integerArray()`         | INTEGER[]        | `number[] \| null`  |                                       |
-| `booleanArray()`         | BOOLEAN[]        | `boolean[] \| null` |                                       |
-| `vector({ dimensions })` | VECTOR(n)        | `number[] \| null`  | Requires pgvector extension           |
-| `createdAt()`            | TIMESTAMPTZ      | `Date`              | notNull, auto-set on insert           |
-| `updatedAt()`            | TIMESTAMPTZ      | `Date`              | notNull, auto-set on insert/update    |
+| Builder                  | PostgreSQL type  | TypeScript type     | Notes                                   |
+| ------------------------ | ---------------- | ------------------- | --------------------------------------- |
+| `serial()`               | SERIAL           | `number`            | notNull + default implied               |
+| `bigserial()`            | BIGSERIAL        | `number`            | notNull + default implied               |
+| `text<T>()`              | TEXT             | `T \| null`         | Defaults to `string`; narrow with union |
+| `varchar<T>({ length })` | VARCHAR(n)       | `T \| null`         | Defaults to `string`; narrow with union |
+| `integer()`              | INTEGER          | `number \| null`    |                                         |
+| `bigint()`               | BIGINT           | `number \| null`    |                                         |
+| `smallint()`             | SMALLINT         | `number \| null`    |                                         |
+| `float()` / `real()`     | REAL             | `number \| null`    |                                         |
+| `double()`               | DOUBLE PRECISION | `number \| null`    |                                         |
+| `boolean()`              | BOOLEAN          | `boolean \| null`   |                                         |
+| `timestamp()`            | TIMESTAMP        | `Date \| null`      |                                         |
+| `timestamptz()`          | TIMESTAMPTZ      | `Date \| null`      |                                         |
+| `date()`                 | DATE             | `Date \| null`      |                                         |
+| `json<T>()`              | JSON             | `T \| null`         | Defaults to `Record<string, unknown>`   |
+| `jsonb<T>()`             | JSONB            | `T \| null`         | Defaults to `Record<string, unknown>`   |
+| `uuid()`                 | UUID             | `string \| null`    |                                         |
+| `bytea()`                | BYTEA            | `Buffer \| null`    |                                         |
+| `textArray()`            | TEXT[]           | `string[] \| null`  |                                         |
+| `integerArray()`         | INTEGER[]        | `number[] \| null`  |                                         |
+| `booleanArray()`         | BOOLEAN[]        | `boolean[] \| null` |                                         |
+| `vector({ dimensions })` | VECTOR(n)        | `number[] \| null`  | Requires pgvector extension             |
+| `createdAt()`            | TIMESTAMPTZ      | `Date`              | notNull, auto-set on insert             |
+| `updatedAt()`            | TIMESTAMPTZ      | `Date`              | notNull, auto-set on insert/update      |
 
 ## Relationships
 

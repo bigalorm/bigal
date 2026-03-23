@@ -3,8 +3,6 @@ import { ColumnBuilder } from './ColumnBuilder.js';
 
 type SerialConfig = ColumnBuilderConfig<number, true, true, true>;
 type BigSerialConfig = ColumnBuilderConfig<number, true, true, true>;
-type TextConfig = ColumnBuilderConfig<string>;
-type VarcharConfig = ColumnBuilderConfig<string>;
 type IntegerConfig = ColumnBuilderConfig<number>;
 type BigIntConfig = ColumnBuilderConfig<number>;
 type SmallIntConfig = ColumnBuilderConfig<number>;
@@ -46,12 +44,12 @@ export function bigserial(options?: ColumnOptions): ColumnBuilder<BigSerialConfi
   return builder as unknown as ColumnBuilder<BigSerialConfig>;
 }
 
-export function text(options?: ColumnOptions): ColumnBuilder<TextConfig> {
-  return new ColumnBuilder('TEXT', options?.name) as unknown as ColumnBuilder<TextConfig>;
+export function text<T extends string = string>(options?: ColumnOptions): ColumnBuilder<ColumnBuilderConfig<T>> {
+  return new ColumnBuilder('TEXT', options?.name) as unknown as ColumnBuilder<ColumnBuilderConfig<T>>;
 }
 
-export function varchar(options?: VarcharOptions): ColumnBuilder<VarcharConfig> {
-  const builder = new ColumnBuilder('VARCHAR', options?.name) as unknown as ColumnBuilder<VarcharConfig>;
+export function varchar<T extends string = string>(options?: VarcharOptions): ColumnBuilder<ColumnBuilderConfig<T>> {
+  const builder = new ColumnBuilder('VARCHAR', options?.name) as unknown as ColumnBuilder<ColumnBuilderConfig<T>>;
   if (options?.length) {
     builder.config.maxLength = options.length;
   }

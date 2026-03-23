@@ -182,8 +182,8 @@ database column name is auto-derived from the property key using snakeCase conve
 | ------------------------ | ---------------- | ------------------- |
 | `serial()`               | SERIAL           | `number`            |
 | `bigserial()`            | BIGSERIAL        | `number`            |
-| `text()`                 | TEXT             | `string \| null`    |
-| `varchar(options?)`      | VARCHAR(n)       | `string \| null`    |
+| `text<T>()`              | TEXT             | `T \| null`         |
+| `varchar<T>(options?)`   | VARCHAR(n)       | `T \| null`         |
 | `integer()`              | INTEGER          | `number \| null`    |
 | `bigint()`               | BIGINT           | `number \| null`    |
 | `smallint()`             | SMALLINT         | `number \| null`    |

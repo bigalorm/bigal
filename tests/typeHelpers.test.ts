@@ -1,6 +1,7 @@
 import { describe, expectTypeOf, it } from 'vitest';
 
 import type { BelongsToKeys, CreateUpdateParams, HasManyKeys, IRepository, InferSelect, ModelRelationshipKeys, QueryResult, RelationshipKeys } from '../src/index.js';
+import { serial, table, text, varchar } from '../src/schema/index.js';
 
 import { Product } from './models/Product.js';
 import { Store } from './models/Store.js';
@@ -107,6 +108,38 @@ describe('CreateUpdateParams', () => {
   it('should be simple Partial without schema (backward compat)', () => {
     type PlainParams = CreateUpdateParams<ProductRow>;
     expectTypeOf<PlainParams>().toEqualTypeOf<Partial<ProductRow>>();
+  });
+});
+
+describe('text() enum narrowing', () => {
+  it('should narrow text<T> to the specified union', () => {
+    const EnumModel = table('test', {
+      id: serial().primaryKey(),
+      status: text<'active' | 'inactive'>().notNull(),
+    });
+
+    type Row = InferSelect<(typeof EnumModel)['schema']>;
+    expectTypeOf<Row['status']>().toEqualTypeOf<'active' | 'inactive'>();
+  });
+
+  it('should default to string when no generic is provided', () => {
+    const PlainModel = table('test', {
+      id: serial().primaryKey(),
+      name: text().notNull(),
+    });
+
+    type Row = InferSelect<(typeof PlainModel)['schema']>;
+    expectTypeOf<Row['name']>().toEqualTypeOf<string>();
+  });
+
+  it('should narrow varchar<T> the same way', () => {
+    const EnumModel = table('test', {
+      id: serial().primaryKey(),
+      role: varchar<'admin' | 'user'>({ length: 50 }).notNull(),
+    });
+
+    type Row = InferSelect<(typeof EnumModel)['schema']>;
+    expectTypeOf<Row['role']>().toEqualTypeOf<'admin' | 'user'>();
   });
 });
 

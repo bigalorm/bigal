@@ -129,8 +129,8 @@ export const Product = table('products', {
 | ------------------------ | ---------------- | ------------------- |
 | `serial()`               | SERIAL           | `number`            |
 | `bigserial()`            | BIGSERIAL        | `number`            |
-| `text()`                 | TEXT             | `string \| null`    |
-| `varchar({ length })`    | VARCHAR(n)       | `string \| null`    |
+| `text<T>()`              | TEXT             | `T \| null`         |
+| `varchar<T>({ length })` | VARCHAR(n)       | `T \| null`         |
 | `integer()`              | INTEGER          | `number \| null`    |
 | `bigint()`               | BIGINT           | `number \| null`    |
 | `smallint()`             | SMALLINT         | `number \| null`    |

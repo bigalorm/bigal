@@ -7,7 +7,7 @@ export const SimpleWithOptionalEnum = table(
   {
     ...modelBase,
     name: text().notNull(),
-    status: text(),
+    status: text<'active' | 'inactive'>(),
   },
   { modelName: 'SimpleWithOptionalEnum' },
 );
