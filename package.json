@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "15.11.4",
+  "version": "15.11.5",
   "description": "A type-safe PostgreSQL ORM for Node.js, written in TypeScript. Features a fluent query builder, decorator-based models, and immutable query state.",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
