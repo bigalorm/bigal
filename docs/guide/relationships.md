@@ -161,5 +161,4 @@ const compilation = await compilationRepository
 
 1. **Use `QueryResult<typeof Model>` for return types** - excludes hasMany, narrows FK types
 2. **Use string references for model relationships** - avoids circular import issues
-3. **All relationships are validated at startup** - `initialize()` throws if a referenced model is
-   missing from the `models` object/array
+3. **All relationships are validated at startup** - `initialize()` throws if a referenced model is missing from the `models` object/array
