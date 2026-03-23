@@ -1,6 +1,11 @@
+import type { InferSelect, SchemaDefinition } from '../schema/InferTypes.js';
+import type { TableDefinition } from '../schema/TableDefinition.js';
 import type { ExcludeEntityCollections, ExcludeFunctions } from '../types/index.js';
 
 import type { ScalarSubquery, SubqueryBuilderLike } from './Subquery.js';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TableDefinition uses any for variance
+type AnyTableDef = TableDefinition<string, any>;
 
 type ExcludeUndefined<T> = Exclude<T, undefined>;
 export type LiteralValues<TValue> = (TValue | null)[] | TValue | null;
@@ -41,7 +46,14 @@ export type WhereQueryStatement<TValue> = [TValue] extends [string] // Avoid dis
       ? NegatableConstraint<NumberOrDateConstraintWithSubquery<TValue> | SubqueryInConstraint | WhereClauseValue<TValue>>
       : NegatableConstraint<JsonConstraint<TValue> | JsonPropertyConstraint | SubqueryInConstraint | WhereClauseValue<TValue>>;
 
-export type WhereQuery<T extends Record<string, unknown>> = {
+/** Structural match for repositories - carries schema via phantom `_schema` property */
+interface HasSchema<TSchema extends SchemaDefinition = SchemaDefinition> {
+  readonly _schema?: TSchema;
+}
+
+type ResolveRow<T> = T extends TableDefinition<string, infer TSchema> ? InferSelect<TSchema> : T extends HasSchema<infer TSchema> ? InferSelect<TSchema> : T;
+
+type WhereQueryRecord<T extends Record<string, unknown>> = {
   // Exclude entity collections and functions. Make the rest of the properties optional
   [K in keyof T as ExcludeEntityCollections<ExcludeFunctions<T[K], K>>]?: K extends 'id'
     ? NegatableConstraint<WhereClauseValue<T>> | WhereQueryStatement<T[K]> // Allow entity objects (via Pick<T,'id'>) and literal id values
@@ -53,8 +65,15 @@ export type WhereQuery<T extends Record<string, unknown>> = {
             | NegatableConstraint<LiteralValues<ExcludeUndefined<T[K]>>> // Allow Single object and arrays of type
             | WhereQueryStatement<ExcludeUndefined<T[K]>>; // Allow nested where query statements
 } & {
-  and?: WhereQuery<T>[];
-  or?: WhereQuery<T>[];
+  and?: WhereQueryRecord<T>[];
+  or?: WhereQueryRecord<T>[];
   exists?: SubqueryBuilderLike;
-  '!'?: Pick<WhereQuery<T>, 'exists'>;
+  '!'?: Pick<WhereQueryRecord<T>, 'exists'>;
 };
+
+/**
+ * Where clause type. Accepts a TableDefinition, repository, or row type:
+ * - `WhereQuery<typeof Product>` - from a model or repository
+ * - `WhereQuery<ProductRow>` - from a plain row type
+ */
+export type WhereQuery<T extends AnyTableDef | HasSchema | Record<string, unknown>> = WhereQueryRecord<ResolveRow<T> extends Record<string, unknown> ? ResolveRow<T> : Record<string, unknown>>;

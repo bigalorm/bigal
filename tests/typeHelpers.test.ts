@@ -1,6 +1,6 @@
 import { describe, expectTypeOf, it } from 'vitest';
 
-import type { BelongsToKeys, CreateUpdateParams, HasManyKeys, IRepository, InferSelect, ModelRelationshipKeys, QueryResult, RelationshipKeys } from '../src/index.js';
+import type { BelongsToKeys, CreateUpdateParams, HasManyKeys, IRepository, InferSelect, ModelRelationshipKeys, QueryResult, RelationshipKeys, Repository, WhereQuery } from '../src/index.js';
 import { serial, table, text, varchar } from '../src/schema/index.js';
 
 import { Product } from './models/Product.js';
@@ -143,16 +143,41 @@ describe('text() enum narrowing', () => {
   });
 });
 
+describe('WhereQuery accepts TableDefinition', () => {
+  it('should accept TableDefinition and allow querying by column values', () => {
+    const where: WhereQuery<typeof Product> = { name: 'Widget' };
+    void where;
+  });
+
+  it('should accept entity object for belongsTo FK fields', () => {
+    const where: WhereQuery<typeof Product> = { store: { id: 5, name: 'Acme' } };
+    void where;
+  });
+});
+
+describe('Repository accepts TableDefinition', () => {
+  it('should allow Repository<typeof Product> as a type annotation', () => {
+    const repo = {} as Repository<typeof Product>;
+    expectTypeOf(repo.create).toBeFunction();
+    expectTypeOf(repo.find).toBeFunction();
+    expectTypeOf(repo.destroy).toBeFunction();
+  });
+
+  it('should thread schema through for CreateUpdateParams', () => {
+    const repo = {} as Repository<typeof Product>;
+    // This should compile - store accepts number or hydrated object
+    expectTypeOf(repo.create).toBeFunction();
+  });
+});
+
 describe('IRepository with TSchema', () => {
   it('should accept hydrated objects in create when schema is threaded', () => {
     const repo = {} as IRepository<ProductRow, ProductSchema>;
-    // This should compile - store accepts number or object
     expectTypeOf(repo.create).toBeFunction();
   });
 
   it('should accept hydrated objects via IRepository without TSchema (backward compat)', () => {
     const repo = {} as IRepository<ProductRow>;
-    // Without schema, CreateUpdateParams falls back to Partial<T>
     expectTypeOf(repo.create).toBeFunction();
   });
 });
