@@ -1,3 +1,9 @@
+## [16.0.0-beta.2](https://github.com/bigalorm/bigal/compare/v16.0.0-beta.1...v16.0.0-beta.2) (2026-03-24)
+
+### Features
+
+- Type-safe populate, EntityOrId, and model registry ([1d68830](https://github.com/bigalorm/bigal/commit/1d688306e1574ae4f3275700c1325b7410daadf3))
+
 ## [16.0.0-beta.1](https://github.com/bigalorm/bigal/compare/v15.11.4...v16.0.0-beta.1) (2026-03-23)
 
 ### ⚠ BREAKING CHANGES
