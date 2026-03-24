@@ -376,6 +376,35 @@ function stripToJSON(sourceFile: SourceFile): number {
   return removedCount;
 }
 
+function collectNonModelStatements(sourceFile: SourceFile): string[] {
+  const modelClassNames = new Set<string>();
+  for (const cls of sourceFile.getClasses()) {
+    if (cls.getDecorator('table')) {
+      modelClassNames.add(cls.getName() ?? '');
+    }
+  }
+
+  const preserved: string[] = [];
+  for (const statement of sourceFile.getStatements()) {
+    // Skip import declarations (we generate new ones)
+    if (statement.getKind() === SyntaxKind.ImportDeclaration) {
+      continue;
+    }
+
+    // Skip model classes (converted to table() calls)
+    if (statement.getKind() === SyntaxKind.ClassDeclaration) {
+      const cls = statement as ClassDeclaration;
+      if (modelClassNames.has(cls.getName() ?? '')) {
+        continue;
+      }
+    }
+
+    preserved.push(statement.getText());
+  }
+
+  return preserved;
+}
+
 function processFile(sourceFile: SourceFile): string | undefined {
   const classes = sourceFile.getClasses();
   const fileTableInfos: TableInfo[] = [];
@@ -406,6 +435,16 @@ function processFile(sourceFile: SourceFile): string | undefined {
   for (const tableInfo of fileTableInfos) {
     lines.push(generateTableDefinition(tableInfo));
     lines.push('');
+  }
+
+  // Preserve non-model exports (types, interfaces, enums, standalone functions)
+  const preserved = collectNonModelStatements(sourceFile);
+  if (preserved.length) {
+    lines.push('// Preserved non-model exports');
+    for (const stmt of preserved) {
+      lines.push(stmt);
+      lines.push('');
+    }
   }
 
   return lines.join('\n');
