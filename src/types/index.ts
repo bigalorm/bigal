@@ -1,5 +1,6 @@
 export * from './PoolLike.js';
 export * from './CreateUpdateParams.js';
+export * from './EntityOrId.js';
 export * from './ExcludeEntityCollections.js';
 export * from './ExcludeFunctions.js';
 export * from './GetValueType.js';
@@ -14,3 +15,4 @@ export * from './PickFunctions.js';
 export * from './Populated.js';
 export * from './QueryResult.js';
 export * from './QueryResultPopulated.js';
+export * from './ResolveModel.js';

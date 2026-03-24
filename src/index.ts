@@ -61,7 +61,6 @@ export type {
   HasManyThroughIntermediate,
   InferInsert,
   InferSelect,
-  ModelReference,
   ModelHooks,
   OptionalInsertKeys,
   RelationshipKeys,

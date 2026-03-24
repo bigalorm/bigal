@@ -46,8 +46,8 @@ export const Store = table('stores', {
 ```
 
 - `.via('store')` references the property name on the related table (not the database column)
-- `hasMany` columns are excluded from the select and insert types - they only exist after
-  `.populate()`
+- `hasMany` columns appear in `InferSelect` as optional `Record<string, unknown>[]` to support
+  populate. `QueryResult` strips them from results, so they only appear after `.populate()`
 
 ## Many-to-many (through)
 
@@ -116,10 +116,10 @@ console.log(product.store); // number (the foreign key ID)
 
 The narrowing rules:
 
-| Select type (InferSelect) | QueryResult type     |
-| ------------------------- | -------------------- |
-| `number` (belongsTo FK)   | `number`             |
-| (hasMany collection)      | Excluded from result |
+| InferSelect type                                   | QueryResult type     |
+| -------------------------------------------------- | -------------------- |
+| `number` (belongsTo FK)                            | `number`             |
+| `Record<string, unknown>[] \| undefined` (hasMany) | Stripped from result |
 
 ### Using QueryResult in type definitions
 
@@ -128,12 +128,26 @@ The narrowing rules:
 ```ts
 import type { QueryResult } from 'bigal';
 
-// store is `number`, categories (hasMany) is excluded
+// store is `number`, categories (hasMany) is stripped
 type ProductRow = QueryResult<typeof Product>;
 
 // Pick specific fields
 type ProductSummary = Pick<QueryResult<typeof Product>, 'id' | 'name' | 'store'>;
 ```
+
+## Typed populate
+
+When using object-style `initialize({ models: { Product, Store } })`, populate results are fully
+typed. The full models map is threaded through repositories, so `.populate('store')` resolves to the
+related entity type rather than `Record<string, unknown>`.
+
+```ts
+const product = await Product.findOne().where({ id: 1 }).populate('store');
+
+// product.store is typed as the full Store entity, not unknown
+```
+
+Array-style `initialize({ models: [...] })` still works but does not provide typed populate results.
 
 ## Populate with junction table filtering
 
@@ -159,6 +173,7 @@ const compilation = await compilationRepository
 
 ## Best practices
 
-1. **Use `QueryResult<typeof Model>` for return types** - excludes hasMany, narrows FK types
+1. **Use `QueryResult<typeof Model>` for return types** - strips hasMany, narrows FK types
 2. **Use string references for model relationships** - avoids circular import issues
-3. **All relationships are validated at startup** - `initialize()` throws if a referenced model is missing from the `models` object/array
+3. **Use object-style `initialize()`** - enables typed populate results
+4. **All relationships are validated at startup** - `initialize()` throws if a referenced model is missing from the `models` object/array

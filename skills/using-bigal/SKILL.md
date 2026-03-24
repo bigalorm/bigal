@@ -189,14 +189,20 @@ Reference model names by string (`'Store'`, not `Store`) to avoid circular impor
 
 ### Shared columns
 
+Extract a shared base only for universal columns (id + timestamps). Keep domain-specific
+columns inline in each model - avoid creating hierarchies of base objects.
+
 ```ts
-const modelBase = { id: serial().primaryKey() };
-const timestamps = { createdAt: createdAt(), updatedAt: updatedAt() };
+const modelBase = {
+  id: serial().primaryKey(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+};
 
 export const Product = table('products', {
   ...modelBase,
-  ...timestamps,
   name: text().notNull(),
+  store: belongsTo('Store'),
 });
 ```
 
@@ -374,11 +380,13 @@ const { results, totalCount } = await Product
 
 ### Populate (eager loading)
 
+With object-style `initialize({ models: { Product, Store } })`, populate results are fully typed.
+
 ```ts
 const product = await Product.findOne()
   .where({ id: 42 })
   .populate('store', { select: ['name'] });
-// product.store is the full Store entity
+// product.store is typed as the full Store entity
 ```
 
 ### Joins
@@ -525,7 +533,7 @@ const results = await query;
 
 ### QueryResult accepts TableDefinition directly
 
-`QueryResult<typeof Model>` produces the row type with hasMany excluded and FKs narrowed:
+`QueryResult<typeof Model>` produces the row type with hasMany stripped and FKs narrowed:
 
 ```ts
 import type { QueryResult } from 'bigal';

@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
-import type { InferInsert, InferSelect, TableDefinition } from '../src/schema/index.js';
+import type { InferInsert, InferSelect } from '../src/schema/index.js';
 import {
   belongsTo,
   bigserial,
@@ -29,6 +29,7 @@ import {
   uuid,
   varchar,
 } from '../src/schema/index.js';
+import type { EntityOrId } from '../src/types/index.js';
 
 // ---------------------------------------------------------------------------
 // Shared base column definitions
@@ -47,11 +48,6 @@ const timestamps = {
 // Test model definitions (using real builders against real code)
 // ---------------------------------------------------------------------------
 
-// Registry object for circular references. Arrow functions in belongsTo/hasMany
-// capture `tables` by reference, so they resolve correctly after all tables are assigned.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- opaque registry to break circular type inference
-const tables: Record<string, TableDefinition<any, any>> = {};
-
 const productSchema = {
   ...modelBase,
   ...timestamps,
@@ -62,13 +58,10 @@ const productSchema = {
   priceCents: integer().notNull(),
   isActive: boolean().notNull().default(true),
   metadata: jsonb<{ color?: string }>(),
-  store: belongsTo(() => tables.Store!),
-  categories: hasMany(() => tables.Category!)
-    .through(() => tables.ProductCategory!)
-    .via('product'),
+  store: belongsTo('Store'),
+  categories: hasMany('Category').through('ProductCategory').via('product'),
 };
 const Product = table('products', productSchema);
-tables.Product = Product;
 
 type ProductSelect = InferSelect<typeof productSchema>;
 type ProductInsert = InferInsert<typeof productSchema>;
@@ -77,10 +70,9 @@ const storeSchema = {
   ...modelBase,
   ...timestamps,
   name: text(),
-  products: hasMany(() => tables.Product!).via('store'),
+  products: hasMany('Product').via('store'),
 };
 const Store = table('stores', storeSchema);
-tables.Store = Store;
 
 type StoreSelect = InferSelect<typeof storeSchema>;
 type StoreInsert = InferInsert<typeof storeSchema>;
@@ -89,24 +81,21 @@ const categorySchema = {
   ...modelBase,
   ...timestamps,
   name: text().notNull(),
-  products: hasMany(() => tables.Product!)
-    .through(() => tables.ProductCategory!)
-    .via('category'),
+  products: hasMany('Product').through('ProductCategory').via('category'),
 };
-const Category = table('categories', categorySchema);
-tables.Category = Category;
+// Table definition exists for completeness; not directly referenced by tests.
+void table('categories', categorySchema);
 
 type CategorySelect = InferSelect<typeof categorySchema>;
 
 const productCategorySchema = {
   ...modelBase,
-  product: belongsTo(() => tables.Product!),
-  category: belongsTo(() => tables.Category!),
+  product: belongsTo('Product'),
+  category: belongsTo('Category'),
   ordering: integer(),
   isPrimary: booleanColumn(),
 };
 const ProductCategory = table('product__category', productCategorySchema);
-tables.ProductCategory = ProductCategory;
 
 type ProductCategorySelect = InferSelect<typeof productCategorySchema>;
 type ProductCategoryInsert = InferInsert<typeof productCategorySchema>;
@@ -125,15 +114,15 @@ type StringIdInsert = InferInsert<(typeof SimpleWithStringId)['schema']>;
 const selfRefSchema = {
   ...modelBase,
   name: text().notNull(),
-  parent: belongsTo(() => tables.SelfRef!),
-  children: hasMany(() => tables.SelfRef!).via('parent'),
+  parent: belongsTo('SelfRef'),
+  children: hasMany('SelfRef').via('parent'),
 };
-const SelfRef = table('self_ref', selfRefSchema);
-tables.SelfRef = SelfRef;
+// Table definition exists for completeness; not directly referenced by tests.
+void table('self_ref', selfRefSchema);
 
 type SelfRefSelect = InferSelect<typeof selfRefSchema>;
 
-// JSON column with id property (the old NotEntity case)
+// JSON column with id property (should not be confused with a relationship)
 interface IJsonPayload {
   id: string;
   message: string;
@@ -236,13 +225,14 @@ describe('Schema builder type inference', () => {
         expectTypeOf<ProductSelect['metadata']>().toEqualTypeOf<{ color?: string } | null>();
       });
 
-      it('store is number (belongsTo FK)', () => {
-        expectTypeOf<ProductSelect['store']>().toEqualTypeOf<number>();
+      it('store is EntityOrId<number> (belongsTo FK)', () => {
+        expectTypeOf<ProductSelect['store']>().toEqualTypeOf<EntityOrId<number>>();
       });
 
-      it('categories excluded (hasMany not in select)', () => {
+      it('categories is optional Record<string, unknown>[] (hasMany)', () => {
         type HasCategories = 'categories' extends keyof ProductSelect ? true : false;
-        expectTypeOf<HasCategories>().toEqualTypeOf<false>();
+        expectTypeOf<HasCategories>().toEqualTypeOf<true>();
+        expectTypeOf<ProductSelect['categories']>().toEqualTypeOf<Record<string, unknown>[] | undefined>();
       });
 
       it('createdAt is Date (auto-set, notNull)', () => {
@@ -263,19 +253,20 @@ describe('Schema builder type inference', () => {
         expectTypeOf<StoreSelect['name']>().toEqualTypeOf<string | null>();
       });
 
-      it('products excluded (hasMany)', () => {
+      it('products is optional Record<string, unknown>[] (hasMany)', () => {
         type HasProducts = 'products' extends keyof StoreSelect ? true : false;
-        expectTypeOf<HasProducts>().toEqualTypeOf<false>();
+        expectTypeOf<HasProducts>().toEqualTypeOf<true>();
+        expectTypeOf<StoreSelect['products']>().toEqualTypeOf<Record<string, unknown>[] | undefined>();
       });
     });
 
     describe('ProductCategory (junction table)', () => {
-      it('product is number (belongsTo FK)', () => {
-        expectTypeOf<ProductCategorySelect['product']>().toEqualTypeOf<number>();
+      it('product is EntityOrId<number> (belongsTo FK)', () => {
+        expectTypeOf<ProductCategorySelect['product']>().toEqualTypeOf<EntityOrId<number>>();
       });
 
-      it('category is number (belongsTo FK)', () => {
-        expectTypeOf<ProductCategorySelect['category']>().toEqualTypeOf<number>();
+      it('category is EntityOrId<number> (belongsTo FK)', () => {
+        expectTypeOf<ProductCategorySelect['category']>().toEqualTypeOf<EntityOrId<number>>();
       });
 
       it('ordering is number | null', () => {
@@ -298,17 +289,18 @@ describe('Schema builder type inference', () => {
     });
 
     describe('SelfReferential model', () => {
-      it('parent is number (belongsTo FK)', () => {
-        expectTypeOf<SelfRefSelect['parent']>().toEqualTypeOf<number>();
+      it('parent is EntityOrId<number> (belongsTo FK)', () => {
+        expectTypeOf<SelfRefSelect['parent']>().toEqualTypeOf<EntityOrId<number>>();
       });
 
-      it('children excluded (hasMany)', () => {
+      it('children is optional Record<string, unknown>[] (hasMany)', () => {
         type HasChildren = 'children' extends keyof SelfRefSelect ? true : false;
-        expectTypeOf<HasChildren>().toEqualTypeOf<false>();
+        expectTypeOf<HasChildren>().toEqualTypeOf<true>();
+        expectTypeOf<SelfRefSelect['children']>().toEqualTypeOf<Record<string, unknown>[] | undefined>();
       });
     });
 
-    describe('JSON column with id property (old NotEntity case)', () => {
+    describe('JSON column with id property', () => {
       it('payload is IJsonPayload | null (not confused with a relationship)', () => {
         expectTypeOf<JsonWithIdSelect['payload']>().toEqualTypeOf<IJsonPayload | null>();
       });
@@ -410,7 +402,7 @@ describe('Schema builder type inference', () => {
       });
 
       it('requires store (belongsTo FK)', () => {
-        expectTypeOf<Pick<Required<ProductInsert>, 'store'>>().toEqualTypeOf<{ store: number }>();
+        expectTypeOf<Pick<Required<ProductInsert>, 'store'>>().toEqualTypeOf<{ store: EntityOrId<number> }>();
       });
 
       it('accepts minimal insert with only required fields', () => {
@@ -648,29 +640,27 @@ describe('Schema builder runtime behavior', () => {
 
   describe('Relationship builders', () => {
     it('belongsTo stores FK column name', () => {
-      const builder = belongsTo(() => Store, 'store_id');
+      const builder = belongsTo('Store', 'store_id');
       expect(builder.dbColumnName).toBe('store_id');
     });
 
     it('belongsTo accepts options object for FK column name', () => {
-      const builder = belongsTo(() => Store, { name: 'shop_id' });
+      const builder = belongsTo('Store', { name: 'shop_id' });
       expect(builder.dbColumnName).toBe('shop_id');
     });
 
     it('belongsTo auto-derives FK column name when omitted', () => {
-      const builder = belongsTo(() => Store);
+      const builder = belongsTo('Store');
       expect(builder.dbColumnName).toBe('');
     });
 
     it('hasMany stores via property name', () => {
-      const builder = hasMany(() => Product).via('store');
+      const builder = hasMany('Product').via('store');
       expect(builder.viaPropertyName).toBe('store');
     });
 
     it('hasMany with through stores through reference', () => {
-      const builder = hasMany(() => Category)
-        .through(() => ProductCategory)
-        .via('product');
+      const builder = hasMany('Category').through('ProductCategory').via('product');
       expect(builder.viaPropertyName).toBe('product');
       expect(builder.throughRef).toBeDefined();
     });

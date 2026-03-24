@@ -28,13 +28,17 @@ export type OnQueryCallback = (event: OnQueryEvent) => void;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- variance: hooks use contravariant function params
 type AnyModel = TableDefinition<string, any>;
 
-/** Infers the repository type for a model — readonly or read-write based on the model's isReadonly flag */
-type InferRepository<T extends AnyModel> =
-  T extends TableDefinition<string, infer TSchema> ? (T['isReadonly'] extends true ? IReadonlyRepository<InferSelect<TSchema>, TSchema> : IRepository<InferSelect<TSchema>, TSchema>) : never;
+/** Infers the repository type for a model, threading the full models map for populate resolution */
+type InferRepository<TModels extends Record<string, AnyModel>, T extends AnyModel> =
+  T extends TableDefinition<string, infer TSchema>
+    ? T['isReadonly'] extends true
+      ? IReadonlyRepository<InferSelect<TSchema>, TSchema, TModels>
+      : IRepository<InferSelect<TSchema>, TSchema, TModels>
+    : never;
 
 /** Maps a named models object to a typed repositories object */
 type RepositoryMap<TModels extends Record<string, AnyModel>> = {
-  [K in keyof TModels]: InferRepository<TModels[K]>;
+  [K in keyof TModels]: InferRepository<TModels, TModels[K]>;
 };
 
 // --- Options: array-style ---
@@ -119,7 +123,8 @@ export function initialize<TModels extends Record<string, AnyModel>>(options: In
       modelReadonlyPool = modelConnection.readonlyPool ?? modelPool;
     }
 
-    let repository: ReadonlyRepository<AnyRecord> | Repository<AnyRecord>;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- runtime repositories use any for cross-model operations
+    let repository: ReadonlyRepository<any> | Repository<any>;
     if (model.isReadonly) {
       repository = new ReadonlyRepository({
         modelMetadata,
@@ -194,30 +199,22 @@ export function initialize<TModels extends Record<string, AnyModel>>(options: In
   return instance;
 }
 
-function resolveModelName(ref: AnyModel['belongsToEntries'][number]['builder']['modelRef']): string {
-  if (typeof ref === 'string') {
-    return ref;
-  }
-
-  return ref().modelName;
-}
-
 function validateRelationships(model: AnyModel, repositoriesByModelNameLowered: Record<string, unknown>): void {
   for (const entry of model.belongsToEntries) {
-    const modelName = resolveModelName(entry.builder.modelRef);
+    const modelName = entry.builder.modelRef;
     if (!repositoriesByModelNameLowered[modelName.toLowerCase()]) {
       throw new Error(`belongsTo reference from "${model.modelName}.${entry.propertyName}" points to model "${modelName}" which is not registered`);
     }
   }
 
   for (const entry of model.hasManyEntries) {
-    const modelName = resolveModelName(entry.builder.modelRef);
+    const modelName = entry.builder.modelRef;
     if (!repositoriesByModelNameLowered[modelName.toLowerCase()]) {
       throw new Error(`hasMany reference from "${model.modelName}.${entry.propertyName}" points to model "${modelName}" which is not registered`);
     }
 
     if (entry.builder.throughRef) {
-      const throughName = resolveModelName(entry.builder.throughRef);
+      const throughName = entry.builder.throughRef;
       if (!repositoriesByModelNameLowered[throughName.toLowerCase()]) {
         throw new Error(`hasMany.through reference from "${model.modelName}.${entry.propertyName}" points to junction model "${throughName}" which is not registered`);
       }

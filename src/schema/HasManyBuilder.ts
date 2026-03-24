@@ -1,35 +1,34 @@
-import type { ModelReference } from './BelongsToBuilder.js';
-
-export interface HasManyConfig {
+export interface HasManyConfig<TModelName extends string = string> {
   brand: 'hasMany';
+  modelName: TModelName;
 }
 
-export interface HasManyThroughIntermediate {
-  via(propertyName: string): HasManyBuilder;
+export interface HasManyThroughIntermediate<TModelName extends string = string> {
+  via(propertyName: string): HasManyBuilder<TModelName>;
 }
 
-export class HasManyBuilder {
-  declare public readonly _: HasManyConfig;
+export class HasManyBuilder<TModelName extends string = string> {
+  declare public readonly _: HasManyConfig<TModelName>;
 
-  public readonly modelRef: ModelReference;
+  public readonly modelRef: string;
 
   public viaPropertyName: string | undefined;
 
-  public throughRef: ModelReference | undefined;
+  public throughRef: string | undefined;
 
-  public constructor(modelRef: ModelReference) {
+  public constructor(modelRef: string) {
     this.modelRef = modelRef;
   }
 
-  public via(propertyName: string): HasManyBuilder {
+  public via(propertyName: string): HasManyBuilder<TModelName> {
     this.viaPropertyName = propertyName;
     return this;
   }
 
-  public through(throughRef: ModelReference): HasManyThroughIntermediate {
+  public through(throughRef: string): HasManyThroughIntermediate<TModelName> {
     this.throughRef = throughRef;
     return {
-      via: (propertyName: string): HasManyBuilder => {
+      via: (propertyName: string): HasManyBuilder<TModelName> => {
         this.viaPropertyName = propertyName;
         return this;
       },
@@ -40,8 +39,8 @@ export class HasManyBuilder {
 /**
  * Defines a one-to-many or many-to-many (hasMany) relationship.
  *
- * @param {string | Function} modelRef - Model name string or arrow function returning a TableDefinition
+ * @param {string} modelRef - Model name string (resolved at initialize() time)
  */
-export function hasMany(modelRef: ModelReference): HasManyBuilder {
-  return new HasManyBuilder(modelRef);
+export function hasMany<TModelName extends string = string>(modelRef: TModelName): HasManyBuilder<TModelName> {
+  return new HasManyBuilder<TModelName>(modelRef);
 }

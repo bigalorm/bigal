@@ -1,6 +1,18 @@
 import { describe, expectTypeOf, it } from 'vitest';
 
-import type { BelongsToKeys, CreateUpdateParams, HasManyKeys, IRepository, InferSelect, ModelRelationshipKeys, QueryResult, RelationshipKeys, Repository, WhereQuery } from '../src/index.js';
+import type {
+  BelongsToKeys,
+  CreateUpdateParams,
+  EntityOrId,
+  HasManyKeys,
+  IRepository,
+  InferSelect,
+  ModelRelationshipKeys,
+  QueryResult,
+  RelationshipKeys,
+  Repository,
+  WhereQuery,
+} from '../src/index.js';
 import { serial, table, text, varchar } from '../src/schema/index.js';
 
 import { Product } from './models/Product.js';
@@ -42,7 +54,7 @@ describe('Schema-level key helpers', () => {
 describe('ModelRelationshipKeys', () => {
   it('should return only relationship keys with concrete schema', () => {
     type ProductRelKeys = ModelRelationshipKeys<ProductRow, ProductSchema>;
-    expectTypeOf<ProductRelKeys>().toEqualTypeOf<'store'>();
+    expectTypeOf<ProductRelKeys>().toEqualTypeOf<'categories' | 'store'>();
   });
 
   it('should fall back to all string keys without schema', () => {
@@ -88,10 +100,30 @@ describe('QueryResult', () => {
   });
 });
 
+describe('EntityOrId and InferSelect', () => {
+  it('should widen belongsTo to EntityOrId in InferSelect', () => {
+    expectTypeOf<ProductRow['store']>().toEqualTypeOf<EntityOrId<number>>();
+  });
+
+  it('should accept FK value for belongsTo', () => {
+    const row: Pick<ProductRow, 'store'> = { store: 5 };
+    void row;
+  });
+
+  it('should accept entity object with id for belongsTo', () => {
+    const row: Pick<ProductRow, 'store'> = { store: { id: 5, name: 'Acme' } };
+    void row;
+  });
+
+  it('should narrow belongsTo back to FK type in QueryResult', () => {
+    type ProductResult = QueryResult<typeof Product>;
+    expectTypeOf<ProductResult['store']>().toEqualTypeOf<number>();
+  });
+});
+
 describe('CreateUpdateParams', () => {
-  it('should accept FK value for belongsTo with concrete schema', () => {
-    type ProductParams = CreateUpdateParams<ProductRow, ProductSchema>;
-    // Both FK value and hydrated object should be assignable
+  it('should accept FK value for belongsTo', () => {
+    type ProductParams = CreateUpdateParams<ProductRow>;
     const withFk: ProductParams = { store: 5 };
     const withObject: ProductParams = { store: { id: 5, name: 'Acme' } };
     void withFk;
@@ -99,15 +131,15 @@ describe('CreateUpdateParams', () => {
   });
 
   it('should not widen non-FK columns', () => {
-    type ProductParams = CreateUpdateParams<ProductRow, ProductSchema>;
+    type ProductParams = CreateUpdateParams<ProductRow>;
     // @ts-expect-error - name is string, not widened to accept objects
     const bad: ProductParams = { name: { not: 'a string' } };
     void bad;
   });
 
-  it('should be simple Partial without schema (backward compat)', () => {
-    type PlainParams = CreateUpdateParams<ProductRow>;
-    expectTypeOf<PlainParams>().toEqualTypeOf<Partial<ProductRow>>();
+  it('should be Partial<T>', () => {
+    type ProductParams = CreateUpdateParams<ProductRow>;
+    expectTypeOf<ProductParams>().toEqualTypeOf<Partial<ProductRow>>();
   });
 });
 

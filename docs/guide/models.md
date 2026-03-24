@@ -313,34 +313,32 @@ categories: hasMany('Category')
   .via('product'),
 ```
 
-`hasMany` columns are excluded from both the select and insert types. They are only present
-after `.populate()`.
+`hasMany` columns appear in `InferSelect` as optional `Record<string, unknown>[]` to support
+populate. `QueryResult` strips them from results, so they only appear after `.populate()`.
+They are excluded from the insert type entirely.
 
 See [Relationships](/guide/relationships) for complete examples.
 
 ## Shared columns
 
-Define reusable column sets as plain objects and spread them into schema definitions:
+Extract a shared base only for columns that appear in every model (typically `id` + timestamps).
+Domain-specific columns like relationships should stay inline in each model.
 
 ```ts
 const modelBase = {
   id: serial().primaryKey(),
-};
-
-const timestamps = {
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 };
 
 export const Product = table('products', {
   ...modelBase,
-  ...timestamps,
   name: text().notNull(),
+  store: belongsTo('Store'),
 });
 
 export const Store = table('stores', {
   ...modelBase,
-  ...timestamps,
   name: text(),
 });
 ```
@@ -355,7 +353,7 @@ import type { QueryResult, InferInsert } from 'bigal';
 type ProductRow = QueryResult<typeof Product>;
 // { id: number; name: string; priceCents: number; isActive: boolean;
 //   store: number; metadata: { color?: string } | null; createdAt: Date; updatedAt: Date }
-// hasMany collections (categories) are excluded
+// hasMany collections (categories) are stripped by QueryResult
 
 type ProductInsert = InferInsert<(typeof Product)['schema']>;
 // { name: string; priceCents: number; store: number;  <-- required

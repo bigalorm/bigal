@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { faker } from '@faker-js/faker';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { InferSelect, IRepository, PoolLike, PoolQueryResult, QueryResultRow, TableDefinition } from '../src/index.js';
+import type { InferSelect, IRepository, PoolLike, PoolQueryResult, QueryResultRow } from '../src/index.js';
 import { belongsTo, boolean as booleanColumn, initialize, hasMany, integer, serial, text, textArray, defineTable as table } from '../src/index.js';
 
 import { pick } from './utils/pick.js';
@@ -33,26 +33,19 @@ const modelBase = {
   id: serial().primaryKey(),
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const tables: Record<string, TableDefinition<any, any>> = {};
-
 const storeSchema = {
   ...modelBase,
   name: text(),
-  products: hasMany(() => tables.Product!).via('store'),
+  products: hasMany('Product').via('store'),
 };
-const StoreDef = table('stores', storeSchema);
-tables.Store = StoreDef;
+const StoreModel = table('stores', storeSchema);
 
 const categorySchema = {
   ...modelBase,
   name: text().notNull(),
-  products: hasMany(() => tables.Product!)
-    .through(() => tables.ProductCategory!)
-    .via('category'),
+  products: hasMany('Product').through('ProductCategory').via('category'),
 };
-const CategoryDef = table('categories', categorySchema);
-tables.Category = CategoryDef;
+const CategoryModel = table('categories', categorySchema);
 
 const productSchema = {
   ...modelBase,
@@ -60,28 +53,24 @@ const productSchema = {
   sku: text(),
   location: text(),
   aliases: textArray({ name: 'alias_names' }).default([]),
-  store: belongsTo(() => tables.Store!),
-  categories: hasMany(() => tables.Category!)
-    .through(() => tables.ProductCategory!)
-    .via('product'),
+  store: belongsTo('Store'),
+  categories: hasMany('Category').through('ProductCategory').via('product'),
 };
-const ProductDef = table('products', productSchema);
-tables.Product = ProductDef;
+const ProductModel = table('products', productSchema);
 
 const productCategorySchema = {
   ...modelBase,
-  product: belongsTo(() => tables.Product!),
-  category: belongsTo(() => tables.Category!),
+  product: belongsTo('Product'),
+  category: belongsTo('Category'),
   ordering: integer(),
   isPrimary: booleanColumn(),
 };
-const ProductCategoryDef = table('product__category', productCategorySchema);
-tables.ProductCategory = ProductCategoryDef;
+const ProductCategoryModel = table('product__category', productCategorySchema);
 
 const hookedProductSchema = {
   ...productSchema,
 };
-const ProductWithHooksDef = table('products', hookedProductSchema, {
+const ProductWithHooksModel = table('products', hookedProductSchema, {
   hooks: {
     async beforeCreate(values) {
       await Promise.resolve();
@@ -104,15 +93,15 @@ const stringCollectionSchema = {
   name: text().notNull(),
   otherIds: textArray().default([]),
 };
-const SimpleWithStringCollectionDef = table('simple', stringCollectionSchema);
+const SimpleWithStringCollectionModel = table('simple', stringCollectionSchema);
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type ProductSelect = InferSelect<(typeof ProductDef)['schema']>;
-type ProductCategorySelect = InferSelect<(typeof ProductCategoryDef)['schema']>;
-type StoreSelect = InferSelect<(typeof StoreDef)['schema']>;
+type ProductSelect = InferSelect<(typeof ProductModel)['schema']>;
+type ProductCategorySelect = InferSelect<(typeof ProductCategoryModel)['schema']>;
+type StoreSelect = InferSelect<(typeof StoreModel)['schema']>;
 
 // ---------------------------------------------------------------------------
 // Generators (plain objects)
@@ -137,7 +126,7 @@ function generateProduct(args: Partial<ProductSelect> & Pick<ProductSelect, 'sto
   };
 }
 
-function generateCategory(args?: Partial<InferSelect<(typeof CategoryDef)['schema']>>): InferSelect<(typeof CategoryDef)['schema']> {
+function generateCategory(args?: Partial<InferSelect<(typeof CategoryModel)['schema']>>): InferSelect<(typeof CategoryModel)['schema']> {
   return {
     id: faker.number.int(),
     name: `Category - ${faker.string.uuid()}`,
@@ -145,7 +134,7 @@ function generateCategory(args?: Partial<InferSelect<(typeof CategoryDef)['schem
   };
 }
 
-function generateProductCategory(productInput: Pick<ProductSelect, 'id'> | number, categoryInput: Pick<InferSelect<(typeof CategoryDef)['schema']>, 'id'> | number): ProductCategorySelect {
+function generateProductCategory(productInput: Pick<ProductSelect, 'id'> | number, categoryInput: Pick<InferSelect<(typeof CategoryModel)['schema']>, 'id'> | number): ProductCategorySelect {
   return {
     id: faker.number.int(),
     product: typeof productInput === 'number' ? productInput : productInput.id,
@@ -155,7 +144,7 @@ function generateProductCategory(productInput: Pick<ProductSelect, 'id'> | numbe
   };
 }
 
-function generateSimpleWithStringCollection(args?: Partial<InferSelect<(typeof SimpleWithStringCollectionDef)['schema']>>): InferSelect<(typeof SimpleWithStringCollectionDef)['schema']> {
+function generateSimpleWithStringCollection(args?: Partial<InferSelect<(typeof SimpleWithStringCollectionModel)['schema']>>): InferSelect<(typeof SimpleWithStringCollectionModel)['schema']> {
   return {
     id: faker.number.int(),
     name: `WithStringCollection - ${faker.string.uuid()}`,
@@ -173,27 +162,27 @@ describe('Repository', () => {
 
   let ProductRepository: IRepository<ProductSelect>;
   let ProductCategoryRepository: IRepository<ProductCategorySelect>;
-  let SimpleWithStringCollectionRepository: IRepository<InferSelect<(typeof SimpleWithStringCollectionDef)['schema']>>;
+  let SimpleWithStringCollectionRepository: IRepository<InferSelect<(typeof SimpleWithStringCollectionModel)['schema']>>;
   let StoreRepository: IRepository<StoreSelect>;
-  let ProductWithHooksRepository: IRepository<InferSelect<(typeof ProductWithHooksDef)['schema']>>;
+  let ProductWithHooksRepository: IRepository<InferSelect<(typeof ProductWithHooksModel)['schema']>>;
 
   beforeAll(() => {
     const bigal = initialize({
-      models: [CategoryDef, ProductDef, ProductCategoryDef, SimpleWithStringCollectionDef, StoreDef],
+      models: [CategoryModel, ProductModel, ProductCategoryModel, SimpleWithStringCollectionModel, StoreModel],
       pool: mockedPool,
     });
 
-    ProductRepository = bigal.getRepository(ProductDef);
-    ProductCategoryRepository = bigal.getRepository(ProductCategoryDef);
-    SimpleWithStringCollectionRepository = bigal.getRepository(SimpleWithStringCollectionDef);
-    StoreRepository = bigal.getRepository(StoreDef);
+    ProductRepository = bigal.getRepository(ProductModel);
+    ProductCategoryRepository = bigal.getRepository(ProductCategoryModel);
+    SimpleWithStringCollectionRepository = bigal.getRepository(SimpleWithStringCollectionModel);
+    StoreRepository = bigal.getRepository(StoreModel);
 
     // Separate instance for hooked models since they share the 'products' table name
     const hookedBigal = initialize({
-      models: [ProductWithHooksDef, StoreDef, CategoryDef, ProductCategoryDef],
+      models: [ProductWithHooksModel, StoreModel, CategoryModel, ProductCategoryModel],
       pool: mockedPool,
     });
-    ProductWithHooksRepository = hookedBigal.getRepository(ProductWithHooksDef);
+    ProductWithHooksRepository = hookedBigal.getRepository(ProductWithHooksModel);
   });
 
   beforeEach(() => {

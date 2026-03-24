@@ -83,27 +83,39 @@ a name when the convention doesn't match:
 aliases: textArray({ name: 'alias_names' }).default([]),
 ```
 
-### Step 2: Extract shared base columns
+### Step 2: Replace class inheritance with spread
 
-Replace class inheritance with object spread:
+Only extract a shared base for columns that genuinely appear in every model (typically
+`id` + timestamps). Domain-specific columns like `organization: belongsTo(...)` should
+stay inline in each model, even if repeated. A bit of repetition is better than a hierarchy
+of base objects that becomes hard to maintain.
 
 ```typescript
 // Before
 abstract class ModelBase extends Entity {
   @primaryColumn({ type: 'integer' }) public id!: number;
+  @createDateColumn() public createdAt!: Date;
+  @updateDateColumn() public updatedAt!: Date;
 }
 class Product extends ModelBase { ... }
 
-// After
-const modelBase = { id: serial().primaryKey() };
-const timestamps = { createdAt: createdAt(), updatedAt: updatedAt() };
+// After - one shared base for universal columns
+const modelBase = {
+  id: serial().primaryKey(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+};
 
 const Product = table('products', {
   ...modelBase,
-  ...timestamps,
   name: text().notNull(),
+  organization: belongsTo<string>('Organization'),
 });
 ```
+
+**Avoid** creating a hierarchy of base objects like `orgBase`, `accountingBase`, etc.
+Each model should declare its own relationships and domain columns inline. Use
+`QueryResult<typeof Product>` for the row type instead of creating separate base row types.
 
 ### Step 3: Convert hooks
 
@@ -160,25 +172,37 @@ const Product = bigal.getRepository(Product);
 - Remove `experimentalDecorators: true` from tsconfig.json
 - Remove `useDefineForClassFields: false` from tsconfig.json
 - Remove `NotEntity<T>` wrappers - no longer needed
+- Remove redundant `{ name: '...' }` options where the column name matches the auto-derived
+  snakeCase (e.g., `priceCents: integer({ name: 'price_cents' })` should be just
+  `priceCents: integer()`)
 
 ### Step 6: Update type references
 
 ```typescript
-// Before
+// Before (v15)
 let product: Product;
 let params: CreateUpdateParams<Product>;
+let result: QueryResult<Product>;
 
-// After -- types inferred from table definition
-import type { InferSelect, InferInsert, Repository } from 'bigal';
+// After (v16) - use typeof Model everywhere
+import type { QueryResult, CreateUpdateParams, InferInsert, Repository } from 'bigal';
 
-type ProductRow = InferSelect<(typeof Product)['schema']>;
-type ProductInsert = InferInsert<(typeof Product)['schema']>;
+let product: QueryResult<typeof Product>;
+let params: CreateUpdateParams<QueryResult<typeof Product>>;
+let insert: InferInsert<(typeof Product)['schema']>;
 
 // For repository type annotations:
 function getProducts(repo: Repository<typeof Product>) {
   /* ... */
 }
 ```
+
+Use `typeof Product` as the single source of truth for all type references:
+
+- `QueryResult<typeof Product>` - row type for query results (narrows FKs, excludes hasMany)
+- `CreateUpdateParams<QueryResult<typeof Product>>` - partial type for create/update
+- `Repository<typeof Product>` - typed repository
+- `InferInsert<(typeof Product)['schema']>` - insert params with required/optional awareness
 
 ## Removed Exports
 
@@ -201,7 +225,7 @@ These v15 exports no longer exist:
 - All 7 lifecycle hooks - `beforeCreate`, `afterCreate`,
   `beforeUpdate`, `afterUpdate`, `beforeDestroy`, `afterDestroy`,
   `afterFind`
-- String references - `belongsTo('Store')` instead of arrow functions
+- String references - `belongsTo('Store')` with model name strings only
 - Auto-derived names - column names from property keys, model names
   from table names
 - pgvector - `vector({ dimensions })` with nearest-neighbor sort and
