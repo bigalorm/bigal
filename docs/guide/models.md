@@ -10,10 +10,10 @@ definition - no separate interfaces required.
 
 ## Defining a model
 
-Use `table()` (exported as `defineTable` from `'bigal'`) to create a model:
+Use `table()` to create a model:
 
 ```ts
-import { defineTable as table, serial, text, integer, boolean, createdAt, updatedAt } from 'bigal';
+import { table, serial, text, integer, boolean, createdAt, updatedAt } from 'bigal';
 
 export const Product = table('products', {
   id: serial().primaryKey(),

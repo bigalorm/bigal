@@ -175,7 +175,7 @@ This is useful for debugging, logging, and testing SQL generation.
 ## Initialization example
 
 ```ts
-import { initialize, defineTable as table, serial, text, integer, createdAt, updatedAt } from 'bigal';
+import { initialize, table, serial, text, integer, createdAt, updatedAt } from 'bigal';
 import { Pool } from 'postgres-pool';
 
 const Product = table('products', {

@@ -34,7 +34,7 @@ const Product = repos.Product as Repository<Product>;
 **After (v16):**
 
 ```typescript
-import { defineTable as table, serial, text, belongsTo, initialize } from 'bigal';
+import { table, serial, text, belongsTo, initialize } from 'bigal';
 import type { Repository } from 'bigal';
 
 const Product = table('products', {
@@ -211,8 +211,7 @@ These v15 exports no longer exist:
 - `Entity`, `EntityStatic`, `NotEntity`, `NotEntityBrand`
 - `column`, `primaryColumn`, `createDateColumn`, `updateDateColumn`,
   `versionColumn` (decorators)
-- `table` decorator (replaced by `table` function, exported as
-  `defineTable`)
+- `table` decorator (replaced by `table` function)
 - `getMetadataStorage`, `MetadataStorage`
 
 ## New Features in v16

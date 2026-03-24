@@ -72,7 +72,7 @@ v16 uses function-based schema definitions. Column names are auto-derived from p
 
 ```ts
 // v16
-import { boolean, createdAt, defineTable as table, integer, jsonb, serial, text, updatedAt, varchar } from 'bigal';
+import { boolean, createdAt, table, integer, jsonb, serial, text, updatedAt, varchar } from 'bigal';
 
 export const Product = table('products', {
   id: serial().primaryKey(),
@@ -140,7 +140,7 @@ export const timestamps = {
 };
 
 // v16 -- Product.ts
-import { defineTable as table, text } from 'bigal';
+import { table, text } from 'bigal';
 import { modelBase, timestamps } from './shared';
 
 export const Product = table('products', {

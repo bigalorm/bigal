@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { PoolLike, PoolQueryResult, QueryResultRow, Repository } from '../src/index.js';
-import { initialize, serial, text, defineTable as table } from '../src/index.js';
+import { initialize, serial, text, table } from '../src/index.js';
 import { vector } from '../src/schema/columns.js';
 
 // ---------------------------------------------------------------------------

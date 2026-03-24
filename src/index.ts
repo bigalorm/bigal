@@ -43,7 +43,7 @@ export {
   uuid,
   varchar,
   vector,
-  table as defineTable,
+  table,
   view,
 } from './schema/index.js';
 

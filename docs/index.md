@@ -52,7 +52,7 @@ features:
 
 ```ts
 // models/Product.ts
-import { defineTable as table, serial, text, integer, belongsTo } from 'bigal';
+import { table, serial, text, integer, belongsTo } from 'bigal';
 
 export const Product = table('products', {
   id: serial().primaryKey(),
