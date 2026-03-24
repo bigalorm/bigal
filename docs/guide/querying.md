@@ -185,6 +185,21 @@ Properties set to `undefined` in a where clause are silently ignored (standard J
 `undefined` values are dropped by `Object.entries`). To query for missing or null properties, always
 use `null` explicitly.
 
+### String matching on JSON properties
+
+The same string operators available on regular columns work on JSONB properties:
+
+```ts
+await repo.find().where({ bar: { theme: { contains: 'dark' } } });
+// SQL: WHERE "bar"->>'theme' ILIKE '%dark%'
+
+await repo.find().where({ bar: { theme: { startsWith: 'mid' } } });
+// SQL: WHERE "bar"->>'theme' ILIKE 'mid%'
+
+await repo.find().where({ bar: { failure: { message: { contains: 'timeout' } } } });
+// SQL: WHERE "bar"->'failure'->>'message' ILIKE '%timeout%'
+```
+
 ### JSONB containment
 
 Combine `contains` with property access:

@@ -2763,6 +2763,122 @@ describe('sqlHelper', () => {
         expect(whereStatement).toBe(`WHERE "bar"->'failure'->>'stage'=$1 AND ("bar"->'failure'->>'code')::numeric>=$2`);
         expect(params).toStrictEqual(['transcription', 400]);
       });
+
+      it('should handle contains on a JSONB property', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              theme: { contains: 'dar' },
+            },
+          } as Record<string, unknown>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->>'theme' ILIKE $1`);
+        expect(params).toStrictEqual(['%dar%']);
+      });
+
+      it('should handle startsWith on a JSONB property', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              theme: { startsWith: 'dar' },
+            },
+          } as Record<string, unknown>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->>'theme' ILIKE $1`);
+        expect(params).toStrictEqual(['dar%']);
+      });
+
+      it('should handle endsWith on a JSONB property', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              theme: { endsWith: 'ark' },
+            },
+          } as Record<string, unknown>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->>'theme' ILIKE $1`);
+        expect(params).toStrictEqual(['%ark']);
+      });
+
+      it('should handle like on a JSONB property', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              theme: { like: 'd_rk%' },
+            },
+          } as Record<string, unknown>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->>'theme' ILIKE $1`);
+        expect(params).toStrictEqual(['d_rk%']);
+      });
+
+      it('should handle negated contains on a JSONB property', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              '!': {
+                theme: { contains: 'light' },
+              },
+            },
+          } as Record<string, unknown>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->>'theme' NOT ILIKE $1`);
+        expect(params).toStrictEqual(['%light%']);
+      });
+
+      it('should handle contains with array of values on a JSONB property', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              theme: { contains: ['dark', 'midnight'] },
+            },
+          } as Record<string, unknown>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE ("bar"->>'theme' ILIKE $1 OR "bar"->>'theme' ILIKE $2)`);
+        expect(params).toStrictEqual(['%dark%', '%midnight%']);
+      });
+
+      it('should handle nested JSONB path with string matching', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: {
+              failure: {
+                message: { contains: 'timeout' },
+              },
+            },
+          } as Record<string, unknown>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->'failure'->>'message' ILIKE $1`);
+        expect(params).toStrictEqual(['%timeout%']);
+      });
     });
 
     it('should handle date value', () => {

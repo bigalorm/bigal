@@ -2201,8 +2201,10 @@ function buildJsonAccessor(columnName: string, path: readonly string[]): string 
   return result;
 }
 
+const JSON_CONSTRAINT_OPERATORS = new Set(['!', '<', '<=', '>', '>=', 'contains', 'startsWith', 'endsWith', 'like']);
+
 function isJsonConstraintOperator(key: string): boolean {
-  return key === '!' || key === '<' || key === '<=' || key === '>' || key === '>=';
+  return JSON_CONSTRAINT_OPERATORS.has(key);
 }
 
 function buildJsonPropertyClause({
@@ -2258,6 +2260,26 @@ function buildJsonPropertyClause({
           const castAccessor = castSuffix ? `(${accessor})${castSuffix}` : accessor;
           const effectiveOperator = isNegated ? negatedComparisonOperators[operator] : operator;
           clauses.push(`${castAccessor}${effectiveOperator}$${params.length}`);
+        } else if (operator === 'contains' || operator === 'startsWith' || operator === 'endsWith' || operator === 'like') {
+          const ilikeValues = Array.isArray(operatorValue) ? (operatorValue as string[]) : [operatorValue as string];
+          const ilikeClauses: string[] = [];
+          for (const ilikeValue of ilikeValues) {
+            let pattern: string;
+            if (operator === 'contains') {
+              pattern = `%${ilikeValue}%`;
+            } else if (operator === 'startsWith') {
+              pattern = `${ilikeValue}%`;
+            } else if (operator === 'endsWith') {
+              pattern = `%${ilikeValue}`;
+            } else {
+              pattern = ilikeValue;
+            }
+
+            params.push(pattern);
+            ilikeClauses.push(`${accessor} ${isNegated ? 'NOT ILIKE' : 'ILIKE'} $${params.length}`);
+          }
+
+          clauses.push(ilikeClauses.length === 1 ? ilikeClauses[0]! : `(${ilikeClauses.join(' OR ')})`);
         }
       }
 
