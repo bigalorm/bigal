@@ -1,10 +1,8 @@
-import type { Entity } from '../Entity.js';
-
 import type { WhereQuery, WhereQueryStatement } from './WhereQuery.js';
 
 type ExcludeUndefined<T> = Exclude<T, undefined>;
 
-export interface JoinInfo<TProperty extends string = string, TAlias extends string = string, TEntity extends Entity = Entity> {
+export interface JoinInfo<TProperty extends string = string, TAlias extends string = string, TEntity extends Record<string, unknown> = Record<string, unknown>> {
   property: TProperty;
   alias: TAlias;
   entity: TEntity;
@@ -32,7 +30,7 @@ type ModelJoinAliases<TJoins extends AnyJoinInfo> = Extract<TJoins, JoinInfo>['a
 
 type GetJoinedEntity<TJoins extends JoinInfo, TAlias extends string> = Extract<TJoins, { alias: TAlias }>['entity'];
 
-type JoinedPropertyConstraint<TJoinedEntity extends Entity, TPropertyValue> = WhereQuery<TJoinedEntity> | WhereQueryStatement<ExcludeUndefined<TPropertyValue>>;
+type JoinedPropertyConstraint<TJoinedEntity extends Record<string, unknown>, TPropertyValue> = WhereQuery<TJoinedEntity> | WhereQueryStatement<ExcludeUndefined<TPropertyValue>>;
 
 /**
  * WhereQuery that supports nested where clauses for joined relationships.
@@ -44,7 +42,7 @@ type JoinedPropertyConstraint<TJoinedEntity extends Entity, TPropertyValue> = Wh
  * .join('store')
  * .where({ store: { name: 'Acme' } })
  */
-export type JoinedWhereQuery<T extends Entity, TJoins extends AnyJoinInfo = never> = WhereQuery<T> &
+export type JoinedWhereQuery<T extends Record<string, unknown>, TJoins extends AnyJoinInfo = never> = WhereQuery<T> &
   ([TJoins] extends [never]
     ? // eslint-disable-next-line @typescript-eslint/no-empty-object-type
       {}

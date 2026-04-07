@@ -1,21 +1,13 @@
-import { column, table } from '../../src/index.js';
+import { table, text, textArray } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithStringCollection extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-
-  @column({
-    defaultsTo: [],
-    type: 'string[]',
-    name: 'other_ids',
-  })
-  public otherIds!: string[];
-}
+export const SimpleWithStringCollection = table(
+  'simple',
+  {
+    ...modelBase,
+    name: text().notNull(),
+    otherIds: textArray().default([]),
+  },
+  { modelName: 'SimpleWithStringCollection' },
+);

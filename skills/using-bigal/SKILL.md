@@ -2,7 +2,7 @@
 name: using-bigal
 description: >-
   Type-safe PostgreSQL ORM guidance for BigAl. Use when importing BigAl,
-  defining Entity models with decorators, writing WhereQuery filters,
+  defining models with table() or view(), writing WhereQuery filters,
   using Repository patterns, or deciding between BigAl and raw SQL.
   Covers model definition, fluent query building, joins, subqueries,
   pagination, JSONB querying, and common gotchas.
@@ -10,32 +10,27 @@ description: >-
 
 # Using BigAl
 
-BigAl is a PostgreSQL-optimized, type-safe TypeScript ORM. It uses decorator-based models, a fluent builder pattern for queries, and the Repository pattern for CRUD operations.
+BigAl is a PostgreSQL-optimized, type-safe TypeScript ORM. It uses function-based models, a fluent
+builder pattern for queries, and the Repository pattern for CRUD operations. All results are plain
+objects.
 
 ## Quick Start
 
 ```ts
-import { column, primaryColumn, table, Entity, initialize, Repository } from 'bigal';
+import { table, serial, text, integer, belongsTo, initialize, subquery } from 'bigal';
 import { Pool } from 'postgres-pool';
 
-@table({ name: 'products' })
-class Product extends Entity {
-  @primaryColumn({ type: 'integer' })
-  public id!: number;
-
-  @column({ type: 'string', required: true })
-  public name!: string;
-
-  @column({ type: 'integer', required: true, name: 'price_cents' })
-  public priceCents!: number;
-}
+const Product = table('products', {
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  priceCents: integer().notNull(),
+  store: belongsTo('Store'),
+});
 
 const pool = new Pool('postgres://localhost/mydb');
-const repos = initialize({ models: [Product], pool });
-const productRepository = repos.Product as Repository<Product>;
+const { Product, Store } = initialize({ models: { Product, Store }, pool });
 
-const products = await productRepository
-  .find()
+const products = await Product.find()
   .where({ priceCents: { '>=': 1000 } })
   .sort('name asc')
   .limit(10);
@@ -61,7 +56,7 @@ const products = await productRepository
 - Bulk operations with custom locking (SELECT FOR UPDATE)
 - Database-specific features BigAl does not wrap
 
-BigAl wraps your existing connection pool — `postgres-pool`, `pg`, or `@neondatabase/serverless`.
+BigAl wraps your existing connection pool - `postgres-pool`, `pg`, or `@neondatabase/serverless`.
 The pool is always accessible for raw queries, so you can eject to SQL at any point:
 
 ```ts
@@ -74,132 +69,256 @@ Use BigAl for the 90% of queries that fit its fluent API, and raw SQL for the re
 
 ### Basic queries
 
-| SQL                                                   | BigAl                                                        |
-| ----------------------------------------------------- | ------------------------------------------------------------ |
-| `SELECT * FROM products WHERE id = 1`                 | `productRepo.findOne().where({ id: 1 })`                     |
-| `SELECT name FROM products WHERE id = 1`              | `productRepo.findOne({ select: ['name'] }).where({ id: 1 })` |
-| `SELECT * FROM products WHERE name ILIKE '%widget%'`  | `productRepo.find().where({ name: { contains: 'widget' } })` |
-| `SELECT * FROM products WHERE price >= 100`           | `productRepo.find().where({ price: { '>=': 100 } })`         |
-| `SELECT * FROM products WHERE status IN ('a','b')`    | `productRepo.find().where({ status: ['a', 'b'] })`           |
-| `SELECT * FROM products WHERE status <> 'x'`          | `productRepo.find().where({ status: { '!': 'x' } })`         |
-| `SELECT * FROM products WHERE deleted_at IS NOT NULL` | `productRepo.find().where({ deletedAt: { '!': null } })`     |
-| `SELECT * FROM products ORDER BY name LIMIT 10`       | `productRepo.find().where({}).sort('name asc').limit(10)`    |
-| `SELECT COUNT(*) FROM products WHERE active = true`   | `productRepo.count().where({ active: true })`                |
+| SQL                                                   | BigAl                                                    |
+| ----------------------------------------------------- | -------------------------------------------------------- |
+| `SELECT * FROM products WHERE id = 1`                 | `Product.findOne().where({ id: 1 })`                     |
+| `SELECT name FROM products WHERE id = 1`              | `Product.findOne({ select: ['name'] }).where({ id: 1 })` |
+| `SELECT * FROM products WHERE name ILIKE '%widget%'`  | `Product.find().where({ name: { contains: 'widget' } })` |
+| `SELECT * FROM products WHERE price >= 100`           | `Product.find().where({ price: { '>=': 100 } })`         |
+| `SELECT * FROM products WHERE status IN ('a','b')`    | `Product.find().where({ status: ['a', 'b'] })`           |
+| `SELECT * FROM products WHERE status <> 'x'`          | `Product.find().where({ status: { '!': 'x' } })`         |
+| `SELECT * FROM products WHERE deleted_at IS NOT NULL` | `Product.find().where({ deletedAt: { '!': null } })`     |
+| `SELECT * FROM products ORDER BY name LIMIT 10`       | `Product.find().where({}).sort('name asc').limit(10)`    |
+| `SELECT COUNT(*) FROM products WHERE active = true`   | `Product.count().where({ active: true })`                |
 
 ### CRUD
 
-| SQL                                                         | BigAl                                          |
-| ----------------------------------------------------------- | ---------------------------------------------- |
-| `INSERT INTO products (name) VALUES ('Widget') RETURNING *` | `productRepo.create({ name: 'Widget' })`       |
-| `UPDATE products SET name = 'X' WHERE id = 1 RETURNING *`   | `productRepo.update({ id: 1 }, { name: 'X' })` |
-| `DELETE FROM products WHERE id = 1 RETURNING *`             | `productRepo.destroy({ id: 1 })`               |
+| SQL                                                         | BigAl                                      |
+| ----------------------------------------------------------- | ------------------------------------------ |
+| `INSERT INTO products (name) VALUES ('Widget') RETURNING *` | `Product.create({ name: 'Widget' })`       |
+| `UPDATE products SET name = 'X' WHERE id = 1 RETURNING *`   | `Product.update({ id: 1 }, { name: 'X' })` |
+| `DELETE FROM products WHERE id = 1 RETURNING *`             | `Product.destroy({ id: 1 })`               |
 
 ### Subqueries, joins, and advanced
 
-| SQL                                                                             | BigAl                                                                                   |
-| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `WHERE store_id IN (SELECT id FROM stores WHERE active)`                        | `.where({ store: { in: subquery(storeRepo).select(['id']).where({ active: true }) } })` |
-| `INNER JOIN stores ON products.store_id = stores.id WHERE stores.name = 'Acme'` | `.join('store').where({ store: { name: 'Acme' } })`                                     |
-| `SELECT DISTINCT ON (store_id) * ... ORDER BY store_id, created_at DESC`        | `.distinctOn(['store']).sort('store').sort('createdAt desc')`                           |
-| `ON CONFLICT (sku) DO NOTHING`                                                  | `{ onConflict: { action: 'ignore', targets: ['sku'] } }`                                |
-| `ON CONFLICT (sku) DO UPDATE SET name = EXCLUDED.name`                          | `{ onConflict: { action: 'merge', targets: ['sku'], merge: ['name'] } }`                |
+| SQL                                                                             | BigAl                                                                               |
+| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `WHERE store_id IN (SELECT id FROM stores WHERE active)`                        | `.where({ store: { in: subquery(Store).select(['id']).where({ active: true }) } })` |
+| `INNER JOIN stores ON products.store_id = stores.id WHERE stores.name = 'Acme'` | `.join('store').where({ store: { name: 'Acme' } })`                                 |
+| `SELECT DISTINCT ON (store_id) * ... ORDER BY store_id, created_at DESC`        | `.distinctOn(['store']).sort('store').sort('createdAt desc')`                       |
+| `ON CONFLICT (sku) DO NOTHING`                                                  | `{ onConflict: { action: 'ignore', targets: ['sku'] } }`                            |
+| `ON CONFLICT (sku) DO UPDATE SET name = EXCLUDED.name`                          | `{ onConflict: { action: 'merge', targets: ['sku'], merge: ['name'] } }`            |
 
 ## Model Definition
 
-### Decorators
+### Defining a model
 
-Every model extends `Entity` and uses decorators:
+Models are defined with the `table()` function and PostgreSQL-native column builders. Types are
+inferred from the schema definition. Column names are auto-derived from property keys using snakeCase.
 
 ```ts
-import { column, primaryColumn, createDateColumn, updateDateColumn, versionColumn, table, Entity } from 'bigal';
+import { table, serial, text, varchar, integer, boolean, jsonb, createdAt, updatedAt, belongsTo, hasMany } from 'bigal';
 
-@table({ name: 'products', schema: 'public' })
-class Product extends Entity {
-  @primaryColumn({ type: 'integer' })
-  public id!: number;
-
-  @column({ type: 'string', required: true })
-  public name!: string;
-
-  @column({ type: 'string' })
-  public sku?: string;
-
-  @column({ type: 'integer', required: true, name: 'price_cents' })
-  public priceCents!: number;
-
-  @column({ type: 'json' })
-  public metadata?: Record<string, unknown>;
-
-  @createDateColumn()
-  public createdAt!: Date;
-
-  @updateDateColumn()
-  public updatedAt!: Date;
-
-  @versionColumn()
-  public version!: number;
-}
+export const Product = table('products', {
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  sku: varchar({ length: 100 }),
+  priceCents: integer().notNull(),
+  isActive: boolean().notNull().default(true),
+  metadata: jsonb<{ color?: string }>(),
+  store: belongsTo('Store'),
+  categories: hasMany('Category').through('ProductCategory').via('product'),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
 ```
 
 ### Column types
 
-`'string'`, `'integer'`, `'float'`, `'boolean'`, `'date'`, `'datetime'`, `'json'`, `'string[]'`, `'integer[]'`, `'float[]'`, `'boolean[]'`
+| Builder                  | PostgreSQL type  | TypeScript type     |
+| ------------------------ | ---------------- | ------------------- |
+| `serial()`               | SERIAL           | `number`            |
+| `bigserial()`            | BIGSERIAL        | `number`            |
+| `text<T>()`              | TEXT             | `T \| null`         |
+| `varchar<T>({ length })` | VARCHAR(n)       | `T \| null`         |
+| `integer()`              | INTEGER          | `number \| null`    |
+| `bigint()`               | BIGINT           | `number \| null`    |
+| `smallint()`             | SMALLINT         | `number \| null`    |
+| `float()` / `real()`     | REAL             | `number \| null`    |
+| `double()`               | DOUBLE PRECISION | `number \| null`    |
+| `boolean()`              | BOOLEAN          | `boolean \| null`   |
+| `timestamp()`            | TIMESTAMP        | `Date \| null`      |
+| `timestamptz()`          | TIMESTAMPTZ      | `Date \| null`      |
+| `date()`                 | DATE             | `Date \| null`      |
+| `json<T>()`              | JSON             | `T \| null`         |
+| `jsonb<T>()`             | JSONB            | `T \| null`         |
+| `uuid()`                 | UUID             | `string \| null`    |
+| `bytea()`                | BYTEA            | `Buffer \| null`    |
+| `textArray()`            | TEXT[]           | `string[] \| null`  |
+| `integerArray()`         | INTEGER[]        | `number[] \| null`  |
+| `booleanArray()`         | BOOLEAN[]        | `boolean[] \| null` |
+| `vector({ dimensions })` | VECTOR(n)        | `number[] \| null`  |
+| `createdAt()`            | TIMESTAMPTZ      | `Date`              |
+| `updatedAt()`            | TIMESTAMPTZ      | `Date`              |
+
+### Column modifiers
+
+```ts
+name: text().notNull(),                         // removes null from type
+isActive: boolean().notNull().default(true),     // optional on insert
+id: serial().primaryKey(),                       // notNull + optional on insert
+email: text().notNull().unique(),                // UNIQUE constraint
+revision: integer().version(),                   // optimistic locking, auto-increments on update
+```
 
 ### Relationships
 
-**Many-to-one** — current entity holds the foreign key:
+**Many-to-one** - this model holds the foreign key:
 
 ```ts
-@column({ model: () => 'Store', name: 'store_id' })
-public store!: number | Store;
+store: belongsTo('Store'),
+// FK column auto-derived as store_id
+
+store: belongsTo('Store', { name: 'shop_id' }),
+// Override FK column name
 ```
 
-**One-to-many** — inverse side (must be optional):
+**One-to-many** - inverse side:
 
 ```ts
-@column({ collection: () => 'Product', via: 'store' })
-public products?: Product[];
+products: hasMany('Product').via('store'),
 ```
 
-**Many-to-many** — requires a join table Entity:
+**Many-to-many** - via junction model:
 
 ```ts
-@column({
-  collection: () => 'Category',
-  through: () => 'ProductCategory',
-  via: 'product',
-})
-public categories?: Category[];
+categories: hasMany('Category').through('ProductCategory').via('product'),
 ```
 
-Reference model names by string (`'Store'`, not `Store`) to avoid circular imports. Model names are case-insensitive.
+Reference model names by string (`'Store'`, not `Store`) to avoid circular imports.
+
+### Shared columns
+
+Extract a shared base only for universal columns (id + timestamps). Keep domain-specific
+columns inline in each model - avoid creating hierarchies of base objects.
+
+```ts
+const modelBase = {
+  id: serial().primaryKey(),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+};
+
+export const Product = table('products', {
+  ...modelBase,
+  name: text().notNull(),
+  store: belongsTo('Store'),
+});
+```
 
 ### Readonly models (views)
 
 ```ts
-@table({ name: 'product_summaries', readonly: true })
-class ProductSummary extends Entity {
+import { view, serial, text, integer } from 'bigal';
+
+export const ProductSummary = view('product_summaries', {
+  id: serial().primaryKey(),
+  name: text().notNull(),
+  storeName: text().notNull(),
+  categoryCount: integer().notNull(),
+});
+```
+
+`initialize()` returns a `ReadonlyRepository` which exposes only `find()`, `findOne()`, and `count()`.
+
+### Hooks
+
+```ts
+export const Product = table(
+  'products',
+  { id: serial().primaryKey(), name: text().notNull(), slug: text().notNull() },
+  {
+    hooks: {
+      beforeCreate(values) {
+        return { ...values, slug: slugify(values.name) };
+      },
+      afterFind(results) {
+        return results;
+      },
+    },
+  },
+);
+```
+
+Available hooks: `beforeCreate`, `afterCreate`, `beforeUpdate`, `afterUpdate`, `beforeDestroy`,
+`afterDestroy`, `afterFind`.
+
+### Global filters
+
+```ts
+const Product = table(
+  'products',
+  {
+    /* columns */
+  },
+  {
+    filters: {
+      active: { isActive: true },
+      notDeleted: () => ({ deletedAt: null }),
+    },
+  },
+);
+
+// Override per query
+await Product.find().where({}).filters(false); // disable all
+await Product.find().where({}).filters({ active: false }); // disable specific
+```
+
+### Type inference
+
+```ts
+import type { InferSelect, InferInsert, Repository, ReadonlyRepository } from 'bigal';
+
+type ProductRow = InferSelect<(typeof Product)['schema']>;
+type ProductInsert = InferInsert<(typeof Product)['schema']>;
+
+function processProducts(repo: Repository<typeof Product>) {
+  /* ... */
+}
+function readSummary(repo: ReadonlyRepository<typeof ProductSummary>) {
   /* ... */
 }
 ```
 
-`initialize()` returns a `ReadonlyRepository` which omits `create`, `update`, and `destroy`.
+## Initialization
+
+```ts
+import { initialize } from 'bigal';
+
+// Object-style (recommended) -- typed destructuring
+const { Product, Store } = initialize({
+  models: { Product, Store, Category, ProductCategory },
+  pool,
+  readonlyPool, // optional: separate pool for reads
+  connections: {
+    // optional: multi-database
+    audit: { pool: auditPool },
+  },
+  onQuery({ sql, params, duration, error, model, operation }) {
+    logger.debug({ sql, params, duration, model, operation });
+  },
+});
+
+// Array-style -- use getRepository()
+const bigal = initialize({ pool, models: [Product, Store] });
+const ProductRepo = bigal.getRepository(Product);
+```
 
 ## Query Patterns
 
 ### Fluent builder
 
-Every query method returns a new immutable instance. Queries are `PromiseLike` — just `await` the chain.
+Every query method returns a new immutable instance. Queries are `PromiseLike` - just `await` the chain.
 
 ```ts
 // Find multiple
-const products = await productRepo.find().where({ store: storeId }).sort('name asc').limit(10);
+const products = await Product.find().where({ store: storeId }).sort('name asc').limit(10);
 
 // Find one
-const product = await productRepo.findOne().where({ id: 42 });
+const product = await Product.findOne().where({ id: 42 });
 
 // Count
-const count = await productRepo.count().where({ sku: { '!': null } });
+const count = await Product.count().where({ sku: { '!': null } });
 ```
 
 ### Where operators
@@ -255,42 +374,40 @@ const count = await productRepo.count().where({ sku: { '!': null } });
 .paginate(2, 25)   // page 2, 25 per page
 
 // With total count (single query using COUNT(*) OVER())
-const { results, totalCount } = await productRepo
+const { results, totalCount } = await Product
   .find().where({}).sort('name').limit(10).skip(20).withCount();
 ```
 
 ### Populate (eager loading)
 
+With object-style `initialize({ models: { Product, Store } })`, populate results are fully typed.
+
 ```ts
-const product = await productRepo
-  .findOne()
+const product = await Product.findOne()
   .where({ id: 42 })
   .populate('store', { select: ['name'] });
-// product.store is the full Store entity
+// product.store is typed as the full Store entity
 ```
 
 ### Joins
 
 ```ts
 // Model join (INNER)
-await productRepo
-  .find()
+await Product.find()
   .join('store')
   .where({ store: { name: 'Acme' } });
 
 // Left join
-await productRepo
-  .find()
+await Product.find()
   .leftJoin('store')
   .where({ store: { name: 'Acme' } });
 
 // Subquery join with aggregates
-const productCounts = subquery(productRepo)
+const productCounts = subquery(Product)
   .select(['store', (sb) => sb.count().as('productCount')])
   .groupBy(['store']);
 
-await storeRepo
-  .find()
+await Store.find()
   .join(productCounts, 'stats', { on: { id: 'store' } })
   .sort('stats.productCount desc');
 ```
@@ -299,7 +416,7 @@ await storeRepo
 
 ```ts
 // Most recently created product per store
-await productRepo.find().distinctOn(['store']).sort('store').sort('createdAt desc');
+await Product.find().distinctOn(['store']).sort('store').sort('createdAt desc');
 ```
 
 ORDER BY must start with the DISTINCT ON columns. Cannot combine with `withCount()`.
@@ -307,43 +424,43 @@ ORDER BY must start with the DISTINCT ON columns. Cannot combine with `withCount
 ### Create
 
 ```ts
-// Single record — returns the created record
-const product = await productRepo.create({ name: 'Widget', priceCents: 999 });
+// Single record -- returns the created record
+const product = await Product.create({ name: 'Widget', priceCents: 999 });
 
 // Multiple records
-const products = await productRepo.create([
+const products = await Product.create([
   { name: 'Widget', priceCents: 999 },
   { name: 'Gadget', priceCents: 1499 },
 ]);
 
 // Upsert: ON CONFLICT DO NOTHING
-await productRepo.create({ name: 'Widget', sku: 'WDG-001' }, { onConflict: { action: 'ignore', targets: ['sku'] } });
+await Product.create({ name: 'Widget', sku: 'WDG-001' }, { onConflict: { action: 'ignore', targets: ['sku'] } });
 
 // Upsert: ON CONFLICT DO UPDATE specific columns
-await productRepo.create({ name: 'Widget', sku: 'WDG-001', priceCents: 999 }, { onConflict: { action: 'merge', targets: ['sku'], merge: ['priceCents'] } });
+await Product.create({ name: 'Widget', sku: 'WDG-001', priceCents: 999 }, { onConflict: { action: 'merge', targets: ['sku'], merge: ['priceCents'] } });
 
 // Skip returning records
-await productRepo.create({ name: 'Widget', priceCents: 999 }, { returnRecords: false });
+await Product.create({ name: 'Widget', priceCents: 999 }, { returnRecords: false });
 
 // Return only specific columns (primary key always included)
-await productRepo.create({ name: 'Widget', priceCents: 999 }, { returnSelect: ['name'] });
+await Product.create({ name: 'Widget', priceCents: 999 }, { returnSelect: ['name'] });
 ```
 
 ### Update
 
 ```ts
 // Returns array of updated records
-const products = await productRepo.update({ id: 42 }, { name: 'Super Widget' });
+const products = await Product.update({ id: 42 }, { name: 'Super Widget' });
 
 // Update multiple
-const products = await productRepo.update({ id: [42, 43] }, { priceCents: 1299 });
+const products = await Product.update({ id: [42, 43] }, { priceCents: 1299 });
 ```
 
 ### Destroy
 
 ```ts
 // Returns array of deleted records
-const products = await productRepo.destroy({ id: 42 });
+const products = await Product.destroy({ id: 42 });
 ```
 
 ### Subqueries
@@ -352,49 +469,51 @@ const products = await productRepo.destroy({ id: 42 });
 import { subquery } from 'bigal';
 
 // WHERE IN
-const activeStores = subquery(storeRepo).select(['id']).where({ isActive: true });
-await productRepo.find().where({ store: { in: activeStores } });
+const activeStores = subquery(Store).select(['id']).where({ isActive: true });
+await Product.find().where({ store: { in: activeStores } });
 
 // WHERE EXISTS
-const hasProducts = subquery(productRepo).where({ name: { like: 'Widget%' } });
-await storeRepo.find().where({ exists: hasProducts });
+const hasProducts = subquery(Product).where({ name: { like: 'Widget%' } });
+await Store.find().where({ exists: hasProducts });
 
 // Scalar comparison
-const avgPrice = subquery(productRepo).avg('price');
-await productRepo.find().where({ price: { '>': avgPrice } });
+const avgPrice = subquery(Product).avg('priceCents');
+await Product.find().where({ priceCents: { '>': avgPrice } });
+```
+
+### toSQL()
+
+Inspect generated SQL without executing:
+
+```ts
+const { sql, params } = Product.find().where({ name: 'Widget' }).toSQL();
+const { sql, params } = Product.create({ name: 'Widget', priceCents: 999 }).toSQL();
+const { sql, params } = Product.update({ id: 42 }, { name: 'X' }).toSQL();
+const { sql, params } = Product.destroy({ id: 42 }).toSQL();
+```
+
+### Vector distance queries
+
+```ts
+import { vector } from 'bigal';
+
+// In model definition
+embedding: vector({ dimensions: 1536 }),
+
+// Sort by similarity
+const similar = await Document.find()
+  .where({})
+  .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
+  .limit(10);
+
+// Filter by distance
+const nearby = await Document.find()
+  .where({ embedding: { nearestTo: queryVector, metric: 'cosine', distance: { '<': 0.5 } } })
+  .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
+  .limit(10);
 ```
 
 ## Gotchas
-
-### Collections must be optional
-
-Collection properties (one-to-many, many-to-many) must use `?`, not `!`. They are only present after `.populate()`:
-
-```ts
-// Correct
-@column({ collection: () => 'Product', via: 'store' })
-public products?: Product[];
-
-// Wrong — causes QueryResult type errors
-@column({ collection: () => 'Product', via: 'store' })
-public products!: Product[];
-```
-
-### NotEntity for JSON objects with id fields
-
-If a JSON column contains objects with an `id` property, wrap the type with `NotEntity<T>` to prevent BigAl's type system from treating them as entities:
-
-```ts
-import type { NotEntity } from 'bigal';
-
-interface IMyJsonType {
-  id: string;
-  foo: string;
-}
-
-@column({ type: 'json' })
-public metadata?: NotEntity<IMyJsonType>;
-```
 
 ### Query state is immutable
 
@@ -402,33 +521,30 @@ Each fluent method returns a new instance. Do not ignore the return value:
 
 ```ts
 // Correct
-const query = productRepo.find().where({ store: storeId });
+const query = Product.find().where({ store: storeId });
 const sorted = query.sort('name asc');
 const results = await sorted.limit(10);
 
-// Wrong — .sort() result is discarded
-const query = productRepo.find().where({ store: storeId });
+// Wrong -- .sort() result is discarded
+const query = Product.find().where({ store: storeId });
 query.sort('name asc'); // This does nothing to `query`
 const results = await query;
 ```
 
-### QueryResult narrows relationship types
+### QueryResult accepts TableDefinition directly
 
-`QueryResult<T>` automatically narrows `number | Store` to `number`. Use `QueryResult<T>` (not `T`) for derived types:
+`QueryResult<typeof Model>` produces the row type with hasMany stripped and FKs narrowed:
 
 ```ts
 import type { QueryResult } from 'bigal';
 
-// Correct: store is `number`
-type ProductSummary = Pick<QueryResult<Product>, 'id' | 'name' | 'store'>;
-
-// Wrong: store is `number | Store`
-type ProductSummaryWrong = Pick<Product, 'id' | 'name' | 'store'>;
+type ProductRow = QueryResult<typeof Product>;
+type ProductSummary = Pick<QueryResult<typeof Product>, 'id' | 'name' | 'store'>;
 ```
 
 ### Debugging SQL
 
-Set `DEBUG_BIGAL=true` to log all generated SQL and parameter values:
+Use `onQuery` for structured logging, or set `DEBUG_BIGAL=true` for console output:
 
 ```sh
 DEBUG_BIGAL=true node app.js
@@ -438,26 +554,25 @@ DEBUG_BIGAL=true node app.js
 
 After applying this skill, verify:
 
-- [ ] Models extend `Entity` and use `@table()`, `@primaryColumn()`, `@column()` decorators
+- [ ] Models use `table()` with column builders (not decorators)
+- [ ] Initialize uses object-style `models` with destructuring
 - [ ] Queries use the fluent builder pattern (not raw SQL strings)
 - [ ] CRUD uses Repository methods: `create()`, `update()`, `destroy()`
 - [ ] Query chains are awaited (not fire-and-forget)
 - [ ] Query state is treated as immutable (return values are used)
-- [ ] Collection properties are optional (`?`)
-- [ ] JSON column types with `id` fields use `NotEntity<T>`
-- [ ] Model names in decorators are strings (`'Store'`) to avoid circular imports
-- [ ] `QueryResult<T>` is used for derived types involving relationships
+- [ ] Model names in relationships are strings (`'Store'`) to avoid circular imports
+- [ ] `QueryResult<typeof Model>` is used for derived types involving relationships
 
 ## Further Reading
 
-- [Getting Started](https://bigalorm.github.io/bigal/getting-started) — install, first model, first query
-- [Models](https://bigalorm.github.io/bigal/guide/models) — decorators, column options, relationships
-- [Querying](https://bigalorm.github.io/bigal/guide/querying) — operators, pagination, JSONB, DISTINCT ON
-- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) — create, update, destroy, upserts
-- [Relationships](https://bigalorm.github.io/bigal/guide/relationships) — many-to-one, one-to-many, many-to-many, QueryResult
-- [Subqueries and Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) — subquery builder, aggregates, GROUP BY
-- [Views](https://bigalorm.github.io/bigal/guide/views) — readonly models and ReadonlyRepository
-- [API Reference](https://bigalorm.github.io/bigal/reference/api) — all exports and method signatures
-- [Configuration](https://bigalorm.github.io/bigal/reference/configuration) — pools, read replicas, multi-database
-- [BigAl vs Raw SQL](https://bigalorm.github.io/bigal/advanced/bigal-vs-raw-sql) — decision framework
-- [Known Issues](https://bigalorm.github.io/bigal/advanced/known-issues) — workarounds and debugging
+- [Getting Started](https://bigalorm.github.io/bigal/getting-started) - install, first model, first query
+- [Models](https://bigalorm.github.io/bigal/guide/models) - table(), column types, relationships, hooks, filters
+- [Querying](https://bigalorm.github.io/bigal/guide/querying) - operators, pagination, JSONB, DISTINCT ON
+- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) - create, update, destroy, upserts
+- [Relationships](https://bigalorm.github.io/bigal/guide/relationships) - belongsTo, hasMany, QueryResult
+- [Subqueries and Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) - subquery builder, aggregates, GROUP BY
+- [Views](https://bigalorm.github.io/bigal/guide/views) - readonly models and ReadonlyRepository
+- [API Reference](https://bigalorm.github.io/bigal/reference/api) - all exports and method signatures
+- [Configuration](https://bigalorm.github.io/bigal/reference/configuration) - pools, read replicas, multi-database
+- [BigAl vs Raw SQL](https://bigalorm.github.io/bigal/advanced/bigal-vs-raw-sql) - decision framework
+- [Known Issues](https://bigalorm.github.io/bigal/advanced/known-issues) - workarounds and debugging

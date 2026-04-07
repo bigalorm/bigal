@@ -1,5 +1,4 @@
-import type { Entity } from '../Entity.js';
-import type { OmitEntityCollections, OmitFunctions } from '../types/index.js';
+import type { OmitFunctions } from '../types/index.js';
 
 import type { AnyJoinInfo, JoinInfo, SubqueryJoinInfo } from './JoinedWhereQuery.js';
 import type { Sort } from './Sort.js';
@@ -19,7 +18,7 @@ type GetJoinColumns<TJoins extends AnyJoinInfo, TAlias extends string> =
   Extract<TJoins, { alias: TAlias }> extends SubqueryJoinInfo<TAlias, infer TColumns>
     ? TColumns
     : Extract<TJoins, { alias: TAlias }> extends JoinInfo<string, TAlias, infer TEntity>
-      ? string & keyof OmitFunctions<OmitEntityCollections<TEntity>>
+      ? string & keyof OmitFunctions<TEntity>
       : never;
 
 /**
@@ -42,4 +41,4 @@ type JoinedSortString<TJoins extends AnyJoinInfo> =
 /**
  * Sort type that supports both base entity columns and joined columns (from model or subquery joins).
  */
-export type JoinedSort<T extends Entity, TJoins extends AnyJoinInfo = never> = [TJoins] extends [never] ? Sort<T> : JoinedSortString<TJoins> | Sort<T>;
+export type JoinedSort<T extends Record<string, unknown>, TJoins extends AnyJoinInfo = never> = [TJoins] extends [never] ? Sort<T> : JoinedSortString<TJoins> | Sort<T>;

@@ -1,8 +1,12 @@
-import { createDateColumn } from '../../src/index.js';
+import { createdAt, table } from '../../src/schema/index.js';
 
-import { Product } from './Product.js';
+import { productColumns } from './Product.js';
 
-export class ProductWithCreatedAt extends Product {
-  @createDateColumn()
-  public createdAt!: Date;
-}
+export const ProductWithCreatedAt = table(
+  'products',
+  {
+    ...productColumns,
+    createdAt: createdAt(),
+  },
+  { modelName: 'ProductWithCreatedAt' },
+);

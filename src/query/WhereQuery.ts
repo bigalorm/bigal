@@ -1,28 +1,25 @@
-import type { Entity, NotEntityBrand } from '../Entity.js';
+import type { InferSelect, SchemaDefinition } from '../schema/InferTypes.js';
+import type { TableDefinition } from '../schema/TableDefinition.js';
 import type { ExcludeEntityCollections, ExcludeFunctions } from '../types/index.js';
 
 import type { ScalarSubquery, SubqueryBuilderLike } from './Subquery.js';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TableDefinition uses any for variance
+type AnyTableDef = TableDefinition<string, any>;
+
 type ExcludeUndefined<T> = Exclude<T, undefined>;
 export type LiteralValues<TValue> = (TValue | null)[] | TValue | null;
 
-export type WhereClauseValue<TValue> = TValue extends NotEntityBrand | undefined
-  ? Exclude<TValue, NotEntityBrand | undefined> // If the value is a NotEntityBrand, return the type without undefined
-  : Extract<TValue, Entity> extends undefined // Otherwise if the type does not extend Entity
-    ? LiteralValues<ExcludeUndefined<TValue>>
-    :
-        | (ExcludeUndefined<Exclude<TValue, Entity>> | null)[] // Allow an array of the literal value (non-entity)
-        | (Pick<Extract<ExcludeUndefined<TValue>, Entity>, 'id'> | null)[] // Allow an array of objects with the id property
-        | ExcludeUndefined<Exclude<TValue, Entity>> // Allow a single literal value
-        | Pick<Extract<ExcludeUndefined<TValue>, Entity>, 'id'> // Allow a single object with the id property
-        | null;
+export type WhereClauseValue<TValue> = LiteralValues<ExcludeUndefined<TValue>>;
 
 export type StringConstraint<TValue extends string> = Partial<Record<'contains' | 'endsWith' | 'like' | 'startsWith', LiteralValues<ExcludeUndefined<TValue>>>>;
 
 export type JsonPropertyValue = boolean | number | string | null;
 
+type JsonStringConstraint = Partial<Record<'contains' | 'endsWith' | 'like' | 'startsWith', string | string[]>>;
+
 export type JsonPropertyConstraint = {
-  [key: string]: JsonPropertyConstraint | JsonPropertyValue | JsonPropertyValue[] | Partial<Record<'!' | '<' | '<=' | '>' | '>=', JsonPropertyValue>> | undefined;
+  [key: string]: JsonPropertyConstraint | JsonPropertyValue | JsonPropertyValue[] | JsonStringConstraint | Partial<Record<'!' | '<' | '<=' | '>' | '>=', JsonPropertyValue>> | undefined;
 };
 
 export type JsonConstraint<TValue> = Partial<Record<'contains', ExcludeUndefined<TValue> | LiteralValues<ExcludeUndefined<TValue>>>>;
@@ -51,18 +48,32 @@ export type WhereQueryStatement<TValue> = [TValue] extends [string] // Avoid dis
       ? NegatableConstraint<NumberOrDateConstraintWithSubquery<TValue> | SubqueryInConstraint | WhereClauseValue<TValue>>
       : NegatableConstraint<JsonConstraint<TValue> | JsonPropertyConstraint | SubqueryInConstraint | WhereClauseValue<TValue>>;
 
-export type WhereQuery<T extends Entity> = {
+/** Structural match for repositories - carries schema via phantom `_schema` property */
+interface HasSchema<TSchema extends SchemaDefinition = SchemaDefinition> {
+  readonly _schema?: TSchema;
+}
+
+type ResolveRow<T> = T extends TableDefinition<string, infer TSchema> ? InferSelect<TSchema> : T extends HasSchema<infer TSchema> ? InferSelect<TSchema> : T;
+
+type WhereQueryRecord<T extends Record<string, unknown>> = {
   // Exclude entity collections and functions. Make the rest of the properties optional
-  [K in keyof T as ExcludeEntityCollections<T[K], ExcludeFunctions<T[K], K>>]?: K extends 'id'
+  [K in keyof T as ExcludeEntityCollections<ExcludeFunctions<T[K], K>>]?: K extends 'id'
     ? NegatableConstraint<WhereClauseValue<T>> | WhereQueryStatement<T[K]> // Allow entity objects (via Pick<T,'id'>) and literal id values
     : T[K] extends (infer U)[] | undefined // If property type is an array, allow where query statements for the array type
       ? WhereQueryStatement<ExcludeUndefined<U>>
       :
-          | NegatableConstraint<LiteralValues<ExcludeUndefined<T[K]>>> // Allow Single object and arrays of type
+          | NegatableConstraint<LiteralValues<ExcludeUndefined<T[K]>>> // Allow single object and arrays of type
           | WhereQueryStatement<ExcludeUndefined<T[K]>>; // Allow nested where query statements
 } & {
-  and?: WhereQuery<T>[];
-  or?: WhereQuery<T>[];
+  and?: WhereQueryRecord<T>[];
+  or?: WhereQueryRecord<T>[];
   exists?: SubqueryBuilderLike;
-  '!'?: Pick<WhereQuery<T>, 'exists'>;
+  '!'?: Pick<WhereQueryRecord<T>, 'exists'>;
 };
+
+/**
+ * Where clause type. Accepts a TableDefinition, repository, or row type:
+ * - `WhereQuery<typeof Product>` - from a model or repository
+ * - `WhereQuery<ProductRow>` - from a plain row type
+ */
+export type WhereQuery<T extends AnyTableDef | HasSchema | Record<string, unknown>> = WhereQueryRecord<ResolveRow<T> extends Record<string, unknown> ? ResolveRow<T> : Record<string, unknown>>;

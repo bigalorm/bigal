@@ -1,4 +1,3 @@
-import type { Entity } from '../Entity.js';
 import type { ModelMetadata } from '../metadata/index.js';
 
 import type { SubqueryBuilderLike } from './SubqueryBuilder.js';
@@ -6,7 +5,7 @@ import type { WhereQuery } from './WhereQuery.js';
 
 export type JoinType = 'inner' | 'left';
 
-export interface ModelJoinDefinition<T extends Entity = Entity> {
+export interface ModelJoinDefinition<T extends Record<string, unknown> = Record<string, unknown>> {
   propertyName: string;
   alias: string;
   type: JoinType;
@@ -29,7 +28,7 @@ export interface SubqueryJoinDefinition {
   on: SubqueryJoinOnCondition;
 }
 
-export type JoinDefinition<T extends Entity = Entity> = ModelJoinDefinition<T> | SubqueryJoinDefinition;
+export type JoinDefinition<T extends Record<string, unknown> = Record<string, unknown>> = ModelJoinDefinition<T> | SubqueryJoinDefinition;
 
 export function isSubqueryJoin(join: JoinDefinition): join is SubqueryJoinDefinition {
   return 'subquery' in join;

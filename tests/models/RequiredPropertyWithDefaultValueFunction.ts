@@ -1,20 +1,13 @@
-import { column, table } from '../../src/index.js';
+import { table, text } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'some_other_table',
-})
-export class RequiredPropertyWithDefaultValueFunction extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-    defaultsTo: () => 'foobar',
-  })
-  public foo!: string;
-
-  @column({
-    type: 'string',
-  })
-  public bar?: string;
-}
+export const RequiredPropertyWithDefaultValueFunction = table(
+  'some_other_table',
+  {
+    ...modelBase,
+    foo: text().notNull().default('foobar'),
+    bar: text(),
+  },
+  { modelName: 'RequiredPropertyWithDefaultValueFunction' },
+);

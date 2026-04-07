@@ -6,10 +6,6 @@
     "types": ["node"],
     "allowJs": false,
 
-    "useDefineForClassFields": false,
-
-    "experimentalDecorators": true,
-
     "outDir": "dist",
 
     "declaration": true,

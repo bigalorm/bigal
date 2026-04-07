@@ -1,21 +1,13 @@
-import { column, table } from '../../src/index.js';
+import { table, text } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithUnion extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-
-  @column({
-    enum: ['Foo', 'Bar', 'Foobar'],
-    defaultsTo: 'Foo',
-    type: 'string',
-  })
-  public status!: 'Bar' | 'Foo' | 'Foobar';
-}
+export const SimpleWithUnion = table(
+  'simple',
+  {
+    ...modelBase,
+    name: text().notNull(),
+    status: text<'Bar' | 'Foo' | 'Foobar'>().notNull().default('Foo'),
+  },
+  { modelName: 'SimpleWithUnion' },
+);

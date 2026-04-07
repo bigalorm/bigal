@@ -1,15 +1,12 @@
-import { column, table } from '../../src/index.js';
+import { table, text } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  schema: 'foo',
-  name: 'simple',
-})
-export class SimpleWithSchema extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-}
+export const SimpleWithSchema = table(
+  'simple',
+  {
+    ...modelBase,
+    name: text().notNull(),
+  },
+  { modelName: 'SimpleWithSchema', schema: 'foo' },
+);

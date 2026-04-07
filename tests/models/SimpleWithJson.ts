@@ -1,24 +1,14 @@
-import { column, table } from '../../src/index.js';
+import { jsonb, table, text } from '../../src/schema/index.js';
 
-import { ModelBase } from './ModelBase.js';
+import { modelBase } from './base.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithJson extends ModelBase {
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-
-  @column({
-    type: 'json',
-  })
-  public bar?: unknown;
-
-  @column({
-    type: 'json',
-  })
-  public keyValue?: Record<string, number>;
-}
+export const SimpleWithJson = table(
+  'simple',
+  {
+    ...modelBase,
+    name: text().notNull(),
+    bar: jsonb(),
+    keyValue: jsonb<Record<string, number>>(),
+  },
+  { modelName: 'SimpleWithJson' },
+);

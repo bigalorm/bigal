@@ -1,27 +1,14 @@
-import { column, Entity, primaryColumn, table } from '../../src/index.js';
+import { belongsTo, hasMany, table, text } from '../../src/schema/index.js';
 
-@table({
-  name: 'simple',
-})
-export class SimpleWithSelfReference extends Entity {
-  @primaryColumn({ type: 'string' })
-  public id!: string;
+import { stringIdBase } from './base.js';
 
-  @column({
-    type: 'string',
-    required: true,
-  })
-  public name!: string;
-
-  @column({
-    model: () => SimpleWithSelfReference.name,
-    name: 'source_id',
-  })
-  public source?: SimpleWithSelfReference | string;
-
-  @column({
-    collection: () => SimpleWithSelfReference.name,
-    via: 'source',
-  })
-  public translations?: SimpleWithSelfReference[];
-}
+export const SimpleWithSelfReference = table(
+  'simple',
+  {
+    ...stringIdBase,
+    name: text().notNull(),
+    source: belongsTo<string>('SimpleWithSelfReference'),
+    translations: hasMany('SimpleWithSelfReference').via('source'),
+  },
+  { modelName: 'SimpleWithSelfReference' },
+);

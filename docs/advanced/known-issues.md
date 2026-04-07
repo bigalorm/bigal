@@ -1,47 +1,42 @@
 ---
-description: Known issues and workarounds — optional collections, NotEntity for JSON objects with id fields, and DEBUG_BIGAL logging.
+description: Known issues and workarounds - hasMany collections with populate, and query observability.
 ---
 
 # Known Issues
 
-## Entity collections must be optional
+## hasMany collections require populate
 
-Collection properties (one-to-many, many-to-many) must be declared as optional. They are only present after `.populate()` and will cause `QueryResult` type errors if required:
-
-```ts
-// Correct
-@column({ collection: () => 'Product', via: 'store' })
-public products?: Product[];
-
-// Incorrect — causes type issues
-@column({ collection: () => 'Product', via: 'store' })
-public products!: Product[];
-```
-
-## Non-entity objects with id fields
-
-If a JSON column contains objects with an `id` property, TypeScript may mistake them for BigAl entities. Wrap the type with `NotEntity<T>`:
+`hasMany` relationships are excluded from the select and insert types. They are only present
+on query results after calling `.populate()`:
 
 ```ts
-import type { NotEntity } from 'bigal';
+// categories is NOT on the result type
+const product = await Product.findOne().where({ id: 42 });
 
-interface IMyJsonType {
-  id: string;
-  foo: string;
-}
-
-@column({ type: 'json' })
-public metadata?: NotEntity<IMyJsonType>;
+// categories IS on the result type after populate
+const populated = await Product.findOne().where({ id: 42 }).populate('categories');
 ```
 
-Without `NotEntity`, BigAl's type system treats the type as an entity relationship, which leads to incorrect type narrowing in `QueryResult`.
+## Query observability
 
-## Debugging queries
+Use the `onQuery` callback in `initialize()` for structured query logging:
 
-Set the `DEBUG_BIGAL` environment variable to see generated SQL:
+```ts
+const { Product } = initialize({
+  pool,
+  models: { Product },
+  onQuery({ sql, params, duration, error, model, operation }) {
+    logger.debug({ sql, params, duration, model, operation });
+  },
+});
+```
+
+The `DEBUG_BIGAL` environment variable still works as a fallback when no `onQuery` callback is
+provided:
 
 ```sh
 DEBUG_BIGAL=true node app.js
 ```
 
-This logs all SQL statements and parameter values to the console.
+This logs all SQL statements and parameter values to the console. Note that `params` may contain
+sensitive data.

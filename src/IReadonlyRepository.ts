@@ -1,10 +1,18 @@
-import type { Entity } from './Entity.js';
 import type { ModelMetadata } from './metadata/index.js';
 import type { CountArgs } from './query/CountArgs.js';
 import type { CountResult, FindArgs, FindOneArgs, FindOneResult, FindResult, WhereQuery } from './query/index.js';
-import type { QueryResult } from './types/index.js';
+import type { SchemaDefinition } from './schema/InferTypes.js';
+import type { TableDefinition } from './schema/TableDefinition.js';
+import type { DefaultModelsMap, QueryResult } from './types/index.js';
 
-export interface IReadonlyRepository<T extends Entity> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- variance: models use contravariant hook params
+type AnyModel = TableDefinition<string, any>;
+
+export interface IReadonlyRepository<T extends Record<string, unknown>, TSchema extends SchemaDefinition = SchemaDefinition, TModels extends Record<string, AnyModel> = DefaultModelsMap> {
+  /** @internal Phantom property for type-level schema extraction */
+  readonly _schema?: TSchema;
+  /** @internal Phantom property for type-level models map extraction */
+  readonly _models?: TModels;
   readonly model: ModelMetadata<T>;
 
   /**
@@ -15,14 +23,7 @@ export interface IReadonlyRepository<T extends Entity> {
    * @param {string|object|string[]|object[]} [args.sort] - Property name(s) to sort by
    * @param {object} [args.pool] - Override the db pool to use for the query
    */
-  findOne<
-    // Optional keys specified as args.select
-    K extends string & keyof T,
-    // Return type used to pass through to all chained methods
-    TReturn = QueryResult<Pick<T, K | 'id'>>,
-  >(
-    args: FindOneArgs<T, K> | WhereQuery<T>,
-  ): FindOneResult<T, TReturn>;
+  findOne<K extends string & keyof T, TReturn = QueryResult<Pick<T, K | 'id'>, TSchema>>(args?: FindOneArgs<T, K> | WhereQuery<T>): FindOneResult<T, TReturn, never, TSchema, TModels>;
 
   /**
    * Gets a collection of objects
@@ -34,14 +35,7 @@ export interface IReadonlyRepository<T extends Entity> {
    * @param {string|number} [args.limit] - Number of results to return
    * @param {object} [args.pool] - Override the db pool to use for the query
    */
-  find<
-    // Optional keys specified as args.select
-    K extends string & keyof T,
-    // Return type used to pass through to all chained methods
-    TReturn = QueryResult<Pick<T, K | 'id'>>,
-  >(
-    args: FindArgs<T, K> | WhereQuery<T>,
-  ): FindResult<T, TReturn>;
+  find<K extends string & keyof T, TReturn = QueryResult<Pick<T, K | 'id'>, TSchema>>(args?: FindArgs<T, K> | WhereQuery<T>): FindResult<T, TReturn, never, TSchema, TModels>;
 
   /**
    * Gets a count of rows matching the where query

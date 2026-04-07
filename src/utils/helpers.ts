@@ -1,3 +1,12 @@
+// Valid PostgreSQL identifier: starts with letter or underscore, contains letters, digits, underscores, or dots (for alias.column notation)
+const VALID_SQL_IDENTIFIER = /^[A-Z_a-z][\w.]*$/;
+
+export function assertValidSqlIdentifier(value: string, context: string): void {
+  if (!VALID_SQL_IDENTIFIER.test(value)) {
+    throw new Error(`Invalid SQL identifier for ${context}: "${value}". Identifiers must start with a letter or underscore and contain only letters, numbers, underscores, and dots.`);
+  }
+}
+
 const CASE_SPLIT_PATTERN = /\p{Lu}?\p{Ll}+|[0-9]+|\p{Lu}+(?!\p{Ll})|\p{Emoji_Presentation}|\p{Extended_Pictographic}|\p{L}+/gu;
 
 /**
@@ -10,10 +19,65 @@ function words(str: string): string[] {
 }
 
 /**
- * Converts a string to snake_case.
- * Matches lodash/es-toolkit behavior.
+ * Naive English singularization for common table name patterns.
+ * Handles: -ies → -y, -ses → -s, -es → -e, -s → (drop s).
+ * Does NOT handle irregular plurals (people, children, etc.).
+ * @param {string} word - The word to singularize
+ */
+export function singularize(word: string): string {
+  if (word.endsWith('ies')) {
+    return `${word.slice(0, -3)}y`;
+  }
+
+  if (word.endsWith('sses') || word.endsWith('uses')) {
+    return word.slice(0, -2);
+  }
+
+  if (word.endsWith('ses')) {
+    return word.slice(0, -1);
+  }
+
+  if (word.endsWith('s') && !word.endsWith('ss')) {
+    return word.slice(0, -1);
+  }
+
+  return word;
+}
+
+/**
+ * Converts a table name to a PascalCase singular model name.
+ * @param {string} tableName - The PostgreSQL table name
+ * @example modelNameFromTable('products') // 'Product'
+ * @example modelNameFromTable('product__category') // 'ProductCategory'
+ * @example modelNameFromTable('categories') // 'Category'
+ * @example modelNameFromTable('stores') // 'Store'
+ */
+export function modelNameFromTable(tableName: string): string {
+  return words(tableName)
+    .map((word, index, arr) => {
+      // Only singularize the last word (e.g., 'products' → 'product', but 'product_categories' → 'product' + 'category')
+      const processed = index === arr.length - 1 ? singularize(word) : word;
+      return processed.charAt(0).toUpperCase() + processed.slice(1).toLowerCase();
+    })
+    .join('');
+}
+
+/**
+ * Converts a string to PascalCase.
  * @param {string} str - The string to convert
- * @returns {string} The snake_case version of the string
+ * @example pascalCase('products') // 'Products'
+ * @example pascalCase('product__category') // 'ProductCategory'
+ * @example pascalCase('foo_bar') // 'FooBar'
+ */
+export function pascalCase(str: string): string {
+  return words(str)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join('');
+}
+
+/**
+ * Converts a string to snake_case.
+ * @param {string} str - The string to convert
  * @example snakeCase('fooBar') // 'foo_bar'
  * @example snakeCase('FooBar') // 'foo_bar'
  * @example snakeCase('foo-bar') // 'foo_bar'
