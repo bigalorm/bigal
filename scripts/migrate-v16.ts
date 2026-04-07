@@ -42,6 +42,8 @@ interface ColumnInfo {
   collection: string | undefined;
   through: string | undefined;
   via: string | undefined;
+  enumValues: string[] | undefined;
+  enumExpression: string | undefined;
 }
 
 interface TableInfo {
@@ -89,6 +91,39 @@ function getBooleanProperty(obj: ObjectLiteralExpression, name: string): boolean
   return false;
 }
 
+function getEnumInfo(obj: ObjectLiteralExpression): { expression?: string; values?: string[] } {
+  const prop = obj.getProperty('enum');
+  if (!prop || prop.getKind() !== SyntaxKind.PropertyAssignment) {
+    return {};
+  }
+
+  const init = (prop as PropertyAssignment).getInitializer();
+  if (!init) {
+    return {};
+  }
+
+  const arrayLiteral = init.asKind(SyntaxKind.ArrayLiteralExpression);
+  if (arrayLiteral) {
+    const values: string[] = [];
+    for (const element of arrayLiteral.getElements()) {
+      if (element.getKind() !== SyntaxKind.StringLiteral) {
+        return { expression: init.getText() };
+      }
+
+      const text = element.getText();
+      values.push(text.slice(1, -1));
+    }
+
+    if (values.length) {
+      return { values };
+    }
+
+    return {};
+  }
+
+  return { expression: init.getText() };
+}
+
 function extractTableInfo(classDecl: ClassDeclaration): TableInfo | undefined {
   const tableDecorator = classDecl.getDecorator('table');
   if (!tableDecorator) {
@@ -119,6 +154,7 @@ function extractTableInfo(classDecl: ClassDeclaration): TableInfo | undefined {
 
     const propName = prop.getName();
     const arg = getDecoratorArg(decorator);
+    const enumInfo = arg ? getEnumInfo(arg) : {};
 
     const info: ColumnInfo = {
       propertyName: propName,
@@ -131,6 +167,8 @@ function extractTableInfo(classDecl: ClassDeclaration): TableInfo | undefined {
       collection: undefined,
       through: undefined,
       via: arg ? getStringProperty(arg, 'via') : undefined,
+      enumValues: enumInfo.values,
+      enumExpression: enumInfo.expression,
     };
 
     if (arg) {
@@ -245,7 +283,8 @@ function generateColumnBuilder(col: ColumnInfo): string {
   }
 
   const builderFn = col.type ? (COLUMN_TYPE_MAP[col.type] ?? 'text') : 'text';
-  let result = explicitDbName ? `${builderFn}({ name: '${explicitDbName}' })` : `${builderFn}()`;
+  const genericParam = col.enumValues?.length ? `<${col.enumValues.map((value) => `'${value}'`).join(' | ')}>` : '';
+  let result = explicitDbName ? `${builderFn}${genericParam}({ name: '${explicitDbName}' })` : `${builderFn}${genericParam}()`;
   if (col.required) {
     result += '.notNull()';
   }
@@ -280,6 +319,9 @@ function generateTableDefinition(info: TableInfo): string {
   }
 
   for (const col of info.columns) {
+    if (col.enumExpression) {
+      lines.push(`  // TODO: enum constraint \`${col.enumExpression}\` - convert to text<'...' | '...'>() generic`);
+    }
     lines.push(`  ${col.propertyName}: ${generateColumnBuilder(col)},`);
   }
 
