@@ -12,7 +12,7 @@ export interface ColumnTypeOptions extends ColumnBaseOptions {
   /**
    * Array of possible enumerated values
    */
-  enum?: string[];
+  enum?: readonly string[];
   /**
    * If set, enforces a maximum length check on the column
    *
