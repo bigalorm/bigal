@@ -1,3 +1,9 @@
+## [15.11.6](https://github.com/bigalorm/bigal/compare/v15.11.5...v15.11.6) (2026-04-07)
+
+### Bug Fixes
+
+* Accept readonly arrays for column enum values ([4843e01](https://github.com/bigalorm/bigal/commit/4843e0117eedae2d0b601d9148ff2a885fad5f27))
+
 ## [15.11.5](https://github.com/bigalorm/bigal/compare/v15.11.4...v15.11.5) (2026-03-23)
 
 ## [15.11.4](https://github.com/bigalorm/bigal/compare/v15.11.3...v15.11.4) (2026-03-12)
