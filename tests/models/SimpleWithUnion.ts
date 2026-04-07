@@ -2,6 +2,8 @@ import { column, table } from '../../src/index.js';
 
 import { ModelBase } from './ModelBase.js';
 
+const STATUSES = ['Foo', 'Bar', 'Foobar'] as const;
+
 @table({
   name: 'simple',
 })
@@ -13,7 +15,7 @@ export class SimpleWithUnion extends ModelBase {
   public name!: string;
 
   @column({
-    enum: ['Foo', 'Bar', 'Foobar'],
+    enum: STATUSES,
     defaultsTo: 'Foo',
     type: 'string',
   })
