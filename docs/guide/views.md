@@ -45,7 +45,7 @@ GROUP BY p.id, p.name, s.name;
 Alternatively, use `table()` with `readonly: true`:
 
 ```ts
-import { defineTable as table, serial, text, integer } from 'bigal';
+import { table, serial, text, integer } from 'bigal';
 
 export const ProductSummary = table(
   'product_summaries',

@@ -13,7 +13,7 @@ export interface ColumnTypeMetadataOptions extends ColumnBaseMetadataOptions {
   /**
    * Array of possible enumerated values
    */
-  enum?: string[];
+  enum?: readonly string[];
   /**
    * If set, enforces a maximum length check on the column
    *
@@ -36,7 +36,7 @@ export class ColumnTypeMetadata extends ColumnBaseMetadata {
   /**
    * Array of possible enumerated values
    */
-  public enum?: string[];
+  public enum?: readonly string[];
 
   /**
    * If set, enforces a maximum length check on the column

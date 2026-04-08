@@ -13,7 +13,7 @@ use string model name references by default. Model names are auto-derived from t
 Use `belongsTo` when this table holds the foreign key:
 
 ```ts
-import { belongsTo, defineTable as table, serial, text, createdAt, updatedAt } from 'bigal';
+import { belongsTo, table, serial, text, createdAt, updatedAt } from 'bigal';
 
 export const Product = table('products', {
   id: serial().primaryKey(),
@@ -34,7 +34,7 @@ export const Product = table('products', {
 Use `hasMany` on the inverse side:
 
 ```ts
-import { defineTable as table, hasMany, serial, text, createdAt, updatedAt } from 'bigal';
+import { table, hasMany, serial, text, createdAt, updatedAt } from 'bigal';
 
 export const Store = table('stores', {
   id: serial().primaryKey(),

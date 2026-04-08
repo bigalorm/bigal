@@ -34,7 +34,7 @@ const Product = repos.Product as Repository<Product>;
 **After (v16):**
 
 ```typescript
-import { defineTable as table, serial, text, belongsTo, initialize } from 'bigal';
+import { table, serial, text, belongsTo, initialize } from 'bigal';
 import type { Repository } from 'bigal';
 
 const Product = table('products', {
@@ -204,6 +204,59 @@ Use `typeof Product` as the single source of truth for all type references:
 - `Repository<typeof Product>` - typed repository
 - `InferInsert<(typeof Product)['schema']>` - insert params with required/optional awareness
 
+### Step 7: Handle FK type narrowing differences
+
+In v15, belongsTo fields were typed as `Organization | string`. In v16, `QueryResult<typeof Model>`
+narrows them to just the FK type (e.g., `string` or `number`). This is the biggest source of
+downstream type errors.
+
+Common patterns to fix:
+
+```typescript
+// v15: test fixture with full entity object
+const fixture = { organization: orgObject }; // Organization | string
+
+// v16: use the FK value or EntityOrId
+const fixture = { organization: orgObject.id }; // string
+// OR pass the full object - EntityOrId<string> accepts both
+const fixture = { organization: orgObject }; // works with InferSelect, not QueryResult
+```
+
+If your code uses `Pick<QueryResult<typeof Model>, ...>` in service signatures, the picked FK
+fields will be the narrowed type (just the FK value), not the v15 union.
+
+### Step 8: Maintain backward compatibility with dual exports
+
+Large codebases may have hundreds of `import type { Product }` statements. To avoid changing them
+all, export both the model definition and a type alias:
+
+```typescript
+// models/Product.ts
+export const Product = table('products', { ... });
+export type Product = QueryResult<typeof Product>;
+```
+
+This lets existing `import type { Product }` statements continue working while the value export
+provides the model definition for `initialize()`.
+
+### Step 9: Hook function typing
+
+Keep hooks inline in the `table()` call. The parameter types are inferred automatically:
+
+```typescript
+const Product = table('products', { ... }, {
+  hooks: {
+    beforeCreate(values) {
+      // values is correctly typed from the schema - no manual type annotation needed
+      return { ...values, slug: slugify(values.name) };
+    },
+  },
+});
+```
+
+If you extract hook functions to standalone helpers, use generic parameters or `Record<string, any>`
+to avoid circular type references between the model and the hook.
+
 ## Removed Exports
 
 These v15 exports no longer exist:
@@ -211,8 +264,7 @@ These v15 exports no longer exist:
 - `Entity`, `EntityStatic`, `NotEntity`, `NotEntityBrand`
 - `column`, `primaryColumn`, `createDateColumn`, `updateDateColumn`,
   `versionColumn` (decorators)
-- `table` decorator (replaced by `table` function, exported as
-  `defineTable`)
+- `table` decorator (replaced by `table` function)
 - `getMetadataStorage`, `MetadataStorage`
 
 ## New Features in v16

@@ -16,8 +16,10 @@ export type StringConstraint<TValue extends string> = Partial<Record<'contains' 
 
 export type JsonPropertyValue = boolean | number | string | null;
 
+type JsonStringConstraint = Partial<Record<'contains' | 'endsWith' | 'like' | 'startsWith', string | string[]>>;
+
 export type JsonPropertyConstraint = {
-  [key: string]: JsonPropertyConstraint | JsonPropertyValue | JsonPropertyValue[] | Partial<Record<'!' | '<' | '<=' | '>' | '>=', JsonPropertyValue>> | undefined;
+  [key: string]: JsonPropertyConstraint | JsonPropertyValue | JsonPropertyValue[] | JsonStringConstraint | Partial<Record<'!' | '<' | '<=' | '>' | '>=', JsonPropertyValue>> | undefined;
 };
 
 export type JsonConstraint<TValue> = Partial<Record<'contains', ExcludeUndefined<TValue> | LiteralValues<ExcludeUndefined<TValue>>>>;

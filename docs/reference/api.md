@@ -78,11 +78,10 @@ const ViewRepo = bigal.getReadonlyRepository(StoreSummary);
 
 ## table()
 
-Creates a model with column metadata and inferred types. Exported as `defineTable` from the main
-`'bigal'` package to avoid naming conflicts.
+Creates a model with column metadata and inferred types.
 
 ```ts
-import { defineTable as table, serial, text } from 'bigal';
+import { table, serial, text } from 'bigal';
 
 export const Product = table(
   'products',

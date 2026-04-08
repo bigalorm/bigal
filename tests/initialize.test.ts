@@ -4,7 +4,7 @@ import { faker } from '@faker-js/faker';
 import { afterEach, beforeAll, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import type { OnQueryEvent, PoolLike, PoolQueryResult, QueryResultRow, Repository } from '../src/index.js';
-import { initialize, belongsTo, boolean as booleanColumn, serial, text, defineTable as table } from '../src/index.js';
+import { initialize, belongsTo, boolean as booleanColumn, serial, text, table } from '../src/index.js';
 
 import { Category, modelBase, Product, ProductCategory, ReadonlyProduct, SimpleWithStringCollection, Store } from './models/index.js';
 

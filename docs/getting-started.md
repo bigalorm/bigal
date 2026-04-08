@@ -29,7 +29,7 @@ Models are defined with the `table()` function and PostgreSQL-native column buil
 inferred from the schema definition. Column names are auto-derived from property keys using snakeCase.
 
 ```ts
-import { createdAt, defineTable as table, integer, serial, text, updatedAt, varchar } from 'bigal';
+import { createdAt, table, integer, serial, text, updatedAt, varchar } from 'bigal';
 
 export const Product = table('products', {
   id: serial().primaryKey(),

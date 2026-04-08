@@ -17,7 +17,7 @@ objects.
 ## Quick Start
 
 ```ts
-import { defineTable as table, serial, text, integer, belongsTo, initialize, subquery } from 'bigal';
+import { table, serial, text, integer, belongsTo, initialize, subquery } from 'bigal';
 import { Pool } from 'postgres-pool';
 
 const Product = table('products', {
@@ -107,7 +107,7 @@ Models are defined with the `table()` function and PostgreSQL-native column buil
 inferred from the schema definition. Column names are auto-derived from property keys using snakeCase.
 
 ```ts
-import { defineTable as table, serial, text, varchar, integer, boolean, jsonb, createdAt, updatedAt, belongsTo, hasMany } from 'bigal';
+import { table, serial, text, varchar, integer, boolean, jsonb, createdAt, updatedAt, belongsTo, hasMany } from 'bigal';
 
 export const Product = table('products', {
   id: serial().primaryKey(),

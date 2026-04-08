@@ -4,7 +4,7 @@ import { faker } from '@faker-js/faker';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { InferSelect, IRepository, PoolLike, PoolQueryResult, QueryResultRow } from '../src/index.js';
-import { belongsTo, boolean as booleanColumn, initialize, hasMany, integer, serial, text, textArray, defineTable as table } from '../src/index.js';
+import { belongsTo, boolean as booleanColumn, initialize, hasMany, integer, serial, text, textArray, table } from '../src/index.js';
 
 import { pick } from './utils/pick.js';
 
