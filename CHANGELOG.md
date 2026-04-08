@@ -1,3 +1,9 @@
+## [16.0.0-beta.3](https://github.com/bigalorm/bigal/compare/v16.0.0-beta.2...v16.0.0-beta.3) (2026-04-08)
+
+### Features
+
+- Readonly enum arrays, JSONB string operators, codemod improvements, and table() export ([81629fa](https://github.com/bigalorm/bigal/commit/81629fa9dea7d56b223c477a139ca46be1016f16))
+
 ## [16.0.0-beta.2](https://github.com/bigalorm/bigal/compare/v16.0.0-beta.1...v16.0.0-beta.2) (2026-03-24)
 
 ### Features
