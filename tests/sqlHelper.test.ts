@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 
 import { faker } from '@faker-js/faker';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { QueryError } from '../src/errors/index.js';
 import type { AggregateBuilder, IReadonlyRepository, IRepository, ModelMetadata, PoolLike, SelectAggregateExpression, TableDefinition, WhereQuery } from '../src/index.js';
@@ -51,6 +51,7 @@ import type {
   SimpleWithVersionSelect,
   StoreSelect,
 } from './models/index.js';
+import { createMockPool } from './utils/mockPool.js';
 
 type AnyRecord = Record<string, unknown>;
 type TestEntity<T> = AnyRecord & T;
@@ -142,7 +143,7 @@ describe('sqlHelper', () => {
   const repositoriesByModelNameLowered = {} as LowerCaseKeys<RepositoriesByModelName>;
 
   beforeAll(() => {
-    const mockedPool: PoolLike = { query: vi.fn() };
+    const mockedPool = createMockPool();
 
     // Build repos with custom name keys (matching old class-name convention)
     // plus table-name keys for relationship resolution
