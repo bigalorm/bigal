@@ -62,7 +62,7 @@
     "postgres-pool": "11.0.4",
     "semantic-release": "25.0.3",
     "strict-event-emitter-types": "2.0.0",
-    "typescript": "5.9.3",
+    "typescript": "6.0.3",
     "unbuild": "3.6.1",
     "vitest": "4.1.0"
   },
