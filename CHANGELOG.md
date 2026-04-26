@@ -1,8 +1,14 @@
+## [15.11.7](https://github.com/bigalorm/bigal/compare/v15.11.6...v15.11.7) (2026-04-26)
+
+### Bug Fixes
+
+* Return Pick<QueryResult<T>> from chained .select() ([#390](https://github.com/bigalorm/bigal/issues/390)) ([89780a4](https://github.com/bigalorm/bigal/commit/89780a4068c312fcf59b8598eb35792e3b498918))
+
 ## [15.11.6](https://github.com/bigalorm/bigal/compare/v15.11.5...v15.11.6) (2026-04-07)
 
 ### Bug Fixes
 
-* Accept readonly arrays for column enum values ([4843e01](https://github.com/bigalorm/bigal/commit/4843e0117eedae2d0b601d9148ff2a885fad5f27))
+- Accept readonly arrays for column enum values ([4843e01](https://github.com/bigalorm/bigal/commit/4843e0117eedae2d0b601d9148ff2a885fad5f27))
 
 ## [15.11.5](https://github.com/bigalorm/bigal/compare/v15.11.4...v15.11.5) (2026-03-23)
 
