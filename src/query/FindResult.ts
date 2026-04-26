@@ -1,5 +1,5 @@
 import type { Entity } from '../Entity.js';
-import type { GetValueType, ModelRelationshipKeys, OmitEntityCollections, OmitFunctions, PickByValueType, PlainObject, Populated } from '../types/index.js';
+import type { GetValueType, ModelRelationshipKeys, OmitEntityCollections, OmitFunctions, PickByValueType, PlainObject, Populated, QueryResult } from '../types/index.js';
 
 import type { FindQueryWithCount, FindQueryWithCountJSON } from './FindWithCountResult.js';
 import type { SubqueryJoinOnCondition } from './JoinDefinition.js';
@@ -13,7 +13,7 @@ import type { WhereQuery } from './WhereQuery.js';
 // WhereQuery is used for leftJoin 'on' condition
 
 export interface FindResultJSON<T extends Entity, TReturn, TJoins extends AnyJoinInfo = never> extends PromiseLike<PlainObject<TReturn>[]> {
-  select<TKeys extends string & keyof T>(keys: TKeys[]): FindResultJSON<T, Pick<T, TKeys>, TJoins>;
+  select<TKeys extends string & keyof OmitFunctions<QueryResult<T>>>(keys: TKeys[]): FindResultJSON<T, Pick<QueryResult<T>, TKeys>, TJoins>;
   where(args: JoinedWhereQuery<T, TJoins>): FindResultJSON<T, TReturn, TJoins>;
   populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T, TPopulateType extends GetValueType<T[TProperty], Entity>, TPopulateSelectKeys extends string & keyof TPopulateType>(
     propertyName: TProperty,
@@ -75,7 +75,7 @@ export interface FindResultJSON<T extends Entity, TReturn, TJoins extends AnyJoi
 }
 
 export interface FindResult<T extends Entity, TReturn, TJoins extends AnyJoinInfo = never> extends PromiseLike<TReturn[]> {
-  select<TKeys extends string & keyof T>(keys: TKeys[]): FindResult<T, Pick<T, TKeys>, TJoins>;
+  select<TKeys extends string & keyof OmitFunctions<QueryResult<T>>>(keys: TKeys[]): FindResult<T, Pick<QueryResult<T>, TKeys>, TJoins>;
   where(args: JoinedWhereQuery<T, TJoins>): FindResult<T, TReturn, TJoins>;
   populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T, TPopulateType extends GetValueType<T[TProperty], Entity>, TPopulateSelectKeys extends string & keyof TPopulateType>(
     propertyName: TProperty,

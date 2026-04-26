@@ -1,5 +1,5 @@
 import type { Entity } from '../Entity.js';
-import type { GetValueType, ModelRelationshipKeys, PickByValueType, PlainObject, Populated } from '../types/index.js';
+import type { GetValueType, ModelRelationshipKeys, OmitFunctions, PickByValueType, PlainObject, Populated, QueryResult } from '../types/index.js';
 
 import type { SubqueryJoinOnCondition } from './JoinDefinition.js';
 import type { AnyJoinInfo, JoinedSort } from './JoinedSort.js';
@@ -15,7 +15,7 @@ export interface FindWithCountResult<TReturn> {
 }
 
 export interface FindQueryWithCountJSON<T extends Entity, TReturn, TJoins extends AnyJoinInfo = never> extends PromiseLike<FindWithCountResult<PlainObject<TReturn>>> {
-  select<TKeys extends string & keyof T>(keys: TKeys[]): FindQueryWithCountJSON<T, Pick<T, TKeys>, TJoins>;
+  select<TKeys extends string & keyof OmitFunctions<QueryResult<T>>>(keys: TKeys[]): FindQueryWithCountJSON<T, Pick<QueryResult<T>, TKeys>, TJoins>;
   where(args: JoinedWhereQuery<T, TJoins>): FindQueryWithCountJSON<T, TReturn, TJoins>;
   populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T, TPopulateType extends GetValueType<T[TProperty], Entity>, TPopulateSelectKeys extends string & keyof TPopulateType>(
     propertyName: TProperty,
@@ -49,7 +49,7 @@ export interface FindQueryWithCountJSON<T extends Entity, TReturn, TJoins extend
 }
 
 export interface FindQueryWithCount<T extends Entity, TReturn, TJoins extends AnyJoinInfo = never> extends PromiseLike<FindWithCountResult<TReturn>> {
-  select<TKeys extends string & keyof T>(keys: TKeys[]): FindQueryWithCount<T, Pick<T, TKeys>, TJoins>;
+  select<TKeys extends string & keyof OmitFunctions<QueryResult<T>>>(keys: TKeys[]): FindQueryWithCount<T, Pick<QueryResult<T>, TKeys>, TJoins>;
   where(args: JoinedWhereQuery<T, TJoins>): FindQueryWithCount<T, TReturn, TJoins>;
   populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T, TPopulateType extends GetValueType<T[TProperty], Entity>, TPopulateSelectKeys extends string & keyof TPopulateType>(
     propertyName: TProperty,

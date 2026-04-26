@@ -2257,6 +2257,27 @@ describe('ReadonlyRepository', () => {
       expect(params).toStrictEqual([]);
     });
 
+    it('should compose chained select() and populate() (select narrows columns; populate hydrates the FK)', async () => {
+      const productResult = pick(generator.product({ store: store.id }), 'id', 'name', 'store');
+      const storeResult = pick(store, 'id', 'name');
+      mockedPool.query.mockResolvedValueOnce(getQueryResult([productResult])).mockResolvedValueOnce(getQueryResult([storeResult]));
+
+      const [result] = await ProductRepository.find().select(['name', 'store']).populate('store');
+      assert(result);
+      // eslint-disable-next-line vitest-js/prefer-strict-equal
+      expect(result).toEqual({
+        ...productResult,
+        store: storeResult,
+      });
+
+      const [productQuery] = mockedPool.query.mock.calls[0]!;
+      // Select query must include the FK column (`store_id` AS `store`) so populate has the join key.
+      expect(productQuery).toBe('SELECT "name","store_id" AS "store","id" FROM "products"');
+      const [storeQuery, storeQueryParams] = mockedPool.query.mock.calls[1]!;
+      expect(storeQuery).toBe('SELECT "id","name" FROM "stores" WHERE "id"=$1');
+      expect(storeQueryParams).toStrictEqual([store.id]);
+    });
+
     describe('join', () => {
       it('should support inner join with nested where clause', async () => {
         const products = [
