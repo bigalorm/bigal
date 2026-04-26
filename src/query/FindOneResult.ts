@@ -1,5 +1,5 @@
 import type { Entity } from '../Entity.js';
-import type { GetValueType, ModelRelationshipKeys, PickAsType, PickByValueType, PlainObject, Populated } from '../types/index.js';
+import type { GetValueType, ModelRelationshipKeys, OmitFunctions, PickAsType, PickByValueType, PlainObject, Populated, QueryResult } from '../types/index.js';
 
 import type { JoinedSort } from './JoinedSort.js';
 import type { JoinedWhereQuery, JoinInfo } from './JoinedWhereQuery.js';
@@ -7,7 +7,7 @@ import type { PopulateArgs } from './PopulateArgs.js';
 import type { WhereQuery } from './WhereQuery.js';
 
 export interface FindOneResultJSON<T extends Entity, TReturn, TJoins extends JoinInfo = never> extends PromiseLike<PlainObject<TReturn> | null> {
-  select<TKeys extends string & keyof T>(keys: TKeys[]): FindOneResultJSON<T, Pick<T, TKeys>, TJoins>;
+  select<TKeys extends string & keyof OmitFunctions<QueryResult<T>>>(keys: TKeys[]): FindOneResultJSON<T, Pick<QueryResult<T>, TKeys>, TJoins>;
   where(args: JoinedWhereQuery<T, TJoins>): FindOneResultJSON<T, TReturn, TJoins>;
   populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T, TPopulateType extends GetValueType<T[TProperty], Entity>, TPopulateSelectKeys extends string & keyof TPopulateType>(
     propertyName: TProperty,
@@ -33,7 +33,7 @@ export interface FindOneResultJSON<T extends Entity, TReturn, TJoins extends Joi
 }
 
 export interface FindOneResult<T extends Entity, TReturn, TJoins extends JoinInfo = never> extends PromiseLike<TReturn | null> {
-  select<TKeys extends string & keyof T>(keys: TKeys[]): FindOneResult<T, Pick<T, TKeys>, TJoins>;
+  select<TKeys extends string & keyof OmitFunctions<QueryResult<T>>>(keys: TKeys[]): FindOneResult<T, Pick<QueryResult<T>, TKeys>, TJoins>;
   where(args: JoinedWhereQuery<T, TJoins>): FindOneResult<T, TReturn, TJoins>;
   populate<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T, TPopulateType extends GetValueType<T[TProperty], Entity>, TPopulateSelectKeys extends string & keyof TPopulateType>(
     propertyName: TProperty,

@@ -157,10 +157,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * @param {string[]} keys - Columns to select from the entity
        * @returns Query instance
        */
-      select<TKeys extends string & keyof T>(keys: TKeys[]): FindOneResult<T, Pick<T, TKeys>> {
+      select<TKeys extends string & keyof OmitFunctions<QueryResult<T>>>(keys: TKeys[]): FindOneResult<T, Pick<QueryResult<T>, TKeys>> {
         select = new Set(keys);
-        // TypeScript cast for chaining - this is safe as per FindResult generic contract
-        return this as unknown as FindOneResult<T, Pick<T, TKeys>>;
+        // TypeScript cast for chaining - this is safe as per FindOneResult generic contract
+        return this as unknown as FindOneResult<T, Pick<QueryResult<T>, TKeys>>;
       },
       /**
        * Filters the query
@@ -389,10 +389,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * @param {string[]} keys - Columns to select from the entity
        * @returns Query instance
        */
-      select<TKeys extends string & keyof T>(keys: TKeys[]): FindResult<T, Pick<T, TKeys>> {
+      select<TKeys extends string & keyof OmitFunctions<QueryResult<T>>>(keys: TKeys[]): FindResult<T, Pick<QueryResult<T>, TKeys>> {
         select = new Set(keys);
         // TypeScript cast for chaining - this is safe as per FindResult generic contract
-        return this as unknown as FindResult<T, Pick<T, TKeys>>;
+        return this as unknown as FindResult<T, Pick<QueryResult<T>, TKeys>>;
       },
       /**
        * Filters the query
