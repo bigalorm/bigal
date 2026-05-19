@@ -1,8 +1,10 @@
+## [15.11.9](https://github.com/bigalorm/bigal/compare/v15.11.8...v15.11.9) (2026-05-19)
+
 ## [15.11.8](https://github.com/bigalorm/bigal/compare/v15.11.7...v15.11.8) (2026-05-19)
 
 ### Bug Fixes
 
-* prevent propertyName leak across where-clause iteration ([#403](https://github.com/bigalorm/bigal/issues/403)) ([0454e84](https://github.com/bigalorm/bigal/commit/0454e84d4c6fdf46fc14bdcf57ab409619ea8a03)), closes [#393](https://github.com/bigalorm/bigal/issues/393)
+- prevent propertyName leak across where-clause iteration ([#403](https://github.com/bigalorm/bigal/issues/403)) ([0454e84](https://github.com/bigalorm/bigal/commit/0454e84d4c6fdf46fc14bdcf57ab409619ea8a03)), closes [#393](https://github.com/bigalorm/bigal/issues/393)
 
 ## [15.11.7](https://github.com/bigalorm/bigal/compare/v15.11.6...v15.11.7) (2026-04-26)
 
