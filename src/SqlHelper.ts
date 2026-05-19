@@ -1630,34 +1630,35 @@ function buildWhere<T extends Entity>({
 
           // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
           let subQueryComparer: Comparer | string | undefined;
+          let iterationPropertyName = propertyName;
           if (isComparer(key)) {
             subQueryComparer = key;
-          } else if (propertyName) {
-            const parentColumn = model.columnsByPropertyName[propertyName] as ColumnTypeMetadata;
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            if (parentColumn?.type?.toLowerCase() === 'json') {
-              andValues.push(
-                buildJsonPropertyClause({
-                  columnName: parentColumn.name,
-                  path: [key],
-                  isNegated,
-                  constraint: where,
-                  params,
-                }),
-              );
-              continue;
+          } else {
+            if (propertyName) {
+              const parentColumn = model.columnsByPropertyName[propertyName] as ColumnTypeMetadata;
+              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+              if (parentColumn?.type?.toLowerCase() === 'json') {
+                andValues.push(
+                  buildJsonPropertyClause({
+                    columnName: parentColumn.name,
+                    path: [key],
+                    isNegated,
+                    constraint: where,
+                    params,
+                  }),
+                );
+                continue;
+              }
             }
 
-            propertyName = key;
-          } else {
-            propertyName = key;
+            iterationPropertyName = key;
           }
 
           andValues.push(
             buildWhere({
               repositoriesByModelNameLowered,
               model,
-              propertyName,
+              propertyName: iterationPropertyName,
               comparer: subQueryComparer,
               isNegated,
               value: where as WhereClauseValue<T>,

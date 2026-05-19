@@ -5,7 +5,18 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { QueryError } from '../src/errors/index.js';
 import { initialize, subquery } from '../src/index.js';
-import { type AggregateBuilder, type Entity, type IReadonlyRepository, type IRepository, type ModelMetadata, type PoolLike, type SelectAggregateExpression, type WhereQuery } from '../src/index.js';
+import {
+  type AggregateBuilder,
+  type Entity,
+  type IReadonlyRepository,
+  type IRepository,
+  type ModelMetadata,
+  type PoolLike,
+  type PoolQueryResult,
+  type QueryResultRow,
+  type SelectAggregateExpression,
+  type WhereQuery,
+} from '../src/index.js';
 import * as sqlHelper from '../src/SqlHelper.js';
 
 import {
@@ -56,12 +67,14 @@ interface RepositoriesByModelName {
 
 type LowerCaseKeys<T, K extends string & keyof T = string & keyof T> = Record<Lowercase<K>, T[K]>;
 
+type MockedPoolQuery = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
+
 describe('sqlHelper', () => {
   let repositoriesByModelName: RepositoriesByModelName;
   const repositoriesByModelNameLowered = {} as LowerCaseKeys<RepositoriesByModelName>;
 
   beforeAll(() => {
-    const mockedPool: PoolLike = { query: vi.fn() };
+    const mockedPool: PoolLike = { query: vi.fn<MockedPoolQuery>() } as unknown as PoolLike;
     repositoriesByModelName = initialize({
       models: [
         Category,
@@ -2702,6 +2715,36 @@ describe('sqlHelper', () => {
         assert(whereStatement);
         expect(whereStatement).toBe(`WHERE "bar"->'failure'->>'stage'=$1 AND ("bar"->'failure'->>'code')::numeric>=$2`);
         expect(params).toStrictEqual(['transcription', 400]);
+      });
+
+      it('should not treat a sibling top-level column as a JSON path of a prior JSON column', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: { '!': '{}' },
+            name: 'pizza',
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"<>$1 AND "name"=$2`);
+        expect(params).toStrictEqual(['{}', 'pizza']);
+      });
+
+      it('should not treat a sibling top-level column following a JSON path query as another path on the JSON column', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
+          where: {
+            bar: { theme: 'dark' },
+            name: 'pizza',
+          } as WhereQuery<SimpleWithJson>,
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe(`WHERE "bar"->>'theme'=$1 AND "name"=$2`);
+        expect(params).toStrictEqual(['dark', 'pizza']);
       });
     });
 
