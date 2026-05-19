@@ -1,8 +1,14 @@
+## [15.11.8](https://github.com/bigalorm/bigal/compare/v15.11.7...v15.11.8) (2026-05-19)
+
+### Bug Fixes
+
+* prevent propertyName leak across where-clause iteration ([#403](https://github.com/bigalorm/bigal/issues/403)) ([0454e84](https://github.com/bigalorm/bigal/commit/0454e84d4c6fdf46fc14bdcf57ab409619ea8a03)), closes [#393](https://github.com/bigalorm/bigal/issues/393)
+
 ## [15.11.7](https://github.com/bigalorm/bigal/compare/v15.11.6...v15.11.7) (2026-04-26)
 
 ### Bug Fixes
 
-* Return Pick<QueryResult<T>> from chained .select() ([#390](https://github.com/bigalorm/bigal/issues/390)) ([89780a4](https://github.com/bigalorm/bigal/commit/89780a4068c312fcf59b8598eb35792e3b498918))
+- Return Pick<QueryResult<T>> from chained .select() ([#390](https://github.com/bigalorm/bigal/issues/390)) ([89780a4](https://github.com/bigalorm/bigal/commit/89780a4068c312fcf59b8598eb35792e3b498918))
 
 ## [15.11.6](https://github.com/bigalorm/bigal/compare/v15.11.5...v15.11.6) (2026-04-07)
 
