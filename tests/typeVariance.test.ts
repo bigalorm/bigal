@@ -1,4 +1,4 @@
-import { describe, it } from 'vitest';
+import { describe, expect, expectTypeOf, it } from 'vitest';
 
 import type { IReadonlyRepository, IRepository, QueryResult, WhereQuery } from '../src/index.js';
 import type { FindOneResult, FindResult } from '../src/query/index.js';
@@ -22,32 +22,32 @@ function assertExact<T extends true>(_check?: T): void {}
 describe('Type variance', () => {
   it('should allow WhereQuery<SpecificModel> where WhereQuery<BaseModel> is expected', () => {
     const where: WhereQuery<Product> = { name: 'test' };
-    acceptWhereQuery(where);
+    expect(() => acceptWhereQuery(where)).not.toThrow();
   });
 
   it('should allow WhereQuery<ModelWithJsonColumn> where WhereQuery<BaseModel> is expected', () => {
     const where: WhereQuery<SimpleWithJson> = { name: 'test' };
-    acceptWhereQuery(where);
+    expect(() => acceptWhereQuery(where)).not.toThrow();
   });
 
   it('should allow IReadonlyRepository<SpecificModel> where IReadonlyRepository<BaseModel> is expected', () => {
     const repo = {} as IReadonlyRepository<Product>;
-    acceptReadonlyRepository(repo);
+    expect(() => acceptReadonlyRepository(repo)).not.toThrow();
   });
 
   it('should allow IReadonlyRepository<ModelWithJsonColumn> where IReadonlyRepository<BaseModel> is expected', () => {
     const repo = {} as IReadonlyRepository<SimpleWithJson>;
-    acceptReadonlyRepository(repo);
+    expect(() => acceptReadonlyRepository(repo)).not.toThrow();
   });
 
   it('should allow IRepository<SpecificModel> where IRepository<BaseModel> is expected', () => {
     const repo = {} as IRepository<Product>;
-    acceptRepository(repo);
+    expect(() => acceptRepository(repo)).not.toThrow();
   });
 
   it('should allow IRepository<ModelWithJsonColumn> where IRepository<BaseModel> is expected', () => {
     const repo = {} as IRepository<SimpleWithJson>;
-    acceptRepository(repo);
+    expect(() => acceptRepository(repo)).not.toThrow();
   });
 });
 
@@ -140,6 +140,6 @@ describe('select() return type', () => {
     // The actual type assertions live in `_selectReturnTypeChecks` above. tsgo verifies them
     // during `npm run check:types`; this test exists so vitest reports the suite passing and
     // surfaces any failure in test output.
-    void _selectReturnTypeChecks;
+    expectTypeOf(_selectReturnTypeChecks).toBeFunction();
   });
 });

@@ -303,7 +303,7 @@ describe('sqlHelper', () => {
       });
 
       it('should throw error if ORDER BY is missing when using DISTINCT ON', () => {
-        expect((): void => {
+        function action(): void {
           sqlHelper.getSelectQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -313,11 +313,13 @@ describe('sqlHelper', () => {
             limit: 0,
             distinctOn: ['store'],
           });
-        }).to.throw(QueryError, /DISTINCT ON requires ORDER BY/);
+        }
+        expect(action).toThrow(QueryError);
+        expect(action).toThrow(/DISTINCT ON requires ORDER BY/);
       });
 
       it('should throw error if DISTINCT ON columns do not match leftmost ORDER BY columns', () => {
-        expect((): void => {
+        function action(): void {
           sqlHelper.getSelectQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -327,11 +329,13 @@ describe('sqlHelper', () => {
             limit: 0,
             distinctOn: ['store'],
           });
-        }).to.throw(QueryError, /DISTINCT ON columns must match the leftmost ORDER BY columns/);
+        }
+        expect(action).toThrow(QueryError);
+        expect(action).toThrow(/DISTINCT ON columns must match the leftmost ORDER BY columns/);
       });
 
       it('should throw error if fewer ORDER BY columns than DISTINCT ON columns', () => {
-        expect((): void => {
+        function action(): void {
           sqlHelper.getSelectQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -341,7 +345,9 @@ describe('sqlHelper', () => {
             limit: 0,
             distinctOn: ['store', 'name'],
           });
-        }).to.throw(QueryError, /DISTINCT ON columns must match the leftmost ORDER BY columns/);
+        }
+        expect(action).toThrow(QueryError);
+        expect(action).toThrow(/DISTINCT ON columns must match the leftmost ORDER BY columns/);
       });
 
       it('should work with WHERE clause', () => {
@@ -434,7 +440,7 @@ describe('sqlHelper', () => {
 
   describe('#getInsertQueryAndParams()', () => {
     it('should throw if a required property has an undefined value', () => {
-      expect((): void => {
+      function action(): void {
         sqlHelper.getInsertQueryAndParams({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -443,7 +449,9 @@ describe('sqlHelper', () => {
           },
           returnRecords: true,
         });
-      }).to.throw(Error, `Create statement for "${repositoriesByModelNameLowered.product.model.name}" is missing value for required field: name`);
+      }
+      expect(action).toThrow(Error);
+      expect(action).toThrow(`Create statement for "${repositoriesByModelNameLowered.product.model.name}" is missing value for required field: name`);
     });
 
     it('should not throw if a required property has a defaultValue and an undefined initial value', () => {
@@ -456,7 +464,7 @@ describe('sqlHelper', () => {
           },
           returnRecords: true,
         });
-      }).to.not.throw();
+      }).not.toThrow();
     });
 
     it('should not override properties with defaultValue if value is defined', () => {
@@ -1180,7 +1188,7 @@ describe('sqlHelper', () => {
         const itemName = faker.string.uuid();
         const externalId = 'a'.repeat(6);
 
-        expect((): void => {
+        function action(): void {
           sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
@@ -1193,7 +1201,9 @@ describe('sqlHelper', () => {
             ],
             returnRecords: false,
           });
-        }).to.throw(QueryError, `Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
+        }
+        expect(action).toThrow(QueryError);
+        expect(action).toThrow(`Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
 
       it('should allow insert (string[]) when under maxLength', () => {
@@ -1223,7 +1233,7 @@ describe('sqlHelper', () => {
         const itemName = faker.string.uuid();
         const externalIds = ['a'.repeat(11), 'b'.repeat(10)];
 
-        expect((): void => {
+        function action(): void {
           sqlHelper.getInsertQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
@@ -1236,7 +1246,9 @@ describe('sqlHelper', () => {
             ],
             returnRecords: false,
           });
-        }).to.throw(QueryError, `Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
+        }
+        expect(action).toThrow(QueryError);
+        expect(action).toThrow(`Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
     });
   });
@@ -1595,7 +1607,7 @@ describe('sqlHelper', () => {
         const itemId = faker.string.uuid();
         const externalId = 'a'.repeat(6);
 
-        expect((): void => {
+        function action(): void {
           sqlHelper.getUpdateQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
@@ -1607,7 +1619,9 @@ describe('sqlHelper', () => {
             },
             returnRecords: false,
           });
-        }).to.throw(QueryError, `Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
+        }
+        expect(action).toThrow(QueryError);
+        expect(action).toThrow(`Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
 
       it('should allow update (string[]) when under maxLength', () => {
@@ -1634,7 +1648,7 @@ describe('sqlHelper', () => {
         const itemId = faker.string.uuid();
         const externalIds = ['a'.repeat(11), 'b'.repeat(10)];
 
-        expect((): void => {
+        function action(): void {
           sqlHelper.getUpdateQueryAndParams({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.importeditem.model as ModelMetadata<ImportedItem>,
@@ -1646,7 +1660,9 @@ describe('sqlHelper', () => {
             },
             returnRecords: false,
           });
-        }).to.throw(QueryError, `Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
+        }
+        expect(action).toThrow(QueryError);
+        expect(action).toThrow(`Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
     });
   });
@@ -1791,7 +1807,7 @@ describe('sqlHelper', () => {
     });
 
     it('should throw if query value is undefined', () => {
-      expect((): void => {
+      function action(): void {
         sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -1799,7 +1815,9 @@ describe('sqlHelper', () => {
             store: undefined,
           },
         });
-      }).to.throw(QueryError, `Attempting to query with an undefined value. store on ${repositoriesByModelNameLowered.product.model.name}`);
+      }
+      expect(action).toThrow(QueryError);
+      expect(action).toThrow(`Attempting to query with an undefined value. store on ${repositoriesByModelNameLowered.product.model.name}`);
     });
 
     it('should use column name if defined', () => {
@@ -2383,7 +2401,7 @@ describe('sqlHelper', () => {
       });
 
       it('should throw error for like operator on JSON column', () => {
-        expect((): void => {
+        function action(): void {
           sqlHelper.buildWhereStatement({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
@@ -2393,11 +2411,13 @@ describe('sqlHelper', () => {
               },
             } as WhereQuery<SimpleWithJson>,
           });
-        }).to.throw(QueryError, '"like" operator is not supported for JSON columns');
+        }
+        expect(action).toThrow(QueryError);
+        expect(action).toThrow('"like" operator is not supported for JSON columns');
       });
 
       it('should throw error for startsWith operator on JSON column', () => {
-        expect((): void => {
+        function action(): void {
           sqlHelper.buildWhereStatement({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
@@ -2407,11 +2427,13 @@ describe('sqlHelper', () => {
               },
             } as WhereQuery<SimpleWithJson>,
           });
-        }).to.throw(QueryError, '"like" operator is not supported for JSON columns');
+        }
+        expect(action).toThrow(QueryError);
+        expect(action).toThrow('"like" operator is not supported for JSON columns');
       });
 
       it('should throw error for endsWith operator on JSON column', () => {
-        expect((): void => {
+        function action(): void {
           sqlHelper.buildWhereStatement({
             repositoriesByModelNameLowered,
             model: repositoriesByModelNameLowered.simplewithjson.model as ModelMetadata<SimpleWithJson>,
@@ -2421,7 +2443,9 @@ describe('sqlHelper', () => {
               },
             } as WhereQuery<SimpleWithJson>,
           });
-        }).to.throw(QueryError, '"like" operator is not supported for JSON columns');
+        }
+        expect(action).toThrow(QueryError);
+        expect(action).toThrow('"like" operator is not supported for JSON columns');
       });
     });
 
@@ -2811,7 +2835,7 @@ describe('sqlHelper', () => {
     });
 
     it('should throw for empty or', () => {
-      expect((): void => {
+      function action(): void {
         sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -2819,7 +2843,9 @@ describe('sqlHelper', () => {
             or: [],
           },
         });
-      }).to.throw(QueryError, `WHERE statement is unexpectedly empty.`);
+      }
+      expect(action).toThrow(QueryError);
+      expect(action).toThrow(`WHERE statement is unexpectedly empty.`);
     });
 
     it('should handle or with a int field and a string array field', () => {
@@ -2935,7 +2961,7 @@ describe('sqlHelper', () => {
     });
 
     it('should throw for empty and', () => {
-      expect((): void => {
+      function action(): void {
         sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
@@ -2943,7 +2969,9 @@ describe('sqlHelper', () => {
             and: [],
           },
         });
-      }).to.throw(QueryError, `WHERE statement is unexpectedly empty.`);
+      }
+      expect(action).toThrow(QueryError);
+      expect(action).toThrow(`WHERE statement is unexpectedly empty.`);
     });
 
     it('should handle and with nested or', () => {
