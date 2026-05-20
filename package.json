@@ -96,5 +96,10 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bigalorm/bigal.git"
+  },
+  "overrides": {
+    "unbuild": {
+      "typescript": "$typescript"
+    }
   }
 }
