@@ -16,6 +16,7 @@
   "rules": {
     "eqeqeq": ["error", "smart"],
     "no-console": "error",
+    "no-underscore-dangle": "off",
     "no-nested-ternary": "error",
     "no-await-in-loop": "error",
     "id-length": ["error", { "min": 2, "exceptions": ["e", "i", "j", "q", "x", "y", "_", "A", "D", "K", "P", "T", "U"] }],
