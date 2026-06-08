@@ -34,6 +34,7 @@ import {
   SimpleWithCreatedAt,
   SimpleWithCreatedAtAndUpdatedAt,
   SimpleWithJson,
+  SimpleWithRelationAndJson,
   SimpleWithSchema,
   SimpleWithStringId,
   SimpleWithUpdatedAt,
@@ -57,6 +58,7 @@ interface RepositoriesByModelName {
   SimpleWithCreatedAt: IRepository<Entity>;
   SimpleWithCreatedAtAndUpdatedAt: IRepository<Entity>;
   SimpleWithJson: IRepository<Entity>;
+  SimpleWithRelationAndJson: IRepository<Entity>;
   SimpleWithSchema: IRepository<Entity>;
   SimpleWithStringId: IRepository<Entity>;
   SimpleWithUpdatedAt: IRepository<Entity>;
@@ -91,6 +93,7 @@ describe('sqlHelper', () => {
         SimpleWithCreatedAt,
         SimpleWithCreatedAtAndUpdatedAt,
         SimpleWithJson,
+        SimpleWithRelationAndJson,
         SimpleWithSchema,
         SimpleWithStringId,
         SimpleWithUpdatedAt,
@@ -394,6 +397,111 @@ describe('sqlHelper', () => {
 
         expect(query).toBe('SELECT DISTINCT ON ("store_id") "name","store_id" AS "store","id" FROM "products" ORDER BY "store_id"');
         expect(params).toStrictEqual([]);
+      });
+    });
+
+    describe('base-table column qualification with joins', () => {
+      it('should qualify base-table columns in SELECT, WHERE, and ORDER BY when a join is present', () => {
+        const { query, params } = sqlHelper.getSelectQueryAndParams<Product>({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          select: ['id', 'name'],
+          where: { id: [1, 2], store: { name: 'Acme' } } as WhereQuery<Product>,
+          sorts: [{ propertyName: 'id' }],
+          skip: 0,
+          limit: 10,
+          joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
+        });
+
+        expect(query).toBe(
+          'SELECT "products"."id","products"."name" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "products"."id"=ANY($1::INTEGER[]) AND "store"."name"=$2 ORDER BY "products"."id" LIMIT 10',
+        );
+        expect(params).toStrictEqual([[1, 2], 'Acme']);
+      });
+
+      it('should qualify a base column used with an "in" subquery when a join is present', () => {
+        const storeSubquery = subquery(repositoriesByModelNameLowered.store as IRepository<Store>)
+          .select(['id'])
+          .where({ name: 'Acme' });
+
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: { id: { in: storeSubquery } } as WhereQuery<Product>,
+          joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
+        });
+
+        expect(whereStatement).toBe('WHERE "products"."id" IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
+        expect(params).toStrictEqual(['Acme']);
+      });
+
+      it('should qualify an array base column compared to an empty array when a join is present', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: { aliases: [] } as WhereQuery<Product>,
+          joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
+        });
+
+        expect(whereStatement).toBe(`WHERE "products"."alias_names"='{}'`);
+        expect(params).toStrictEqual([]);
+      });
+
+      it('should qualify a base column in a multi-value =ANY constraint when a join is present', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: { name: ['Widget', 'Gadget'] } as WhereQuery<Product>,
+          joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
+        });
+
+        expect(whereStatement).toBe('WHERE "products"."name"=ANY($1::TEXT[])');
+        expect(params).toStrictEqual([['Widget', 'Gadget']]);
+      });
+
+      it('should qualify a base JSON column property access when a join is present', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithrelationandjson.model as ModelMetadata<SimpleWithRelationAndJson>,
+          where: { message: { id: 'abc' } } as WhereQuery<SimpleWithRelationAndJson>,
+          joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
+        });
+
+        expect(whereStatement).toBe(`WHERE "simple"."message"->>'id'=$1`);
+        expect(params).toStrictEqual(['abc']);
+      });
+
+      it('should schema-qualify base columns and the subquery-join ON base side', () => {
+        const idSubquery = subquery(repositoriesByModelNameLowered.product as IRepository<Product>).select(['id']);
+
+        const { query, params } = sqlHelper.getSelectQueryAndParams<SimpleWithSchema>({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.simplewithschema.model as ModelMetadata<SimpleWithSchema>,
+          select: ['name'],
+          where: {},
+          sorts: [],
+          skip: 0,
+          limit: 0,
+          joins: [{ subquery: idSubquery, alias: 'stats', type: 'inner', on: { id: 'id' } }],
+        });
+
+        expect(query).toBe('SELECT "foo"."simple"."name","foo"."simple"."id" FROM "foo"."simple" INNER JOIN (SELECT "id" FROM "products") AS "stats" ON "foo"."simple"."id"="stats"."id"');
+        expect(params).toStrictEqual([]);
+      });
+
+      it('should not qualify base columns when there are no joins', () => {
+        const { query, params } = sqlHelper.getSelectQueryAndParams<Product>({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          select: ['id', 'name'],
+          where: { id: [1, 2] } as WhereQuery<Product>,
+          sorts: [{ propertyName: 'id' }],
+          skip: 0,
+          limit: 10,
+        });
+
+        expect(query).toBe('SELECT "id","name" FROM "products" WHERE "id"=ANY($1::INTEGER[]) ORDER BY "id" LIMIT 10');
+        expect(params).toStrictEqual([[1, 2]]);
       });
     });
   });
@@ -3676,7 +3784,7 @@ describe('sqlHelper', () => {
         ],
       });
 
-      expect(result).toBe('ORDER BY "store"."name","name" DESC');
+      expect(result).toBe('ORDER BY "store"."name","products"."name" DESC');
     });
   });
 
@@ -3892,7 +4000,7 @@ describe('sqlHelper', () => {
         ],
       });
 
-      expect(whereStatement!).toBe('WHERE "name"=$1 AND "store"."name"=$2');
+      expect(whereStatement!).toBe('WHERE "products"."name"=$1 AND "store"."name"=$2');
       expect(params).toStrictEqual(['Widget', 'Acme']);
     });
 

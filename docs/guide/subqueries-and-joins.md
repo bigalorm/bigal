@@ -96,9 +96,9 @@ const products = await productRepository
   .find()
   .join('store')
   .where({ store: { name: 'Acme' } });
-// SQL: SELECT "products".* FROM "products"
-//   INNER JOIN "stores" ON "products"."store_id"="stores"."id"
-//   WHERE "stores"."name"=$1
+// SQL: SELECT "products"."id","products"."name",… FROM "products"
+//   INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id"
+//   WHERE "store"."name"=$1
 
 // Left join
 const products = await productRepository
@@ -116,6 +116,9 @@ const products = await productRepository
 const products = await productRepository.find().leftJoin('store', 'activeStore', { isActive: true });
 ```
 
+When a query includes any join, BigAl automatically qualifies the base table's own columns (in `SELECT`, `WHERE`, `ORDER BY`, and `DISTINCT ON`) with the base table name.
+This keeps columns that share a name across the base and joined tables (most commonly `id`) from being ambiguous, so `.join()` is safe to use without falling back to raw SQL.
+
 ## Subquery joins
 
 Join to subquery results:
@@ -127,7 +130,7 @@ const productCounts = subquery(productRepository)
 
 // Inner join
 const stores = await storeRepository.find().join(productCounts, 'stats', { on: { id: 'store' } });
-// SQL: SELECT "stores".* FROM "stores"
+// SQL: SELECT "stores"."id","stores"."name" FROM "stores"
 //   INNER JOIN (
 //     SELECT "store_id" AS "store", COUNT(*) AS "productCount"
 //     FROM "products" GROUP BY "store_id"
