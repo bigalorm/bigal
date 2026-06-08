@@ -20,6 +20,18 @@ function assertValidSqlIdentifier(value: string, context: string): void {
   }
 }
 
+/**
+ * Returns the SQL prefix used to qualify base-table columns. When a query has one or more joins, base-table columns must be qualified to avoid ambiguity with columns of the same name on a joined
+ * table. Join-less queries return an empty prefix so their SQL is unchanged.
+ * @param {object} model - Model schema for the base table
+ * @param {JoinDefinition[]} [joins] - Array of join definitions for the query
+ * @returns {string} The qualified table prefix (e.g. `"schema"."table".`) when joins are present, otherwise an empty string
+ * @private
+ */
+function getBaseColumnPrefix<T extends Entity>(model: ModelMetadata<T>, joins?: readonly JoinDefinition[]): string {
+  return joins?.length ? `${model.qualifiedTableName}.` : '';
+}
+
 interface QueryAndParams {
   query: string;
   params: readonly unknown[];
@@ -101,13 +113,14 @@ export function getSelectQueryAndParams<T extends Entity>({
   let query = 'SELECT ';
 
   if (distinctOn?.length) {
+    const baseColumnPrefix = getBaseColumnPrefix(model, joins);
     const distinctOnColumnNames = distinctOn.map((propertyName) => {
       const column = model.columnsByPropertyName[propertyName];
       if (!column) {
         throw new QueryError(`Unable to find column for DISTINCT ON property: ${propertyName} on ${model.tableName}`, model);
       }
 
-      return `"${column.name}"`;
+      return `${baseColumnPrefix}"${column.name}"`;
     });
     query += `DISTINCT ON (${distinctOnColumnNames.join(',')}) `;
   }
@@ -115,6 +128,7 @@ export function getSelectQueryAndParams<T extends Entity>({
   query += getColumnsToSelect({
     model,
     select,
+    joins,
   });
 
   if (includeCount) {
@@ -666,6 +680,7 @@ export function getDeleteQueryAndParams<T extends Entity>({
  * @param {object} args - Arguments
  * @param {object} args.model - Model schema
  * @param {string[]} [args.select] - Array of model property names to return from the query.
+ * @param {JoinDefinition[]} [args.joins] - Array of join definitions. When present, base-table columns are qualified to avoid ambiguity with joined tables.
  * @returns {string} SQL columns
  * @private
  */
@@ -673,9 +688,11 @@ export function getDeleteQueryAndParams<T extends Entity>({
 export function getColumnsToSelect<T extends Entity, K extends string & keyof OmitFunctions<OmitEntityCollections<T>> = string & keyof OmitFunctions<OmitEntityCollections<T>>>({
   model,
   select,
+  joins,
 }: {
   model: ModelMetadata<T>;
   select?: readonly K[];
+  joins?: readonly JoinDefinition[];
 }): string {
   let selectColumns: Set<string>;
   if (select) {
@@ -696,6 +713,7 @@ export function getColumnsToSelect<T extends Entity, K extends string & keyof Om
     }
   }
 
+  const baseColumnPrefix = getBaseColumnPrefix(model, joins);
   let query = '';
   for (const [index, propertyName] of Array.from(selectColumns).entries()) {
     const column = model.columnsByPropertyName[propertyName];
@@ -708,9 +726,9 @@ export function getColumnsToSelect<T extends Entity, K extends string & keyof Om
     }
 
     if (column.name === propertyName) {
-      query += `"${propertyName}"`;
+      query += `${baseColumnPrefix}"${propertyName}"`;
     } else {
-      query += `"${column.name}" AS "${propertyName}"`;
+      query += `${baseColumnPrefix}"${column.name}" AS "${propertyName}"`;
     }
   }
 
@@ -847,7 +865,7 @@ function buildSubqueryJoinClause<T extends Entity>({
     }
 
     assertValidSqlIdentifier(subqueryColumn, 'subquery join ON column');
-    onConditions.push(`"${model.tableName}"."${column.name}"="${join.alias}"."${subqueryColumn}"`);
+    onConditions.push(`${model.qualifiedTableName}."${column.name}"="${join.alias}"."${subqueryColumn}"`);
   }
 
   return ` ${joinType} (${subquerySQL}) AS "${join.alias}" ON ${onConditions.join(' AND ')}`;
@@ -1125,7 +1143,7 @@ export function buildOrderStatement<T extends Entity>({
         throw new QueryError(`Property (${propertyName}) not found in model (${model.name}).`, model);
       }
 
-      orderStatement += `"${column.name}"`;
+      orderStatement += `${getBaseColumnPrefix(model, joins)}"${column.name}"`;
     }
 
     if (descending) {
@@ -1347,7 +1365,7 @@ function buildWhere<T extends Entity>({
           repositoriesByModelNameLowered,
         });
 
-        return `"${column.name}"${isNegated ? ' NOT' : ''} IN (${subquerySQL})`;
+        return `${getBaseColumnPrefix(model, joins)}"${column.name}"${isNegated ? ' NOT' : ''} IN (${subquerySQL})`;
       }
 
       throw new QueryError(`Expected subquery value for 'in' operator. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
@@ -1440,7 +1458,7 @@ function buildWhere<T extends Entity>({
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             const arrayColumnType = arrayColumn.type ? arrayColumn.type.toLowerCase() : '';
             if (arrayColumnType === 'array' || arrayColumnType === 'string[]' || arrayColumnType === 'integer[]' || arrayColumnType === 'float[]' || arrayColumnType === 'boolean[]') {
-              return `"${arrayColumn.name}"${isNegated ? '<>' : '='}'{}'`;
+              return `${getBaseColumnPrefix(model, joins)}"${arrayColumn.name}"${isNegated ? '<>' : '='}'{}'`;
             }
           }
 
@@ -1565,7 +1583,7 @@ function buildWhere<T extends Entity>({
               }
 
               params.push(valueWithoutNull);
-              orConstraints.push(`"${columnType.name}"${isNegated ? '<>ALL' : '=ANY'}($${params.length}${castType})`);
+              orConstraints.push(`${getBaseColumnPrefix(model, joins)}"${columnType.name}"${isNegated ? '<>ALL' : '=ANY'}($${params.length}${castType})`);
             }
           }
 
@@ -1640,6 +1658,7 @@ function buildWhere<T extends Entity>({
               if (parentColumn?.type?.toLowerCase() === 'json') {
                 andValues.push(
                   buildJsonPropertyClause({
+                    tablePrefix: getBaseColumnPrefix(model, joins),
                     columnName: parentColumn.name,
                     path: [key],
                     isNegated,
@@ -1945,7 +1964,7 @@ function buildArrayOrSingleStatement<T extends Entity>({
     }
 
     column = localColumn;
-    tablePrefix = '';
+    tablePrefix = getBaseColumnPrefix(model, joins);
   }
 
   if (value === null) {
@@ -2165,8 +2184,8 @@ function getTypeCastSuffix(value: unknown): string {
   return '';
 }
 
-function buildJsonAccessor(columnName: string, path: readonly string[]): string {
-  let result = `"${columnName}"`;
+function buildJsonAccessor(tablePrefix: string, columnName: string, path: readonly string[]): string {
+  let result = `${tablePrefix}"${columnName}"`;
   for (let i = 0; i < path.length; i++) {
     const arrow = i === path.length - 1 ? '->>' : '->';
     result += `${arrow}'${path[i]}'`;
@@ -2180,12 +2199,14 @@ function isJsonConstraintOperator(key: string): boolean {
 }
 
 function buildJsonPropertyClause({
+  tablePrefix,
   columnName,
   path,
   isNegated,
   constraint,
   params,
 }: {
+  tablePrefix: string;
   columnName: string;
   path: readonly string[];
   isNegated: boolean;
@@ -2197,11 +2218,11 @@ function buildJsonPropertyClause({
   }
 
   if (constraint === null) {
-    return `${buildJsonAccessor(columnName, path)} ${isNegated ? 'IS NOT' : 'IS'} NULL`;
+    return `${buildJsonAccessor(tablePrefix, columnName, path)} ${isNegated ? 'IS NOT' : 'IS'} NULL`;
   }
 
   if (Array.isArray(constraint)) {
-    const accessor = buildJsonAccessor(columnName, path);
+    const accessor = buildJsonAccessor(tablePrefix, columnName, path);
     params.push(constraint);
     return `${accessor}${isNegated ? '<>ALL' : '=ANY'}($${params.length})`;
   }
@@ -2212,7 +2233,7 @@ function buildJsonPropertyClause({
 
     // If first key is an operator, treat entire object as constraint operators
     if (firstKey && isJsonConstraintOperator(firstKey)) {
-      const accessor = buildJsonAccessor(columnName, path);
+      const accessor = buildJsonAccessor(tablePrefix, columnName, path);
       const negatedComparisonOperators: Record<string, string> = { '<': '>=', '<=': '>', '>': '<=', '>=': '<' };
       const clauses: string[] = [];
 
@@ -2243,6 +2264,7 @@ function buildJsonPropertyClause({
     for (const [nestedKey, nestedValue] of entries) {
       clauses.push(
         buildJsonPropertyClause({
+          tablePrefix,
           columnName,
           path: [...path, nestedKey],
           isNegated,
@@ -2256,7 +2278,7 @@ function buildJsonPropertyClause({
   }
 
   // Primitive value (string, number, boolean)
-  const accessor = buildJsonAccessor(columnName, path);
+  const accessor = buildJsonAccessor(tablePrefix, columnName, path);
   params.push(constraint);
   const castSuffix = getTypeCastSuffix(constraint);
   const castAccessor = castSuffix ? `(${accessor})${castSuffix}` : accessor;
@@ -2330,7 +2352,7 @@ function buildComparisonOperatorStatement<T extends Entity>({
     }
 
     column = localColumn;
-    tablePrefix = '';
+    tablePrefix = getBaseColumnPrefix(model, joins);
   }
 
   if (value === null) {

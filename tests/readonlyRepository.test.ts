@@ -2301,7 +2301,7 @@ describe('ReadonlyRepository', () => {
 
         const [query, params] = mockedPool.query.mock.calls[0]!;
         expect(query).toBe(
-          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name" ILIKE $1',
+          'SELECT "products"."id","products"."name","products"."sku","products"."location","products"."alias_names" AS "aliases","products"."store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name" ILIKE $1',
         );
         assert(params);
         expect(params).toStrictEqual(['Acme']);
@@ -2325,7 +2325,7 @@ describe('ReadonlyRepository', () => {
 
         const [query, params] = mockedPool.query.mock.calls[0]!;
         expect(query).toBe(
-          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" LEFT JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name" ILIKE $1',
+          'SELECT "products"."id","products"."name","products"."sku","products"."location","products"."alias_names" AS "aliases","products"."store_id" AS "store" FROM "products" LEFT JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name" ILIKE $1',
         );
         assert(params);
         expect(params).toStrictEqual(['%mart%']);
@@ -2349,7 +2349,7 @@ describe('ReadonlyRepository', () => {
 
         const [query, params] = mockedPool.query.mock.calls[0]!;
         expect(query).toBe(
-          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "primaryStore" ON "products"."store_id"="primaryStore"."id" WHERE "primaryStore"."name"=$1',
+          'SELECT "products"."id","products"."name","products"."sku","products"."location","products"."alias_names" AS "aliases","products"."store_id" AS "store" FROM "products" INNER JOIN "stores" AS "primaryStore" ON "products"."store_id"="primaryStore"."id" WHERE "primaryStore"."name"=$1',
         );
         assert(params);
         expect(params).toStrictEqual(['Acme']);
@@ -2374,7 +2374,7 @@ describe('ReadonlyRepository', () => {
 
         const [query, params] = mockedPool.query.mock.calls[0]!;
         expect(query).toBe(
-          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "name"=$1 AND "store"."name"=$2',
+          'SELECT "products"."id","products"."name","products"."sku","products"."location","products"."alias_names" AS "aliases","products"."store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "products"."name"=$1 AND "store"."name"=$2',
         );
         assert(params);
         expect(params).toStrictEqual(['Widget', 'Acme']);
@@ -2394,7 +2394,7 @@ describe('ReadonlyRepository', () => {
 
         const [query, params] = mockedPool.query.mock.calls[0]!;
         expect(query).toBe(
-          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" ORDER BY "store"."name"',
+          'SELECT "products"."id","products"."name","products"."sku","products"."location","products"."alias_names" AS "aliases","products"."store_id" AS "store" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" ORDER BY "store"."name"',
         );
         assert(params);
         expect(params).toStrictEqual([]);
@@ -2414,7 +2414,7 @@ describe('ReadonlyRepository', () => {
 
         const [query, params] = mockedPool.query.mock.calls[0]!;
         expect(query).toBe(
-          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" INNER JOIN "stores" AS "primaryStore" ON "products"."store_id"="primaryStore"."id" ORDER BY "primaryStore"."name" DESC',
+          'SELECT "products"."id","products"."name","products"."sku","products"."location","products"."alias_names" AS "aliases","products"."store_id" AS "store" FROM "products" INNER JOIN "stores" AS "primaryStore" ON "products"."store_id"="primaryStore"."id" ORDER BY "primaryStore"."name" DESC',
         );
         assert(params);
         expect(params).toStrictEqual([]);
@@ -2597,7 +2597,7 @@ describe('ReadonlyRepository', () => {
 
           const [query, params] = mockedPool.query.mock.calls[0]!;
           expect(query).toBe(
-            'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"',
+            'SELECT "stores"."id","stores"."name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"',
           );
           assert(params);
           expect(params).toStrictEqual([]);
@@ -2619,7 +2619,7 @@ describe('ReadonlyRepository', () => {
 
           const [query, params] = mockedPool.query.mock.calls[0]!;
           expect(query).toBe(
-            'SELECT "id","name" FROM "stores" LEFT JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"',
+            'SELECT "stores"."id","stores"."name" FROM "stores" LEFT JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store"',
           );
           assert(params);
           expect(params).toStrictEqual([]);
@@ -2644,7 +2644,7 @@ describe('ReadonlyRepository', () => {
 
           const [query, params] = mockedPool.query.mock.calls[0]!;
           expect(query).toBe(
-            'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."productCount" DESC',
+            'SELECT "stores"."id","stores"."name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."productCount" DESC',
           );
           assert(params);
           expect(params).toStrictEqual([]);
@@ -2667,7 +2667,7 @@ describe('ReadonlyRepository', () => {
 
           const [query, params] = mockedPool.query.mock.calls[0]!;
           expect(query).toBe(
-            'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "widgetCount" FROM "products" WHERE "name"=$1 GROUP BY "store_id") AS "widgetStats" ON "stores"."id"="widgetStats"."store"',
+            'SELECT "stores"."id","stores"."name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "widgetCount" FROM "products" WHERE "name"=$1 GROUP BY "store_id") AS "widgetStats" ON "stores"."id"="widgetStats"."store"',
           );
           assert(params);
           expect(params).toStrictEqual(['Widget']);
@@ -2689,7 +2689,7 @@ describe('ReadonlyRepository', () => {
 
           const [query, params] = mockedPool.query.mock.calls[0]!;
           expect(query).toBe(
-            'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(DISTINCT "name") AS "uniqueNames" FROM "products" GROUP BY "store_id") AS "stats" ON "stores"."id"="stats"."store"',
+            'SELECT "stores"."id","stores"."name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(DISTINCT "name") AS "uniqueNames" FROM "products" GROUP BY "store_id") AS "stats" ON "stores"."id"="stats"."store"',
           );
           assert(params);
           expect(params).toStrictEqual([]);
@@ -2712,7 +2712,7 @@ describe('ReadonlyRepository', () => {
 
           const [query, params] = mockedPool.query.mock.calls[0]!;
           expect(query).toBe(
-            'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id" HAVING COUNT(*)>5) AS "productStats" ON "stores"."id"="productStats"."store"',
+            'SELECT "stores"."id","stores"."name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id" HAVING COUNT(*)>5) AS "productStats" ON "stores"."id"="productStats"."store"',
           );
           assert(params);
           expect(params).toStrictEqual([]);
@@ -2736,7 +2736,7 @@ describe('ReadonlyRepository', () => {
 
           const [query, params] = mockedPool.query.mock.calls[0]!;
           expect(query).toBe(
-            'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" WHERE "name" IS NOT NULL GROUP BY "store_id" HAVING COUNT(*)>=3) AS "productStats" ON "stores"."id"="productStats"."store"',
+            'SELECT "stores"."id","stores"."name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" WHERE "name" IS NOT NULL GROUP BY "store_id" HAVING COUNT(*)>=3) AS "productStats" ON "stores"."id"="productStats"."store"',
           );
           assert(params);
           expect(params).toStrictEqual([]);
@@ -2779,7 +2779,7 @@ describe('ReadonlyRepository', () => {
 
             const [query, params] = mockedPool.query.mock.calls[0]!;
             expect(query).toBe(
-              'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."productCount" DESC',
+              'SELECT "stores"."id","stores"."name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."productCount" DESC',
             );
             assert(params);
             expect(params).toStrictEqual([]);
@@ -2803,7 +2803,7 @@ describe('ReadonlyRepository', () => {
 
             const [query, params] = mockedPool.query.mock.calls[0]!;
             expect(query).toBe(
-              'SELECT "id","name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."store"',
+              'SELECT "stores"."id","stores"."name" FROM "stores" INNER JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."store"',
             );
             assert(params);
             expect(params).toStrictEqual([]);
@@ -2887,7 +2887,7 @@ describe('ReadonlyRepository', () => {
 
             const [query, params] = mockedPool.query.mock.calls[0]!;
             expect(query).toBe(
-              'SELECT "id","name" FROM "stores" LEFT JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."productCount" DESC',
+              'SELECT "stores"."id","stores"."name" FROM "stores" LEFT JOIN (SELECT "store_id" AS "store",COUNT(*) AS "productCount" FROM "products" GROUP BY "store_id") AS "productStats" ON "stores"."id"="productStats"."store" ORDER BY "productStats"."productCount" DESC',
             );
             assert(params);
             expect(params).toStrictEqual([]);
@@ -2909,7 +2909,7 @@ describe('ReadonlyRepository', () => {
 
             const [query, params] = mockedPool.query.mock.calls[0]!;
             expect(query).toBe(
-              'SELECT "id","name" FROM "stores" INNER JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" ORDER BY "store_id") AS "latestProduct" ON "stores"."id"="latestProduct"."store"',
+              'SELECT "stores"."id","stores"."name" FROM "stores" INNER JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" ORDER BY "store_id") AS "latestProduct" ON "stores"."id"="latestProduct"."store"',
             );
             assert(params);
             expect(params).toStrictEqual([]);
@@ -2933,7 +2933,7 @@ describe('ReadonlyRepository', () => {
 
             const [query, params] = mockedPool.query.mock.calls[0]!;
             expect(query).toBe(
-              'SELECT "id","name" FROM "stores" LEFT JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" WHERE "name" IS NOT NULL ORDER BY "store_id") AS "latestProduct" ON "stores"."id"="latestProduct"."store"',
+              'SELECT "stores"."id","stores"."name" FROM "stores" LEFT JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" WHERE "name" IS NOT NULL ORDER BY "store_id") AS "latestProduct" ON "stores"."id"="latestProduct"."store"',
             );
             assert(params);
             expect(params).toStrictEqual([]);
@@ -2957,7 +2957,7 @@ describe('ReadonlyRepository', () => {
 
             const [query, params] = mockedPool.query.mock.calls[0]!;
             expect(query).toBe(
-              'SELECT "id","name" FROM "stores" INNER JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" ORDER BY "store_id","name" DESC) AS "latestProduct" ON "stores"."id"="latestProduct"."store"',
+              'SELECT "stores"."id","stores"."name" FROM "stores" INNER JOIN (SELECT DISTINCT ON ("store_id") "store_id" AS "store","name" FROM "products" ORDER BY "store_id","name" DESC) AS "latestProduct" ON "stores"."id"="latestProduct"."store"',
             );
             assert(params);
             expect(params).toStrictEqual([]);
@@ -3993,7 +3993,7 @@ describe('ReadonlyRepository', () => {
 
         const [query] = mockedPool.query.mock.calls[0]!;
         expect(query).toBe(
-          'SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name"=$1',
+          'SELECT "products"."id","products"."name","products"."sku","products"."location","products"."alias_names" AS "aliases","products"."store_id" AS "store",count(*) OVER() AS "__total_count__" FROM "products" INNER JOIN "stores" AS "store" ON "products"."store_id"="store"."id" WHERE "store"."name"=$1',
         );
       });
 
