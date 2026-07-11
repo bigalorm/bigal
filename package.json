@@ -62,20 +62,20 @@
     "postgres-pool": "11.0.4",
     "semantic-release": "25.0.3",
     "strict-event-emitter-types": "2.0.0",
-    "typescript": "6.0.3",
+    "typescript": "catalog:",
     "unbuild": "3.6.1",
     "vitest": "4.1.6"
   },
   "scripts": {
     "build": "unbuild",
     "check:types": "tsgo --noEmit --skipLibCheck",
-    "test": "npm run check:types && vitest run",
+    "test": "pnpm run check:types && vitest run",
     "lint:markdown": "markdownlint '**/*.md' --ignore '**/node_modules/**' --ignore '**/dist/**' --ignore 'internal/**' --config=.github/linters/.markdown-lint.yml --fix",
     "lint:code": "oxlint --fix --fix-suggestions --deny-warnings",
-    "lint": "npm run format && run-p lint:*",
+    "lint": "pnpm run format && run-p lint:*",
     "format": "oxfmt --write .",
     "lint-staged": "lint-staged",
-    "beta": "npm publish --tag beta",
+    "beta": "pnpm publish --tag beta",
     "prepublishOnly": "pinst --disable",
     "postpublish": "pinst --enable",
     "prepare": "husky"
@@ -97,9 +97,5 @@
     "type": "git",
     "url": "git+https://github.com/bigalorm/bigal.git"
   },
-  "overrides": {
-    "unbuild": {
-      "typescript": "$typescript"
-    }
-  }
+  "packageManager": "pnpm@11.11.0+sha512.4463f65fd80ed80d69bc1d4bf163ee94f605c7380fc318bb5b2ebe15f8cd12d49c51a4d59e951b401e764d3b6ca751cbf51bc50ed7001a6bcb4935e684c34882"
 }
