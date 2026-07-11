@@ -2,7 +2,7 @@ allowBuilds:
   esbuild: true
 
 catalog:
-  typescript: 6.0.3
+  typescript: 7.0.2
 
 overrides:
   'unbuild>typescript': 'catalog:'
