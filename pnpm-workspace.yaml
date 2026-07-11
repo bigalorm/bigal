@@ -3,6 +3,3 @@ allowBuilds:
 
 catalog:
   typescript: 6.0.3
-
-overrides:
-  'unbuild>typescript': 'catalog:'
