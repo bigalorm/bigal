@@ -37,7 +37,7 @@
   },
   "homepage": "https://bigalorm.github.io/bigal/",
   "engines": {
-    "node": ">=20.11.0"
+    "node": ">=22.0.0"
   },
   "devDependencies": {
     "@faker-js/faker": "10.4.0",
