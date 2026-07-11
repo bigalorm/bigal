@@ -143,7 +143,10 @@ class Product extends Entity {
 
 ### Column types
 
-`'string'`, `'integer'`, `'float'`, `'boolean'`, `'date'`, `'datetime'`, `'json'`, `'string[]'`, `'integer[]'`, `'float[]'`, `'boolean[]'`
+`'string'`, `'integer'`, `'float'`, `'boolean'`, `'date'`, `'datetime'`, `'json'`, `'string[]'`, `'integer[]'`, `'float[]'`, `'boolean[]'`, `'vector'`
+
+Vector columns (pgvector) are declared with `@column({ type: 'vector', dimensions: n })` on a `number[]` property.
+`dimensions` is informational — BigAl does not issue DDL.
 
 ### Relationships
 
@@ -362,6 +365,28 @@ await storeRepo.find().where({ exists: hasProducts });
 // Scalar comparison
 const avgPrice = subquery(productRepo).avg('price');
 await productRepo.find().where({ price: { '>': avgPrice } });
+```
+
+### Vector distance queries
+
+```ts
+// In the model: @column({ type: 'vector', dimensions: 1536 }) public embedding?: number[];
+
+// Sort by similarity — metric: 'cosine' (default, <=>), 'l2' (<->), 'l1' (<+>), 'innerProduct' (<#>)
+const similar = await documentRepo
+  .find()
+  .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
+  .limit(10);
+
+// Filter by distance threshold
+const nearby = await documentRepo
+  .find()
+  .where({ embedding: { nearestTo: queryVector, metric: 'cosine', distance: { '<': 0.5 } } })
+  .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
+  .limit(10);
+
+// Writes serialize number[] to pgvector text format; reads parse it back to number[]
+await documentRepo.create({ title: 'foo', embedding: [0.1, 0.2, 0.3] });
 ```
 
 ## Gotchas

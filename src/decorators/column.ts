@@ -74,6 +74,7 @@ export function column(dbColumnNameOrOptions?: ColumnOptions | string, options?:
         required: columnTypeOptions.required,
         type: columnTypeOptions.type,
         defaultsTo: columnTypeOptions.defaultsTo,
+        dimensions: columnTypeOptions.dimensions,
         enum: columnTypeOptions.enum,
         maxLength: columnTypeOptions.maxLength,
       }),

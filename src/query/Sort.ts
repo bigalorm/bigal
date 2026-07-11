@@ -27,8 +27,15 @@ export type MultipleSortString<T extends Entity, TSortString extends string = st
 
 export type SortObjectValue = -1 | 'asc' | 'desc' | 1;
 
+export type VectorDistanceMetric = 'cosine' | 'innerProduct' | 'l1' | 'l2';
+
+export interface VectorDistanceSort {
+  nearestTo: number[];
+  metric?: VectorDistanceMetric;
+}
+
 export type SortObject<T extends Entity> = {
-  [K in keyof T as ExcludeFunctions<OmitEntityCollections<T>, K>]?: SortObjectValue;
+  [K in keyof T as ExcludeFunctions<OmitEntityCollections<T>, K>]?: SortObjectValue | VectorDistanceSort;
 };
 
 export type Sort<T extends Entity> = MultipleSortString<T> | SortObject<T>;
@@ -36,4 +43,8 @@ export type Sort<T extends Entity> = MultipleSortString<T> | SortObject<T>;
 export interface OrderBy<T extends Entity> {
   propertyName: string & keyof OmitFunctions<OmitEntityCollections<T>>;
   descending?: boolean;
+  vectorDistance?: {
+    vector: number[];
+    metric: VectorDistanceMetric;
+  };
 }

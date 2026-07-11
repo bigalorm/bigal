@@ -3,7 +3,18 @@ import { QueryError } from './errors/index.js';
 import type { IReadonlyRepository } from './IReadonlyRepository.js';
 import type { IRepository } from './IRepository.js';
 import type { ColumnBaseMetadata, ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata/index.js';
-import type { Comparer, JoinDefinition, ModelJoinDefinition, OrderBy, SubqueryJoinDefinition, WhereClauseValue, WhereQuery } from './query/index.js';
+import type {
+  Comparer,
+  JoinDefinition,
+  ModelJoinDefinition,
+  OrderBy,
+  SubqueryJoinDefinition,
+  VectorDistanceConstraint,
+  VectorDistanceMetric,
+  VectorDistanceSort,
+  WhereClauseValue,
+  WhereQuery,
+} from './query/index.js';
 import { isSubqueryJoin } from './query/JoinDefinition.js';
 import type { OnConflictOptions } from './query/OnConflictOptions.js';
 import type { SelectAggregateExpression } from './query/SelectBuilder.js';
@@ -164,6 +175,7 @@ export function getSelectQueryAndParams<T extends Entity>({
     repositoriesByModelNameLowered,
     model,
     sorts,
+    params,
     joins,
   });
 
@@ -366,6 +378,7 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
         value = 'NULL';
       } else {
         const isJsonArray = (column as ColumnTypeMetadata).type === 'json' && Array.isArray(entityValue);
+        const isVectorValue = (column as ColumnTypeMetadata).type === 'vector' && Array.isArray(entityValue);
         const relatedModelName = (column as ColumnModelMetadata).model;
         if (relatedModelName && typeof entityValue === 'object') {
           const relatedModelRepository = repositoriesByModelNameLowered[relatedModelName.toLowerCase()];
@@ -389,6 +402,10 @@ export function getInsertQueryAndParams<T extends Entity, K extends string & key
           // Inserting an array to a json/jsonb column will result in a message: invalid input syntax for type json
           // https://github.com/brianc/node-postgres/issues/442
           params.push(JSON.stringify(entityValue));
+        } else if (isVectorValue) {
+          // pgvector expects the text format '[1,2,3]', not the postgres array literal '{1,2,3}' that node-pg would send
+          validateVectorArray(entityValue as number[], column.propertyName, model, 'vector value');
+          params.push(serializeVector(entityValue as number[]));
         } else {
           params.push(entityValue);
         }
@@ -537,6 +554,7 @@ export function getUpdateQueryAndParams<T extends Entity>({
         query += 'NULL';
       } else {
         const isJsonArray = (column as ColumnTypeMetadata).type === 'json' && Array.isArray(value);
+        const isVectorValue = (column as ColumnTypeMetadata).type === 'vector' && Array.isArray(value);
         const relatedModelName = (column as ColumnModelMetadata).model;
 
         // Check and enforce max length for applicable types
@@ -575,6 +593,10 @@ export function getUpdateQueryAndParams<T extends Entity>({
           // Inserting an array to a json/jsonb column will result in a message: invalid input syntax for type json
           // https://github.com/brianc/node-postgres/issues/442
           params.push(JSON.stringify(value));
+        } else if (isVectorValue) {
+          // pgvector expects the text format '[1,2,3]', not the postgres array literal '{1,2,3}' that node-pg would send
+          validateVectorArray(value as number[], column.propertyName, model, 'vector value');
+          params.push(serializeVector(value as number[]));
         } else {
           params.push(value);
         }
@@ -961,6 +983,7 @@ function buildSubquerySelectSQL({
       repositoriesByModelNameLowered,
       model: subqueryModel,
       sorts,
+      params,
     });
 
     if (orderStatement) {
@@ -1108,11 +1131,13 @@ export function buildOrderStatement<T extends Entity>({
   repositoriesByModelNameLowered,
   model,
   sorts,
+  params,
   joins,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
   sorts: readonly OrderBy<T>[];
+  params: unknown[];
   joins?: readonly JoinDefinition[];
 }): string {
   if (!sorts.length) {
@@ -1126,7 +1151,7 @@ export function buildOrderStatement<T extends Entity>({
       orderStatement += ',';
     }
 
-    const { propertyName, descending } = orderProperty;
+    const { propertyName, descending, vectorDistance } = orderProperty;
 
     const resolvedProperty = resolvePropertyPath({
       propertyPath: propertyName,
@@ -1135,15 +1160,30 @@ export function buildOrderStatement<T extends Entity>({
       repositoriesByModelNameLowered,
     });
 
+    let columnReference: string;
     if (resolvedProperty) {
-      orderStatement += `"${resolvedProperty.tableAlias}"."${resolvedProperty.column.name}"`;
+      columnReference = `"${resolvedProperty.tableAlias}"."${resolvedProperty.column.name}"`;
     } else {
       const column = model.columnsByPropertyName[propertyName];
       if (!column) {
         throw new QueryError(`Property (${propertyName}) not found in model (${model.name}).`, model);
       }
 
-      orderStatement += `${getBaseColumnPrefix(model, joins)}"${column.name}"`;
+      columnReference = `${getBaseColumnPrefix(model, joins)}"${column.name}"`;
+    }
+
+    if (vectorDistance) {
+      const sortColumn = (resolvedProperty?.column ?? model.columnsByPropertyName[propertyName]) as ColumnTypeMetadata | undefined;
+      if (sortColumn?.type !== 'vector') {
+        throw new QueryError(`"${propertyName}" is not a vector column and cannot be sorted by distance`, model);
+      }
+
+      const metric = validateVectorMetric(vectorDistance.metric, model);
+      validateVectorArray(vectorDistance.vector, propertyName, model);
+      params.push(serializeVector(vectorDistance.vector));
+      orderStatement += `${columnReference} ${vectorDistanceOperator(metric)} $${params.length}`;
+    } else {
+      orderStatement += columnReference;
     }
 
     if (descending) {
@@ -1469,6 +1509,37 @@ function buildWhere<T extends Entity>({
           return '1<>1';
         }
 
+        // Vector columns compare whole vectors for equality instead of splitting the array into per-element =ANY() constraints
+        const resolvedVectorProperty = resolveVectorColumn({
+          candidateNames: [propertyName, comparer],
+          model,
+          joins,
+          repositoriesByModelNameLowered,
+        });
+        if (resolvedVectorProperty) {
+          const { column: vectorColumn, columnReference } = resolvedVectorProperty;
+          if (value.every((item) => typeof item === 'number')) {
+            validateVectorArray(value as number[], vectorColumn.propertyName, model, 'vector value');
+            params.push(serializeVector(value as number[]));
+            return `${columnReference}${isNegated ? '<>' : '='}$${params.length}`;
+          }
+
+          if (value.every((item) => Array.isArray(item) && item.every((element: unknown) => typeof element === 'number'))) {
+            const vectorConstraints = (value as number[][]).map((vector) => {
+              validateVectorArray(vector, vectorColumn.propertyName, model, 'vector value');
+              params.push(serializeVector(vector));
+              return `${columnReference}${isNegated ? '<>' : '='}$${params.length}`;
+            });
+
+            const [singleVectorConstraint] = vectorConstraints;
+            if (vectorConstraints.length === 1 && singleVectorConstraint) {
+              return singleVectorConstraint;
+            }
+
+            return isNegated ? vectorConstraints.join(' AND ') : `(${vectorConstraints.join(' OR ')})`;
+          }
+        }
+
         const orConstraints = [];
         const valueWithoutNull = [];
         for (const item of value) {
@@ -1617,6 +1688,44 @@ function buildWhere<T extends Entity>({
             params,
             joins,
           });
+        }
+
+        if ('nearestTo' in value) {
+          if (!propertyName) {
+            throw new QueryError('Property name is required for vector distance constraint', model);
+          }
+
+          const resolvedProperty = resolvePropertyPath({
+            propertyPath: propertyName,
+            model,
+            joins,
+            repositoriesByModelNameLowered,
+          });
+          const column = (resolvedProperty?.column ?? model.columnsByPropertyName[propertyName]) as ColumnTypeMetadata | undefined;
+          if (!column) {
+            throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
+          }
+
+          // json columns may contain a literal nearestTo key and keep their normal handling
+          if (column.type === 'vector') {
+            if (isNegated) {
+              throw new QueryError(`Negation is not supported for vector distance constraints on "${propertyName}". Negate the distance comparison instead (eg distance: { '>=': threshold })`, model);
+            }
+
+            const columnReference = resolvedProperty ? `"${resolvedProperty.tableAlias}"."${column.name}"` : `${getBaseColumnPrefix(model, joins)}"${column.name}"`;
+
+            return buildVectorDistanceWhereClause({
+              columnReference,
+              constraint: value as unknown as VectorDistanceConstraint,
+              propertyName,
+              model,
+              params,
+            });
+          }
+
+          if (column.type && column.type !== 'json') {
+            throw new QueryError(`"${propertyName}" is not a vector column; nearestTo requires a column declared with type 'vector'`, model);
+          }
         }
 
         const andValues: string[] = [];
@@ -2064,6 +2173,20 @@ function buildNestedJoinWhere({
     if (whereValue === null) {
       andClauses.push(`"${tableAlias}"."${column.name}" IS NULL`);
     } else if (typeof whereValue === 'object' && !Array.isArray(whereValue)) {
+      if ((column as ColumnTypeMetadata).type === 'vector' && 'nearestTo' in (whereValue as Record<string, unknown>)) {
+        andClauses.push(
+          buildVectorDistanceWhereClause({
+            columnReference: `"${tableAlias}"."${column.name}"`,
+            constraint: whereValue as unknown as VectorDistanceConstraint,
+            propertyName: key,
+            model: joinedModel,
+            params,
+          }),
+        );
+
+        continue;
+      }
+
       for (const [op, opValue] of Object.entries(whereValue as Record<string, unknown>)) {
         if (op === '!') {
           if (opValue === null) {
@@ -2105,7 +2228,13 @@ function buildNestedJoinWhere({
               }
             }
           } else {
-            params.push(opValue);
+            if ((column as ColumnTypeMetadata).type === 'vector' && Array.isArray(opValue) && opValue.every((item) => typeof item === 'number')) {
+              validateVectorArray(opValue as number[], key, joinedModel, 'vector value');
+              params.push(serializeVector(opValue as number[]));
+            } else {
+              params.push(opValue);
+            }
+
             andClauses.push(`"${tableAlias}"."${column.name}"<>$${params.length}`);
           }
         } else if (op === 'like' || op === 'contains' || op === 'startsWith' || op === 'endsWith') {
@@ -2143,6 +2272,19 @@ function buildNestedJoinWhere({
     } else if (Array.isArray(whereValue)) {
       if (whereValue.length === 0) {
         andClauses.push('1<>1');
+      } else if ((column as ColumnTypeMetadata).type === 'vector' && whereValue.every((item) => typeof item === 'number')) {
+        validateVectorArray(whereValue as number[], key, joinedModel, 'vector value');
+        params.push(serializeVector(whereValue as number[]));
+        andClauses.push(`"${tableAlias}"."${column.name}"=$${params.length}`);
+      } else if ((column as ColumnTypeMetadata).type === 'vector' && whereValue.every((item) => Array.isArray(item) && item.every((element: unknown) => typeof element === 'number'))) {
+        const vectorConstraints = (whereValue as number[][]).map((vector) => {
+          validateVectorArray(vector, key, joinedModel, 'vector value');
+          params.push(serializeVector(vector));
+          return `"${tableAlias}"."${column.name}"=$${params.length}`;
+        });
+
+        const [singleVectorConstraint] = vectorConstraints;
+        andClauses.push(vectorConstraints.length === 1 && singleVectorConstraint ? singleVectorConstraint : `(${vectorConstraints.join(' OR ')})`);
       } else {
         params.push(whereValue);
         andClauses.push(`"${tableAlias}"."${column.name}"=ANY($${params.length})`);
@@ -2510,6 +2652,7 @@ export function buildSubquerySQL<T extends Entity>({
       repositoriesByModelNameLowered,
       model,
       sorts,
+      params,
     });
 
     if (orderStatement) {
@@ -2589,6 +2732,19 @@ function convertSortToOrderBy<T extends Entity>(sort: Record<string, unknown> | 
     }
   } else if (typeof sort === 'object') {
     for (const [propertyName, orderValue] of Object.entries(sort)) {
+      if (orderValue && typeof orderValue === 'object' && 'nearestTo' in orderValue) {
+        const vectorSort = orderValue as VectorDistanceSort;
+        result.push({
+          propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
+          descending: false,
+          vectorDistance: {
+            vector: vectorSort.nearestTo,
+            metric: validateVectorMetric(vectorSort.metric ?? 'cosine'),
+          },
+        });
+        continue;
+      }
+
       let descending = false;
       if (orderValue && (orderValue === -1 || (typeof orderValue === 'string' && /desc/i.test(orderValue)))) {
         descending = true;
@@ -2602,4 +2758,127 @@ function convertSortToOrderBy<T extends Entity>(sort: Record<string, unknown> | 
   }
 
   return result;
+}
+
+// Distance operators and metrics are interpolated into SQL, so these whitelists prevent SQL injection
+const VALID_DISTANCE_OPERATORS = new Set(['<', '<=', '>', '>=']);
+const VALID_VECTOR_METRICS = new Set(['cosine', 'innerProduct', 'l1', 'l2']);
+
+function validateDistanceOperator<T extends Entity>(operator: string, model: ModelMetadata<T>): void {
+  if (!VALID_DISTANCE_OPERATORS.has(operator)) {
+    throw new QueryError(`Invalid vector distance operator: ${operator}`, model);
+  }
+}
+
+function validateVectorMetric<T extends Entity>(metric: string, model?: ModelMetadata<T>): VectorDistanceMetric {
+  if (!VALID_VECTOR_METRICS.has(metric)) {
+    const message = `Invalid vector distance metric: ${metric}. Must be one of: cosine, innerProduct, l1, l2`;
+    if (model) {
+      throw new QueryError(message, model);
+    }
+
+    throw new Error(message);
+  }
+
+  return metric as VectorDistanceMetric;
+}
+
+function validateVectorArray<T extends Entity>(vector: number[], propertyName: string, model?: ModelMetadata<T>, valueDescription = 'nearestTo'): void {
+  if (!Array.isArray(vector) || vector.length === 0 || !vector.every((value) => typeof value === 'number' && Number.isFinite(value))) {
+    const message = `"${propertyName}" ${valueDescription} must be a non-empty array of finite numbers`;
+    if (model) {
+      throw new QueryError(message, model);
+    }
+
+    throw new Error(message);
+  }
+}
+
+function resolveVectorColumn<T extends Entity>({
+  candidateNames,
+  model,
+  joins,
+  repositoriesByModelNameLowered,
+}: {
+  candidateNames: (string | undefined)[];
+  model: ModelMetadata<T>;
+  joins?: readonly JoinDefinition[];
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+}): { column: ColumnTypeMetadata; columnReference: string } | undefined {
+  for (const candidateName of candidateNames) {
+    if (!candidateName) {
+      continue;
+    }
+
+    const resolvedProperty = resolvePropertyPath({
+      propertyPath: candidateName,
+      model,
+      joins,
+      repositoriesByModelNameLowered,
+    });
+    const column = (resolvedProperty?.column ?? model.columnsByPropertyName[candidateName]) as ColumnTypeMetadata | undefined;
+    if (column?.type === 'vector') {
+      return {
+        column,
+        columnReference: resolvedProperty ? `"${resolvedProperty.tableAlias}"."${column.name}"` : `${getBaseColumnPrefix(model, joins)}"${column.name}"`,
+      };
+    }
+  }
+
+  return undefined;
+}
+
+function buildVectorDistanceWhereClause<T extends Entity>({
+  columnReference,
+  constraint,
+  propertyName,
+  model,
+  params,
+}: {
+  columnReference: string;
+  constraint: VectorDistanceConstraint;
+  propertyName: string;
+  model: ModelMetadata<T>;
+  params: unknown[];
+}): string {
+  const metric = validateVectorMetric(constraint.metric ?? 'cosine', model);
+  validateVectorArray(constraint.nearestTo, propertyName, model);
+  params.push(serializeVector(constraint.nearestTo));
+  const distanceExpression = `${columnReference} ${vectorDistanceOperator(metric)} $${params.length}`;
+
+  const distanceConstraints: string[] = [];
+  for (const [distanceOperator, distanceThreshold] of Object.entries(constraint.distance ?? {})) {
+    validateDistanceOperator(distanceOperator, model);
+    if (typeof distanceThreshold !== 'number' || !Number.isFinite(distanceThreshold)) {
+      throw new QueryError(`"${propertyName}" distance threshold must be a finite number`, model);
+    }
+
+    params.push(distanceThreshold);
+    distanceConstraints.push(`${distanceExpression} ${distanceOperator} $${params.length}`);
+  }
+
+  if (!distanceConstraints.length) {
+    // pgvector distance operators return a number, not a boolean, so a bare distance expression is not a valid where clause
+    throw new QueryError(`"${propertyName}" vector distance constraint requires at least one distance bound (eg distance: { '<': 0.5 }). Use sort() with nearestTo to order by distance`, model);
+  }
+
+  return distanceConstraints.join(' AND ');
+}
+
+function vectorDistanceOperator(metric: VectorDistanceMetric): string {
+  switch (metric) {
+    case 'l2':
+      return '<->';
+    case 'innerProduct':
+      return '<#>';
+    case 'l1':
+      return '<+>';
+    case 'cosine':
+    default:
+      return '<=>';
+  }
+}
+
+function serializeVector(vector: number[]): string {
+  return `[${vector.join(',')}]`;
 }
