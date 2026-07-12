@@ -72,9 +72,6 @@ const config: UserConfig = defineConfig({
     entry: ['src/index.ts'],
     format: ['esm', 'cjs'],
     dts: { oxc: true },
-    // Match the historical unbuild output layout referenced by package.json
-    // (index.mjs + index.d.ts for ESM, index.cjs + index.d.cts for CJS).
-    outExtensions: ({ format }) => (format === 'es' ? { js: '.mjs', dts: '.d.ts' } : { js: '.cjs', dts: '.d.cts' }),
   },
   staged: {
     '*.md': ['vp fmt', 'markdownlint --config=.github/linters/.markdown-lint.yml --fix'],
