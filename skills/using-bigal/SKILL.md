@@ -451,6 +451,18 @@ type ProductSummary = Pick<QueryResult<Product>, 'id' | 'name' | 'store'>;
 type ProductSummaryWrong = Pick<Product, 'id' | 'name' | 'store'>;
 ```
 
+### Prefer count() over findOne() for existence checks
+
+If you only need to know whether a match exists, use `count()` instead of `findOne()` — it performs better since it doesn't select or hydrate a row:
+
+```ts
+// Correct
+const exists = (await productRepo.count().where({ sku: 'ABC123' })) > 0;
+
+// Wasteful — findOne() selects and hydrates a full row just to check for existence
+const exists = (await productRepo.findOne().where({ sku: 'ABC123' })) != null;
+```
+
 ### Debugging SQL
 
 Set `DEBUG_BIGAL=true` to log all generated SQL and parameter values:

@@ -60,7 +60,7 @@ Returns a query builder for a single record or `null`. Options: `{ select?, pool
 repository.count(options?): CountQuery<T>
 ```
 
-Returns a query builder that resolves to a number. Options: `{ pool? }`.
+Returns a query builder that resolves to a number. Options: `{ pool? }`. Prefer this over `findOne()` for existence checks — it performs better since it doesn't select or hydrate a row.
 
 ### create()
 
