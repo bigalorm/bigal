@@ -48,11 +48,10 @@
     "lint:code": "vp lint --fix",
     "lint": "pnpm run format && run-p lint:*",
     "format": "vp fmt",
-    "lint-staged": "vp staged",
     "beta": "pnpm publish --tag beta",
     "prepublishOnly": "pinst --disable",
     "postpublish": "pinst --enable",
-    "prepare": "husky"
+    "prepare": "vp config --no-agent"
   },
   "devDependencies": {
     "@faker-js/faker": "10.5.0",
@@ -69,7 +68,6 @@
     "eslint-plugin-jsdoc": "62.9.0",
     "eslint-plugin-security": "4.0.1",
     "eslint-plugin-unicorn": "64.0.0",
-    "husky": "9.1.7",
     "markdownlint-cli": "0.49.0",
     "npm-run-all2": "9.0.2",
     "oxlint-plugin-eslint": "1.73.0",
