@@ -1,277 +1,72 @@
+import { oxlintConfig } from 'eslint-config-decent/oxlint';
+import { type UserConfig } from 'vite';
 import { defineConfig } from 'vite-plus';
 
-export default defineConfig({
-  test: {
-    include: ['tests/**/*.test.ts'],
-  },
+type LintConfig = ReturnType<typeof oxlintConfig>;
+type LintRules = NonNullable<LintConfig['rules']>;
+
+const baseLintConfig: LintConfig = oxlintConfig({ enableReact: false, enableTestingLibrary: false, enableVitest: true });
+
+// These compat plugins import @typescript-eslint/typescript-estree, which cannot
+// load alongside typescript 7 (it supports typescript <6.1 only). Drop them and
+// their rules (member-ordering, explicit-member-accessibility, and a few vitest
+// padding/style rules) until typescript-eslint supports typescript 7.
+const estreeDependentPlugins = new Set(['@typescript-eslint/eslint-plugin', '@vitest/eslint-plugin']);
+const estreeDependentRulePrefixes = ['typescript-compat/', 'vitest-compat/'];
+
+function withoutEstreeDependentRules(rules: LintRules | undefined): LintRules {
+  return Object.fromEntries(Object.entries(rules ?? {}).filter(([ruleName]) => !estreeDependentRulePrefixes.some((prefix) => ruleName.startsWith(prefix))));
+}
+
+const config: UserConfig = defineConfig({
   fmt: {
     printWidth: 200,
-    semi: true,
     singleQuote: true,
-    bracketSpacing: true,
-    arrowParens: 'always',
-    quoteProps: 'as-needed',
-    trailingComma: 'all',
-    useTabs: false,
-    tabWidth: 2,
-    endOfLine: 'lf',
-    arrayWrap: {
-      minElementsToWrap: 3,
-    },
-    sortImports: {
-      newlinesBetween: true,
-      customGroups: [
-        {
-          groupName: 'path-alias',
-          elementNamePattern: ['@/**'],
-        },
-      ],
-      groups: [
-        ['value-builtin', 'type-builtin'],
-        {
-          newlinesBetween: true,
-        },
-        ['value-external', 'type-external'],
-        {
-          newlinesBetween: true,
-        },
-        ['value-internal', 'type-internal'],
-        {
-          newlinesBetween: true,
-        },
-        ['value-parent', 'type-parent'],
-        {
-          newlinesBetween: true,
-        },
-        ['value-sibling', 'type-sibling', 'value-index', 'type-index'],
-        {
-          newlinesBetween: true,
-        },
-        'path-alias',
-      ],
-    },
-    sortPackageJson: false,
-    ignorePatterns: ['**/node_modules/**', '**/dist/**'],
   },
   lint: {
-    options: {
-      typeAware: true,
-      typeCheck: true,
-    },
-    plugins: ['node', 'jsx-a11y', 'jsdoc', 'vitest', 'import', 'promise'],
-    jsPlugins: [{ name: 'vitest-js', specifier: 'eslint-plugin-vitest' }],
-    categories: {
-      correctness: 'error',
-      suspicious: 'error',
-      pedantic: 'off',
-      style: 'off',
-      restriction: 'off',
-      nursery: 'off',
-    },
+    ...baseLintConfig,
+    jsPlugins: (baseLintConfig.jsPlugins ?? []).filter((plugin) => !estreeDependentPlugins.has(typeof plugin === 'string' ? plugin : plugin.specifier)),
     rules: {
-      eqeqeq: ['error', 'smart'],
-      'no-console': 'error',
-      'no-underscore-dangle': 'off',
-      'no-nested-ternary': 'error',
-      'no-await-in-loop': 'error',
-      'id-length': ['error', { min: 2, exceptions: ['e', 'i', 'j', 'q', 'x', 'y', '_', 'A', 'D', 'K', 'P', 'T', 'U'] }],
-      'no-void': 'off',
-      'no-bitwise': 'off',
-
-      curly: ['error', 'all'],
-      'no-var': 'error',
-      'prefer-const': ['error', { destructuring: 'any', ignoreReadBeforeAssign: true }],
-      'prefer-template': 'error',
-      'no-else-return': ['error', { allowElseIf: false }],
-      'no-return-assign': ['error', 'always'],
-      yoda: 'error',
-      'no-lonely-if': 'error',
-      'no-negated-condition': 'error',
-      'no-self-compare': 'error',
-      'no-useless-return': 'error',
-      'no-promise-executor-return': 'error',
-      'no-constructor-return': 'error',
-      'no-new-wrappers': 'error',
-      'no-template-curly-in-string': 'error',
-      'no-useless-computed-key': 'error',
-      'no-sequences': 'error',
-      'no-proto': 'error',
-      'no-multi-assign': 'error',
-      'no-multi-str': 'error',
-      'no-lone-blocks': 'error',
-      'no-labels': ['error', { allowLoop: false, allowSwitch: false }],
-      'no-label-var': 'error',
-      'no-extra-label': 'error',
-      'no-new-func': 'error',
-      'no-script-url': 'error',
-      'max-classes-per-file': ['error', 1],
-      'array-callback-return': ['error', { allowImplicit: true }],
-      'symbol-description': 'error',
-      'default-case': ['error', { commentPattern: '^no default$' }],
-      'default-case-last': 'error',
-      'operator-assignment': ['error', 'always'],
-      'prefer-numeric-literals': 'error',
-      'prefer-object-spread': 'error',
-      'prefer-promise-reject-errors': ['error', { allowEmptyReject: true }],
-      'vars-on-top': 'error',
-      'func-names': 'error',
-      'func-style': ['error', 'declaration'],
-      'grouped-accessor-pairs': 'error',
-      'guard-for-in': 'error',
-      'sort-imports': 'off',
-      'no-array-constructor': 'error',
-      'no-restricted-globals': ['error', { name: 'isFinite', message: 'Use Number.isFinite instead' }, { name: 'isNaN', message: 'Use Number.isNaN instead' }],
-      'no-use-before-define': ['error', { functions: false, classes: true, variables: true }],
-      'no-empty-function': ['error', { allow: ['arrowFunctions', 'functions', 'methods'] }],
-      'no-case-declarations': 'error',
-      'no-empty': 'error',
-      'no-fallthrough': 'error',
-      'no-prototype-builtins': 'error',
-      'no-redeclare': 'error',
-      'no-regex-spaces': 'error',
-      'no-unreachable': 'error',
-      'prefer-rest-params': 'error',
-      'prefer-spread': 'error',
-      'getter-return': ['error', { allowImplicit: true }],
-      'no-undef': 'off',
-
-      'no-unneeded-ternary': ['error', { defaultAssignment: false }],
-
-      'typescript/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      'typescript/consistent-type-imports': ['error', { prefer: 'type-imports' }],
-      'typescript/array-type': ['error', { default: 'array' }],
-      'typescript/explicit-function-return-type': 'off',
-      'typescript/prefer-nullish-coalescing': 'off',
-      'typescript/no-unsafe-argument': 'off',
-      'typescript/no-unsafe-assignment': 'off',
-      'typescript/no-unsafe-call': 'off',
-      'typescript/no-unsafe-member-access': 'off',
-      'typescript/no-unsafe-return': 'off',
-      'typescript/no-misused-promises': 'off',
-      'typescript/ban-ts-comment': ['error', { minimumDescriptionLength: 10 }],
-      'typescript/only-throw-error': 'error',
-      'typescript/return-await': 'error',
-      'typescript/no-empty-interface': 'error',
-      'typescript/parameter-properties': ['error', { allow: ['readonly'] }],
-      'typescript/no-deprecated': 'off',
-      'typescript/no-dynamic-delete': 'error',
-      'typescript/no-empty-object-type': 'error',
-      'typescript/no-extraneous-class': 'error',
-      'typescript/no-invalid-void-type': 'error',
-      'typescript/no-mixed-enums': 'error',
-      'typescript/no-namespace': 'error',
-      'typescript/no-non-null-asserted-nullish-coalescing': 'error',
-      'typescript/no-require-imports': 'error',
-      'typescript/no-unnecessary-condition': 'error',
-      'typescript/no-unnecessary-template-expression': 'error',
-      'typescript/no-unnecessary-type-arguments': 'error',
-      'typescript/no-unnecessary-type-assertion': 'error',
-      'typescript/no-unnecessary-type-constraint': 'error',
-      'typescript/no-unnecessary-type-parameters': 'error',
-      'typescript/no-unsafe-enum-comparison': 'error',
-      'typescript/no-unsafe-function-type': 'error',
-      'typescript/no-useless-default-assignment': 'error',
-      'typescript/prefer-literal-enum-member': 'error',
-      'typescript/prefer-promise-reject-errors': 'error',
-      'typescript/prefer-reduce-type-parameter': 'error',
-      'typescript/prefer-return-this-type': 'error',
-      'typescript/related-getter-setter-pairs': 'error',
-      'typescript/require-await': 'error',
-      'typescript/restrict-plus-operands': 'error',
-      'typescript/unified-signatures': 'error',
-      'typescript/adjacent-overload-signatures': 'error',
-      'typescript/ban-tslint-comment': 'error',
-      'typescript/class-literal-property-style': 'error',
-      'typescript/consistent-generic-constructors': 'error',
-      'typescript/consistent-indexed-object-style': 'error',
-      'typescript/consistent-type-assertions': 'error',
-      'typescript/consistent-type-definitions': 'error',
-      'typescript/no-confusing-non-null-assertion': 'error',
-      'typescript/no-inferrable-types': 'error',
-      'typescript/non-nullable-type-assertion-style': 'error',
-      'typescript/prefer-find': 'error',
-      'typescript/prefer-for-of': 'error',
-      'typescript/prefer-function-type': 'error',
-      'typescript/prefer-includes': 'error',
-      'typescript/prefer-optional-chain': 'error',
-      'typescript/prefer-regexp-exec': 'error',
-      'typescript/prefer-string-starts-ends-with': 'error',
-      'typescript/dot-notation': 'error',
-      'typescript/no-unnecessary-boolean-literal-compare': 'error',
-
-      'react/react-in-jsx-scope': 'off',
-      'react/exhaustive-deps': 'error',
-      'react/rules-of-hooks': 'error',
-      'react/display-name': ['error', { ignoreTranspilerName: false }],
-      'react/jsx-no-target-blank': 'error',
-      'react/jsx-no-useless-fragment': 'error',
-      'react/jsx-fragments': 'error',
-      'react/jsx-pascal-case': ['error', { allowAllCaps: true }],
-      'react/no-redundant-should-component-update': 'error',
-      'react/self-closing-comp': 'error',
-      'react/require-render-return': 'error',
-      'react/jsx-no-script-url': 'error',
-      'react/no-namespace': 'error',
-      'react/style-prop-object': 'error',
-      'react/iframe-missing-sandbox': 'error',
-
-      'import/no-named-as-default': 'off',
-      'import/no-named-as-default-member': 'off',
-      'import/no-unassigned-import': 'off',
-      'import/consistent-type-specifier-style': 'off',
-      'import/first': 'error',
-      'import/no-duplicates': 'error',
-
-      'jsx-a11y/prefer-tag-over-role': 'off',
-      'jsx-a11y/no-static-element-interactions': 'off',
-
-      'unicorn/no-array-method-this-argument': 'off',
-      'unicorn/prefer-array-find': 'error',
-      'unicorn/prefer-set-has': 'error',
-      'unicorn/prefer-node-protocol': 'error',
-      'unicorn/prefer-object-from-entries': 'error',
-
-      'promise/catch-or-return': ['error', { allowThen: true }],
-      'promise/param-names': 'error',
-      'promise/always-return': 'error',
-
-      'node/no-new-require': 'error',
-      'node/no-path-concat': 'error',
-      'node/global-require': 'error',
-
-      'jsdoc/require-param': ['error', { ignoreWhenAllParamsMissing: true }],
-      'jsdoc/require-param-name': 'error',
-      'jsdoc/require-param-type': 'error',
-
-      'vitest/warn-todo': 'off',
-      'vitest/no-import-node-test': 'error',
-      'vitest/no-conditional-tests': 'error',
-      'vitest/prefer-called-once': 'error',
-      'vitest/prefer-expect-type-of': 'error',
-      'vitest/prefer-to-be-object': 'error',
-      'vitest-js/consistent-test-it': ['error', { fn: 'it' }],
-      'vitest-js/no-duplicate-hooks': 'error',
-      'vitest-js/no-identical-title': 'error',
-      'vitest-js/no-test-prefixes': 'error',
-      'vitest-js/prefer-comparison-matcher': 'error',
-      'vitest-js/prefer-equality-matcher': 'error',
-      'vitest-js/prefer-hooks-in-order': 'error',
-      'vitest-js/prefer-hooks-on-top': 'error',
-      'vitest-js/prefer-lowercase-title': ['error', { ignore: ['describe'] }],
-      'vitest-js/prefer-mock-promise-shorthand': 'error',
-      'vitest-js/prefer-spy-on': 'error',
-      'vitest-js/prefer-strict-equal': 'error',
-      'vitest-js/require-top-level-describe': 'error',
+      ...withoutEstreeDependentRules(baseLintConfig.rules),
+      // The base exceptions plus uppercase letters: single-letter generic type
+      // parameters (T, K, P, U, ...) are house style for the query builder API.
+      'eslint/id-length': [
+        'error',
+        {
+          exceptions: ['_', '$', 'e', 'i', 'j', 'k', 'q', 't', 'x', 'y', 'A', 'D', 'K', 'P', 'T', 'U'],
+        },
+      ],
+      // Helper functions are commonly declared below their first use.
+      'eslint/no-use-before-define': ['error', { functions: false, classes: true, variables: true }],
+      // Repositories return custom thenables so query chains can be awaited
+      // directly; `void` appears deliberately in their resolve unions and in
+      // the NotEntityBrand marker type.
+      'unicorn/no-thenable': 'off',
+      'typescript/no-invalid-void-type': 'off',
+      // Every switch in this codebase handles the remaining union members in a
+      // default clause; treat that as exhaustive.
+      'typescript/switch-exhaustiveness-check': ['error', { considerDefaultExhaustiveForUnions: true }],
     },
     overrides: [
+      ...(baseLintConfig.overrides ?? [])
+        .map((override) => ({
+          ...override,
+          rules: withoutEstreeDependentRules(override.rules),
+        }))
+        .filter((override) => Object.keys(override.rules).length > 0 || override.jsPlugins),
       {
-        files: ['**/*.test.ts', '**/*.test.tsx'],
+        // Type-level assertion helpers need single-use generic parameters, and
+        // Promise.all() over a single query deliberately exercises the
+        // PromiseLike query implementation.
+        files: ['**/*.test.ts'],
         rules: {
-          'id-length': 'off',
+          'eslint/id-length': 'off',
+          'typescript/no-unnecessary-type-parameters': 'off',
+          'unicorn/no-single-promise-in-promise-methods': 'off',
         },
       },
     ],
-    ignorePatterns: ['dist/**', 'node_modules/**', '.agents/**', '.claude/skills/**', 'docs/**'],
+    ignorePatterns: [...(baseLintConfig.ignorePatterns ?? []), '.agents/**', '.claude/skills/**', 'docs/**'],
   },
   pack: {
     entry: ['src/index.ts'],
@@ -287,3 +82,5 @@ export default defineConfig({
     '*.{json5,yml}': ['vp fmt'],
   },
 });
+
+export default config;

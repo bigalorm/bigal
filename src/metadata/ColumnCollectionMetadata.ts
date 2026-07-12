@@ -1,4 +1,4 @@
-import type { ColumnBaseMetadataOptions } from './ColumnBaseMetadata.js';
+import { type ColumnBaseMetadataOptions } from './ColumnBaseMetadata.js';
 import { ColumnBaseMetadata } from './ColumnBaseMetadata.js';
 
 export interface ColumnCollectionMetadataOptions extends ColumnBaseMetadataOptions {

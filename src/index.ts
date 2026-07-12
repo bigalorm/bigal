@@ -1,11 +1,11 @@
-import type { Entity, EntityStatic } from './Entity.js';
-import type { IReadonlyRepository } from './IReadonlyRepository.js';
-import type { IRepository } from './IRepository.js';
-import type { ColumnMetadata, ColumnModifierMetadata } from './metadata/index.js';
+import { type Entity, type EntityStatic } from './Entity.js';
+import { type IReadonlyRepository } from './IReadonlyRepository.js';
+import { type IRepository } from './IRepository.js';
+import { type ColumnMetadata, type ColumnModifierMetadata } from './metadata/index.js';
 import { ColumnModelMetadata, ColumnTypeMetadata, getMetadataStorage, ModelMetadata } from './metadata/index.js';
 import { ReadonlyRepository } from './ReadonlyRepository.js';
 import { Repository } from './Repository.js';
-import type { PoolLike } from './types/index.js';
+import { type PoolLike } from './types/index.js';
 
 export * from './decorators/index.js';
 export * from './errors/index.js';

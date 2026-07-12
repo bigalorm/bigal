@@ -1,5 +1,5 @@
-import type { Entity } from '../Entity.js';
-import type { PlainObject, QueryResult } from '../types/index.js';
+import { type Entity } from '../Entity.js';
+import { type PlainObject, type QueryResult } from '../types/index.js';
 
 /**
  * Result of an update operation that returns plain objects (after calling toJSON())

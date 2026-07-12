@@ -1,8 +1,8 @@
-import type { Entity } from '../Entity.js';
-import type { OmitEntityCollections, OmitFunctions } from '../types/index.js';
+import { type Entity } from '../Entity.js';
+import { type OmitEntityCollections, type OmitFunctions } from '../types/index.js';
 
-import type { AnyJoinInfo, JoinInfo, SubqueryJoinInfo } from './JoinedWhereQuery.js';
-import type { Sort } from './Sort.js';
+import { type AnyJoinInfo, type JoinInfo, type SubqueryJoinInfo } from './JoinedWhereQuery.js';
+import { type Sort } from './Sort.js';
 
 // Re-export for convenience
 export type { AnyJoinInfo } from './JoinedWhereQuery.js';

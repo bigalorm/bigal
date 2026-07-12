@@ -1,6 +1,6 @@
-import type { Entity } from '../Entity.js';
-import type { ModelMetadata } from '../metadata/index.js';
-import type { WhereQuery } from '../query/index.js';
+import { type Entity } from '../Entity.js';
+import { type ModelMetadata } from '../metadata/index.js';
+import { type WhereQuery } from '../query/index.js';
 
 export class QueryError<T extends Entity> extends Error {
   public model: ModelMetadata<T>;

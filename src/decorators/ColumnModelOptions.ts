@@ -1,4 +1,4 @@
-import type { ColumnBaseOptions } from './ColumnBaseOptions.js';
+import { type ColumnBaseOptions } from './ColumnBaseOptions.js';
 
 export interface ColumnModelOptions extends ColumnBaseOptions {
   /**

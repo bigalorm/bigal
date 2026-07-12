@@ -27,7 +27,7 @@
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.cts",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "import": {
@@ -42,8 +42,8 @@
   },
   "scripts": {
     "build": "vp pack",
-    "check:types": "vp check --no-fmt --no-lint",
-    "test": "pnpm run check:types && vp test",
+    "check:types": "tsc --noEmit --skipLibCheck",
+    "test": "pnpm run check:types && vp test run",
     "lint:markdown": "markdownlint '**/*.md' --ignore '**/node_modules/**' --ignore '**/dist/**' --ignore 'internal/**' --config=.github/linters/.markdown-lint.yml --fix",
     "lint:code": "vp lint --fix",
     "lint": "pnpm run format && run-p lint:*",
@@ -62,18 +62,24 @@
     "@semantic-release/github": "12.0.9",
     "@semantic-release/npm": "13.1.5",
     "@semantic-release/release-notes-generator": "14.1.1",
+    "@stylistic/eslint-plugin": "5.10.0",
     "@types/node": ">=22",
     "conventional-changelog-conventionalcommits": "10.2.1",
-    "eslint-plugin-vitest": "0.5.4",
+    "eslint-config-decent": "4.2.38",
+    "eslint-plugin-jsdoc": "62.9.0",
+    "eslint-plugin-security": "4.0.1",
+    "eslint-plugin-unicorn": "64.0.0",
     "husky": "9.1.7",
     "markdownlint-cli": "0.49.0",
     "npm-run-all2": "9.0.2",
+    "oxlint-plugin-eslint": "1.73.0",
     "pinst": "3.0.0",
     "postgres-pool": "11.0.5",
     "semantic-release": "25.0.5",
     "strict-event-emitter-types": "2.0.0",
-    "typescript": "catalog:",
-    "vite-plus": "0.2.4",
+    "typescript": "7.0.2",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
     "vitest": "4.1.10"
   },
   "engines": {

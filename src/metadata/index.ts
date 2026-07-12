@@ -1,4 +1,4 @@
-import type { Entity } from '../Entity.js';
+import { type Entity } from '../Entity.js';
 
 import { MetadataStorage } from './MetadataStorage.js';
 

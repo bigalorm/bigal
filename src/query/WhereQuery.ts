@@ -1,7 +1,7 @@
-import type { Entity, NotEntityBrand } from '../Entity.js';
-import type { ExcludeEntityCollections, ExcludeFunctions } from '../types/index.js';
+import { type Entity, type NotEntityBrand } from '../Entity.js';
+import { type ExcludeEntityCollections, type ExcludeFunctions } from '../types/index.js';
 
-import type { ScalarSubquery, SubqueryBuilderLike } from './Subquery.js';
+import { type ScalarSubquery, type SubqueryBuilderLike } from './Subquery.js';
 
 type ExcludeUndefined<T> = Exclude<T, undefined>;
 export type LiteralValues<TValue> = (TValue | null)[] | TValue | null;
@@ -21,9 +21,9 @@ export type StringConstraint<TValue extends string> = Partial<Record<'contains' 
 
 export type JsonPropertyValue = boolean | number | string | null;
 
-export type JsonPropertyConstraint = {
+export interface JsonPropertyConstraint {
   [key: string]: JsonPropertyConstraint | JsonPropertyValue | JsonPropertyValue[] | Partial<Record<'!' | '<' | '<=' | '>' | '>=', JsonPropertyValue>> | undefined;
-};
+}
 
 export type JsonConstraint<TValue> = Partial<Record<'contains', ExcludeUndefined<TValue> | LiteralValues<ExcludeUndefined<TValue>>>>;
 
