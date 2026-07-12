@@ -1,11 +1,11 @@
-import type { Entity } from '../Entity.js';
-import type { IReadonlyRepository } from '../IReadonlyRepository.js';
-import type { IRepository } from '../IRepository.js';
+import { type Entity } from '../Entity.js';
+import { type IReadonlyRepository } from '../IReadonlyRepository.js';
+import { type IRepository } from '../IRepository.js';
 
-import type { Sort, SortObject, WhereQuery } from './index.js';
+import { type Sort, type SortObject, type WhereQuery } from './index.js';
 import { ScalarSubquery } from './ScalarSubquery.js';
 import { SelectBuilder } from './SelectBuilder.js';
-import type { AggregateBuilder, SelectAggregateExpression } from './SelectBuilder.js';
+import { type AggregateBuilder, type SelectAggregateExpression } from './SelectBuilder.js';
 
 /**
  * An aggregate expression with a typed alias from `.as()`.

@@ -1,26 +1,26 @@
-import type { Entity, EntityFieldValue } from './Entity.js';
+import { type Entity, type EntityFieldValue } from './Entity.js';
 import { QueryError } from './errors/index.js';
-import type { IReadonlyRepository } from './IReadonlyRepository.js';
-import type { IRepository } from './IRepository.js';
-import type { ColumnBaseMetadata, ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, ModelMetadata } from './metadata/index.js';
-import type {
-  Comparer,
-  JoinDefinition,
-  ModelJoinDefinition,
-  OrderBy,
-  SubqueryJoinDefinition,
-  VectorDistanceConstraint,
-  VectorDistanceMetric,
-  VectorDistanceSort,
-  WhereClauseValue,
-  WhereQuery,
+import { type IReadonlyRepository } from './IReadonlyRepository.js';
+import { type IRepository } from './IRepository.js';
+import { type ColumnBaseMetadata, type ColumnCollectionMetadata, type ColumnModelMetadata, type ColumnTypeMetadata, type ModelMetadata } from './metadata/index.js';
+import {
+  type Comparer,
+  type JoinDefinition,
+  type ModelJoinDefinition,
+  type OrderBy,
+  type SubqueryJoinDefinition,
+  type VectorDistanceConstraint,
+  type VectorDistanceMetric,
+  type VectorDistanceSort,
+  type WhereClauseValue,
+  type WhereQuery,
 } from './query/index.js';
 import { isSubqueryJoin } from './query/JoinDefinition.js';
-import type { OnConflictOptions } from './query/OnConflictOptions.js';
-import type { SelectAggregateExpression } from './query/SelectBuilder.js';
-import type { HavingCondition, SubqueryBuilderLike } from './query/Subquery.js';
+import { type OnConflictOptions } from './query/OnConflictOptions.js';
+import { type SelectAggregateExpression } from './query/SelectBuilder.js';
+import { type HavingCondition, type SubqueryBuilderLike } from './query/Subquery.js';
 import { ScalarSubquery, SubqueryBuilder } from './query/Subquery.js';
-import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions } from './types/index.js';
+import { type CreateUpdateParams, type OmitEntityCollections, type OmitFunctions } from './types/index.js';
 
 // Valid PostgreSQL identifier: starts with letter or underscore, contains letters, digits, underscores, or dots (for alias.column notation)
 const VALID_SQL_IDENTIFIER = /^[A-Z_a-z][\w.]*$/;
@@ -1723,7 +1723,7 @@ function buildWhere<T extends Entity>({
             });
           }
 
-          if (column.type && column.type !== 'json') {
+          if (column.type !== 'json') {
             throw new QueryError(`"${propertyName}" is not a vector column; nearestTo requires a column declared with type 'vector'`, model);
           }
         }
@@ -2229,8 +2229,8 @@ function buildNestedJoinWhere({
             }
           } else {
             if ((column as ColumnTypeMetadata).type === 'vector' && Array.isArray(opValue) && opValue.every((item) => typeof item === 'number')) {
-              validateVectorArray(opValue as number[], key, joinedModel, 'vector value');
-              params.push(serializeVector(opValue as number[]));
+              validateVectorArray(opValue, key, joinedModel, 'vector value');
+              params.push(serializeVector(opValue));
             } else {
               params.push(opValue);
             }
@@ -2273,11 +2273,11 @@ function buildNestedJoinWhere({
       if (whereValue.length === 0) {
         andClauses.push('1<>1');
       } else if ((column as ColumnTypeMetadata).type === 'vector' && whereValue.every((item) => typeof item === 'number')) {
-        validateVectorArray(whereValue as number[], key, joinedModel, 'vector value');
-        params.push(serializeVector(whereValue as number[]));
+        validateVectorArray(whereValue, key, joinedModel, 'vector value');
+        params.push(serializeVector(whereValue));
         andClauses.push(`"${tableAlias}"."${column.name}"=$${params.length}`);
       } else if ((column as ColumnTypeMetadata).type === 'vector' && whereValue.every((item) => Array.isArray(item) && item.every((element: unknown) => typeof element === 'number'))) {
-        const vectorConstraints = (whereValue as number[][]).map((vector) => {
+        const vectorConstraints = whereValue.map((vector) => {
           validateVectorArray(vector, key, joinedModel, 'vector value');
           params.push(serializeVector(vector));
           return `"${tableAlias}"."${column.name}"=$${params.length}`;
@@ -2847,6 +2847,7 @@ function buildVectorDistanceWhereClause<T extends Entity>({
   const distanceExpression = `${columnReference} ${vectorDistanceOperator(metric)} $${params.length}`;
 
   const distanceConstraints: string[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
   for (const [distanceOperator, distanceThreshold] of Object.entries(constraint.distance ?? {})) {
     validateDistanceOperator(distanceOperator, model);
     if (typeof distanceThreshold !== 'number' || !Number.isFinite(distanceThreshold)) {

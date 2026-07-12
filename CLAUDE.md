@@ -14,10 +14,10 @@ BigAl is a type-safe PostgreSQL ORM for Node.js/TypeScript. It uses a fluent bui
 ## Build and Test Commands
 
 ```bash
-npm run build       # Build the project using unbuild
-npm test            # Type-check and run all tests with Vitest
-npm run lint        # Run oxlint, oxfmt, and markdownlint
-npm run check:types # Type-check without emitting files (tsgo --noEmit --skipLibCheck)
+pnpm run build       # Build the project using vp pack (Vite+)
+pnpm test            # Type-check and run all tests with Vitest
+pnpm run lint        # Run vp fmt, vp lint, and markdownlint
+pnpm run check:types # Type-check without emitting files (tsc --noEmit --skipLibCheck)
 ```
 
 ## Code Style Guidelines

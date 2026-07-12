@@ -1,0 +1,3 @@
+# Marks docs/ as a standalone pnpm project, separate from the library at the repo root.
+allowBuilds:
+  esbuild: true

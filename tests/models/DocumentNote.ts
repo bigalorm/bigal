@@ -1,6 +1,6 @@
 import { column, table } from '../../src/index.js';
 
-import type { Document } from './Document.js';
+import { type Document } from './Document.js';
 import { ModelBase } from './ModelBase.js';
 
 @table({

@@ -345,6 +345,7 @@ describe('sqlHelper', () => {
             distinctOn: ['store'],
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(/DISTINCT ON requires ORDER BY/);
       });
@@ -361,6 +362,7 @@ describe('sqlHelper', () => {
             distinctOn: ['store'],
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(/DISTINCT ON columns must match the leftmost ORDER BY columns/);
       });
@@ -377,6 +379,7 @@ describe('sqlHelper', () => {
             distinctOn: ['store', 'name'],
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(/DISTINCT ON columns must match the leftmost ORDER BY columns/);
       });
@@ -586,6 +589,7 @@ describe('sqlHelper', () => {
           returnRecords: true,
         });
       }
+
       expect(action).toThrow(Error);
       expect(action).toThrow(`Create statement for "${repositoriesByModelNameLowered.product.model.name}" is missing value for required field: name`);
     });
@@ -1365,6 +1369,7 @@ describe('sqlHelper', () => {
             returnRecords: false,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(`Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
@@ -1410,6 +1415,7 @@ describe('sqlHelper', () => {
             returnRecords: false,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(`Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
@@ -1814,6 +1820,7 @@ describe('sqlHelper', () => {
             returnRecords: false,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(`Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
@@ -1855,6 +1862,7 @@ describe('sqlHelper', () => {
             returnRecords: false,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(`Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
@@ -2010,6 +2018,7 @@ describe('sqlHelper', () => {
           },
         });
       }
+
       expect(action).toThrow(QueryError);
       expect(action).toThrow(`Attempting to query with an undefined value. store on ${repositoriesByModelNameLowered.product.model.name}`);
     });
@@ -2606,6 +2615,7 @@ describe('sqlHelper', () => {
             } as WhereQuery<SimpleWithJson>,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow('"like" operator is not supported for JSON columns');
       });
@@ -2622,6 +2632,7 @@ describe('sqlHelper', () => {
             } as WhereQuery<SimpleWithJson>,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow('"like" operator is not supported for JSON columns');
       });
@@ -2638,6 +2649,7 @@ describe('sqlHelper', () => {
             } as WhereQuery<SimpleWithJson>,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow('"like" operator is not supported for JSON columns');
       });
@@ -3038,6 +3050,7 @@ describe('sqlHelper', () => {
           },
         });
       }
+
       expect(action).toThrow(QueryError);
       expect(action).toThrow(`WHERE statement is unexpectedly empty.`);
     });
@@ -3164,6 +3177,7 @@ describe('sqlHelper', () => {
           },
         });
       }
+
       expect(action).toThrow(QueryError);
       expect(action).toThrow(`WHERE statement is unexpectedly empty.`);
     });

@@ -1,7 +1,7 @@
-import type { Entity, NotEntityBrand } from '../Entity.js';
+import { type Entity, type NotEntityBrand } from '../Entity.js';
 
-import type { ExcludeEntityCollections } from './ExcludeEntityCollections.js';
-import type { ExcludeFunctions } from './ExcludeFunctions.js';
+import { type ExcludeEntityCollections } from './ExcludeEntityCollections.js';
+import { type ExcludeFunctions } from './ExcludeFunctions.js';
 
 /**
  * Changes all Entity value properties to Primitive (string|number) | Pick<Entity, 'id'>

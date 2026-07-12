@@ -1,6 +1,6 @@
-import type { Entity } from '../Entity.js';
+import { type Entity } from '../Entity.js';
 
-import type { SubqueryBuilder } from './SubqueryBuilder.js';
+import { type SubqueryBuilder } from './SubqueryBuilder.js';
 
 export class ScalarSubquery<TValue> {
   declare private readonly _resultType: TValue;

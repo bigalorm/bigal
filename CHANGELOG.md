@@ -1,8 +1,12 @@
+## [15.11.12](https://github.com/bigalorm/bigal/compare/v15.11.11...v15.11.12) (2026-07-11)
+
+## [15.11.11](https://github.com/bigalorm/bigal/compare/v15.11.10...v15.11.11) (2026-07-11)
+
 ## [15.11.10](https://github.com/bigalorm/bigal/compare/v15.11.9...v15.11.10) (2026-06-09)
 
 ### Bug Fixes
 
-* qualify base-table columns when a query has a join ([#435](https://github.com/bigalorm/bigal/issues/435)) ([667e1f3](https://github.com/bigalorm/bigal/commit/667e1f3d427f73713e30bb7bf18f5f7e61acd206))
+- qualify base-table columns when a query has a join ([#435](https://github.com/bigalorm/bigal/issues/435)) ([667e1f3](https://github.com/bigalorm/bigal/commit/667e1f3d427f73713e30bb7bf18f5f7e61acd206))
 
 ## [15.11.9](https://github.com/bigalorm/bigal/compare/v15.11.8...v15.11.9) (2026-05-19)
 

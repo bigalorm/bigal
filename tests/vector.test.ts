@@ -3,9 +3,9 @@ import assert from 'node:assert';
 import { beforeAll, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
 import { type ColumnTypeMetadata, initialize, type PoolLike, type PoolQueryResult, type QueryResultRow, type Repository } from '../src/index.js';
-import type { VectorDistanceConstraint, VectorDistanceMetric } from '../src/query/index.js';
+import { type VectorDistanceConstraint, type VectorDistanceMetric } from '../src/query/index.js';
 
-import { Document, DocumentNote, KitchenSink, SimpleWithJson } from './models/index.js';
+import { Document, DocumentNote, type KitchenSink, SimpleWithJson } from './models/index.js';
 
 type PoolQueryFn = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
 
