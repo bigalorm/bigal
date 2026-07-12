@@ -1,8 +1,8 @@
-import type { Entity } from '../Entity.js';
+import { type Entity } from '../Entity.js';
 
-import type { ColumnMetadata } from './ColumnMetadata.js';
-import type { ColumnModifierMetadata } from './ColumnModifierMetadata.js';
-import type { ModelMetadata } from './ModelMetadata.js';
+import { type ColumnMetadata } from './ColumnMetadata.js';
+import { type ColumnModifierMetadata } from './ColumnModifierMetadata.js';
+import { type ModelMetadata } from './ModelMetadata.js';
 
 /**
  * This represents an object to store all of the decorator data. Since there can be multiple decorators per

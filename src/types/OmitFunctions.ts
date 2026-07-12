@@ -1,4 +1,4 @@
-import type { ExcludeFunctions } from './ExcludeFunctions.js';
+import { type ExcludeFunctions } from './ExcludeFunctions.js';
 
 /**
  * Removes all functions

@@ -1,8 +1,8 @@
-import type { Entity } from '../Entity.js';
-import type { OmitEntityCollections, OmitFunctions, PoolLike } from '../types/index.js';
+import { type Entity } from '../Entity.js';
+import { type OmitEntityCollections, type OmitFunctions, type PoolLike } from '../types/index.js';
 
-import type { Sort, SortObject } from './Sort.js';
-import type { WhereQuery } from './WhereQuery.js';
+import { type Sort, type SortObject } from './Sort.js';
+import { type WhereQuery } from './WhereQuery.js';
 
 /**
  * Options for filtering and sorting by junction table columns in through relationships.

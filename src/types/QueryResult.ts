@@ -1,6 +1,6 @@
-import type { Entity, NotEntityBrand } from '../Entity.js';
+import { type Entity, type NotEntityBrand } from '../Entity.js';
 
-import type { ExcludeEntityCollections } from './ExcludeEntityCollections.js';
+import { type ExcludeEntityCollections } from './ExcludeEntityCollections.js';
 
 /**
  * Changes all properties with Entity values to Primitive (string|number). Removes any properties that with values
