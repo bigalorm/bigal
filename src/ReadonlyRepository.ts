@@ -22,6 +22,7 @@ import {
   type SortObjectValue,
   type SubqueryBuilderLike,
   type SubqueryJoinOnCondition,
+  type VectorDistanceSort,
   type WhereQuery,
 } from './query/index.js';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
@@ -78,6 +79,8 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
   protected _intProperties: string[] = [];
 
+  protected _vectorProperties: string[] = [];
+
   public constructor({ modelMetadata, type, pool, readonlyPool, repositoriesByModelNameLowered }: IRepositoryOptions<T>) {
     this._modelMetadata = modelMetadata;
     this._type = type;
@@ -90,6 +93,8 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         this._floatProperties.push(column.propertyName);
       } else if ((column as ColumnTypeMetadata).type === 'integer') {
         this._intProperties.push(column.propertyName);
+      } else if ((column as ColumnTypeMetadata).type === 'vector') {
+        this._vectorProperties.push(column.propertyName);
       }
     }
   }
@@ -746,6 +751,18 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       }
     }
 
+    // NOTE: pg returns pgvector values as '[1,2,3]' text since no type parser is registered for the vector oid
+    for (const name of this._vectorProperties) {
+      const originalValue = row[name as keyof QueryResult<T>] as number[] | string | null | undefined;
+      if (typeof originalValue === 'string') {
+        const parsedValue = this._parseVectorString(originalValue);
+        if (parsedValue) {
+          // @ts-expect-error - number[] cannot be used to index type T
+          instance[name] = parsedValue;
+        }
+      }
+    }
+
     return instance as unknown as QueryResult<T>;
   }
 
@@ -781,11 +798,40 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       }
     }
 
+    // NOTE: pg returns pgvector values as '[1,2,3]' text since no type parser is registered for the vector oid
+    for (const name of this._vectorProperties) {
+      const originalValue = plainObject[name];
+      if (typeof originalValue === 'string') {
+        const parsedValue = this._parseVectorString(originalValue);
+        if (parsedValue) {
+          plainObject[name] = parsedValue;
+        }
+      }
+    }
+
     return plainObject as QueryResult<T>;
   }
 
   protected _buildPlainObjects(rows: Partial<QueryResult<T>>[]): QueryResult<T>[] {
     return rows.map((row: Partial<QueryResult<T>>) => this._buildPlainObject(row));
+  }
+
+  protected _parseVectorString(value: string): number[] | undefined {
+    if (!value.startsWith('[') || !value.endsWith(']')) {
+      return undefined;
+    }
+
+    const innerValue = value.slice(1, -1);
+    if (!innerValue) {
+      return [];
+    }
+
+    const parsedValues = innerValue.split(',').map((valuePart) => (valuePart.trim() ? Number(valuePart) : Number.NaN));
+    if (parsedValues.every((parsedValue) => Number.isFinite(parsedValue))) {
+      return parsedValues;
+    }
+
+    return undefined;
   }
 
   protected _convertSortsToOrderBy(sorts: SortObject<T> | string): OrderBy<T>[] {
@@ -811,6 +857,20 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         }
       } else if (typeof sorts === 'object') {
         for (const [propertyName, orderValue] of Object.entries(sorts)) {
+          if (orderValue && typeof orderValue === 'object' && 'nearestTo' in orderValue) {
+            const vectorSort = orderValue as VectorDistanceSort;
+            // The metric is validated when the ORDER BY statement is built
+            result.push({
+              propertyName: propertyName as string & keyof OmitFunctions<OmitEntityCollections<T>>,
+              descending: false,
+              vectorDistance: {
+                vector: vectorSort.nearestTo,
+                metric: vectorSort.metric ?? 'cosine',
+              },
+            });
+            continue;
+          }
+
           let descending = false;
           const order = orderValue as SortObjectValue;
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition

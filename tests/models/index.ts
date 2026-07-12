@@ -1,5 +1,7 @@
 export * from './Category.js';
 export * from './Classroom.js';
+export * from './Document.js';
+export * from './DocumentNote.js';
 export * from './ImportedItem.js';
 export * from './KitchenSink.js';
 export * from './LevelOne.js';

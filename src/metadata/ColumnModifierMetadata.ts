@@ -38,7 +38,7 @@ export interface ColumnModifierMetadata {
   /**
    * Type of sql column
    */
-  type?: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]';
+  type?: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]' | 'vector';
   /**
    * Name of the model represented by this column id
    */

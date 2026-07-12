@@ -5,11 +5,17 @@ export interface ColumnTypeMetadataOptions extends ColumnBaseMetadataOptions {
   /**
    * Type of sql column
    */
-  type: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]' | 'uuid' | 'uuid[]';
+  type: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]' | 'uuid' | 'uuid[]' | 'vector';
   /**
    * Default database value
    */
   defaultsTo?: boolean[] | number[] | string[] | boolean | number | string | (() => Date | Record<string, unknown> | boolean | number | string) | [];
+  /**
+   * Number of dimensions for the column. Informational only - BigAl does not issue DDL
+   *
+   * Applies to types: vector
+   */
+  dimensions?: number;
   /**
    * Array of possible enumerated values
    */
@@ -26,12 +32,19 @@ export class ColumnTypeMetadata extends ColumnBaseMetadata {
   /**
    * Type of the column
    */
-  public type: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]' | 'uuid' | 'uuid[]';
+  public type: 'array' | 'binary' | 'boolean' | 'boolean[]' | 'date' | 'datetime' | 'float' | 'float[]' | 'integer' | 'integer[]' | 'json' | 'string' | 'string[]' | 'uuid' | 'uuid[]' | 'vector';
 
   /**
    * Default database value
    */
   public defaultsTo?: boolean[] | number[] | string[] | boolean | number | string | (() => Date | Record<string, unknown> | boolean | number | string) | [];
+
+  /**
+   * Number of dimensions for the column. Informational only - BigAl does not issue DDL
+   *
+   * Applies to types: vector
+   */
+  public dimensions?: number;
 
   /**
    * Array of possible enumerated values
@@ -61,6 +74,7 @@ export class ColumnTypeMetadata extends ColumnBaseMetadata {
 
     this.type = options.type;
     this.defaultsTo = options.defaultsTo;
+    this.dimensions = options.dimensions;
     this.enum = options.enum;
     this.maxLength = options.maxLength;
   }
