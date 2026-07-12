@@ -463,6 +463,21 @@ const exists = (await productRepo.count().where({ sku: 'ABC123' })) > 0;
 const exists = (await productRepo.findOne().where({ sku: 'ABC123' })) != null;
 ```
 
+### Prefer an array to create() over looping
+
+Passing an array to `create()` builds a single multi-row `INSERT` statement — one round trip for the whole batch. Calling `create()` in a loop issues a separate `INSERT` (and round trip) per record:
+
+```ts
+// Correct — one INSERT statement for all rows
+const products = await productRepo.create(items);
+
+// Slower — a separate INSERT statement and round trip per item
+const products = [];
+for (const item of items) {
+  products.push(await productRepo.create(item));
+}
+```
+
 ### Debugging SQL
 
 Set `DEBUG_BIGAL=true` to log all generated SQL and parameter values:

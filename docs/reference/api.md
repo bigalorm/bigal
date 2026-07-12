@@ -71,6 +71,8 @@ repository.create(values[], options?): Promise<QueryResult<T>[]>
 
 Insert one or multiple records. Options: `{ returnRecords?, returnSelect?, onConflict? }`.
 
+An array inserts in a single statement. Prefer this over calling `create()` in a loop, which costs one round trip per record.
+
 ### update()
 
 ```ts
