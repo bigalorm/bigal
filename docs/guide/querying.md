@@ -57,6 +57,12 @@ const count = await productRepository.count().where({
 });
 ```
 
+If you only need to know whether a match exists, use `count()` instead of `findOne()` — it performs better since it doesn't select or hydrate a row:
+
+```ts
+const exists = (await productRepository.count().where({ sku: 'ABC123' })) > 0;
+```
+
 ## Where operators
 
 ### String matching
