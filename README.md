@@ -91,7 +91,7 @@ npx skills add bigalorm/bigal
 ## Compatibility
 
 - [PostgreSQL](http://www.postgresql.org/) 14 or above
-- Node.js 22.0.0 or above (22, 24, and 26 are tested in CI)
+- Node.js 22.11.0 or above
 
 ## License
 
