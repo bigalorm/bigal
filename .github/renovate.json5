@@ -10,6 +10,13 @@
   ignorePaths: ['docs/brainstorms/**', 'docs/plans/**', 'internal/**'],
   packageRules: [
     {
+      // v10 replaced Handlebars templates with render functions and requires conventional-changelog-writer v9,
+      // but @semantic-release/release-notes-generator still pins writer ^8 - the v10 preset breaks release-notes
+      // generation at publish time. Remove this rule once release-notes-generator moves to writer v9.
+      matchPackageNames: ['conventional-changelog-conventionalcommits'],
+      allowedVersions: '<10',
+    },
+    {
       matchFileNames: ['docs/package.json'],
       groupName: 'docs dependencies',
       schedule: ['* 0-4,22-23 * * 1-5', '* * * * 0,6'],
