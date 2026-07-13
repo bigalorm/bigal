@@ -1,3 +1,9 @@
+## [16.0.1](https://github.com/bigalorm/bigal/compare/v16.0.0...v16.0.1) (2026-07-13)
+
+### Bug Fixes
+
+- **deps:** pin conventional-changelog-conventionalcommits to 9.x ([#474](https://github.com/bigalorm/bigal/issues/474)) ([05ac685](https://github.com/bigalorm/bigal/commit/05ac6852e93b5d929b198fe62839c2f2bffb096f))
+
 ## [16.0.0](https://github.com/bigalorm/bigal/compare/v15.12.0...v16.0.0) (2026-07-13)
 
 ## [15.12.0](https://github.com/bigalorm/bigal/compare/v15.11.12...v15.12.0) (2026-07-12)
