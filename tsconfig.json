@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
+    "target": "ES2022",
     "module": "nodenext",
-    "lib": ["ESNext"],
+    "lib": ["ES2024", "ESNext.Array", "ESNext.Collection", "ESNext.Iterator"],
     "types": ["node"],
     "allowJs": false,
 
