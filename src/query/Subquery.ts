@@ -1,6 +1,6 @@
-import type { Entity } from '../Entity.js';
-import type { IReadonlyRepository } from '../IReadonlyRepository.js';
-import type { IRepository } from '../IRepository.js';
+import { type Entity } from '../Entity.js';
+import { type IReadonlyRepository } from '../IReadonlyRepository.js';
+import { type IRepository } from '../IRepository.js';
 
 import { SubqueryBuilder } from './SubqueryBuilder.js';
 

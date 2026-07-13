@@ -1,10 +1,10 @@
-import type { ColumnModifierMetadata } from '../metadata/index.js';
+import { type ColumnModifierMetadata } from '../metadata/index.js';
 import { ColumnModelMetadata, ColumnTypeMetadata, getMetadataStorage } from '../metadata/index.js';
-import type { ClassLike } from '../types/index.js';
+import { type ClassLike } from '../types/index.js';
 import { snakeCase } from '../utils/index.js';
 
-import type { ColumnModelOptions } from './ColumnModelOptions.js';
-import type { ColumnTypeOptions } from './ColumnTypeOptions.js';
+import { type ColumnModelOptions } from './ColumnModelOptions.js';
+import { type ColumnTypeOptions } from './ColumnTypeOptions.js';
 
 type ColumnOptions = ColumnModelOptions | ColumnTypeOptions;
 

@@ -57,6 +57,12 @@ const count = await productRepository.count().where({
 });
 ```
 
+If you only need to know whether a match exists, use `count()` instead of `findOne()` — it performs better since it doesn't select or hydrate a row:
+
+```ts
+const exists = (await productRepository.count().where({ sku: 'ABC123' })) > 0;
+```
+
 ## Where operators
 
 ### String matching
@@ -211,6 +217,67 @@ await productRepository.find().where({}).sort('name asc, createdAt desc');
 ```ts
 await productRepository.find().where({}).sort({ name: 1 }); // ASC
 await productRepository.find().where({}).sort({ name: 1, createdAt: -1 }); // ASC, DESC
+```
+
+## Vector distance queries
+
+BigAl supports nearest-neighbor queries on columns declared with `@column({ type: 'vector', dimensions: n })`,
+backed by the [pgvector](https://github.com/pgvector/pgvector) extension. Four distance metrics are
+available: `cosine`, `l2`, `l1`, and `innerProduct`. The `l1` metric requires pgvector >= 0.7.0.
+
+| Metric         | PostgreSQL operator | Description               |
+| -------------- | ------------------- | ------------------------- |
+| `cosine`       | `<=>`               | Cosine distance (default) |
+| `l2`           | `<->`               | Euclidean distance        |
+| `l1`           | `<+>`               | Manhattan distance        |
+| `innerProduct` | `<#>`               | Negative inner product    |
+
+### Sorting by distance
+
+Use the `nearestTo` sort to order results by vector similarity:
+
+```ts
+const similar = await documentRepository
+  .find()
+  .where({ title: { contains: 'biology' } })
+  .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
+  .limit(10);
+// SQL: ... WHERE "title" ILIKE $1 ORDER BY "embedding" <=> $2 LIMIT 10
+```
+
+The `metric` option defaults to `'cosine'` if omitted. An unknown metric throws a `QueryError`.
+
+### Filtering by distance
+
+Combine `nearestTo` in the where clause with a distance threshold:
+
+```ts
+const nearby = await documentRepository
+  .find()
+  .where({
+    embedding: {
+      nearestTo: queryVector,
+      metric: 'cosine',
+      distance: { '<': 0.5 },
+    },
+  })
+  .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
+  .limit(10);
+// SQL: ... WHERE "embedding" <=> $1 < $2 ORDER BY "embedding" <=> $3 LIMIT 10
+```
+
+At least one `distance` bound is required in where clauses; multiple bounds are combined with `AND`
+(for example `distance: { '>': 0.1, '<': 0.5 }` finds a distance band). Vectors must be non-empty
+arrays of finite numbers.
+
+### Equality and writes
+
+Vector values round-trip as `number[]`. Where clauses compare whole vectors, and create/update
+serialize the array to pgvector's text format:
+
+```ts
+await documentRepository.create({ title: 'foo', embedding: [0.1, 0.2, 0.3] }); // Sends '[0.1,0.2,0.3]'
+await documentRepository.findOne({ embedding: queryVector }); // WHERE "embedding"=$1
 ```
 
 ## Pagination

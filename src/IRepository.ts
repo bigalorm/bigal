@@ -1,20 +1,20 @@
-import type { Entity } from './Entity.js';
-import type { IReadonlyRepository } from './IReadonlyRepository.js';
-import type { CreateOptions } from './query/CreateOptions.js';
-import type {
-  CreateResult,
-  CreateResultArray,
-  CreateUpdateOptions,
-  DeleteOptions,
-  DestroyResult,
-  DestroyResultWithRecords,
-  DoNotReturnRecords,
-  ReturnSelect,
-  UpdateResult,
-  WhereQuery,
+import { type Entity } from './Entity.js';
+import { type IReadonlyRepository } from './IReadonlyRepository.js';
+import { type CreateOptions } from './query/CreateOptions.js';
+import {
+  type CreateResult,
+  type CreateResultArray,
+  type CreateUpdateOptions,
+  type DeleteOptions,
+  type DestroyResult,
+  type DestroyResultWithRecords,
+  type DoNotReturnRecords,
+  type ReturnSelect,
+  type UpdateResult,
+  type WhereQuery,
 } from './query/index.js';
-import type { OnConflictOptions } from './query/OnConflictOptions.js';
-import type { CreateUpdateParams, QueryResult } from './types/index.js';
+import { type OnConflictOptions } from './query/OnConflictOptions.js';
+import { type CreateUpdateParams, type QueryResult } from './types/index.js';
 
 export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
   /**

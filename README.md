@@ -6,7 +6,7 @@
 
 A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js. BigAl uses a fluent builder pattern for queries,
 decorator-based models, and immutable query state. Built exclusively for Postgres — queries are tuned for
-Postgres performance with native support for JSONB, DISTINCT ON, subquery joins, and ON CONFLICT upserts.
+Postgres performance with native support for JSONB, DISTINCT ON, subquery joins, ON CONFLICT upserts, and pgvector.
 
 ## Install
 
@@ -91,7 +91,7 @@ npx skills add bigalorm/bigal
 ## Compatibility
 
 - [PostgreSQL](http://www.postgresql.org/) 14 or above
-- Node.js 20.11.0 or above
+- Node.js 22.11.0 or above
 
 ## License
 

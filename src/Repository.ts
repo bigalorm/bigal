@@ -1,22 +1,22 @@
-import type { Entity } from './Entity.js';
-import type { IRepository } from './IRepository.js';
-import type { CreateOptions } from './query/CreateOptions.js';
-import type {
-  CreateResult,
-  CreateResultArray,
-  CreateUpdateOptions,
-  DeleteOptions,
-  DestroyResult,
-  DestroyResultWithRecords,
-  DoNotReturnRecords,
-  ReturnSelect,
-  UpdateResult,
-  WhereQuery,
+import { type Entity } from './Entity.js';
+import { type IRepository } from './IRepository.js';
+import { type CreateOptions } from './query/CreateOptions.js';
+import {
+  type CreateResult,
+  type CreateResultArray,
+  type CreateUpdateOptions,
+  type DeleteOptions,
+  type DestroyResult,
+  type DestroyResultWithRecords,
+  type DoNotReturnRecords,
+  type ReturnSelect,
+  type UpdateResult,
+  type WhereQuery,
 } from './query/index.js';
-import type { OnConflictOptions } from './query/OnConflictOptions.js';
+import { type OnConflictOptions } from './query/OnConflictOptions.js';
 import { ReadonlyRepository } from './ReadonlyRepository.js';
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper.js';
-import type { CreateUpdateParams, OmitEntityCollections, OmitFunctions, QueryResult } from './types/index.js';
+import { type CreateUpdateParams, type OmitEntityCollections, type OmitFunctions, type QueryResult } from './types/index.js';
 
 export class Repository<T extends Entity> extends ReadonlyRepository<T> implements IRepository<T> {
   /**

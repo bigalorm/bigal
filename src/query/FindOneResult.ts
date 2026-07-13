@@ -1,10 +1,10 @@
-import type { Entity } from '../Entity.js';
-import type { GetValueType, ModelRelationshipKeys, OmitFunctions, PickAsType, PickByValueType, PlainObject, Populated, QueryResult } from '../types/index.js';
+import { type Entity } from '../Entity.js';
+import { type GetValueType, type ModelRelationshipKeys, type OmitFunctions, type PickAsType, type PickByValueType, type PlainObject, type Populated, type QueryResult } from '../types/index.js';
 
-import type { JoinedSort } from './JoinedSort.js';
-import type { JoinedWhereQuery, JoinInfo } from './JoinedWhereQuery.js';
-import type { PopulateArgs } from './PopulateArgs.js';
-import type { WhereQuery } from './WhereQuery.js';
+import { type JoinedSort } from './JoinedSort.js';
+import { type JoinedWhereQuery, type JoinInfo } from './JoinedWhereQuery.js';
+import { type PopulateArgs } from './PopulateArgs.js';
+import { type WhereQuery } from './WhereQuery.js';
 
 export interface FindOneResultJSON<T extends Entity, TReturn, TJoins extends JoinInfo = never> extends PromiseLike<PlainObject<TReturn> | null> {
   select<TKeys extends string & keyof OmitFunctions<QueryResult<T>>>(keys: TKeys[]): FindOneResultJSON<T, Pick<QueryResult<T>, TKeys>, TJoins>;

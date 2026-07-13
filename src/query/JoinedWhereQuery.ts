@@ -1,6 +1,6 @@
-import type { Entity } from '../Entity.js';
+import { type Entity } from '../Entity.js';
 
-import type { WhereQuery, WhereQueryStatement } from './WhereQuery.js';
+import { type WhereQuery, type WhereQueryStatement } from './WhereQuery.js';
 
 type ExcludeUndefined<T> = Exclude<T, undefined>;
 

@@ -29,6 +29,20 @@ const products = await productRepository.create([
 // products = [{ id: 42, ... }, { id: 43, ... }]
 ```
 
+Passing an array builds a single multi-row `INSERT` statement, one round trip for the whole batch. Prefer this over calling
+`create()` in a loop, which issues a separate `INSERT` (and round trip) per record:
+
+```ts
+// Correct — one INSERT statement for all rows
+const products = await productRepository.create(items);
+
+// Slower — a separate INSERT statement and round trip per item
+const products = [];
+for (const item of items) {
+  products.push(await productRepository.create(item));
+}
+```
+
 ### Skip returning records
 
 ```ts

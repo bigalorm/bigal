@@ -55,6 +55,22 @@ public name!: string;
 public sku?: string;
 ```
 
+### Vector (pgvector)
+
+Declare a `VECTOR(n)` column with `type: 'vector'`. Values are `number[] | null`:
+
+```ts
+import { column } from 'bigal';
+
+@column({ type: 'vector', dimensions: 1536 })
+public embedding?: number[];
+```
+
+Requires the [pgvector](https://github.com/pgvector/pgvector) extension. The `dimensions` option is
+informational — BigAl does not issue DDL. See
+[Querying > Vector distance queries](/guide/querying#vector-distance-queries) for sorting and
+filtering by similarity.
+
 ### `@createDateColumn()`
 
 Automatically set on insert:
@@ -90,16 +106,17 @@ public version!: number;
 
 ## Column options
 
-| Option       | Type           | Description                                                                                                                                             |
-| ------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `type`       | `string`       | Column type: `'string'`, `'integer'`, `'float'`, `'boolean'`, `'date'`, `'datetime'`, `'json'`, `'string[]'`, `'integer[]'`, `'float[]'`, `'boolean[]'` |
-| `name`       | `string`       | Database column name (if different from property name)                                                                                                  |
-| `required`   | `boolean`      | If `true`, value must not be null                                                                                                                       |
-| `defaultsTo` | `any`          | Default value                                                                                                                                           |
-| `model`      | `() => string` | Foreign key relationship (many-to-one)                                                                                                                  |
-| `collection` | `() => string` | Inverse relationship (one-to-many or many-to-many)                                                                                                      |
-| `through`    | `() => string` | Join table for many-to-many                                                                                                                             |
-| `via`        | `string`       | Property on related model that holds the foreign key                                                                                                    |
+| Option       | Type           | Description                                                                                                                                                         |
+| ------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `type`       | `string`       | Column type: `'string'`, `'integer'`, `'float'`, `'boolean'`, `'date'`, `'datetime'`, `'json'`, `'string[]'`, `'integer[]'`, `'float[]'`, `'boolean[]'`, `'vector'` |
+| `name`       | `string`       | Database column name (if different from property name)                                                                                                              |
+| `required`   | `boolean`      | If `true`, value must not be null                                                                                                                                   |
+| `defaultsTo` | `any`          | Default value                                                                                                                                                       |
+| `dimensions` | `number`       | Number of dimensions for `'vector'` columns. Informational only — BigAl does not issue DDL                                                                          |
+| `model`      | `() => string` | Foreign key relationship (many-to-one)                                                                                                                              |
+| `collection` | `() => string` | Inverse relationship (one-to-many or many-to-many)                                                                                                                  |
+| `through`    | `() => string` | Join table for many-to-many                                                                                                                                         |
+| `via`        | `string`       | Property on related model that holds the foreign key                                                                                                                |
 
 ## Relationships
 

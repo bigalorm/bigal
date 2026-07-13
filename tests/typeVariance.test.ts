@@ -1,21 +1,24 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
 
-import type { IReadonlyRepository, IRepository, QueryResult, WhereQuery } from '../src/index.js';
-import type { FindOneResult, FindResult } from '../src/query/index.js';
+import { type IReadonlyRepository, type IRepository, type QueryResult, type WhereQuery } from '../src/index.js';
+import { type FindOneResult, type FindResult } from '../src/query/index.js';
 
-import type { ModelBase } from './models/ModelBase.js';
-import type { Product } from './models/Product.js';
-import type { SimpleWithJson } from './models/SimpleWithJson.js';
-import type { Store } from './models/Store.js';
+import { type ModelBase } from './models/ModelBase.js';
+import { type Product } from './models/Product.js';
+import { type SimpleWithJson } from './models/SimpleWithJson.js';
+import { type Store } from './models/Store.js';
 
 // Compile-time assignability checks - a type error means variance is broken
 function acceptWhereQuery(_where: WhereQuery<ModelBase>): void {}
+
 function acceptReadonlyRepository(_repo: IReadonlyRepository<ModelBase>): void {}
+
 function acceptRepository(_repo: IRepository<ModelBase>): void {}
 
 // Exact-equality helper for type-level assertions. Resolves to `true` only when X and Y are
 // structurally identical, so a type error here means the inferred type drifted.
 type Equals<X, Y> = (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? true : false;
+
 // `T` is consumed by the optional param so lint sees it as used; passing the param is unnecessary.
 function assertExact<T extends true>(_check?: T): void {}
 
@@ -93,6 +96,7 @@ async function _selectReturnTypeChecks(productRepo: IRepository<Product>, storeR
       const storeFk: number = findOneJson.store;
       void storeFk;
     }
+
     const firstStoreFk: number | undefined = findJson[0]?.store;
     void firstStoreFk;
   }
