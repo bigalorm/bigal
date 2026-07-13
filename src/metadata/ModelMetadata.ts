@@ -1,9 +1,9 @@
-import type { Entity, EntityStatic } from '../Entity.js';
+import { type Entity, type EntityStatic } from '../Entity.js';
 import { snakeCase } from '../utils/index.js';
 
-import type { ColumnCollectionMetadata } from './ColumnCollectionMetadata.js';
-import type { ColumnModelMetadata } from './ColumnModelMetadata.js';
-import type { ColumnTypeMetadata } from './ColumnTypeMetadata.js';
+import { type ColumnCollectionMetadata } from './ColumnCollectionMetadata.js';
+import { type ColumnModelMetadata } from './ColumnModelMetadata.js';
+import { type ColumnTypeMetadata } from './ColumnTypeMetadata.js';
 
 type Column = ColumnCollectionMetadata | ColumnModelMetadata | ColumnTypeMetadata;
 type ColumnByStringId = Record<string, Column>;

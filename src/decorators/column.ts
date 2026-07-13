@@ -1,10 +1,10 @@
 import { ColumnCollectionMetadata, ColumnModelMetadata, ColumnTypeMetadata, getMetadataStorage } from '../metadata/index.js';
-import type { ClassLike } from '../types/index.js';
+import { type ClassLike } from '../types/index.js';
 import { snakeCase } from '../utils/index.js';
 
-import type { ColumnCollectionOptions } from './ColumnCollectionOptions.js';
-import type { ColumnModelOptions } from './ColumnModelOptions.js';
-import type { ColumnTypeOptions } from './ColumnTypeOptions.js';
+import { type ColumnCollectionOptions } from './ColumnCollectionOptions.js';
+import { type ColumnModelOptions } from './ColumnModelOptions.js';
+import { type ColumnTypeOptions } from './ColumnTypeOptions.js';
 
 type ColumnOptions = ColumnCollectionOptions | ColumnModelOptions | ColumnTypeOptions;
 type ReturnFunctionType = (object: ClassLike, propertyName: string) => void;
@@ -74,6 +74,7 @@ export function column(dbColumnNameOrOptions?: ColumnOptions | string, options?:
         required: columnTypeOptions.required,
         type: columnTypeOptions.type,
         defaultsTo: columnTypeOptions.defaultsTo,
+        dimensions: columnTypeOptions.dimensions,
         enum: columnTypeOptions.enum,
         maxLength: columnTypeOptions.maxLength,
       }),

@@ -15,12 +15,14 @@ import {
   type PoolQueryResult,
   type QueryResultRow,
   type SelectAggregateExpression,
+  type VectorDistanceMetric,
   type WhereQuery,
 } from '../src/index.js';
 import * as sqlHelper from '../src/SqlHelper.js';
 
 import {
   Category,
+  Document,
   ImportedItem,
   KitchenSink,
   Product,
@@ -45,6 +47,7 @@ import {
 
 interface RepositoriesByModelName {
   Category: IRepository<Entity>;
+  Document: IRepository<Entity>;
   ImportedItem: IRepository<Entity>;
   KitchenSink: IRepository<Entity>;
   Product: IRepository<Entity>;
@@ -80,6 +83,7 @@ describe('sqlHelper', () => {
     repositoriesByModelName = initialize({
       models: [
         Category,
+        Document,
         ImportedItem,
         KitchenSink,
         Product,
@@ -219,6 +223,30 @@ describe('sqlHelper', () => {
         );
         expect(params).toStrictEqual([]);
       });
+
+      it('should number vector sort placeholders after where placeholders', () => {
+        const { query, params } = sqlHelper.getSelectQueryAndParams<Document>({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.document.model as ModelMetadata<Document>,
+          where: {
+            title: 'test',
+          },
+          sorts: [
+            {
+              propertyName: 'embedding',
+              vectorDistance: {
+                vector: [1, 2, 3],
+                metric: 'cosine',
+              },
+            },
+          ],
+          limit: 10,
+          skip: 0,
+        });
+
+        expect(query).toBe('SELECT "id","title","embedding" FROM "documents" WHERE "title"=$1 ORDER BY "embedding" <=> $2 LIMIT 10');
+        expect(params).toStrictEqual(['test', '[1,2,3]']);
+      });
     });
 
     describe('skip', () => {
@@ -317,6 +345,7 @@ describe('sqlHelper', () => {
             distinctOn: ['store'],
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(/DISTINCT ON requires ORDER BY/);
       });
@@ -333,6 +362,7 @@ describe('sqlHelper', () => {
             distinctOn: ['store'],
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(/DISTINCT ON columns must match the leftmost ORDER BY columns/);
       });
@@ -349,6 +379,7 @@ describe('sqlHelper', () => {
             distinctOn: ['store', 'name'],
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(/DISTINCT ON columns must match the leftmost ORDER BY columns/);
       });
@@ -558,6 +589,7 @@ describe('sqlHelper', () => {
           returnRecords: true,
         });
       }
+
       expect(action).toThrow(Error);
       expect(action).toThrow(`Create statement for "${repositoriesByModelNameLowered.product.model.name}" is missing value for required field: name`);
     });
@@ -894,6 +926,33 @@ describe('sqlHelper', () => {
 
       expect(query).toBe(`INSERT INTO "${repositoriesByModelNameLowered.product.model.tableName}" ("name","alias_names","store_id") VALUES ($1,$3,$5),($2,$4,$6)`);
       expect(params).toStrictEqual([name1, name2, [], [], storeId1, storeId2]);
+    });
+
+    it('should serialize vector values as pgvector text format', () => {
+      const { query, params } = sqlHelper.getInsertQueryAndParams<Document>({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.document.model as ModelMetadata<Document>,
+        values: {
+          title: 'foo',
+          embedding: [0.1, 0.2, 0.3],
+        },
+      });
+
+      expect(query).toBe('INSERT INTO "documents" ("title","embedding") VALUES ($1,$2) RETURNING "id","title","embedding"');
+      expect(params).toStrictEqual(['foo', '[0.1,0.2,0.3]']);
+    });
+
+    it('should reject non-finite vector values', () => {
+      expect(() =>
+        sqlHelper.getInsertQueryAndParams<Document>({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.document.model as ModelMetadata<Document>,
+          values: {
+            title: 'foo',
+            embedding: [1, Number.NaN, 3],
+          },
+        }),
+      ).toThrow('"embedding" vector value must be a non-empty array of finite numbers');
     });
 
     describe('onConflict', () => {
@@ -1310,6 +1369,7 @@ describe('sqlHelper', () => {
             returnRecords: false,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(`Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
@@ -1355,6 +1415,7 @@ describe('sqlHelper', () => {
             returnRecords: false,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(`Create statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
@@ -1588,6 +1649,37 @@ describe('sqlHelper', () => {
       expect(params).toStrictEqual([name, storeId, productId]);
     });
 
+    it('should serialize vector values as pgvector text format', () => {
+      const { query, params } = sqlHelper.getUpdateQueryAndParams<Document>({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.document.model as ModelMetadata<Document>,
+        where: {
+          id: 42,
+        },
+        values: {
+          embedding: [0.1, 0.2, 0.3],
+        },
+      });
+
+      expect(query).toBe('UPDATE "documents" SET "embedding"=$1 WHERE "id"=$2 RETURNING "id","title","embedding"');
+      expect(params).toStrictEqual(['[0.1,0.2,0.3]', 42]);
+    });
+
+    it('should reject non-finite vector values', () => {
+      expect(() =>
+        sqlHelper.getUpdateQueryAndParams<Document>({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.document.model as ModelMetadata<Document>,
+          where: {
+            id: 42,
+          },
+          values: {
+            embedding: [1, Number.POSITIVE_INFINITY, 3],
+          },
+        }),
+      ).toThrow('"embedding" vector value must be a non-empty array of finite numbers');
+    });
+
     describe('maxLength', () => {
       it('should allow update when maxLength set and providing null', () => {
         const itemId = faker.string.uuid();
@@ -1728,6 +1820,7 @@ describe('sqlHelper', () => {
             returnRecords: false,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(`Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
@@ -1769,6 +1862,7 @@ describe('sqlHelper', () => {
             returnRecords: false,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow(`Update statement for "${repositoriesByModelNameLowered.importeditem.model.name}" contains a value that exceeds maxLength on field: externalIdString`);
       });
@@ -1924,6 +2018,7 @@ describe('sqlHelper', () => {
           },
         });
       }
+
       expect(action).toThrow(QueryError);
       expect(action).toThrow(`Attempting to query with an undefined value. store on ${repositoriesByModelNameLowered.product.model.name}`);
     });
@@ -2520,6 +2615,7 @@ describe('sqlHelper', () => {
             } as WhereQuery<SimpleWithJson>,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow('"like" operator is not supported for JSON columns');
       });
@@ -2536,6 +2632,7 @@ describe('sqlHelper', () => {
             } as WhereQuery<SimpleWithJson>,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow('"like" operator is not supported for JSON columns');
       });
@@ -2552,6 +2649,7 @@ describe('sqlHelper', () => {
             } as WhereQuery<SimpleWithJson>,
           });
         }
+
         expect(action).toThrow(QueryError);
         expect(action).toThrow('"like" operator is not supported for JSON columns');
       });
@@ -2952,6 +3050,7 @@ describe('sqlHelper', () => {
           },
         });
       }
+
       expect(action).toThrow(QueryError);
       expect(action).toThrow(`WHERE statement is unexpectedly empty.`);
     });
@@ -3078,6 +3177,7 @@ describe('sqlHelper', () => {
           },
         });
       }
+
       expect(action).toThrow(QueryError);
       expect(action).toThrow(`WHERE statement is unexpectedly empty.`);
     });
@@ -3250,6 +3350,50 @@ describe('sqlHelper', () => {
       assert(whereStatement);
       expect(whereStatement).toBe('WHERE "float_column"=ANY($1::NUMERIC[])');
       expect(params).toStrictEqual([values]);
+    });
+
+    describe('vector distance constraints', () => {
+      it('should qualify vector distance columns with the base table when joins exist', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement<Document>({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.document.model as ModelMetadata<Document>,
+          where: {
+            embedding: { nearestTo: [1, 2, 3], metric: 'l2', distance: { '<': 0.5 } },
+          },
+          joins: [
+            {
+              propertyName: 'store',
+              alias: 'store',
+              type: 'inner',
+            },
+          ],
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe('WHERE "documents"."embedding" <-> $1 < $2');
+        expect(params).toStrictEqual(['[1,2,3]', 0.5]);
+      });
+
+      it('should qualify vector equality columns with the base table when joins exist', () => {
+        const { whereStatement, params } = sqlHelper.buildWhereStatement<Document>({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.document.model as ModelMetadata<Document>,
+          where: {
+            embedding: [1, 2, 3],
+          },
+          joins: [
+            {
+              propertyName: 'store',
+              alias: 'store',
+              type: 'inner',
+            },
+          ],
+        });
+
+        assert(whereStatement);
+        expect(whereStatement).toBe('WHERE "documents"."embedding"=$1');
+        expect(params).toStrictEqual(['[1,2,3]']);
+      });
     });
 
     describe('type: "array"', () => {
@@ -3636,6 +3780,7 @@ describe('sqlHelper', () => {
     it('should return empty if there are no orders defined', () => {
       const result = sqlHelper.buildOrderStatement({
         repositoriesByModelNameLowered,
+        params: [],
         model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [],
       });
@@ -3646,6 +3791,7 @@ describe('sqlHelper', () => {
     it('should handle single string order with implicit direction', () => {
       const result = sqlHelper.buildOrderStatement({
         repositoriesByModelNameLowered,
+        params: [],
         model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
@@ -3660,6 +3806,7 @@ describe('sqlHelper', () => {
     it('should handle single string order with implicit direction and explicit columnName', () => {
       const result = sqlHelper.buildOrderStatement({
         repositoriesByModelNameLowered,
+        params: [],
         model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
@@ -3674,6 +3821,7 @@ describe('sqlHelper', () => {
     it('should handle single string order with explicit desc direction', () => {
       const result = sqlHelper.buildOrderStatement({
         repositoriesByModelNameLowered,
+        params: [],
         model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
@@ -3689,6 +3837,7 @@ describe('sqlHelper', () => {
     it('should handle single string order with explicit desc direction and explicit columnName', () => {
       const result = sqlHelper.buildOrderStatement({
         repositoriesByModelNameLowered,
+        params: [],
         model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
@@ -3704,6 +3853,7 @@ describe('sqlHelper', () => {
     it('should handle multiple string order', () => {
       const result = sqlHelper.buildOrderStatement({
         repositoriesByModelNameLowered,
+        params: [],
         model: repositoriesByModelNameLowered.kitchensink.model as ModelMetadata<KitchenSink>,
         sorts: [
           {
@@ -3722,6 +3872,7 @@ describe('sqlHelper', () => {
     it('should handle dot-notation for joined table column', () => {
       const result = sqlHelper.buildOrderStatement({
         repositoriesByModelNameLowered,
+        params: [],
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         sorts: [
           {
@@ -3743,6 +3894,7 @@ describe('sqlHelper', () => {
     it('should handle dot-notation with custom alias', () => {
       const result = sqlHelper.buildOrderStatement({
         repositoriesByModelNameLowered,
+        params: [],
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         sorts: [
           {
@@ -3765,6 +3917,7 @@ describe('sqlHelper', () => {
     it('should handle mixed regular and dot-notation sorts', () => {
       const result = sqlHelper.buildOrderStatement({
         repositoriesByModelNameLowered,
+        params: [],
         model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
         sorts: [
           {
@@ -3785,6 +3938,99 @@ describe('sqlHelper', () => {
       });
 
       expect(result).toBe('ORDER BY "store"."name","products"."name" DESC');
+    });
+
+    it('should handle vector distance sort and push the serialized vector param', () => {
+      const params: unknown[] = [];
+      const result = sqlHelper.buildOrderStatement<Document>({
+        repositoriesByModelNameLowered,
+        params,
+        model: repositoriesByModelNameLowered.document.model as ModelMetadata<Document>,
+        sorts: [
+          {
+            propertyName: 'embedding',
+            vectorDistance: {
+              vector: [1, 2, 3],
+              metric: 'l2',
+            },
+          },
+        ],
+      });
+
+      expect(result).toBe('ORDER BY "embedding" <-> $1');
+      expect(params).toStrictEqual(['[1,2,3]']);
+    });
+
+    it('should number vector placeholders after existing params', () => {
+      const params: unknown[] = ['existing where param'];
+      const result = sqlHelper.buildOrderStatement<Document>({
+        repositoriesByModelNameLowered,
+        params,
+        model: repositoriesByModelNameLowered.document.model as ModelMetadata<Document>,
+        sorts: [
+          {
+            propertyName: 'title',
+            descending: true,
+          },
+          {
+            propertyName: 'embedding',
+            vectorDistance: {
+              vector: [1, 2, 3],
+              metric: 'cosine',
+            },
+          },
+        ],
+      });
+
+      expect(result).toBe('ORDER BY "title" DESC,"embedding" <=> $2');
+      expect(params).toStrictEqual(['existing where param', '[1,2,3]']);
+    });
+
+    it('should qualify vector sort columns with the base table when joins exist', () => {
+      const params: unknown[] = [];
+      const result = sqlHelper.buildOrderStatement<Document>({
+        repositoriesByModelNameLowered,
+        params,
+        model: repositoriesByModelNameLowered.document.model as ModelMetadata<Document>,
+        sorts: [
+          {
+            propertyName: 'embedding',
+            vectorDistance: {
+              vector: [1, 2, 3],
+              metric: 'cosine',
+            },
+          },
+        ],
+        joins: [
+          {
+            propertyName: 'store',
+            alias: 'store',
+            type: 'inner',
+          },
+        ],
+      });
+
+      expect(result).toBe('ORDER BY "documents"."embedding" <=> $1');
+      expect(params).toStrictEqual(['[1,2,3]']);
+    });
+
+    it('should throw for an invalid vector distance metric', () => {
+      expect(() =>
+        sqlHelper.buildOrderStatement<Document>({
+          repositoriesByModelNameLowered,
+          params: [],
+          model: repositoriesByModelNameLowered.document.model as ModelMetadata<Document>,
+          sorts: [
+            {
+              propertyName: 'embedding',
+              vectorDistance: {
+                vector: [1, 2, 3],
+                metric: 'bogus' as VectorDistanceMetric,
+              },
+            },
+          ],
+        }),
+      ).toThrow('Invalid vector distance metric: bogus. Must be one of: cosine, innerProduct, l1, l2');
     });
   });
 

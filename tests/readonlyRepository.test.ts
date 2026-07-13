@@ -5,7 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { type PoolLike, type PoolQueryResult, type QueryResult, type QueryResultPopulated, type QueryResultRow, type ReadonlyRepository, type Repository } from '../src/index.js';
 import { initialize, subquery } from '../src/index.js';
-import { type SelectAggregateExpression, type Sort, type TypedAggregateExpression, type WhereQuery } from '../src/query/index.js';
+import { type SelectAggregateExpression, type TypedAggregateExpression, type WhereQuery } from '../src/query/index.js';
 
 import { type ParkingLot } from './models/index.js';
 import {
@@ -2636,8 +2636,7 @@ describe('ReadonlyRepository', () => {
 
           const result = await StoreRepository.find()
             .join(productCounts, 'productStats', { on: { id: 'store' } })
-            // Type assertion needed because Sort<Store> doesn't include joined column aliases
-            .sort('productStats.productCount desc' as Sort<Store>);
+            .sort('productStats.productCount desc');
 
           assert(result);
           expect(result).toStrictEqual(stores);

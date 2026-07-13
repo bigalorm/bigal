@@ -1,7 +1,7 @@
-import type { Entity } from '../Entity.js';
-import type { PlainObject } from '../types/index.js';
+import { type Entity } from '../Entity.js';
+import { type PlainObject } from '../types/index.js';
 
-import type { WhereQuery } from './WhereQuery.js';
+import { type WhereQuery } from './WhereQuery.js';
 
 /**
  * Result of a destroy operation that returns plain objects (after calling toJSON())

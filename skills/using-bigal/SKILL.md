@@ -143,7 +143,10 @@ class Product extends Entity {
 
 ### Column types
 
-`'string'`, `'integer'`, `'float'`, `'boolean'`, `'date'`, `'datetime'`, `'json'`, `'string[]'`, `'integer[]'`, `'float[]'`, `'boolean[]'`
+`'string'`, `'integer'`, `'float'`, `'boolean'`, `'date'`, `'datetime'`, `'json'`, `'string[]'`, `'integer[]'`, `'float[]'`, `'boolean[]'`, `'vector'`
+
+Vector columns (pgvector) are declared with `@column({ type: 'vector', dimensions: n })` on a `number[]` property.
+`dimensions` is informational — BigAl does not issue DDL.
 
 ### Relationships
 
@@ -364,6 +367,28 @@ const avgPrice = subquery(productRepo).avg('price');
 await productRepo.find().where({ price: { '>': avgPrice } });
 ```
 
+### Vector distance queries
+
+```ts
+// In the model: @column({ type: 'vector', dimensions: 1536 }) public embedding?: number[];
+
+// Sort by similarity — metric: 'cosine' (default, <=>), 'l2' (<->), 'l1' (<+>), 'innerProduct' (<#>)
+const similar = await documentRepo
+  .find()
+  .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
+  .limit(10);
+
+// Filter by distance threshold
+const nearby = await documentRepo
+  .find()
+  .where({ embedding: { nearestTo: queryVector, metric: 'cosine', distance: { '<': 0.5 } } })
+  .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
+  .limit(10);
+
+// Writes serialize number[] to pgvector text format; reads parse it back to number[]
+await documentRepo.create({ title: 'foo', embedding: [0.1, 0.2, 0.3] });
+```
+
 ## Gotchas
 
 ### Collections must be optional
@@ -424,6 +449,33 @@ type ProductSummary = Pick<QueryResult<Product>, 'id' | 'name' | 'store'>;
 
 // Wrong: store is `number | Store`
 type ProductSummaryWrong = Pick<Product, 'id' | 'name' | 'store'>;
+```
+
+### Prefer count() over findOne() for existence checks
+
+If you only need to know whether a match exists, use `count()` instead of `findOne()` — it performs better since it doesn't select or hydrate a row:
+
+```ts
+// Correct
+const exists = (await productRepo.count().where({ sku: 'ABC123' })) > 0;
+
+// Wasteful — findOne() selects and hydrates a full row just to check for existence
+const exists = (await productRepo.findOne().where({ sku: 'ABC123' })) != null;
+```
+
+### Prefer an array to create() over looping
+
+Passing an array to `create()` builds a single multi-row `INSERT` statement — one round trip for the whole batch. Calling `create()` in a loop issues a separate `INSERT` (and round trip) per record:
+
+```ts
+// Correct — one INSERT statement for all rows
+const products = await productRepo.create(items);
+
+// Slower — a separate INSERT statement and round trip per item
+const products = [];
+for (const item of items) {
+  products.push(await productRepo.create(item));
+}
 ```
 
 ### Debugging SQL

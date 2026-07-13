@@ -1,8 +1,8 @@
-import type { Entity, EntityStatic } from '../Entity.js';
+import { type Entity, type EntityStatic } from '../Entity.js';
 import { getMetadataStorage, ModelMetadata } from '../metadata/index.js';
 import { snakeCase } from '../utils/index.js';
 
-import type { TableOptions } from './TableOptions.js';
+import { type TableOptions } from './TableOptions.js';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ReturnFunctionType = (object: any) => void;

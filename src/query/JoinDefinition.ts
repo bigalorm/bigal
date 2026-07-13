@@ -1,8 +1,8 @@
-import type { Entity } from '../Entity.js';
-import type { ModelMetadata } from '../metadata/index.js';
+import { type Entity } from '../Entity.js';
+import { type ModelMetadata } from '../metadata/index.js';
 
-import type { SubqueryBuilderLike } from './SubqueryBuilder.js';
-import type { WhereQuery } from './WhereQuery.js';
+import { type SubqueryBuilderLike } from './SubqueryBuilder.js';
+import { type WhereQuery } from './WhereQuery.js';
 
 export type JoinType = 'inner' | 'left';
 

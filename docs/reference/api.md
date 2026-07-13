@@ -60,7 +60,7 @@ Returns a query builder for a single record or `null`. Options: `{ select?, pool
 repository.count(options?): CountQuery<T>
 ```
 
-Returns a query builder that resolves to a number. Options: `{ pool? }`.
+Returns a query builder that resolves to a number. Options: `{ pool? }`. Prefer this over `findOne()` for existence checks — it performs better since it doesn't select or hydrate a row.
 
 ### create()
 
@@ -70,6 +70,8 @@ repository.create(values[], options?): Promise<QueryResult<T>[]>
 ```
 
 Insert one or multiple records. Options: `{ returnRecords?, returnSelect?, onConflict? }`.
+
+An array inserts in a single statement. Prefer this over calling `create()` in a loop, which costs one round trip per record.
 
 ### update()
 
@@ -141,6 +143,8 @@ Marks the primary key. Options: `{ type }`.
 ### @column(options)
 
 Defines a column. See [Models > Column options](/guide/models#column-options) for all options.
+Vector columns are declared with `{ type: 'vector', dimensions: n }` (`dimensions` is informational —
+BigAl does not issue DDL).
 
 ### @createDateColumn()
 
@@ -175,6 +179,39 @@ Type for entities with specific relationships populated.
 ### TypedAggregateExpression\<Alias\>
 
 Return type annotation for aggregate callbacks that enables type-safe sorting on subquery join columns.
+
+### VectorDistanceMetric
+
+```ts
+type VectorDistanceMetric = 'cosine' | 'innerProduct' | 'l1' | 'l2';
+```
+
+### VectorDistanceSort
+
+```ts
+interface VectorDistanceSort {
+  nearestTo: number[];
+  metric?: VectorDistanceMetric;
+}
+```
+
+Used in `.sort()` for nearest-neighbor queries on vector columns. See
+[Querying > Vector distance queries](/guide/querying#vector-distance-queries).
+
+### VectorDistanceConstraint
+
+```ts
+interface VectorDistanceConstraint {
+  nearestTo: number[];
+  metric?: VectorDistanceMetric;
+  distance: Partial<Record<'<' | '<=' | '>' | '>=', number>>;
+}
+```
+
+Used in where clauses to filter vector columns by distance threshold. At least one `distance` bound is
+required (pgvector distance operators return a number, so a bare distance expression is not a valid
+where clause); multiple bounds are combined with `AND`. To order by distance without filtering, use
+`sort()` with `nearestTo` instead.
 
 ### PoolLike
 
