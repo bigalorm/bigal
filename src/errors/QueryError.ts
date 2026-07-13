@@ -1,3 +1,4 @@
+/* eslint-disable unicorn-compat/custom-error-definition -- model/where are part of the public constructor signature; switching to an `options` parameter would be a breaking change */
 import { type Entity } from '../Entity.js';
 import { type ModelMetadata } from '../metadata/index.js';
 import { type WhereQuery } from '../query/index.js';
