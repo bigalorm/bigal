@@ -73,7 +73,7 @@
     "oxlint-plugin-eslint": "1.73.0",
     "pinst": "3.0.0",
     "postgres-pool": "11.0.5",
-    "semantic-release": "25.0.5",
+    "semantic-release": "25.0.6",
     "strict-event-emitter-types": "2.0.0",
     "typescript": "7.0.2",
     "vite": "catalog:",
