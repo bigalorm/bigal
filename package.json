@@ -72,7 +72,7 @@
     "npm-run-all2": "9.0.2",
     "oxlint-plugin-eslint": "1.73.0",
     "pinst": "3.0.0",
-    "postgres-pool": "11.0.5",
+    "postgres-pool": "12.0.0",
     "semantic-release": "25.0.6",
     "strict-event-emitter-types": "2.0.0",
     "typescript": "7.0.2",
