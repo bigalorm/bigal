@@ -17,7 +17,10 @@ const product = await productRepository.findOne().where({ id: 42 });
 
 ### Query projection
 
-Select specific columns:
+Pass `select` to return only the columns you need instead of every column (the default).
+This shrinks the SELECT list, reduces bytes transferred, and lowers hydration cost.
+It is a large win for wide rows, big JSON blobs, or vector/embedding columns you do not need on a given path.
+`find()` and `populate()` accept the same option.
 
 ```ts
 const product = await productRepository
@@ -25,6 +28,9 @@ const product = await productRepository
     select: ['name', 'sku'],
   })
   .where({ id: 42 });
+
+// find() takes the same option
+const products = await productRepository.find({ select: ['name', 'sku'] }).where({ store: storeId });
 ```
 
 ### Pool override

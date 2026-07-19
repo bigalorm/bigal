@@ -73,21 +73,25 @@ Insert one or multiple records. Options: `{ returnRecords?, returnSelect?, onCon
 
 An array inserts in a single statement. Prefer this over calling `create()` in a loop, which costs one round trip per record.
 
+`returnSelect` narrows the returned columns and `returnRecords: false` skips them entirely, cutting transfer and hydration cost.
+
 ### update()
 
 ```ts
 repository.update(where, values, options?): Promise<QueryResult<T>[]>
 ```
 
-Update matching records. Options: `{ returnRecords?, returnSelect? }`.
+Update matching records. Options: `{ returnRecords?, returnSelect? }`. As with `create()`, use `returnSelect` to return only the columns you need or `returnRecords: false` to skip the returned rows.
 
 ### destroy()
 
 ```ts
-repository.destroy(where, options?): Promise<QueryResult<T>[]>
+repository.destroy(where, options?): Promise<void>
+repository.destroy(where, { returnRecords: true }): Promise<QueryResult<T>[]>
 ```
 
 Delete matching records. Options: `{ returnRecords?, returnSelect? }`.
+Unlike `create()`/`update()`, `destroy()` does not return records by default (plain `DELETE`, no `RETURNING`); pass `returnRecords: true` or `returnSelect` to get the deleted rows back.
 
 ## ReadonlyRepository
 

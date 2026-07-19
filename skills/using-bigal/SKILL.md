@@ -88,11 +88,12 @@ Use BigAl for the 90% of queries that fit its fluent API, and raw SQL for the re
 
 ### CRUD
 
-| SQL                                                         | BigAl                                          |
-| ----------------------------------------------------------- | ---------------------------------------------- |
-| `INSERT INTO products (name) VALUES ('Widget') RETURNING *` | `productRepo.create({ name: 'Widget' })`       |
-| `UPDATE products SET name = 'X' WHERE id = 1 RETURNING *`   | `productRepo.update({ id: 1 }, { name: 'X' })` |
-| `DELETE FROM products WHERE id = 1 RETURNING *`             | `productRepo.destroy({ id: 1 })`               |
+| SQL                                                         | BigAl                                                     |
+| ----------------------------------------------------------- | --------------------------------------------------------- |
+| `INSERT INTO products (name) VALUES ('Widget') RETURNING *` | `productRepo.create({ name: 'Widget' })`                  |
+| `UPDATE products SET name = 'X' WHERE id = 1 RETURNING *`   | `productRepo.update({ id: 1 }, { name: 'X' })`            |
+| `DELETE FROM products WHERE id = 1`                         | `productRepo.destroy({ id: 1 })`                          |
+| `DELETE FROM products WHERE id = 1 RETURNING *`             | `productRepo.destroy({ id: 1 }, { returnRecords: true })` |
 
 ### Subqueries, joins, and advanced
 
@@ -334,19 +335,38 @@ await productRepo.create({ name: 'Widget', priceCents: 999 }, { returnSelect: ['
 
 ### Update
 
+By default `update()` runs `RETURNING *` and hydrates the full updated rows.
+Shape what comes back to only what you need, or skip it entirely, to reduce bytes over the wire and hydration cost:
+
 ```ts
-// Returns array of updated records
+// Returns array of updated records (RETURNING *)
 const products = await productRepo.update({ id: 42 }, { name: 'Super Widget' });
 
 // Update multiple
 const products = await productRepo.update({ id: [42, 43] }, { priceCents: 1299 });
+
+// Return only specific columns (primary key always included) - smaller RETURNING clause, less to hydrate
+const products = await productRepo.update({ id: 42 }, { name: 'Super Widget' }, { returnSelect: ['name'] });
+
+// Skip returning records entirely (no RETURNING clause) - fastest when you do not need the rows back
+await productRepo.update({ id: 42 }, { name: 'Super Widget' }, { returnRecords: false });
 ```
 
 ### Destroy
 
+Unlike `create()`/`update()`, `destroy()` does not return records by default.
+It emits a plain `DELETE` with no `RETURNING` clause, which is the cheapest option.
+Opt in to the deleted rows only when you need them, and prefer `returnSelect` to bring back just the columns you use:
+
 ```ts
-// Returns array of deleted records
-const products = await productRepo.destroy({ id: 42 });
+// Default: deletes and resolves to void (no RETURNING clause)
+await productRepo.destroy({ id: 42 });
+
+// Opt in to the deleted rows (RETURNING *)
+const products = await productRepo.destroy({ id: 42 }, { returnRecords: true });
+
+// Return only specific columns (primary key always included) - returnSelect implies returnRecords
+const products = await productRepo.destroy({ id: 42 }, { returnSelect: ['name'] });
 ```
 
 ### Subqueries
@@ -451,6 +471,27 @@ type ProductSummary = Pick<QueryResult<Product>, 'id' | 'name' | 'store'>;
 type ProductSummaryWrong = Pick<Product, 'id' | 'name' | 'store'>;
 ```
 
+### Select only the columns you need
+
+`find()`/`findOne()` select every column by default. Pass `select` to return only the columns you actually use.
+This shrinks the SELECT list, reduces bytes transferred, and lowers hydration cost.
+For wide rows, large JSON blobs, or vector/embedding columns it can be a large win, since the database only reads and ships those columns when you ask for them.
+`populate()` and joined models accept the same `select` option:
+
+```ts
+// Selects every column
+const product = await productRepo.findOne().where({ id: 42 });
+
+// Selects only the primary key (always included) + name + priceCents
+const product = await productRepo.findOne({ select: ['name', 'priceCents'] }).where({ id: 42 });
+
+// Applies to lists, populated relations, and joins too
+const products = await productRepo
+  .find({ select: ['name'] })
+  .where({ store: storeId })
+  .populate('store', { select: ['name'] });
+```
+
 ### Prefer count() over findOne() for existence checks
 
 If you only need to know whether a match exists, use `count()` instead of `findOne()` — it performs better since it doesn't select or hydrate a row:
@@ -499,6 +540,7 @@ After applying this skill, verify:
 - [ ] JSON column types with `id` fields use `NotEntity<T>`
 - [ ] Model names in decorators are strings (`'Store'`) to avoid circular imports
 - [ ] `QueryResult<T>` is used for derived types involving relationships
+- [ ] Queries return only needed data: `select` on `find()`/`findOne()`/`populate()`, and `returnSelect` / `returnRecords: false` on `create()`/`update()`/`destroy()` when the full row is not needed
 
 ## Further Reading
 
