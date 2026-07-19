@@ -4,8 +4,10 @@ description: Create, update, and destroy records with RETURNING support, query p
 
 # CRUD Operations
 
-BigAl repositories provide `create()`, `update()`, and `destroy()` methods. All three return affected records
-by default (using `RETURNING *`), and all support `returnRecords` and `returnSelect` options.
+BigAl repositories provide `create()`, `update()`, and `destroy()` methods.
+`create()` and `update()` return affected records by default (using `RETURNING *`); `destroy()` does not.
+All three accept `returnRecords` and `returnSelect` to shape what comes back.
+Return only the columns you need, or skip the returned rows entirely, to reduce bytes over the wire and hydration cost.
 
 ## Create
 
@@ -33,10 +35,10 @@ Passing an array builds a single multi-row `INSERT` statement, one round trip fo
 `create()` in a loop, which issues a separate `INSERT` (and round trip) per record:
 
 ```ts
-// Correct — one INSERT statement for all rows
+// Correct - one INSERT statement for all rows
 const products = await productRepository.create(items);
 
-// Slower — a separate INSERT statement and round trip per item
+// Slower - a separate INSERT statement and round trip per item
 const products = [];
 for (const item of items) {
   products.push(await productRepository.create(item));
@@ -143,26 +145,25 @@ const products = await productRepository.update({ id: [42, 43] }, { priceCents: 
 
 ## Destroy
 
-`destroy()` takes a where clause object. Returns an array of deleted records.
+`destroy()` takes a where clause object. Unlike `create()` and `update()`, it does not return records by default.
+It emits a plain `DELETE` with no `RETURNING` clause and resolves to `void`, which is the cheapest option.
 
 ```ts
-// Delete a single record
-const products = await productRepository.destroy({ id: 42 });
-// products = [{ id: 42, name: 'Super Widget', ... }]
+// Delete a single record (resolves to void)
+await productRepository.destroy({ id: 42 });
 
 // Delete multiple records
-const products = await productRepository.destroy({ id: [42, 43] });
+await productRepository.destroy({ id: [42, 43] });
 ```
 
-> `destroy()` always returns an array, regardless of how many records were affected.
-
-Without returning records:
+To get the deleted rows back, opt in with `returnRecords: true`:
 
 ```ts
-await productRepository.destroy({ id: 42 }, { returnRecords: false });
+const products = await productRepository.destroy({ id: [42, 43] }, { returnRecords: true });
+// products = [{ id: 42, ... }, { id: 43, ... }]
 ```
 
-With query projection:
+With query projection (implies `returnRecords`):
 
 ```ts
 const products = await productRepository.destroy({ id: [42, 43] }, { returnSelect: ['name'] });

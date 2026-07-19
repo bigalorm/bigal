@@ -5,7 +5,7 @@ description: Map PostgreSQL views to readonly models with ReadonlyRepository. Su
 # Views and Readonly Repositories
 
 BigAl does not distinguish between tables and views. Both use the `@table()` decorator. Setting `readonly: true` causes
-`initialize()` to return a `ReadonlyRepository` — which omits `create`, `update`, and `destroy` methods,
+`initialize()` to return a `ReadonlyRepository` - which omits `create`, `update`, and `destroy` methods,
 catching accidental writes at compile time.
 
 BigAl does not create or manage views. Create them in PostgreSQL via your migration tool.

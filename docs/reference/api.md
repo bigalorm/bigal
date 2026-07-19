@@ -1,5 +1,5 @@
 ---
-description: Complete API reference for BigAl — initialize(), Repository, ReadonlyRepository, query builder methods, subquery(), decorators, and types.
+description: Complete API reference for BigAl - initialize(), Repository, ReadonlyRepository, query builder methods, subquery(), decorators, and types.
 ---
 
 # API Reference
@@ -60,7 +60,7 @@ Returns a query builder for a single record or `null`. Options: `{ select?, pool
 repository.count(options?): CountQuery<T>
 ```
 
-Returns a query builder that resolves to a number. Options: `{ pool? }`. Prefer this over `findOne()` for existence checks — it performs better since it doesn't select or hydrate a row.
+Returns a query builder that resolves to a number. Options: `{ pool? }`. Prefer this over `findOne()` for existence checks - it performs better since it doesn't select or hydrate a row.
 
 ### create()
 
@@ -73,21 +73,25 @@ Insert one or multiple records. Options: `{ returnRecords?, returnSelect?, onCon
 
 An array inserts in a single statement. Prefer this over calling `create()` in a loop, which costs one round trip per record.
 
+`returnSelect` narrows the returned columns and `returnRecords: false` skips them entirely, cutting transfer and hydration cost.
+
 ### update()
 
 ```ts
 repository.update(where, values, options?): Promise<QueryResult<T>[]>
 ```
 
-Update matching records. Options: `{ returnRecords?, returnSelect? }`.
+Update matching records. Options: `{ returnRecords?, returnSelect? }`. As with `create()`, use `returnSelect` to return only the columns you need or `returnRecords: false` to skip the returned rows.
 
 ### destroy()
 
 ```ts
-repository.destroy(where, options?): Promise<QueryResult<T>[]>
+repository.destroy(where, options?): Promise<void>
+repository.destroy(where, { returnRecords: true }): Promise<QueryResult<T>[]>
 ```
 
 Delete matching records. Options: `{ returnRecords?, returnSelect? }`.
+Unlike `create()`/`update()`, `destroy()` does not return records by default (plain `DELETE`, no `RETURNING`); pass `returnRecords: true` or `returnSelect` to get the deleted rows back.
 
 ## ReadonlyRepository
 
@@ -143,7 +147,7 @@ Marks the primary key. Options: `{ type }`.
 ### @column(options)
 
 Defines a column. See [Models > Column options](/guide/models#column-options) for all options.
-Vector columns are declared with `{ type: 'vector', dimensions: n }` (`dimensions` is informational —
+Vector columns are declared with `{ type: 'vector', dimensions: n }` (`dimensions` is informational -
 BigAl does not issue DDL).
 
 ### @createDateColumn()

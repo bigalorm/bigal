@@ -61,7 +61,7 @@ const products = await productRepository
 - Bulk operations with custom locking (SELECT FOR UPDATE)
 - Database-specific features BigAl does not wrap
 
-BigAl wraps your existing connection pool — `postgres-pool`, `pg`, or `@neondatabase/serverless`.
+BigAl wraps your existing connection pool - `postgres-pool`, `pg`, or `@neondatabase/serverless`.
 The pool is always accessible for raw queries, so you can eject to SQL at any point:
 
 ```ts
@@ -88,11 +88,12 @@ Use BigAl for the 90% of queries that fit its fluent API, and raw SQL for the re
 
 ### CRUD
 
-| SQL                                                         | BigAl                                          |
-| ----------------------------------------------------------- | ---------------------------------------------- |
-| `INSERT INTO products (name) VALUES ('Widget') RETURNING *` | `productRepo.create({ name: 'Widget' })`       |
-| `UPDATE products SET name = 'X' WHERE id = 1 RETURNING *`   | `productRepo.update({ id: 1 }, { name: 'X' })` |
-| `DELETE FROM products WHERE id = 1 RETURNING *`             | `productRepo.destroy({ id: 1 })`               |
+| SQL                                                         | BigAl                                                     |
+| ----------------------------------------------------------- | --------------------------------------------------------- |
+| `INSERT INTO products (name) VALUES ('Widget') RETURNING *` | `productRepo.create({ name: 'Widget' })`                  |
+| `UPDATE products SET name = 'X' WHERE id = 1 RETURNING *`   | `productRepo.update({ id: 1 }, { name: 'X' })`            |
+| `DELETE FROM products WHERE id = 1`                         | `productRepo.destroy({ id: 1 })`                          |
+| `DELETE FROM products WHERE id = 1 RETURNING *`             | `productRepo.destroy({ id: 1 }, { returnRecords: true })` |
 
 ### Subqueries, joins, and advanced
 
@@ -146,25 +147,25 @@ class Product extends Entity {
 `'string'`, `'integer'`, `'float'`, `'boolean'`, `'date'`, `'datetime'`, `'json'`, `'string[]'`, `'integer[]'`, `'float[]'`, `'boolean[]'`, `'vector'`
 
 Vector columns (pgvector) are declared with `@column({ type: 'vector', dimensions: n })` on a `number[]` property.
-`dimensions` is informational — BigAl does not issue DDL.
+`dimensions` is informational - BigAl does not issue DDL.
 
 ### Relationships
 
-**Many-to-one** — current entity holds the foreign key:
+**Many-to-one** - current entity holds the foreign key:
 
 ```ts
 @column({ model: () => 'Store', name: 'store_id' })
 public store!: number | Store;
 ```
 
-**One-to-many** — inverse side (must be optional):
+**One-to-many** - inverse side (must be optional):
 
 ```ts
 @column({ collection: () => 'Product', via: 'store' })
 public products?: Product[];
 ```
 
-**Many-to-many** — requires a join table Entity:
+**Many-to-many** - requires a join table Entity:
 
 ```ts
 @column({
@@ -192,7 +193,7 @@ class ProductSummary extends Entity {
 
 ### Fluent builder
 
-Every query method returns a new immutable instance. Queries are `PromiseLike` — just `await` the chain.
+Every query method returns a new immutable instance. Queries are `PromiseLike` - just `await` the chain.
 
 ```ts
 // Find multiple
@@ -272,7 +273,16 @@ const product = await productRepo
 // product.store is the full Store entity
 ```
 
+`populate()` does not use a SQL `JOIN`.
+After the main query resolves, it runs a separate query per relation (batched by id, in parallel) and nests the results, so `.join()` is not needed to populate.
+Every primary row is returned whether or not the relation exists (an absent to-one is `undefined`, an empty to-many is `[]`).
+`populate`'s `where`/`limit` constrain only the related rows, not the primary results.
+Add `.join()` only when you need to filter or sort the primary results by a related table's columns.
+
 ### Joins
+
+Use `.join()`/`.leftJoin()` to constrain or sort the primary results by columns on a related table (or to join subquery aggregates), not to load related records.
+To load related records, use `.populate()` (above), which does not require a join.
 
 ```ts
 // Model join (INNER)
@@ -310,7 +320,7 @@ ORDER BY must start with the DISTINCT ON columns. Cannot combine with `withCount
 ### Create
 
 ```ts
-// Single record — returns the created record
+// Single record - returns the created record
 const product = await productRepo.create({ name: 'Widget', priceCents: 999 });
 
 // Multiple records
@@ -334,19 +344,38 @@ await productRepo.create({ name: 'Widget', priceCents: 999 }, { returnSelect: ['
 
 ### Update
 
+By default `update()` runs `RETURNING *` and hydrates the full updated rows.
+Shape what comes back to only what you need, or skip it entirely, to reduce bytes over the wire and hydration cost:
+
 ```ts
-// Returns array of updated records
+// Returns array of updated records (RETURNING *)
 const products = await productRepo.update({ id: 42 }, { name: 'Super Widget' });
 
 // Update multiple
 const products = await productRepo.update({ id: [42, 43] }, { priceCents: 1299 });
+
+// Return only specific columns (primary key always included) - smaller RETURNING clause, less to hydrate
+const products = await productRepo.update({ id: 42 }, { name: 'Super Widget' }, { returnSelect: ['name'] });
+
+// Skip returning records entirely (no RETURNING clause) - fastest when you do not need the rows back
+await productRepo.update({ id: 42 }, { name: 'Super Widget' }, { returnRecords: false });
 ```
 
 ### Destroy
 
+Unlike `create()`/`update()`, `destroy()` does not return records by default.
+It emits a plain `DELETE` with no `RETURNING` clause, which is the cheapest option.
+Opt in to the deleted rows only when you need them, and prefer `returnSelect` to bring back just the columns you use:
+
 ```ts
-// Returns array of deleted records
-const products = await productRepo.destroy({ id: 42 });
+// Default: deletes and resolves to void (no RETURNING clause)
+await productRepo.destroy({ id: 42 });
+
+// Opt in to the deleted rows (RETURNING *)
+const products = await productRepo.destroy({ id: 42 }, { returnRecords: true });
+
+// Return only specific columns (primary key always included) - returnSelect implies returnRecords
+const products = await productRepo.destroy({ id: 42 }, { returnSelect: ['name'] });
 ```
 
 ### Subqueries
@@ -372,7 +401,7 @@ await productRepo.find().where({ price: { '>': avgPrice } });
 ```ts
 // In the model: @column({ type: 'vector', dimensions: 1536 }) public embedding?: number[];
 
-// Sort by similarity — metric: 'cosine' (default, <=>), 'l2' (<->), 'l1' (<+>), 'innerProduct' (<#>)
+// Sort by similarity - metric: 'cosine' (default, <=>), 'l2' (<->), 'l1' (<+>), 'innerProduct' (<#>)
 const similar = await documentRepo
   .find()
   .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
@@ -400,7 +429,7 @@ Collection properties (one-to-many, many-to-many) must use `?`, not `!`. They ar
 @column({ collection: () => 'Product', via: 'store' })
 public products?: Product[];
 
-// Wrong — causes QueryResult type errors
+// Wrong - causes QueryResult type errors
 @column({ collection: () => 'Product', via: 'store' })
 public products!: Product[];
 ```
@@ -431,7 +460,7 @@ const query = productRepo.find().where({ store: storeId });
 const sorted = query.sort('name asc');
 const results = await sorted.limit(10);
 
-// Wrong — .sort() result is discarded
+// Wrong - .sort() result is discarded
 const query = productRepo.find().where({ store: storeId });
 query.sort('name asc'); // This does nothing to `query`
 const results = await query;
@@ -451,27 +480,48 @@ type ProductSummary = Pick<QueryResult<Product>, 'id' | 'name' | 'store'>;
 type ProductSummaryWrong = Pick<Product, 'id' | 'name' | 'store'>;
 ```
 
+### Select only the columns you need
+
+`find()`/`findOne()` select every column by default. Pass `select` to return only the columns you actually use.
+This shrinks the SELECT list, reduces bytes transferred, and lowers hydration cost.
+For wide rows, large JSON blobs, or vector/embedding columns it can be a large win, since the database only reads and ships those columns when you ask for them.
+`populate()` and joined models accept the same `select` option:
+
+```ts
+// Selects every column
+const product = await productRepo.findOne().where({ id: 42 });
+
+// Selects only the primary key (always included) + name + priceCents
+const product = await productRepo.findOne({ select: ['name', 'priceCents'] }).where({ id: 42 });
+
+// Applies to lists, populated relations, and joins too
+const products = await productRepo
+  .find({ select: ['name'] })
+  .where({ store: storeId })
+  .populate('store', { select: ['name'] });
+```
+
 ### Prefer count() over findOne() for existence checks
 
-If you only need to know whether a match exists, use `count()` instead of `findOne()` — it performs better since it doesn't select or hydrate a row:
+If you only need to know whether a match exists, use `count()` instead of `findOne()` - it performs better since it doesn't select or hydrate a row:
 
 ```ts
 // Correct
 const exists = (await productRepo.count().where({ sku: 'ABC123' })) > 0;
 
-// Wasteful — findOne() selects and hydrates a full row just to check for existence
+// Wasteful - findOne() selects and hydrates a full row just to check for existence
 const exists = (await productRepo.findOne().where({ sku: 'ABC123' })) != null;
 ```
 
 ### Prefer an array to create() over looping
 
-Passing an array to `create()` builds a single multi-row `INSERT` statement — one round trip for the whole batch. Calling `create()` in a loop issues a separate `INSERT` (and round trip) per record:
+Passing an array to `create()` builds a single multi-row `INSERT` statement - one round trip for the whole batch. Calling `create()` in a loop issues a separate `INSERT` (and round trip) per record:
 
 ```ts
-// Correct — one INSERT statement for all rows
+// Correct - one INSERT statement for all rows
 const products = await productRepo.create(items);
 
-// Slower — a separate INSERT statement and round trip per item
+// Slower - a separate INSERT statement and round trip per item
 const products = [];
 for (const item of items) {
   products.push(await productRepo.create(item));
@@ -499,17 +549,18 @@ After applying this skill, verify:
 - [ ] JSON column types with `id` fields use `NotEntity<T>`
 - [ ] Model names in decorators are strings (`'Store'`) to avoid circular imports
 - [ ] `QueryResult<T>` is used for derived types involving relationships
+- [ ] Queries return only needed data: `select` on `find()`/`findOne()`/`populate()`, and `returnSelect` / `returnRecords: false` on `create()`/`update()`/`destroy()` when the full row is not needed
 
 ## Further Reading
 
-- [Getting Started](https://bigalorm.github.io/bigal/getting-started) — install, first model, first query
-- [Models](https://bigalorm.github.io/bigal/guide/models) — decorators, column options, relationships
-- [Querying](https://bigalorm.github.io/bigal/guide/querying) — operators, pagination, JSONB, DISTINCT ON
-- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) — create, update, destroy, upserts
-- [Relationships](https://bigalorm.github.io/bigal/guide/relationships) — many-to-one, one-to-many, many-to-many, QueryResult
-- [Subqueries and Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) — subquery builder, aggregates, GROUP BY
-- [Views](https://bigalorm.github.io/bigal/guide/views) — readonly models and ReadonlyRepository
-- [API Reference](https://bigalorm.github.io/bigal/reference/api) — all exports and method signatures
-- [Configuration](https://bigalorm.github.io/bigal/reference/configuration) — pools, read replicas, multi-database
-- [BigAl vs Raw SQL](https://bigalorm.github.io/bigal/advanced/bigal-vs-raw-sql) — decision framework
-- [Known Issues](https://bigalorm.github.io/bigal/advanced/known-issues) — workarounds and debugging
+- [Getting Started](https://bigalorm.github.io/bigal/getting-started) - install, first model, first query
+- [Models](https://bigalorm.github.io/bigal/guide/models) - decorators, column options, relationships
+- [Querying](https://bigalorm.github.io/bigal/guide/querying) - operators, pagination, JSONB, DISTINCT ON
+- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) - create, update, destroy, upserts
+- [Relationships](https://bigalorm.github.io/bigal/guide/relationships) - many-to-one, one-to-many, many-to-many, QueryResult
+- [Subqueries and Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) - subquery builder, aggregates, GROUP BY
+- [Views](https://bigalorm.github.io/bigal/guide/views) - readonly models and ReadonlyRepository
+- [API Reference](https://bigalorm.github.io/bigal/reference/api) - all exports and method signatures
+- [Configuration](https://bigalorm.github.io/bigal/reference/configuration) - pools, read replicas, multi-database
+- [BigAl vs Raw SQL](https://bigalorm.github.io/bigal/advanced/bigal-vs-raw-sql) - decision framework
+- [Known Issues](https://bigalorm.github.io/bigal/advanced/known-issues) - workarounds and debugging

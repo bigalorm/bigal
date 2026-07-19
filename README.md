@@ -5,7 +5,7 @@
 [![Known Vulnerabilities](https://snyk.io/test/npm/bigal/badge.svg)](https://snyk.io/test/npm/bigal)
 
 A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js. BigAl uses a fluent builder pattern for queries,
-decorator-based models, and immutable query state. Built exclusively for Postgres — queries are tuned for
+decorator-based models, and immutable query state. Built exclusively for Postgres - queries are tuned for
 Postgres performance with native support for JSONB, DISTINCT ON, subquery joins, ON CONFLICT upserts, and pgvector.
 
 ## Install
@@ -49,7 +49,7 @@ const pool = new Pool('postgres://localhost/mydb');
 const repos = initialize({ models: [Product], pool });
 const productRepository = repos.Product as Repository<Product>;
 
-// Fluent queries — just await the chain
+// Fluent queries - just await the chain
 const products = await productRepository
   .find()
   .where({ priceCents: { '>=': 1000 }, name: { contains: 'widget' } })
@@ -64,12 +64,12 @@ await productRepository.create({ name: 'Widget', sku: 'WDG-001', priceCents: 999
 
 Full documentation is available at **[bigalorm.github.io/bigal](https://bigalorm.github.io/bigal/)**.
 
-- [Getting Started](https://bigalorm.github.io/bigal/getting-started) — install, first model, first query
-- [Models](https://bigalorm.github.io/bigal/guide/models) — decorators, column options, relationships
-- [Querying](https://bigalorm.github.io/bigal/guide/querying) — operators, pagination, JSONB, DISTINCT ON
-- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) — create, update, destroy, upserts
-- [Subqueries & Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) — subquery builder, aggregates
-- [API Reference](https://bigalorm.github.io/bigal/reference/api) — all exports and method signatures
+- [Getting Started](https://bigalorm.github.io/bigal/getting-started) - install, first model, first query
+- [Models](https://bigalorm.github.io/bigal/guide/models) - decorators, column options, relationships
+- [Querying](https://bigalorm.github.io/bigal/guide/querying) - operators, pagination, JSONB, DISTINCT ON
+- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) - create, update, destroy, upserts
+- [Subqueries & Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) - subquery builder, aggregates
+- [API Reference](https://bigalorm.github.io/bigal/reference/api) - all exports and method signatures
 
 ## Machine-Readable Documentation
 

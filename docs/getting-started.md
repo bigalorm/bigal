@@ -67,7 +67,7 @@ const productRepository = repos.Product as Repository<Product>;
 
 ## Run your first query
 
-Queries use a fluent builder and are `PromiseLike` — just `await` the chain.
+Queries use a fluent builder and are `PromiseLike` - just `await` the chain.
 
 ```ts
 // Find all products with price >= 1000 cents, sorted by name
@@ -95,12 +95,12 @@ npx skills add bigalorm/bigal
 
 Machine-readable documentation is also available:
 
-- [llms.txt](/llms.txt) — structured overview
-- [llms-full.txt](/llms-full.txt) — complete documentation in a single file
+- [llms.txt](/llms.txt) - structured overview
+- [llms-full.txt](/llms-full.txt) - complete documentation in a single file
 
 ## Next steps
 
-- [Models](/guide/models) — decorators, relationships, and Entity types
-- [Querying](/guide/querying) — operators, pagination, JSONB, and more
-- [CRUD Operations](/guide/crud-operations) — create, update, and destroy
-- [API Reference](/reference/api) — all exports and method signatures
+- [Models](/guide/models) - decorators, relationships, and Entity types
+- [Querying](/guide/querying) - operators, pagination, JSONB, and more
+- [CRUD Operations](/guide/crud-operations) - create, update, and destroy
+- [API Reference](/reference/api) - all exports and method signatures

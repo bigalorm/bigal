@@ -4,7 +4,7 @@ description: Fluent query builder for find, findOne, and count with WHERE operat
 
 # Querying
 
-BigAl provides `findOne()`, `find()`, and `count()` methods on repositories. Queries use a fluent builder pattern —
+BigAl provides `findOne()`, `find()`, and `count()` methods on repositories. Queries use a fluent builder pattern -
 each method returns a new immutable instance, and queries are `PromiseLike` so you can `await` them directly.
 
 ## findOne
@@ -17,7 +17,10 @@ const product = await productRepository.findOne().where({ id: 42 });
 
 ### Query projection
 
-Select specific columns:
+Pass `select` to return only the columns you need instead of every column (the default).
+This shrinks the SELECT list, reduces bytes transferred, and lowers hydration cost.
+It is a large win for wide rows, big JSON blobs, or vector/embedding columns you do not need on a given path.
+`find()` and `populate()` accept the same option.
 
 ```ts
 const product = await productRepository
@@ -25,6 +28,9 @@ const product = await productRepository
     select: ['name', 'sku'],
   })
   .where({ id: 42 });
+
+// find() takes the same option
+const products = await productRepository.find({ select: ['name', 'sku'] }).where({ store: storeId });
 ```
 
 ### Pool override
@@ -57,7 +63,7 @@ const count = await productRepository.count().where({
 });
 ```
 
-If you only need to know whether a match exists, use `count()` instead of `findOne()` — it performs better since it doesn't select or hydrate a row:
+If you only need to know whether a match exists, use `count()` instead of `findOne()` - it performs better since it doesn't select or hydrate a row:
 
 ```ts
 const exists = (await productRepository.count().where({ sku: 'ABC123' })) > 0;
@@ -187,9 +193,9 @@ await repo.find().where({ bar: { theme: { '!': null } } });
 ```
 
 Note that `IS NULL` on a JSONB property is true both when the key is missing from the object and when it is
-explicitly set to `null`. This matches PostgreSQL's behavior — the `->>` operator returns `NULL` in both cases.
+explicitly set to `null`. This matches PostgreSQL's behavior - the `->>` operator returns `NULL` in both cases.
 
-Properties set to `undefined` in a where clause are silently ignored (standard JavaScript — `undefined` values are
+Properties set to `undefined` in a where clause are silently ignored (standard JavaScript - `undefined` values are
 dropped by `Object.entries`). To query for missing or null properties, always use `null` explicitly.
 
 ### JSONB containment
@@ -333,6 +339,13 @@ const product = await productRepository
 // product.store is the full Store entity
 console.log(product.store.name);
 ```
+
+`populate()` does not use a SQL `JOIN`.
+After the main query resolves, it runs a separate query per populated relation (batched by id and hydrated back onto the results), so `.join()` is not required to populate a relation.
+Every matched primary row is returned whether or not the relation exists - an absent to-one is `undefined`, an empty to-many is `[]`.
+The populate `where`/`limit` options constrain only the related rows, never the primary results.
+Reach for [`.join()`](/guide/subqueries-and-joins#model-joins) only to constrain or sort the primary results by columns on the related table (for example, only products whose store is active).
+Without such a constraint, `.populate()` on its own is all you need.
 
 ## toJSON
 

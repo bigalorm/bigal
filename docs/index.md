@@ -18,7 +18,7 @@ features:
   - title: Decorator-based models
     details: Define tables, columns, and relationships with TypeScript decorators. Inheritance and schema support built in.
   - title: Type-safe queries
-    details: WhereQuery types narrow automatically — relationship fields resolve to foreign keys or populated entities without type assertions.
+    details: WhereQuery types narrow automatically - relationship fields resolve to foreign keys or populated entities without type assertions.
 ---
 
 <!-- markdownlint-disable MD013 MD033 MD041 -->
@@ -48,7 +48,7 @@ features:
 <div class="code-showcase">
 
 <h2>What it looks like</h2>
-<p class="subtitle">Define a model, query it — that's it.</p>
+<p class="subtitle">Define a model, query it - that's it.</p>
 
 ```ts
 import { column, primaryColumn, table, Entity, initialize } from 'bigal';
@@ -75,7 +75,7 @@ const repos = initialize({
 });
 const productRepo = repos.Product as Repository<Product>;
 
-// Fluent queries — just await the chain
+// Fluent queries - just await the chain
 const products = await productRepo
   .find()
   .where({ priceCents: { '>': 1000 }, name: { contains: 'widget' } })
