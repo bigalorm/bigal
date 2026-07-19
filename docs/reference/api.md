@@ -1,5 +1,5 @@
 ---
-description: Complete API reference for BigAl — initialize(), Repository, ReadonlyRepository, query builder methods, subquery(), decorators, and types.
+description: Complete API reference for BigAl - initialize(), Repository, ReadonlyRepository, query builder methods, subquery(), decorators, and types.
 ---
 
 # API Reference
@@ -60,7 +60,7 @@ Returns a query builder for a single record or `null`. Options: `{ select?, pool
 repository.count(options?): CountQuery<T>
 ```
 
-Returns a query builder that resolves to a number. Options: `{ pool? }`. Prefer this over `findOne()` for existence checks — it performs better since it doesn't select or hydrate a row.
+Returns a query builder that resolves to a number. Options: `{ pool? }`. Prefer this over `findOne()` for existence checks - it performs better since it doesn't select or hydrate a row.
 
 ### create()
 
@@ -147,7 +147,7 @@ Marks the primary key. Options: `{ type }`.
 ### @column(options)
 
 Defines a column. See [Models > Column options](/guide/models#column-options) for all options.
-Vector columns are declared with `{ type: 'vector', dimensions: n }` (`dimensions` is informational —
+Vector columns are declared with `{ type: 'vector', dimensions: n }` (`dimensions` is informational -
 BigAl does not issue DDL).
 
 ### @createDateColumn()

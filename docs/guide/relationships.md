@@ -27,7 +27,7 @@ export class Product extends Entity {
 }
 ```
 
-- The property type is `number | Store` — foreign key when not populated, full entity after `.populate()`
+- The property type is `number | Store` - foreign key when not populated, full entity after `.populate()`
 - Use `name: 'store_id'` when the database column differs from the property name
 - Reference the model by string name (`'Store'`) to avoid circular imports
 - Model names are case-insensitive
@@ -54,7 +54,7 @@ export class Store extends Entity {
 ```
 
 - `via` references the property name on the related model (not the database column)
-- Collections **must** be optional (`?`) — they are only present after `.populate()`
+- Collections **must** be optional (`?`) - they are only present after `.populate()`
 
 ## Many-to-many (through)
 
@@ -207,9 +207,9 @@ const compilation = await compilationRepository
 
 ## Best practices
 
-1. **Use `QueryResult<T>` for return types** — avoids union type ambiguity
-2. **Use string references for model names** — prevents circular imports
-3. **Mark collections as optional** — they are `undefined` unless populated
-4. **Avoid type assertions** — `QueryResult` narrows types automatically
-5. **Use `.toJSON()` for serializable results** — strips class prototypes
+1. **Use `QueryResult<T>` for return types** - avoids union type ambiguity
+2. **Use string references for model names** - prevents circular imports
+3. **Mark collections as optional** - they are `undefined` unless populated
+4. **Avoid type assertions** - `QueryResult` narrows types automatically
+5. **Use `.toJSON()` for serializable results** - strips class prototypes
 6. **Load relations with `.populate()`** - it runs a separate query per relation and does not require `.join()`; reach for `.join()` only to constrain the primary results by a related table

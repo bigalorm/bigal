@@ -1,5 +1,5 @@
 ---
-description: Known issues and workarounds — optional collections, NotEntity for JSON objects with id fields, and DEBUG_BIGAL logging.
+description: Known issues and workarounds - optional collections, NotEntity for JSON objects with id fields, and DEBUG_BIGAL logging.
 ---
 
 # Known Issues
@@ -13,7 +13,7 @@ Collection properties (one-to-many, many-to-many) must be declared as optional. 
 @column({ collection: () => 'Product', via: 'store' })
 public products?: Product[];
 
-// Incorrect — causes type issues
+// Incorrect - causes type issues
 @column({ collection: () => 'Product', via: 'store' })
 public products!: Product[];
 ```

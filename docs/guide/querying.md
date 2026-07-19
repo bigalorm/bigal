@@ -4,7 +4,7 @@ description: Fluent query builder for find, findOne, and count with WHERE operat
 
 # Querying
 
-BigAl provides `findOne()`, `find()`, and `count()` methods on repositories. Queries use a fluent builder pattern —
+BigAl provides `findOne()`, `find()`, and `count()` methods on repositories. Queries use a fluent builder pattern -
 each method returns a new immutable instance, and queries are `PromiseLike` so you can `await` them directly.
 
 ## findOne
@@ -63,7 +63,7 @@ const count = await productRepository.count().where({
 });
 ```
 
-If you only need to know whether a match exists, use `count()` instead of `findOne()` — it performs better since it doesn't select or hydrate a row:
+If you only need to know whether a match exists, use `count()` instead of `findOne()` - it performs better since it doesn't select or hydrate a row:
 
 ```ts
 const exists = (await productRepository.count().where({ sku: 'ABC123' })) > 0;
@@ -193,9 +193,9 @@ await repo.find().where({ bar: { theme: { '!': null } } });
 ```
 
 Note that `IS NULL` on a JSONB property is true both when the key is missing from the object and when it is
-explicitly set to `null`. This matches PostgreSQL's behavior — the `->>` operator returns `NULL` in both cases.
+explicitly set to `null`. This matches PostgreSQL's behavior - the `->>` operator returns `NULL` in both cases.
 
-Properties set to `undefined` in a where clause are silently ignored (standard JavaScript — `undefined` values are
+Properties set to `undefined` in a where clause are silently ignored (standard JavaScript - `undefined` values are
 dropped by `Object.entries`). To query for missing or null properties, always use `null` explicitly.
 
 ### JSONB containment

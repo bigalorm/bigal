@@ -61,7 +61,7 @@ const products = await productRepository
 - Bulk operations with custom locking (SELECT FOR UPDATE)
 - Database-specific features BigAl does not wrap
 
-BigAl wraps your existing connection pool — `postgres-pool`, `pg`, or `@neondatabase/serverless`.
+BigAl wraps your existing connection pool - `postgres-pool`, `pg`, or `@neondatabase/serverless`.
 The pool is always accessible for raw queries, so you can eject to SQL at any point:
 
 ```ts
@@ -147,25 +147,25 @@ class Product extends Entity {
 `'string'`, `'integer'`, `'float'`, `'boolean'`, `'date'`, `'datetime'`, `'json'`, `'string[]'`, `'integer[]'`, `'float[]'`, `'boolean[]'`, `'vector'`
 
 Vector columns (pgvector) are declared with `@column({ type: 'vector', dimensions: n })` on a `number[]` property.
-`dimensions` is informational — BigAl does not issue DDL.
+`dimensions` is informational - BigAl does not issue DDL.
 
 ### Relationships
 
-**Many-to-one** — current entity holds the foreign key:
+**Many-to-one** - current entity holds the foreign key:
 
 ```ts
 @column({ model: () => 'Store', name: 'store_id' })
 public store!: number | Store;
 ```
 
-**One-to-many** — inverse side (must be optional):
+**One-to-many** - inverse side (must be optional):
 
 ```ts
 @column({ collection: () => 'Product', via: 'store' })
 public products?: Product[];
 ```
 
-**Many-to-many** — requires a join table Entity:
+**Many-to-many** - requires a join table Entity:
 
 ```ts
 @column({
@@ -193,7 +193,7 @@ class ProductSummary extends Entity {
 
 ### Fluent builder
 
-Every query method returns a new immutable instance. Queries are `PromiseLike` — just `await` the chain.
+Every query method returns a new immutable instance. Queries are `PromiseLike` - just `await` the chain.
 
 ```ts
 // Find multiple
@@ -320,7 +320,7 @@ ORDER BY must start with the DISTINCT ON columns. Cannot combine with `withCount
 ### Create
 
 ```ts
-// Single record — returns the created record
+// Single record - returns the created record
 const product = await productRepo.create({ name: 'Widget', priceCents: 999 });
 
 // Multiple records
@@ -401,7 +401,7 @@ await productRepo.find().where({ price: { '>': avgPrice } });
 ```ts
 // In the model: @column({ type: 'vector', dimensions: 1536 }) public embedding?: number[];
 
-// Sort by similarity — metric: 'cosine' (default, <=>), 'l2' (<->), 'l1' (<+>), 'innerProduct' (<#>)
+// Sort by similarity - metric: 'cosine' (default, <=>), 'l2' (<->), 'l1' (<+>), 'innerProduct' (<#>)
 const similar = await documentRepo
   .find()
   .sort({ embedding: { nearestTo: queryVector, metric: 'cosine' } })
@@ -429,7 +429,7 @@ Collection properties (one-to-many, many-to-many) must use `?`, not `!`. They ar
 @column({ collection: () => 'Product', via: 'store' })
 public products?: Product[];
 
-// Wrong — causes QueryResult type errors
+// Wrong - causes QueryResult type errors
 @column({ collection: () => 'Product', via: 'store' })
 public products!: Product[];
 ```
@@ -460,7 +460,7 @@ const query = productRepo.find().where({ store: storeId });
 const sorted = query.sort('name asc');
 const results = await sorted.limit(10);
 
-// Wrong — .sort() result is discarded
+// Wrong - .sort() result is discarded
 const query = productRepo.find().where({ store: storeId });
 query.sort('name asc'); // This does nothing to `query`
 const results = await query;
@@ -503,25 +503,25 @@ const products = await productRepo
 
 ### Prefer count() over findOne() for existence checks
 
-If you only need to know whether a match exists, use `count()` instead of `findOne()` — it performs better since it doesn't select or hydrate a row:
+If you only need to know whether a match exists, use `count()` instead of `findOne()` - it performs better since it doesn't select or hydrate a row:
 
 ```ts
 // Correct
 const exists = (await productRepo.count().where({ sku: 'ABC123' })) > 0;
 
-// Wasteful — findOne() selects and hydrates a full row just to check for existence
+// Wasteful - findOne() selects and hydrates a full row just to check for existence
 const exists = (await productRepo.findOne().where({ sku: 'ABC123' })) != null;
 ```
 
 ### Prefer an array to create() over looping
 
-Passing an array to `create()` builds a single multi-row `INSERT` statement — one round trip for the whole batch. Calling `create()` in a loop issues a separate `INSERT` (and round trip) per record:
+Passing an array to `create()` builds a single multi-row `INSERT` statement - one round trip for the whole batch. Calling `create()` in a loop issues a separate `INSERT` (and round trip) per record:
 
 ```ts
-// Correct — one INSERT statement for all rows
+// Correct - one INSERT statement for all rows
 const products = await productRepo.create(items);
 
-// Slower — a separate INSERT statement and round trip per item
+// Slower - a separate INSERT statement and round trip per item
 const products = [];
 for (const item of items) {
   products.push(await productRepo.create(item));
@@ -553,14 +553,14 @@ After applying this skill, verify:
 
 ## Further Reading
 
-- [Getting Started](https://bigalorm.github.io/bigal/getting-started) — install, first model, first query
-- [Models](https://bigalorm.github.io/bigal/guide/models) — decorators, column options, relationships
-- [Querying](https://bigalorm.github.io/bigal/guide/querying) — operators, pagination, JSONB, DISTINCT ON
-- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) — create, update, destroy, upserts
-- [Relationships](https://bigalorm.github.io/bigal/guide/relationships) — many-to-one, one-to-many, many-to-many, QueryResult
-- [Subqueries and Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) — subquery builder, aggregates, GROUP BY
-- [Views](https://bigalorm.github.io/bigal/guide/views) — readonly models and ReadonlyRepository
-- [API Reference](https://bigalorm.github.io/bigal/reference/api) — all exports and method signatures
-- [Configuration](https://bigalorm.github.io/bigal/reference/configuration) — pools, read replicas, multi-database
-- [BigAl vs Raw SQL](https://bigalorm.github.io/bigal/advanced/bigal-vs-raw-sql) — decision framework
-- [Known Issues](https://bigalorm.github.io/bigal/advanced/known-issues) — workarounds and debugging
+- [Getting Started](https://bigalorm.github.io/bigal/getting-started) - install, first model, first query
+- [Models](https://bigalorm.github.io/bigal/guide/models) - decorators, column options, relationships
+- [Querying](https://bigalorm.github.io/bigal/guide/querying) - operators, pagination, JSONB, DISTINCT ON
+- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) - create, update, destroy, upserts
+- [Relationships](https://bigalorm.github.io/bigal/guide/relationships) - many-to-one, one-to-many, many-to-many, QueryResult
+- [Subqueries and Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) - subquery builder, aggregates, GROUP BY
+- [Views](https://bigalorm.github.io/bigal/guide/views) - readonly models and ReadonlyRepository
+- [API Reference](https://bigalorm.github.io/bigal/reference/api) - all exports and method signatures
+- [Configuration](https://bigalorm.github.io/bigal/reference/configuration) - pools, read replicas, multi-database
+- [BigAl vs Raw SQL](https://bigalorm.github.io/bigal/advanced/bigal-vs-raw-sql) - decision framework
+- [Known Issues](https://bigalorm.github.io/bigal/advanced/known-issues) - workarounds and debugging

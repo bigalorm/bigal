@@ -35,10 +35,10 @@ Passing an array builds a single multi-row `INSERT` statement, one round trip fo
 `create()` in a loop, which issues a separate `INSERT` (and round trip) per record:
 
 ```ts
-// Correct — one INSERT statement for all rows
+// Correct - one INSERT statement for all rows
 const products = await productRepository.create(items);
 
-// Slower — a separate INSERT statement and round trip per item
+// Slower - a separate INSERT statement and round trip per item
 const products = [];
 for (const item of items) {
   products.push(await productRepository.create(item));

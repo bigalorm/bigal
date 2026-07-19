@@ -67,7 +67,7 @@ public embedding?: number[];
 ```
 
 Requires the [pgvector](https://github.com/pgvector/pgvector) extension. The `dimensions` option is
-informational — BigAl does not issue DDL. See
+informational - BigAl does not issue DDL. See
 [Querying > Vector distance queries](/guide/querying#vector-distance-queries) for sorting and
 filtering by similarity.
 
@@ -112,7 +112,7 @@ public version!: number;
 | `name`       | `string`       | Database column name (if different from property name)                                                                                                              |
 | `required`   | `boolean`      | If `true`, value must not be null                                                                                                                                   |
 | `defaultsTo` | `any`          | Default value                                                                                                                                                       |
-| `dimensions` | `number`       | Number of dimensions for `'vector'` columns. Informational only — BigAl does not issue DDL                                                                          |
+| `dimensions` | `number`       | Number of dimensions for `'vector'` columns. Informational only - BigAl does not issue DDL                                                                          |
 | `model`      | `() => string` | Foreign key relationship (many-to-one)                                                                                                                              |
 | `collection` | `() => string` | Inverse relationship (one-to-many or many-to-many)                                                                                                                  |
 | `through`    | `() => string` | Join table for many-to-many                                                                                                                                         |
@@ -138,7 +138,7 @@ export class Product extends Entity {
 }
 ```
 
-The property type is `number | Store` — it holds the foreign key when not populated, or the full entity after `.populate()`.
+The property type is `number | Store` - it holds the foreign key when not populated, or the full entity after `.populate()`.
 
 ### One-to-many
 
@@ -168,7 +168,7 @@ See [Relationships](/guide/relationships) for complete examples including join t
 
 ## Entity base class
 
-All models extend `Entity`, which provides no properties by itself — it serves as a marker for BigAl's type system to distinguish ORM entities from plain objects.
+All models extend `Entity`, which provides no properties by itself - it serves as a marker for BigAl's type system to distinguish ORM entities from plain objects.
 
 ## NotEntity\<T\>
 
