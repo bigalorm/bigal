@@ -273,7 +273,16 @@ const product = await productRepo
 // product.store is the full Store entity
 ```
 
+`populate()` does not use a SQL `JOIN`.
+After the main query resolves, it runs a separate query per relation (batched by id, in parallel) and nests the results, so `.join()` is not needed to populate.
+Every primary row is returned whether or not the relation exists (an absent to-one is `undefined`, an empty to-many is `[]`).
+`populate`'s `where`/`limit` constrain only the related rows, not the primary results.
+Add `.join()` only when you need to filter or sort the primary results by a related table's columns.
+
 ### Joins
+
+Use `.join()`/`.leftJoin()` to constrain or sort the primary results by columns on a related table (or to join subquery aggregates), not to load related records.
+To load related records, use `.populate()` (above), which does not require a join.
 
 ```ts
 // Model join (INNER)

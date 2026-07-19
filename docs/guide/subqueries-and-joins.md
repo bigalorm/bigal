@@ -119,6 +119,15 @@ const products = await productRepository.find().leftJoin('store', 'activeStore',
 When a query includes any join, BigAl automatically qualifies the base table's own columns (in `SELECT`, `WHERE`, `ORDER BY`, and `DISTINCT ON`) with the base table name.
 This keeps columns that share a name across the base and joined tables (most commonly `id`) from being ambiguous, so `.join()` is safe to use without falling back to raw SQL.
 
+### `.join()` vs `.populate()`
+
+`.join()` and [`.populate()`](/guide/querying#populate) solve different problems, and you do not need `.join()` to populate a relation:
+
+- `.join()` adds a SQL `JOIN` to the main query so you can filter or sort the base results by columns on the related table. It does not hydrate the related entity onto a nested property.
+- `.populate()` loads the related records. It runs a separate query after the main query resolves (not a `JOIN`) and nests the results, so it works on its own.
+
+Use `.join()` alongside `.populate()` only when you also need to constrain the base results by the related table. Without such a constraint, `.populate()` by itself is enough.
+
 ## Subquery joins
 
 Join to subquery results:

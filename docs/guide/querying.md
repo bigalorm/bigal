@@ -340,6 +340,13 @@ const product = await productRepository
 console.log(product.store.name);
 ```
 
+`populate()` does not use a SQL `JOIN`.
+After the main query resolves, it runs a separate query per populated relation (batched by id and hydrated back onto the results), so `.join()` is not required to populate a relation.
+Every matched primary row is returned whether or not the relation exists - an absent to-one is `undefined`, an empty to-many is `[]`.
+The populate `where`/`limit` options constrain only the related rows, never the primary results.
+Reach for [`.join()`](/guide/subqueries-and-joins#model-joins) only to constrain or sort the primary results by columns on the related table (for example, only products whose store is active).
+Without such a constraint, `.populate()` on its own is all you need.
+
 ## toJSON
 
 Return plain objects without class prototypes:

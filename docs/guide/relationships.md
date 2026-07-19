@@ -212,3 +212,4 @@ const compilation = await compilationRepository
 3. **Mark collections as optional** — they are `undefined` unless populated
 4. **Avoid type assertions** — `QueryResult` narrows types automatically
 5. **Use `.toJSON()` for serializable results** — strips class prototypes
+6. **Load relations with `.populate()`** - it runs a separate query per relation and does not require `.join()`; reach for `.join()` only to constrain the primary results by a related table
