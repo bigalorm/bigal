@@ -4,8 +4,8 @@
 [![node version](https://img.shields.io/node/v/bigal.svg?style=flat)](https://nodejs.org)
 [![Known Vulnerabilities](https://snyk.io/test/npm/bigal/badge.svg)](https://snyk.io/test/npm/bigal)
 
-A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js. BigAl uses a fluent builder pattern for queries,
-decorator-based models, and immutable query state. Built exclusively for Postgres - queries are tuned for
+A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js. BigAl uses a fluent builder pattern for queries
+and decorator-based models. Built exclusively for Postgres - queries are tuned for
 Postgres performance with native support for JSONB, DISTINCT ON, subquery joins, ON CONFLICT upserts, and pgvector.
 
 ## Install

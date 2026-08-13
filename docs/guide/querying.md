@@ -5,7 +5,9 @@ description: Fluent query builder for find, findOne, and count with WHERE operat
 # Querying
 
 BigAl provides `findOne()`, `find()`, and `count()` methods on repositories. Queries use a fluent builder pattern -
-each method returns a new immutable instance, and queries are `PromiseLike` so you can `await` them directly.
+chained methods build up one query object, and queries are `PromiseLike` so you can `await` the chain directly.
+Each call to `find()`, `findOne()`, or `count()` starts a fresh query. See the
+[API reference](/reference/api#query-builder-methods) for the full list of chainable methods.
 
 ## findOne
 
@@ -32,6 +34,15 @@ const product = await productRepository
 // find() takes the same option
 const products = await productRepository.find({ select: ['name', 'sku'] }).where({ store: storeId });
 ```
+
+`.select()` is also available as a chained method and narrows the result type to the picked columns:
+
+```ts
+const products = await productRepository.find().select(['name', 'sku']).where({ store: storeId });
+// products: Pick<QueryResult<Product>, 'name' | 'sku'>[]
+```
+
+The primary key column is always included in the generated SQL, even when it is not in the `select` list.
 
 ### Pool override
 
@@ -70,6 +81,9 @@ const exists = (await productRepository.count().where({ sku: 'ABC123' })) > 0;
 ```
 
 ## Where operators
+
+Calling `.where()` more than once replaces the previous filter - combine conditions in a single object
+instead. (`.sort()` is the opposite: repeated calls [append](#multiple-sort-calls).)
 
 ### String matching
 
@@ -213,16 +227,31 @@ await repo.find().where({
 
 ### String syntax
 
+Direction is `asc` or `desc` (case-insensitive) and defaults to ascending when omitted:
+
 ```ts
+await productRepository.find().where({}).sort('name'); // ASC
 await productRepository.find().where({}).sort('name asc');
 await productRepository.find().where({}).sort('name asc, createdAt desc');
 ```
 
 ### Object syntax
 
+Values can be `1`/`-1` or `'asc'`/`'desc'`:
+
 ```ts
 await productRepository.find().where({}).sort({ name: 1 }); // ASC
 await productRepository.find().where({}).sort({ name: 1, createdAt: -1 }); // ASC, DESC
+await productRepository.find().where({}).sort({ name: 'asc', createdAt: 'desc' }); // Same as above
+```
+
+### Multiple sort calls
+
+Repeated `.sort()` calls append sort columns instead of replacing them - these are equivalent:
+
+```ts
+await productRepository.find().sort('store').sort('createdAt desc');
+await productRepository.find().sort('store, createdAt desc');
 ```
 
 ## Vector distance queries
@@ -296,10 +325,12 @@ await productRepository.find().where({}).skip(20).limit(10);
 
 ### paginate
 
+`paginate({ page, limit })` is shorthand for `.skip((page - 1) * limit).limit(limit)`. `page` starts at 1;
+values below 1 are treated as page 1.
+
 ```ts
-const page = 2;
-const pageSize = 25;
-await productRepository.find().where({}).paginate(page, pageSize);
+await productRepository.find().where({}).paginate({ page: 2, limit: 25 });
+// SQL: ... LIMIT 25 OFFSET 25
 ```
 
 ### withCount
@@ -328,7 +359,9 @@ Requirements:
 
 ## Populate
 
-Load related entities:
+`populate(propertyName, options?)` loads related entities onto the results. It is available on `find()` and
+`findOne()` for any relationship defined with `model`, `collection`, or `through`
+(see [Relationships](/guide/relationships)):
 
 ```ts
 const product = await productRepository
@@ -347,9 +380,117 @@ The populate `where`/`limit` options constrain only the related rows, never the 
 Reach for [`.join()`](/guide/subqueries-and-joins#model-joins) only to constrain or sort the primary results by columns on the related table (for example, only products whose store is active).
 Without such a constraint, `.populate()` on its own is all you need.
 
+### Populate options
+
+All options are optional and apply to the query for related rows, never to the primary results:
+
+| Option    | Type                | Description                                                                                                            |
+| --------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `select`  | `string[]`          | Columns to return on the related entities. The primary key is always included.                                         |
+| `where`   | `WhereQuery`        | Filter related rows. Accepts the same operators as [`.where()`](#where-operators).                                     |
+| `sort`    | `string \| object`  | Order related rows. Same syntax as [`.sort()`](#sorting).                                                              |
+| `skip`    | `number`            | Skip related rows. Collections only.                                                                                   |
+| `limit`   | `number`            | Maximum related rows to return. Collections only.                                                                      |
+| `pool`    | `PoolLike`          | Connection pool for the populate query. Defaults to the main query's pool.                                             |
+| `through` | `{ where?, sort? }` | Filter and order by junction table columns. Many-to-many relations only. See [below](#many-to-many-through-relations). |
+
+### To-one relations
+
+For `model` relations, `where` acts as a condition on the related row - when the row does not match, the
+property is `undefined`. `skip` and `limit` are ignored.
+
+```ts
+const product = await productRepository
+  .findOne()
+  .where({ id: 42 })
+  .populate('store', {
+    select: ['name'],
+    where: { isActive: true },
+  });
+
+// product.store is the Store when it is active, otherwise undefined
+```
+
+### Collections
+
+For `collection` relations, every option applies to the related rows:
+
+```ts
+const store = await storeRepository
+  .findOne()
+  .where({ id: storeId })
+  .populate('products', {
+    select: ['name', 'sku'],
+    where: { status: 'available' },
+    sort: 'name asc',
+    limit: 10,
+  });
+
+// store.products has at most 10 available products, sorted by name
+```
+
+Two caveats when populating collections on `find()` (multiple primary rows):
+
+- BigAl fetches related rows for all primary rows in one query, so `limit` and `skip` apply to the combined
+  set, not per primary row. For "top N per parent", populate from `findOne()` or use a
+  [DISTINCT ON subquery join](/guide/subqueries-and-joins#distinct-on-in-subqueries).
+- A populate `select` must include the relation's `via` property (the foreign key back to the parent).
+  BigAl needs it to group rows by parent and throws if it is missing.
+
+### Many-to-many (through) relations
+
+For `through` relations, `through.where` filters junction rows and `through.sort` orders the populated items
+by junction table columns. Item order always follows the junction query, so use `through.sort` (not `sort`)
+to control ordering:
+
+```ts
+const product = await productRepository
+  .findOne()
+  .where({ id: productId })
+  .populate('categories', {
+    select: ['name'],
+    where: { isActive: true }, // filters categories
+    through: {
+      where: { isPrimary: true }, // filters junction rows
+      sort: 'ordering asc', // orders items by a junction column
+    },
+  });
+```
+
+### Populating multiple relations
+
+Chain `.populate()` once per relation. The populate queries run in parallel:
+
+```ts
+const product = await productRepository
+  .findOne()
+  .where({ id: 42 })
+  .populate('store', { select: ['name'] })
+  .populate('categories', { through: { sort: 'ordering asc' } });
+```
+
+### Populate with a narrowed select
+
+`populate()` adds the relation's foreign key column to an earlier `.select()` automatically. Call `.select()`
+before `.populate()` - a later `.select()` replaces the column list and can drop the foreign key the populate
+needs:
+
+```ts
+const products = await productRepository
+  .find()
+  .select(['name'])
+  .populate('store', { select: ['name'] });
+```
+
+### Type narrowing
+
+`.populate()` changes the property's result type from the foreign key to the populated entity, narrowed by
+the populate `select` when one is given. Use `QueryResultPopulated<T, K>` to name these types - see
+[Relationships > QueryResultPopulated](/guide/relationships#queryresultpopulated).
+
 ## toJSON
 
-Return plain objects without class prototypes:
+Return plain objects without class prototypes. Populated relations are plain objects too:
 
 ```ts
 const product = await productRepository.findOne().where({ id: 42 }).toJSON();

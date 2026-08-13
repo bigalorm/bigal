@@ -71,11 +71,12 @@ Repositories provide CRUD operations with type-safe query building:
 
 ### Query Building
 
-Queries use a fluent builder pattern with immutable state:
+Queries use a fluent builder pattern:
 
-- Each method returns a new instance (clone pattern)
+- Chained methods mutate the query's internal state and return the same instance (`return this`); type-narrowing methods like `.select()` and `.populate()` return the instance re-typed
 - Methods chain naturally: `.where({...}).sort('name').limit(10)`
 - Queries are `PromiseLike` for automatic execution
+- Each `find()`/`findOne()`/`count()` call creates a fresh query; do not branch one builder into multiple queries
 
 ### SQL Generation
 

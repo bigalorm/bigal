@@ -201,9 +201,12 @@ const compilation = await compilationRepository
   });
 ```
 
-- `through.where` filters junction table records
+- `through.where` filters junction table records; `where` filters the target entities themselves
 - `through.sort` orders populated items by junction table columns
-- When `through.sort` is specified, it takes precedence over the target entity sort
+- Item order always follows the junction query, so use `through.sort` (not `sort`) to control ordering of
+  many-to-many results
+
+See [Querying > Populate](/guide/querying#populate) for the full list of populate options.
 
 ## Best practices
 
