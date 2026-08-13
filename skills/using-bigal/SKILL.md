@@ -193,7 +193,7 @@ class ProductSummary extends Entity {
 
 ### Fluent builder
 
-Every query method returns a new immutable instance. Queries are `PromiseLike` - just `await` the chain.
+Chained methods build up one query object. Queries are `PromiseLike` - just `await` the chain.
 
 ```ts
 // Find multiple
@@ -255,8 +255,8 @@ const count = await productRepo.count().where({ sku: { '!': null } });
 // Manual
 .skip(20).limit(10)
 
-// Shorthand
-.paginate(2, 25)   // page 2, 25 per page
+// Shorthand - page starts at 1
+.paginate({ page: 2, limit: 25 })
 
 // With total count (single query using COUNT(*) OVER())
 const { results, totalCount } = await productRepo
@@ -278,6 +278,27 @@ After the main query resolves, it runs a separate query per relation (batched by
 Every primary row is returned whether or not the relation exists (an absent to-one is `undefined`, an empty to-many is `[]`).
 `populate`'s `where`/`limit` constrain only the related rows, not the primary results.
 Add `.join()` only when you need to filter or sort the primary results by a related table's columns.
+
+Options: `select` (columns on related entities; primary key always included), `where` (filter related rows),
+`sort` (order related rows), `skip`/`limit` (collections only), `pool` (pool override), and `through`
+(`{ where?, sort? }` on the junction table, many-to-many only; item order follows the junction query, so use
+`through.sort` to order many-to-many results).
+
+```ts
+const store = await storeRepo
+  .findOne()
+  .where({ id: storeId })
+  .populate('products', {
+    select: ['name', 'sku'],
+    where: { status: 'available' },
+    sort: 'name asc',
+    limit: 10,
+  });
+```
+
+Caveats when populating collections on `find()` (multiple primary rows): `limit`/`skip` apply to the combined
+related-row query, not per primary row, and a populate `select` must include the relation's `via` property or
+BigAl throws.
 
 ### Joins
 
@@ -450,20 +471,21 @@ interface IMyJsonType {
 public metadata?: NotEntity<IMyJsonType>;
 ```
 
-### Query state is immutable
+### Query builders share state
 
-Each fluent method returns a new instance. Do not ignore the return value:
+Chained methods mutate the query's internal state and return the same instance. Build one chain per query
+and use the return value - type-narrowing methods like `.select()` and `.populate()` change the result type
+only through their return value:
 
 ```ts
-// Correct
-const query = productRepo.find().where({ store: storeId });
-const sorted = query.sort('name asc');
-const results = await sorted.limit(10);
+// Correct - one chain per query
+const results = await productRepo.find().where({ store: storeId }).sort('name asc').limit(10);
 
-// Wrong - .sort() result is discarded
-const query = productRepo.find().where({ store: storeId });
-query.sort('name asc'); // This does nothing to `query`
-const results = await query;
+// Wrong - both "branches" are the same object; sorts accumulate and the
+// second .where() replaces the first
+const base = productRepo.find().where({ store: storeId });
+const byName = base.sort('name asc');
+const byDate = base.sort('createdAt desc').where({ status: 'active' });
 ```
 
 ### QueryResult narrows relationship types
@@ -544,7 +566,7 @@ After applying this skill, verify:
 - [ ] Queries use the fluent builder pattern (not raw SQL strings)
 - [ ] CRUD uses Repository methods: `create()`, `update()`, `destroy()`
 - [ ] Query chains are awaited (not fire-and-forget)
-- [ ] Query state is treated as immutable (return values are used)
+- [ ] Each query is built as a single chain (builders are not branched into multiple queries)
 - [ ] Collection properties are optional (`?`)
 - [ ] JSON column types with `id` fields use `NotEntity<T>`
 - [ ] Model names in decorators are strings (`'Store'`) to avoid circular imports

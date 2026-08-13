@@ -14,7 +14,7 @@ features:
   - title: PostgreSQL-native
     details: Built exclusively for Postgres, not a lowest-common-denominator abstraction. Queries are tuned for Postgres performance. JSONB, DISTINCT ON, subquery joins, and ON CONFLICT upserts work out of the box.
   - title: Fluent builder pattern
-    details: Chain .where(), .sort(), .limit(), .join(), and .populate() calls. Each method returns a new immutable instance.
+    details: Chain .where(), .sort(), .limit(), .join(), and .populate() calls. Queries are PromiseLike - build the chain, then await it.
   - title: Decorator-based models
     details: Define tables, columns, and relationships with TypeScript decorators. Inheritance and schema support built in.
   - title: Type-safe queries
