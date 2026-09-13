@@ -7,14 +7,15 @@ issue: bigal-3lo
 
 ## Recommendation
 
-Make transaction-local repositories a first-class, typed operation, then add a managed callback around that binding.
+Keep `initialize({ models, pool: connection })` for existing transaction connections, and add a managed callback for applications that want BigAl to own the transaction lifecycle.
 Keep `find().where().select().populate()`, `create(values, options)`, `update(where, values, options)`, and `destroy(where, options)`.
 Include row locking in the initial managed-transaction release as a small query-builder capability with bounded waiting and real concurrency tests.
 This would remove the need for raw SQL for ordinary transactional CRUD without introducing a new database object, entity manager, schema API, or unit of work.
 
 The underlying pattern already works: `initialize({ models, pool: connection })` creates repositories on a checked-out transaction client.
-The smallest ergonomic addition is `bindRepositories({ pool: connection, repositories })`, which reuses existing metadata and preserves the caller's repository types.
-`transaction({ pool, repositories }, callback)` can then own the lifecycle around that same binding.
+There is no need for a public `bindRepositories` helper to use those repositories in a transaction.
+The proposed `transaction({ pool, repositories }, callback)` adds client acquisition, commit/rollback, cleanup, and typed repositories scoped to that client.
+Reusing existing repository metadata can remain an internal implementation detail of that helper.
 Write-side `pool` overrides are a complementary bridge for existing helpers, not a prerequisite for repository-scoped transactions.
 
 This is a design proposal, with illustrative API examples and an implementation sequence.
@@ -26,7 +27,7 @@ Research reflects the repository at `b4ce8531fb1c595c36afb73553f73e1992a21b21` a
 ## Goal Capsule
 
 Applications should be able to perform dependent reads and writes atomically using familiar BigAl repository methods.
-Existing manually managed transactions should also be able to use those methods without rebuilding repositories.
+Existing manually managed transactions should continue using `initialize` with their connection and ordinary repository methods.
 
 The proposal assumes explicit transaction propagation and one PostgreSQL connection per transaction.
 Implementation requires a separate decision to proceed; the work authorized here is research and this plan.
@@ -74,8 +75,10 @@ Calling the ordinary repository methods on this local set replaces most handwrit
 Global repositories still use their original pools.
 Models with named connections and all relation dependencies must be configured correctly in this initialization.
 
-The remaining ergonomic problem is repeated model lists, broad inferred types, and repeated lifecycle code.
-Improving those boundaries is sufficient; a new query language is unnecessary.
+Applications can share the existing model list rather than repeat it at each call.
+`initialize` rebuilds model and column descriptions and creates new repository instances; an optional `expose` callback also runs again.
+No measured performance problem with that work was established during this research.
+The managed helper should address repeated lifecycle code and preserve types from already-typed repositories.
 
 ### SQL and result behavior worth preserving
 
@@ -161,7 +164,7 @@ Retain BigAl's existing `pool` option instead of introducing a competing `transa
 - R1. Existing query syntax, model metadata, lifecycle transformations, and result overloads remain compatible.
 - R2. Every CRUD operation accepts an explicit `pool` override, including options containing only `pool`.
 - R3. Managed transactions expose ordinary repositories with the caller's chosen keys and each model's existing read/write capabilities.
-- R10. Existing transaction owners can bind a typed repository map without repeating initialization or adopting a new lifecycle owner.
+- R10. Existing transaction owners keep using `initialize({ models, pool: connection })` with its current typing and lifecycle behavior; no additional public binding API is required.
 
 ### Transaction behavior
 
@@ -179,8 +182,8 @@ Retain BigAl's existing `pool` option instead of introducing a competing `transa
 
 ### Scope boundaries
 
-The first increment documents current transaction-local initialization and adds typed binding for existing transaction owners.
-Managed repository scopes layer on that binding; write overrides can ship independently when per-operation helper compatibility is needed.
+Document current transaction-local initialization as the external-owner path.
+Add the managed callback with internal repository construction; write overrides can ship independently when per-operation helper compatibility is needed.
 Row locking ships with the initial managed-transaction API; it remains a separate implementation unit for review and verification.
 The conditional-upsert correction is independently releasable and does not depend on a managed transaction API.
 
@@ -193,31 +196,32 @@ External service calls and writes through unrelated repositories are outside the
 
 ## Proposed Syntax
 
-All examples below show proposed API usage, not implemented features.
+Except for the existing `initialize` example, examples below show proposed API usage, not implemented features.
 Repository variables are assumed to have their existing concrete model types.
 
-### Existing transaction owners: bind an existing repository map
+### Existing transaction owners: use initialize
 
 ```ts
-const repos = bindRepositories({
+const repos = initialize({
+  models: [Product, Store],
   pool: connection,
-  repositories: {
-    Product: productRepository,
-    Store: storeRepository,
-  },
 });
-
-await repos.Product.update({ id: productId }, { name: 'Renamed widget' }, { returnRecords: false });
 ```
 
-This is the typed equivalent of initializing transaction-local repositories, reusing the metadata that already exists.
-It borrows the executor; it does not acquire, begin, commit, roll back, or release anything.
+This works today and supplies transaction-local repositories for ordinary reads and writes.
+Reuse the application's shared model list and existing repository typing wrapper or assertion, if it has one.
+The initializer itself still returns a broadly typed map; this proposal does not claim otherwise.
+It does not acquire, begin, commit, roll back, or release anything.
 The transaction owner remains responsible for its lifetime and for supplying a client connected to the appropriate database.
 Query-only `PoolLike` cannot attest client provenance or observe the owner's eventual commit.
-Unlike the managed helper, a borrowed binding alone cannot invalidate itself when that external transaction ends.
+Repositories created this way cannot invalidate themselves when that external transaction ends.
 
-Choose this explicit helper over an `initialize({ repositories, pool })` overload because it distinguishes metadata initialization from binding an existing set.
-Both forms preserve the project's options-object style; the separate name makes connection ownership easier to understand.
+Include the models needed by relationships and junctions, and direct every relevant named connection to the same transaction client.
+Do not carry a read-replica pool into this initialization; reads must use the transaction client too.
+If using `expose`, keep its assignments local rather than replacing shared application repositories.
+
+Taking an existing repository map could preserve its types and avoid rebuilding model descriptions, but neither benefit requires another public helper for this proposal.
+Keep that reuse inside the managed helper; improving `initialize` inference can be evaluated separately if its existing typing becomes the adoption obstacle.
 
 ### Optional bridge: extend the established per-operation pool option
 
@@ -236,7 +240,7 @@ All statements must use the same checked-out client, as the [node-postgres trans
 Preserve default return behavior: pool-only create returns one entity or an array according to its input, pool-only update returns an array, and pool-only destroy returns no records.
 Do not require a meaningless `returnSelect` or `returnRecords` option just to choose a connection.
 
-### Preferred application API: bind once and query normally
+### BigAl-managed transactions: query normally inside the callback
 
 ```ts
 const repositories = {
@@ -259,6 +263,8 @@ It does not expose `commit`, `rollback`, `release`, or the underlying client.
 
 Keeping repositories under one property prevents a model key such as `query` from colliding with transaction operations.
 The callback result is inferred and returned only after successful commit.
+Choose this helper when BigAl should acquire the client and handle success, failure, timeouts, and cleanup.
+An application that already owns that lifecycle can keep the `initialize` example above.
 
 ### Reuse helpers and retain an SQL escape hatch
 
@@ -353,7 +359,7 @@ Preserve those checks regardless of builder call order and after `toJSON()`.
 Require a managed scope or an explicit client override for locking reads.
 For externally managed clients, the caller remains responsible for an active transaction; a structural `PoolLike` cannot prove that one exists.
 Locks last only as long as that transaction.
-Borrowed bindings and explicit client overrides also borrow the owner's timeout policy; they do not silently change session settings.
+External initialization and explicit client overrides retain the owner's timeout policy; they do not silently change session settings.
 `skipLocked` is intended for work queues, not general consistent reads; these limits follow [PostgreSQL's locking clause](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE).
 
 ### Locking discipline
@@ -427,9 +433,10 @@ Do not mask one of these failures with a secondary rollback error.
 
 ### KTD2. Build isolated scopes from existing metadata
 
-Have `bindRepositories` create fresh built-in repository instances or a dedicated internal binding layer using already-initialized metadata.
-The managed helper uses the same binding with its guarded executor; it must not implement a second repository construction path.
-Do not rerun decorator discovery, `initialize()`, or `expose()` for each transaction.
+Inside `transaction`, construct fresh built-in repositories using the existing instances' model descriptions and relation registry, with the guarded client as their executor.
+Share repository construction with `initialize` where practical, keeping this operation private.
+The managed helper must not rerun `expose` or rediscover decorators because it accepts repositories already configured by the application.
+This preserves those repositories' configuration; it does not establish a performance requirement to replace external calls to `initialize`.
 Never temporarily swap `_pool` or `_readonlyPool` on shared repositories.
 
 Use one guarded executor as the effective pool for every scoped operation, including population and implicit junction repositories.
@@ -440,7 +447,7 @@ Use source write-pool identity plus the initialization connection configuration 
 Equivalent connection strings alone do not establish membership.
 Reject mixed-connection public maps before acquiring a client, and reject cross-connection relation traversal before issuing its SQL.
 Schema differences within the same connection are allowed.
-For a borrowed binding, validate source-map consistency but leave the target client's identity and lifetime to its owner as specified under Proposed Syntax.
+These checks apply to the managed helper; external calls to `initialize` retain the configuration and client-lifetime responsibilities described under Proposed Syntax.
 
 Support the standard `Repository` and `ReadonlyRepository` implementations initially.
 Do not silently reconstruct custom subclasses or wrappers as base repositories while retaining their custom TypeScript types.
@@ -535,23 +542,23 @@ Avoid adding a transaction-state generic to every builder solely to suggest a gu
 
 ## Implementation Units
 
-### U5. Bind typed repositories for an existing transaction owner
+### U5. Construct managed repositories internally
 
-**Requirements:** R1, R10. **Dependencies:** none.
+**Requirements:** R1, R3. **Dependencies:** part of U2; no standalone public API or release.
 
-**Files:** new binding helper under `src/`, `src/ReadonlyRepository.ts`, `src/Repository.ts`, `src/IReadonlyRepository.ts`, and exports in `src/index.ts`.
-Proposed tests: `tests/bindRepositories.test.ts`, `tests/transactionTypes.test.ts`, and relation cases in `tests/readonlyRepository.test.ts`.
+**Files:** an internal helper under `src/` if needed, `src/index.ts`, `src/ReadonlyRepository.ts`, `src/Repository.ts`, and `src/IReadonlyRepository.ts`.
+Proposed tests: repository-construction cases in `tests/transaction.test.ts`, `tests/transactionTypes.test.ts`, and relation cases in `tests/readonlyRepository.test.ts`.
 
-Extract reusable repository binding from the existing constructor/metadata pattern, following KTD2.
+Reuse the existing repository constructor pattern inside the managed helper, following KTD2.
 Preserve typed map keys and read/write capabilities, and carry the effective client into all relationship reads.
-Document current `initialize({ models, pool: connection })` usage alongside the new helper so consumers can adopt the pattern before upgrading.
+Keep `initialize({ models, pool: connection })` working as today; do not add a public binding export or metadata cache as a prerequisite.
 
 **Validation scenarios:**
 
 - Local reads and writes use the supplied executor while original repositories retain their original pools.
 - Relation and implicit junction queries inherit the binding even when omitted from the public map.
 - Mixed source connections and unsupported repository implementations fail without silent rebinding.
-- Binding does not run lifecycle SQL, release the client, rerun `expose`, or rediscover decorators.
+- Internal repository construction does not run lifecycle SQL, release the client, rerun `expose`, or rediscover decorators.
 - A typed public map retains ordinary CRUD and selection inference without a consumer cast.
 
 ### U1. Add write pool overrides without changing returns
@@ -573,7 +580,7 @@ Cover concrete classes and public interfaces so overload resolution does not fal
 
 ### U2. Add the managed lifetime and repository scope
 
-**Requirements:** R3-R8, R12. **Dependencies:** U5; U1 only for optional per-operation override examples.
+**Requirements:** R3-R8, R12. **Dependencies:** includes the internal U5 work; U1 only for optional per-operation override examples.
 
 **Files:** new transaction module and connection-capability types under `src/`; exports in `src/index.ts` and `src/types/index.ts`.
 Also `src/ReadonlyRepository.ts`, `src/Repository.ts`, `src/IReadonlyRepository.ts`, and relation execution paths.
@@ -652,6 +659,7 @@ Capture the non-obvious traps in the shared transaction guide: read-replica bypa
 **Validation scenarios:**
 
 - Public examples type-check without new consumer casts when given typed repositories.
+- The external `initialize` example retains existing typing requirements and routes reads, writes, and required relationships through the supplied client.
 - Writable and read-only maps retain capabilities, custom keys remain known, and invalid model properties fail compilation.
 - Selections, population, joins, JSON conversion, callback results, and single/bulk/void mutations retain existing inference.
 - Type checks do not claim to restore types from broad initialization results or preserve unsupported custom subclasses.
@@ -678,13 +686,13 @@ Do not add runtime experiments or library changes to this planning revision.
 
 Ordinary multi-repository transactions use the existing BigAl CRUD API without manual query strings.
 Both external transaction owners and the managed callback path have documented syntax and preserved return types.
-Borrowed bindings clearly retain caller-owned lifecycle responsibilities.
+External initialization clearly retains caller-owned lifecycle responsibilities and its existing return-type limitations.
 Real PostgreSQL tests prove commit/rollback, read-your-writes, relation routing, locking, and concurrent scope isolation.
 The initial managed-transaction release includes bounded row locking and proves timeout cleanup, deadlock recovery, and the documented parent-lock protocol.
 Failure tests prove that completed or damaged transaction connections cannot be reused through saved scopes.
 The documentation identifies which specialized SQL still needs the escape hatch and which application effects remain outside the transaction.
 
-Start with U5 to make the existing transaction-local repository pattern convenient and typed, then layer U2 over it.
+Document the existing initialization pattern first, then implement U2 with the private repository construction in U5.
 Include U3 with U2 in the first managed-transaction release; U6 can ship independently to restore conditional-upsert behavior.
 U1 is an optional parallel improvement for per-operation integration, with U4 documentation and type coverage accompanying each release.
 
