@@ -9,7 +9,8 @@ issue: bigal-3lo
 
 Keep `initialize({ models, pool: connection })` for existing transaction connections, and add a managed callback for applications that want BigAl to own the transaction lifecycle.
 Keep `find().where().select().populate()`, `create(values, options)`, `update(where, values, options)`, and `destroy(where, options)`.
-Include row locking in the initial managed-transaction release as a small query-builder capability with bounded waiting and real concurrency tests.
+Include opt-in row locking in the initial managed-transaction release, with optional database timeout settings and real concurrency tests.
+This is a non-breaking addition: upgrading alone must preserve existing query behavior, including PostgreSQL's normal locking and configured timeouts.
 This would remove the need for raw SQL for ordinary transactional CRUD without introducing a new database object, entity manager, schema API, or unit of work.
 
 The underlying pattern already works: `initialize({ models, pool: connection })` creates repositories on a checked-out transaction client.
@@ -161,7 +162,7 @@ Retain BigAl's existing `pool` option instead of introducing a competing `transa
 
 ### Repository compatibility
 
-- R1. Existing query syntax, model metadata, lifecycle transformations, and result overloads remain compatible.
+- R1. Existing calls retain their SQL, parameters, execution behavior, routing, hooks, results, errors, and TypeScript compatibility when the new features are unused.
 - R2. Every CRUD operation accepts an explicit `pool` override, including options containing only `pool`.
 - R3. Managed transactions expose ordinary repositories with the caller's chosen keys and each model's existing read/write capabilities.
 - R10. Existing transaction owners keep using `initialize({ models, pool: connection })` with its current typing and lifecycle behavior; no additional public binding API is required.
@@ -172,20 +173,35 @@ Retain BigAl's existing `pool` option instead of introducing a competing `transa
 - R5. Success commits once; a callback failure or database query failure rolls back, preserves the original error, and releases or discards the connection as appropriate.
 - R6. A completed managed scope rejects further execution, and concurrent scopes never modify shared repository connection fields.
 - R7. Scoped queries reject conflicting pool overrides and repositories or relationships belonging to another connection configuration.
-- R12. Managed transactions apply finite database-enforced lock, statement, and idle-in-transaction limits, with explicit application overrides.
+- R12. Managed transactions apply lock, statement, and idle-in-transaction timeout settings only when explicitly supplied; omitted settings preserve database and driver policy unchanged.
 
 ### SQL coverage
 
 - R8. Ordinary dependent CRUD needs no manual SQL; callers retain a parameterized escape hatch for unsupported database operations.
-- R9. Locking reads can be expressed through the existing fluent/options style, with clear limits on lock scope and incompatible query shapes.
-- R11. Conditional conflict predicates reference the existing target row unambiguously while retaining the current `onConflict` syntax.
+- R9. Only an explicit `.lock(...)` or `lock` option adds a locking clause; new lock validation applies only to queries requesting that feature.
+- R11 (separate follow-up, outside this release). Correct conditional conflict predicates to reference the existing target row unambiguously; see U6.
+
+### Compatibility boundaries
+
+Installing the release must not start transactions, add locking SELECT clauses, change isolation levels, set timeouts, or add retries to existing calls.
+`initialize`, ordinary CRUD, read-replica routing, named connections, population, and externally managed transactions keep their existing behavior.
+Preserve mutable builder behavior and repeated-await execution; the new managed lifetime guard must not become a restriction on ordinary repositories.
+
+Calling the new `transaction` helper explicitly opts into one-client routing and its documented lifecycle and failure handling.
+It does not turn normal reads into locking reads or supply a timeout policy when options are omitted.
+Calling `.lock(...)` opts only that query into the requested locking mode and wait behavior; population receives no implicit locking clause.
+Existing `distinctOn`, count, window, join, and JSON queries remain valid unless combined with the new lock option in an unsupported way.
+Scope-membership and closed-transaction checks apply to the new managed executor, not arbitrary existing `PoolLike` clients.
+
+Compatibility covers unchanged callers on upgrade.
+An application that explicitly introduces a locking query can still make concurrent writers wait under PostgreSQL's normal rules; an additive API cannot remove that interaction.
 
 ### Scope boundaries
 
 Document current transaction-local initialization as the external-owner path.
 Add the managed callback with internal repository construction; write overrides can ship independently when per-operation helper compatibility is needed.
 Row locking ships with the initial managed-transaction API; it remains a separate implementation unit for review and verification.
-The conditional-upsert correction is independently releasable and does not depend on a managed transaction API.
+The conditional-upsert correction changes existing generated SQL, so it is excluded from this additive release and remains a separately reviewed bug fix.
 
 Deferred extensions include savepoints, ambient `AsyncLocalStorage` propagation, automatic retries, shared-lock modes, general SQL expressions, and stronger write-selection inference.
 Transaction-aware hook contexts are also deferred.
@@ -263,7 +279,7 @@ It does not expose `commit`, `rollback`, `release`, or the underlying client.
 
 Keeping repositories under one property prevents a model key such as `query` from colliding with transaction operations.
 The callback result is inferred and returned only after successful commit.
-Choose this helper when BigAl should acquire the client and handle success, failure, timeouts, and cleanup.
+Choose this helper when BigAl should acquire the client and handle success, failure, explicitly requested timeouts, and cleanup.
 An application that already owns that lifecycle can keep the `initialize` example above.
 
 ### Reuse helpers and retain an SQL escape hatch
@@ -294,16 +310,17 @@ await transaction.repositories.Product.create(
     onConflict: {
       action: 'merge',
       targets: ['id'],
-      merge: { columns: ['name'], where: { store: storeId } },
+      merge: { columns: ['name'] },
     },
   },
 );
 ```
 
-The `onConflict` structure is already supported; the example also requires the `merge.where` qualification correction described in U6.
-Use `returnRecords: false` when a rejected predicate is an expected no-op.
+The `onConflict` structure and this ordinary merge example are already supported; transaction support preserves their existing SQL and behavior.
+Conditional merges using `merge.where` retain their current behavior in this release; the reported qualification issue remains the separate U6 follow-up.
+Use `returnRecords: false` when no returned row is an expected outcome of conflict handling.
 Single-record `create()` with default returning behavior throws if PostgreSQL returns no row, including when a conflict predicate declines the update.
-Some predicates expressed in raw SQL using `EXCLUDED` can instead compare against a known input value, as the store predicate does here.
+After U6 is separately verified, some predicates expressed in raw SQL using `EXCLUDED` may instead compare against a known input value.
 General existing-column versus incoming-column comparisons still need an expression extension or raw SQL.
 Use SQL when exact database-clock behavior or computed assignments cannot be preserved by a conditional repository update.
 No new `.upsert()` vocabulary is needed for the supported cases.
@@ -327,6 +344,7 @@ await transaction({ pool, repositories, lockTimeoutMs: 2_000, statementTimeoutMs
 ```
 
 This example assumes PostgreSQL READ COMMITTED and that every path adding or moving products into the store takes the same parent lock first.
+Its timeout values are explicit application choices; omitting them retains the connection's existing settings.
 The count runs after the lock is acquired, so it can see the preceding writer's commit.
 A different isolation level needs its own snapshot and retry analysis; the lock alone does not refresh a REPEATABLE READ snapshot.
 The parent lock coordinates participating writers; it does not automatically prevent arbitrary inserts into the product table.
@@ -346,14 +364,15 @@ await productRepository.find({
 Initially expose `'update'` and `'noKeyUpdate'`; defer shared-lock modes until a concrete use case requires them.
 Use `'noKeyUpdate'` to coordinate ordinary non-key changes with less interference with foreign-key checks; use `'update'` when deletion or referenced-key changes need protection.
 The caller chooses the mode explicitly; BigAl does not guess or silently downgrade it.
-The default waits subject to the transaction's finite timeout; optional `wait` is `'nowait'` or `'skipLocked'`.
+When `wait` is omitted, PostgreSQL uses its normal waiting behavior, subject to existing settings or explicitly requested transaction timeouts.
+Optional `wait` is `'nowait'` or `'skipLocked'`; neither is enabled automatically.
 The builder equivalent is `.lock('update', { wait: 'nowait' })`.
 A union for wait behavior avoids contradictory `nowait: true` and `skipLocked: true` flags.
 
 Lock only the base entity's rows in the first version, including when a join filters them.
 Generate `OF` using the actual visible base-table name or alias, not a schema-qualified expression copied from a SELECT column.
 Population uses the same transaction but does not recursively lock related records.
-Reject lock combinations with `distinctOn`, `withCount`/`findWithCount`, or other unsupported result shapes before execution.
+Only when a lock is explicitly requested, reject combinations with `distinctOn`, `withCount`/`findWithCount`, or other unsupported result shapes before execution.
 Preserve those checks regardless of builder call order and after `toJSON()`.
 
 Require a managed scope or an explicit client override for locking reads.
@@ -407,17 +426,18 @@ When omitted, retain the database default; apply an explicit level before invoki
 Connection acquisition timeouts remain driver configuration in the first release.
 No automatic retries or callback timeout implemented with a detached `Promise.race`.
 
-### KTD5. Bound database waiting without pretending to cancel JavaScript
+### KTD5. Make transaction-local timeout settings opt-in
 
-Implement R12 as transaction-local PostgreSQL settings applied after BEGIN and before the callback.
-Proposed defaults are `lockTimeoutMs: 2_000`, `statementTimeoutMs: 5_000`, and `idleInTransactionTimeoutMs: 5_000`.
-These are starting policy choices for short application transactions, not universal performance thresholds.
-Accept positive integer overrides; omitted values retain an inherited stricter nonzero limit instead of loosening it.
-Reject zero, negative, non-integer, or out-of-range values before acquiring the client.
+Implement R12 as optional transaction-local PostgreSQL settings applied after BEGIN and before the callback.
+`lockTimeoutMs`, `statementTimeoutMs`, and `idleInTransactionTimeoutMs` have no BigAl defaults.
+When an option is omitted, leave that setting untouched, including an existing unlimited setting; do not emit configuration SQL for it.
+Accept nonnegative integer values within PostgreSQL's supported range; an explicit zero disables that timeout for this transaction according to PostgreSQL semantics.
+Reject negative, non-integer, or out-of-range supplied values before acquiring the client.
+Recommend finite values in examples for operations that need them, without enabling those values through initialization, repository construction, or `.lock()`.
 
-`lockTimeoutMs` bounds each lock acquisition, including implicit write locks.
-`statementTimeoutMs` bounds a complete statement, covering repeated lock waits and query execution.
-`idleInTransactionTimeoutMs` terminates a connection that remains idle inside the transaction, limiting abandoned or stalled callback holds.
+An enabled `lockTimeoutMs` bounds each lock acquisition, including implicit write locks throughout that transaction, not just an explicit locking SELECT.
+An enabled `statementTimeoutMs` bounds a complete statement, covering repeated lock waits and query execution.
+An enabled `idleInTransactionTimeoutMs` terminates a connection that remains idle inside the transaction, limiting abandoned or stalled callback holds.
 The first two abort a statement; the idle limit closes the session and requires the client to be discarded.
 These meanings follow [PostgreSQL's client timeouts](https://www.postgresql.org/docs/current/runtime-config-client.html).
 
@@ -459,7 +479,7 @@ Reject unsupported custom implementations clearly; those consumers can adopt per
 flowchart TD
   A[Validate repository scope] --> B[Acquire one client]
   B --> C[Begin transaction]
-  C --> T[Apply transaction-local limits]
+  C --> T[Apply only explicitly supplied settings]
   T --> D[Run callback and await its result]
   T -->|Setup failed| G
   D --> E{Callback and query execution succeeded?}
@@ -580,7 +600,7 @@ Cover concrete classes and public interfaces so overload resolution does not fal
 
 ### U2. Add the managed lifetime and repository scope
 
-**Requirements:** R3-R8, R12. **Dependencies:** includes the internal U5 work; U1 only for optional per-operation override examples.
+**Requirements:** R1, R3-R8, R12. **Dependencies:** includes the internal U5 work; U1 only for optional per-operation override examples.
 
 **Files:** new transaction module and connection-capability types under `src/`; exports in `src/index.ts` and `src/types/index.ts`.
 Also `src/ReadonlyRepository.ts`, `src/Repository.ts`, `src/IReadonlyRepository.ts`, and relation execution paths.
@@ -600,12 +620,13 @@ Keep SQL lifecycle construction parameter-safe, using allowlisted isolation valu
 - Concurrent transactions and unscoped queries retain their own clients; saved builders and raw methods fail after scope completion.
 - Pending hook/population work cannot access a released client; directly returned thenables complete before commit.
 - Helpers reuse scoped repositories, and detected attempts to start another managed transaction from that scope are rejected.
-- Timeout defaults respect stricter inherited limits; overrides are validated and transaction-local settings do not leak after commit or rollback.
+- Omitted timeouts produce no timeout-setting SQL and preserve inherited values, including zero; setting one option leaves the others untouched.
+- Explicit timeout values are validated, and transaction-local settings do not leak after commit, rollback, or setup failure.
 - Statement and idle-in-transaction timeouts preserve the primary failure; a terminated idle client is discarded and later callback queries cannot reach it.
 
 ### U3. Add row locking to existing reads
 
-**Requirements:** R9, R12. **Dependencies:** U2 for managed timeout/lifetime guarantees; no new write API required.
+**Requirements:** R1, R9, R12. **Dependencies:** U2 for managed lifetime and optional timeout support; no new write API required.
 
 **Files:** `src/SqlHelper.ts`, `src/ReadonlyRepository.ts`, `src/query/FindOneArgs.ts`, read result interfaces under `src/query/`.
 Tests: `tests/sqlHelper.test.ts`, `tests/readonlyRepository.test.ts`, and `tests/transaction.integration.test.ts`.
@@ -616,22 +637,25 @@ Keep lock generation in `SqlHelper`; use the SQL rules and limitations specified
 **Validation scenarios:**
 
 - Options and fluent forms generate each allowed mode and wait policy without altering selected/populated result types.
+- Queries without a lock option retain their exact SQL and parameters, acquire no additional explicit locks, and do not trigger new lock validation or timeout-setting SQL.
+- An ordinary read inside the new managed helper remains an ordinary SELECT; a lock on another query or repository does not affect its generated SQL.
 - Two real connections demonstrate waiting, `nowait` failure, and queue-style `skipLocked` behavior.
 - A lock wait exceeds its configured limit and causes rollback with the original SQLSTATE, without leaving a usable scoped connection.
 - A deliberately inverted two-row acquisition produces a detected deadlock; the victim rolls back and the other transaction can complete.
 - Competing capacity checks follow the same parent-lock protocol at READ COMMITTED and cannot both consume the last available slot.
 - A failed lookup is not treated as a lock on a missing row; plain reads can proceed while a row is locked.
 - Base-table locks with joins and schema-qualified models use the correct `OF` reference; population does not inherit a lock clause.
-- Incompatible count/window/distinct combinations fail for both modifier orders and JSON result variants.
+- Incompatible count/window/distinct combinations fail only with an explicit lock, for both modifier orders and JSON result variants; their existing unlocked forms still pass.
 - Locks release after commit and rollback; ordinary unscoped reads without an explicit client cannot silently request transaction locks.
 
-### U6. Correct conditional-upsert column qualification
+### U6. Separate follow-up: conditional-upsert column qualification
 
-**Requirements:** R11. **Dependencies:** none.
+**Related finding:** R11. **Scope:** excluded from the transaction and locking release; tracked separately in `bigal-7xb`.
 
 **Files:** `src/SqlHelper.ts`, `tests/sqlHelper.test.ts`, and a PostgreSQL regression case in `tests/transaction.integration.test.ts`.
 
-Start by reproducing the reported ambiguous merge predicate against PostgreSQL.
+Leave existing upsert SQL unchanged in the additive release.
+For the separate bug fix, start by reproducing the reported ambiguous merge predicate against PostgreSQL and review its compatibility independently.
 Introduce an explicit target-row qualification context for the conflict action's `WHERE` clause; do not simulate a join to obtain a prefix.
 Keep INSERT column lists and the left side of `DO UPDATE SET` unqualified.
 Preserve the distinct context of partial-index target predicates and the existing `EXCLUDED` assignments.
@@ -646,7 +670,7 @@ These scopes differ in [PostgreSQL's INSERT grammar](https://www.postgresql.org/
 
 ### U4. Prove public types and document adoption
 
-**Requirements:** R1-R12. **Dependencies:** accompany each unit; U2, U3, and U6 for complete coverage.
+**Requirements:** R1-R10, R12. **Dependencies:** accompany each in-scope unit; U2 and U3 for complete coverage. U6 is outside this release.
 
 **Files:** `tests/typeVariance.test.ts`, proposed `tests/transactionTypes.test.ts`, and proposed `docs/guide/transactions.md`.
 Update `docs/reference/configuration.md`, `docs/reference/api.md`, `docs/guide/querying.md`, `docs/guide/crud-operations.md`, `docs/advanced/bigal-vs-raw-sql.md`, and `skills/using-bigal/SKILL.md`.
@@ -659,6 +683,7 @@ Capture the non-obvious traps in the shared transaction guide: read-replica bypa
 **Validation scenarios:**
 
 - Public examples type-check without new consumer casts when given typed repositories.
+- Existing calls retain overload resolution and public type assignability; avoid adding required members to existing consumer-implemented interfaces solely to expose `.lock()`.
 - The external `initialize` example retains existing typing requirements and routes reads, writes, and required relationships through the supplied client.
 - Writable and read-only maps retain capabilities, custom keys remain known, and invalid model properties fail compilation.
 - Selections, population, joins, JSON conversion, callback results, and single/bulk/void mutations retain existing inference.
@@ -670,7 +695,11 @@ Capture the non-obvious traps in the shared transaction guide: read-replica bypa
 ## Verification Contract
 
 Use existing mock-pool tests for routing, generated SQL, overload behavior, and failure injection.
-They do not prove rollback, lock lifetime, visibility, or concurrent transaction isolation.
+Keep existing expectations intact and add regression cases for calls that do not opt into the new APIs.
+Compare SQL and parameters, pool selection, hooks, returns, errors, and mutable/lazy builder behavior against the current implementation.
+Cover initialized transaction clients, read replicas, named connections, custom repository implementations, population, and existing conflict options.
+Do not update an existing expectation merely to accommodate a behavior change introduced by this feature.
+Mock-pool tests do not prove rollback, lock lifetime, visibility, or concurrent transaction isolation.
 Add a real PostgreSQL integration fixture with two independent connections and deterministic synchronization for those guarantees.
 Use observed lock waits or explicit synchronization barriers for contention tests; avoid correctness assertions based only on short sleeps.
 Give timeout/deadlock tests generous harness deadlines distinct from the database limits they exercise.
@@ -685,15 +714,16 @@ Do not add runtime experiments or library changes to this planning revision.
 ## Definition of Done
 
 Ordinary multi-repository transactions use the existing BigAl CRUD API without manual query strings.
+Upgrading without adopting the new APIs preserves existing runtime and TypeScript behavior, with unchanged SQL and no automatic locks or timeout settings.
 Both external transaction owners and the managed callback path have documented syntax and preserved return types.
 External initialization clearly retains caller-owned lifecycle responsibilities and its existing return-type limitations.
 Real PostgreSQL tests prove commit/rollback, read-your-writes, relation routing, locking, and concurrent scope isolation.
-The initial managed-transaction release includes bounded row locking and proves timeout cleanup, deadlock recovery, and the documented parent-lock protocol.
+The initial managed-transaction release includes opt-in row locking and optional timeout settings, and proves timeout cleanup, deadlock recovery, and the documented parent-lock protocol.
 Failure tests prove that completed or damaged transaction connections cannot be reused through saved scopes.
 The documentation identifies which specialized SQL still needs the escape hatch and which application effects remain outside the transaction.
 
 Document the existing initialization pattern first, then implement U2 with the private repository construction in U5.
-Include U3 with U2 in the first managed-transaction release; U6 can ship independently to restore conditional-upsert behavior.
+Include U3 with U2 in the first managed-transaction release; keep U6 out of that release and review it separately.
 U1 is an optional parallel improvement for per-operation integration, with U4 documentation and type coverage accompanying each release.
 
 Implementation follow-up: `bigal-asa`. Conditional-upsert correctness follow-up: `bigal-7xb`.
