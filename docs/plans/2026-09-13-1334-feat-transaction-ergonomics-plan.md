@@ -1,0 +1,614 @@
+---
+title: Transaction Ergonomics - Plan
+type: feat
+date: 2026-09-13
+issue: bigal-3lo
+---
+
+## Recommendation
+
+Make transaction-local repositories a first-class, typed operation, then add a managed callback around that binding.
+Keep `find().where().select().populate()`, `create(values, options)`, `update(where, values, options)`, and `destroy(where, options)`.
+Add row locking as a separate, small query-builder capability.
+This would remove the need for raw SQL for ordinary transactional CRUD without introducing a new database object, entity manager, schema API, or unit of work.
+
+The underlying pattern already works: `initialize({ models, pool: connection })` creates repositories on a checked-out transaction client.
+The smallest ergonomic addition is `bindRepositories({ pool: connection, repositories })`, which reuses existing metadata and preserves the caller's repository types.
+`transaction({ pool, repositories }, callback)` can then own the lifecycle around that same binding.
+Write-side `pool` overrides are a complementary bridge for existing helpers, not a prerequisite for repository-scoped transactions.
+
+This is a design proposal, with illustrative API examples and an implementation sequence.
+No library implementation is included.
+Research reflects the repository at `b4ce8531fb1c595c36afb73553f73e1992a21b21` and official documentation consulted on September 13, 2026.
+
+---
+
+## Goal Capsule
+
+Applications should be able to perform dependent reads and writes atomically using familiar BigAl repository methods.
+Existing manually managed transactions should also be able to use those methods without rebuilding repositories.
+
+The proposal assumes explicit transaction propagation and one PostgreSQL connection per transaction.
+Implementation requires a separate decision to proceed; the work authorized here is research and this plan.
+Beads holds work status; this document records the proposed design.
+
+---
+
+## Current Capabilities
+
+### Connection routing
+
+`PoolLike` in `src/types/PoolLike.ts` requires only a generic `query()` method.
+A checked-out PostgreSQL client can already satisfy that contract.
+BigAl does not currently acquire clients or own `BEGIN`, `COMMIT`, or `ROLLBACK`.
+
+Reads accept `pool` in `FindOneArgs`, `FindArgs`, and `CountArgs`.
+`ReadonlyRepository` selects the override ahead of `_readonlyPool`.
+For example, this is existing syntax when `connection` belongs to an externally managed transaction:
+
+```ts
+const product = await productRepository.findOne({ pool: connection }).where({ id: productId }).select(['id', 'name']);
+```
+
+An explicit read override already reaches `.populate()`, including the junction and target queries in many-to-many relationships.
+The relevant paths are `populateSingleAssociation`, `populateOneManyCollection`, and `populateManyManyCollection` in `src/ReadonlyRepository.ts`.
+`tests/readonlyRepository.test.ts` already covers inherited overrides and explicit populate overrides.
+
+Writes are the main missing piece.
+`create`, `update`, and `destroy` in `src/Repository.ts` execute against `_pool` directly, and their options do not accept `pool`.
+Applications can currently call `initialize({ models, pool: connection })` inside a transaction to construct another repository set.
+That works structurally, but repeats initialization and often requires type assertions because `initialize()` returns a broad string-keyed repository map.
+
+This is existing syntax:
+
+```ts
+const repos = initialize({
+  models: [Product, Store],
+  pool: connection,
+});
+```
+
+The transaction owner checks out `connection` and manages its lifecycle.
+The local repositories use that client for writes and, by default, reads.
+Calling the ordinary repository methods on this local set replaces most handwritten CRUD SQL today; application typing may require the existing typed-map assertion.
+Global repositories still use their original pools.
+Models with named connections and all relation dependencies must be configured correctly in this initialization.
+
+The remaining ergonomic problem is repeated model lists, broad inferred types, and repeated lifecycle code.
+Improving those boundaries is sufficient; a new query language is unnecessary.
+
+### SQL and result behavior worth preserving
+
+BigAl already supports parameterized filters, arrays of IDs, bulk creates, multi-row updates, deletes, returning records, joins, subqueries, and conflict handling.
+`OnConflictOptions` supports `action: 'ignore'` and `action: 'merge'`, column targets, partial-index predicates, merge columns, and a merge `where` predicate.
+These should remain available inside transactions without another mutation API.
+However, `merge.where` has a concrete SQL-generation concern: `getInsertQueryAndParams` passes its predicate into `buildWhereStatement` without a target-table qualification context.
+The existing merge tests in `tests/sqlHelper.test.ts` expect unqualified columns such as `WHERE ("other_id" IS NULL OR "other_id"=$4)`.
+The supplied usage reports PostgreSQL ambiguity with `EXCLUDED`; local source inspection confirms the unqualified output path, but no database reproduction was run for this plan.
+Treat this as a focused correctness fix before recommending conditional merges as a reliable replacement for raw SQL.
+
+Builders are mutable and lazy.
+Their `.then()` methods execute SQL; repeated awaits can execute the same builder again.
+The transaction helper must await the callback's returned thenable before committing.
+It must not assume builders are eager, memoized promises or introduce an array-of-queries API around that assumption.
+
+`FindResult` and `FindOneResult` already preserve selection, population, join, and `toJSON()` types.
+Write overloads distinguish single records, arrays, and `returnRecords: false`.
+Write `returnSelect` currently limits runtime columns without precisely narrowing the result type; transaction work should preserve that behavior rather than promise a separate typing improvement.
+
+### What transaction support alone cannot replace
+
+| Query need                                                    | Existing capability or remaining gap                                                                                                 |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Multi-step reads, creates, updates, and deletes               | Existing repository operations; connection routing is the gap.                                                                       |
+| Bulk updates using IDs                                        | Existing array filters and `update()`.                                                                                               |
+| Basic conflict ignore or merge                                | Existing `create(..., { onConflict })`.                                                                                              |
+| Conditional conflict merge                                    | Existing syntax; qualify target columns in `merge.where` and verify against PostgreSQL.                                              |
+| Lock rows before a read-modify-write decision                 | No locking API; add a focused builder extension.                                                                                     |
+| Compare an existing row to `EXCLUDED` in a conflict predicate | No general typed column-reference expression API.                                                                                    |
+| Set a value only when it is null                              | Often expressible as `update({ value: null }, { value: replacement })`; exact timestamp and other assignment semantics still matter. |
+| Advisory locks or specialized SQL                             | Retain a parameterized query escape hatch on the transaction scope.                                                                  |
+
+`docs/advanced/bigal-vs-raw-sql.md` currently lists custom locking among raw SQL use cases.
+The proposed work should narrow that guidance to the capabilities that still require SQL.
+Moving an operation from raw SQL to repositories also restores model hooks and timestamp/version behavior, so migration must check those semantic differences.
+
+---
+
+## Comparison with Established ORMs
+
+The common pattern is a managed callback with the normal query API bound to one transaction.
+The main difference is how that scope reaches each query.
+
+| ORM                             | Transaction style                                                  | Lesson for BigAl                                         |
+| ------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------- |
+| [TypeORM][typeorm]              | `dataSource.transaction(callback)`; `manager.withRepository(repo)` | Bind existing repositories.                              |
+| [Drizzle][drizzle]              | `db.transaction(async tx => ...)`; fluent queries on `tx`          | Keep query construction familiar.                        |
+| [Prisma 7][prisma7]             | `prisma.$transaction(async tx => ...)`; model methods on `tx`      | Support dependent operations and branching.              |
+| [Prisma 8][prisma8]             | `db.transaction(async tx => ...)`; ORM access through `tx.orm`     | Preserve the callback; check version-specific features.  |
+| [Sequelize 6][sequelize]        | Managed callback plus `{ transaction }`; optional CLS propagation  | Explicit options help; implicit propagation adds policy. |
+| [MikroORM 7.2][mikro]           | `em.transactional(...)` with a contextual entity manager           | Its unit of work exceeds BigAl's needs.                  |
+| [Knex][knex] / [Kysely][kysely] | Scoped fluent builders; Knex also has `.transacting(trx)`          | Retain the established builder style.                    |
+
+[typeorm]: https://typeorm.io/docs/working-with-entity-manager/custom-repository/
+[drizzle]: https://orm.drizzle.team/docs/transactions
+[prisma7]: https://www.prisma.io/docs/orm/v7/prisma-client/queries/transactions
+[prisma8]: https://docs.prisma.io/docs/orm/fundamentals/transactions
+[sequelize]: https://sequelize.org/docs/v6/other-topics/transactions/
+[mikro]: https://mikro-orm.io/docs/transactions
+[knex]: https://knexjs.org/guide/transactions.html
+[kysely]: https://kysely.dev/docs/examples/transactions/simple-transaction
+
+Version distinctions matter.
+Prisma 7's array transaction API and isolation/timeout options should not be attributed to Prisma 8.
+The [Prisma 8.0 support matrix](https://github.com/prisma/orm/blob/main/scorecard/14-transactions.md) identifies those omissions and no nested savepoints.
+Prisma documentation was available through official indexed extracts; the matrix was fetched directly.
+
+Drizzle documents nested transaction callbacks as savepoints.
+MikroORM distinguishes nested savepoints from propagation that reuses an existing transaction.
+Sequelize 6's nested callback example should not be taken as a guarantee of savepoint behavior.
+For BigAl, service composition should first mean passing the existing scope, with savepoints deferred to an explicit later API.
+
+Borrow callback ownership and scoped repositories from these comparisons.
+Retain BigAl's existing `pool` option instead of introducing a competing `transaction` option on every method.
+
+---
+
+## Product Contract
+
+### Repository compatibility
+
+- R1. Existing query syntax, model metadata, lifecycle transformations, and result overloads remain compatible.
+- R2. Every CRUD operation accepts an explicit `pool` override, including options containing only `pool`.
+- R3. Managed transactions expose ordinary repositories with the caller's chosen keys and each model's existing read/write capabilities.
+- R10. Existing transaction owners can bind a typed repository map without repeating initialization or adopting a new lifecycle owner.
+
+### Transaction behavior
+
+- R4. A managed transaction pins all scoped reads, writes, population queries, and raw queries to one acquired write connection.
+- R5. Success commits once; a callback failure or database query failure rolls back, preserves the original error, and releases or discards the connection as appropriate.
+- R6. A completed managed scope rejects further execution, and concurrent scopes never modify shared repository connection fields.
+- R7. Scoped queries reject conflicting pool overrides and repositories or relationships belonging to another connection configuration.
+
+### SQL coverage
+
+- R8. Ordinary dependent CRUD needs no manual SQL; callers retain a parameterized escape hatch for unsupported database operations.
+- R9. Locking reads can be expressed through the existing fluent/options style, with clear limits on lock scope and incompatible query shapes.
+- R11. Conditional conflict predicates reference the existing target row unambiguously while retaining the current `onConflict` syntax.
+
+### Scope boundaries
+
+The first increment documents current transaction-local initialization and adds typed binding for existing transaction owners.
+Managed repository scopes layer on that binding; write overrides can ship independently when per-operation helper compatibility is needed.
+Row locking can follow independently, but is needed before claiming that common read-modify-write transactions can avoid manual SQL.
+The conditional-upsert correction is independently releasable and does not depend on a managed transaction API.
+
+Deferred extensions include savepoints, ambient `AsyncLocalStorage` propagation, automatic retries, general SQL expressions, stronger write-selection inference, and transaction-aware hook contexts.
+Distributed transactions, schema redesign, and a unit of work are outside this proposal.
+External service calls and writes through unrelated repositories are outside the transaction's atomicity guarantee.
+
+---
+
+## Proposed Syntax
+
+All examples below show proposed API usage, not implemented features.
+Repository variables are assumed to have their existing concrete model types.
+
+### Existing transaction owners: bind an existing repository map
+
+```ts
+const repos = bindRepositories({
+  pool: connection,
+  repositories: {
+    Product: productRepository,
+    Store: storeRepository,
+  },
+});
+
+await repos.Product.update({ id: productId }, { name: 'Renamed widget' }, { returnRecords: false });
+```
+
+This is the typed equivalent of initializing transaction-local repositories, reusing the metadata that already exists.
+It borrows the executor; it does not acquire, begin, commit, roll back, or release anything.
+The transaction owner remains responsible for its lifetime and for supplying a client connected to the appropriate database.
+Query-only `PoolLike` cannot attest client provenance or observe the owner's eventual commit.
+Unlike the managed helper, a borrowed binding alone cannot invalidate itself when that external transaction ends.
+
+Choose this explicit helper over an `initialize({ repositories, pool })` overload because it distinguishes metadata initialization from binding an existing set.
+Both forms preserve the project's options-object style; the separate name makes connection ownership easier to understand.
+
+### Optional bridge: extend the established per-operation pool option
+
+```ts
+await productRepository.create({ name: 'Widget', store: storeId }, { pool: connection });
+
+await productRepository.update({ id: productId }, { name: 'Renamed widget' }, { pool: connection, returnRecords: false });
+
+await productRepository.destroy({ id: obsoleteProductIds }, { pool: connection });
+```
+
+The caller still owns the transaction lifecycle for these examples.
+Passing a pool or client does not itself start a transaction.
+All statements must use the same checked-out client, as the [node-postgres transaction documentation](https://node-postgres.com/features/transactions) requires.
+
+Preserve default return behavior: pool-only create returns one entity or an array according to its input, pool-only update returns an array, and pool-only destroy returns no records.
+Do not require a meaningless `returnSelect` or `returnRecords` option just to choose a connection.
+
+### Preferred application API: bind once and query normally
+
+```ts
+const repositories = {
+  Product: productRepository,
+  Store: storeRepository,
+};
+
+const product = await transaction({ pool, repositories }, async (transaction) => {
+  const { Product, Store } = transaction.repositories;
+  const store = await Store.create({ name: 'Warehouse' });
+
+  return Product.create({ name: 'Widget', store: store.id });
+});
+```
+
+Use a standalone exported helper, consistent with `initialize(options)` and helpers such as `subquery(repository)`.
+`initialize()` continues returning repositories; no additional methods are attached to its string-keyed map.
+The callback context has `repositories` and a guarded `query()` method compatible with `PoolLike`.
+It does not expose `commit`, `rollback`, `release`, or the underlying client.
+
+Keeping repositories under one property prevents a model key such as `query` from colliding with transaction operations.
+The callback result is inferred and returned only after successful commit.
+
+### Reuse helpers and retain an SQL escape hatch
+
+```ts
+await transaction({ pool, repositories }, async (transaction) => {
+  await transaction.query('SELECT pg_advisory_xact_lock($1::bigint)', [resourceKey]);
+
+  await renameProduct(transaction.repositories.Product, productId, newName);
+  await auditRepository.create(auditValues, { pool: transaction });
+});
+```
+
+Here `renameProduct` accepts the ordinary typed repository it needs.
+For helpers already accepting a `PoolLike`, the transaction itself supplies guarded query execution.
+The audit example requires the audit repository to belong to the same connection configuration; managed override validation applies to it too.
+Calling a helper that captures a global repository does not implicitly enlist its queries.
+
+Application side effects belong after the outer transaction promise resolves, or in an outbox written through the transaction if durable delivery is needed.
+
+### Keep existing upsert syntax inside the scope
+
+```ts
+await transaction.repositories.Product.create(
+  { id: productId, name: replacementName, store: storeId },
+  {
+    returnRecords: false,
+    onConflict: {
+      action: 'merge',
+      targets: ['id'],
+      merge: { columns: ['name'], where: { store: storeId } },
+    },
+  },
+);
+```
+
+The `onConflict` structure is already supported; the example also requires the `merge.where` qualification correction described in U6.
+Use `returnRecords: false` when a rejected predicate is an expected no-op.
+Single-record `create()` with default returning behavior throws if PostgreSQL returns no row, including when a conflict predicate declines the update.
+Some predicates expressed in raw SQL using `EXCLUDED` can instead compare against a known input value, as the store predicate does here.
+General existing-column versus incoming-column comparisons still need an expression extension or raw SQL.
+Use SQL when exact database-clock behavior or computed assignments cannot be preserved by a conditional repository update.
+No new `.upsert()` vocabulary is needed for the supported cases.
+
+### Locking reads: add a normal builder modifier
+
+```ts
+await transaction({ pool, repositories }, async (transaction) => {
+  const { Product } = transaction.repositories;
+  const products = await Product.find().where({ id: productIds }).select(['id', 'name']).sort('id').lock('update');
+
+  await Product.update({ id: products.map((product) => product.id) }, { name: replacementName }, { returnRecords: false });
+});
+```
+
+Offer equivalent options syntax, following existing `.sort()`/`sort` and `.where()`/`where` conventions:
+
+```ts
+await productRepository.find({
+  pool: connection,
+  where: { id: productIds },
+  lock: { mode: 'update', wait: 'nowait' },
+});
+```
+
+Proposed modes are `'update'`, `'noKeyUpdate'`, `'share'`, and `'keyShare'`.
+The default waits for locks; optional `wait` is `'nowait'` or `'skipLocked'`.
+The builder equivalent is `.lock('update', { wait: 'nowait' })`.
+A union for wait behavior avoids contradictory `nowait: true` and `skipLocked: true` flags.
+
+Lock only the base entity's rows in the first version, including when a join filters them.
+Generate `OF` using the actual visible base-table name or alias, not a schema-qualified expression copied from a SELECT column.
+Population uses the same transaction but does not recursively lock related records.
+Reject lock combinations with `distinctOn`, `withCount`/`findWithCount`, or other unsupported result shapes before execution.
+Preserve those checks regardless of builder call order and after `toJSON()`.
+
+Require a managed scope or an explicit client override for locking reads.
+For externally managed clients, the caller remains responsible for an active transaction; a structural `PoolLike` cannot prove that one exists.
+Locks last only as long as that transaction.
+`skipLocked` is intended for work queues, not general consistent reads; these limits follow [PostgreSQL's locking clause](https://www.postgresql.org/docs/current/sql-select.html#SQL-FOR-UPDATE-SHARE).
+
+---
+
+## Planning Contract
+
+### KTD1. Separate query execution from connection ownership
+
+Keep `PoolLike` query-only.
+Introduce a separate connect-capable contract for the managed helper; normal initialization and per-query overrides continue accepting query-only executors.
+Initially target checked-out clients from `postgres-pool`, `pg`, and compatible Neon WebSocket pools.
+Do not imply support for interactive transactions over an HTTP batch-only executor.
+
+The owned connection contract needs awaited normal release and explicit discard on an unusable connection.
+The installed `postgres-pool` exposes asynchronous `release(removeConnection?: boolean)`; node-postgres documents a release argument for destroying a client.
+Verify the shared contract against actual driver declarations during implementation, and adapt incompatible drivers at this boundary.
+Do not guess release behavior from the presence of a `.query()` method.
+See [postgres-pool](https://github.com/postgres-pool/postgres-pool) and [node-postgres pooling](https://node-postgres.com/apis/pool).
+
+Allow an optional `isolationLevel` in managed options using a finite union of supported PostgreSQL levels.
+When omitted, retain the database default; apply an explicit level before invoking the callback.
+Connection acquisition timeouts remain driver configuration in the first release.
+No automatic retries or callback timeout implemented with a detached `Promise.race`.
+
+### KTD2. Build isolated scopes from existing metadata
+
+Have `bindRepositories` create fresh built-in repository instances or a dedicated internal binding layer using already-initialized metadata.
+The managed helper uses the same binding with its guarded executor; it must not implement a second repository construction path.
+Do not rerun decorator discovery, `initialize()`, or `expose()` for each transaction.
+Never temporarily swap `_pool` or `_readonlyPool` on shared repositories.
+
+Use one guarded executor as the effective pool for every scoped operation, including population and implicit junction repositories.
+Preserve the complete metadata registry needed by those relationships even when the public repository map contains only selected entries.
+Validate connection membership before forwarding a transaction executor to any repository, including the explicit `{ pool: transaction }` path.
+
+Use source write-pool identity plus the initialization connection configuration as the conservative membership boundary.
+Equivalent connection strings alone do not establish membership.
+Reject mixed-connection public maps before acquiring a client, and reject cross-connection relation traversal before issuing its SQL.
+Schema differences within the same connection are allowed.
+For a borrowed binding, validate source-map consistency but leave the target client's identity and lifetime to its owner as specified under Proposed Syntax.
+
+Support the standard `Repository` and `ReadonlyRepository` implementations initially.
+Do not silently reconstruct custom subclasses or wrappers as base repositories while retaining their custom TypeScript types.
+Reject unsupported custom implementations clearly; those consumers can adopt per-operation overrides until an explicit binding extension is designed.
+
+### KTD3. Make transaction lifetime a runtime contract
+
+```mermaid
+flowchart TD
+  A[Validate repository scope] --> B[Acquire one client]
+  B --> C[Begin transaction]
+  C --> D[Run callback and await its result]
+  D --> E{Callback and query execution succeeded?}
+  E -->|Yes| F[Close scope to new work and commit]
+  E -->|No| G[Close scope to new work and roll back]
+  F --> H[Release connection]
+  G --> H
+  F -->|Commit failed| I[Attempt cleanup and discard if uncertain]
+  G -->|Rollback failed| I
+  I --> J[Preserve primary error and report cleanup failure]
+```
+
+Guard execution when a builder is awaited, rather than only when it is constructed.
+A saved repository, raw-query method, or lazy builder must fail after completion without reaching a released connection.
+Directly returning a builder is supported through thenable assimilation; hiding unawaited builders inside an object is not automatic execution.
+
+Track database query failures on the scope even when application code catches them.
+Without savepoints, a PostgreSQL statement error can leave the transaction aborted; a resolved callback must not be reported as committed in that state.
+Preserve the original database error, including its SQLSTATE.
+
+On failure, prevent new work and settle already-started operations before rollback and release.
+Include BigAl's internal concurrent population branches, and cover the pre-query hook interval so a pending operation cannot resume on a released client.
+On success, a callback that leaves started operations pending should fail clearly rather than commit while work is still outstanding.
+An unstarted lazy builder cannot be discovered automatically; its later execution is rejected by the closed-scope guard.
+
+Acquisition failures have no client to release; begin failures still require cleanup of any acquired client.
+Rollback or release errors must not replace an earlier callback/query error.
+A commit transport failure may leave the outcome unknown; report uncertainty and never retry the callback automatically.
+A release failure after an acknowledged commit must be reported as cleanup failure after commit, not as a rollback.
+
+### KTD4. Preserve explicit composition and existing hooks
+
+Passing scoped repositories into another helper reuses the transaction.
+Do not expose a nested transaction method initially; reject a managed helper invoked with already-scoped repositories or a transaction executor as its source.
+A new top-level transaction started on an ordinary pool is independent, even if lexically inside another callback.
+Without ambient state, BigAl cannot detect every such call or a helper's use of global repositories.
+
+Keep `Entity.beforeCreate(values)` and `Entity.beforeUpdate(values)` running as today.
+They transform values and currently receive no transaction context.
+Globally captured repository calls inside a hook do not become transactional automatically.
+Do not change hook signatures or imply an after-commit mechanism in this release.
+
+---
+
+## TypeScript Approach
+
+Use generics and mapped types to preserve the types callers already have.
+No schema rewrite or advanced lifetime type system is needed.
+
+The conceptual type relationships are:
+
+```text
+Caller repository map
+  -> Same keys, each mapped to its typed standard read/write repository
+Callback result
+  -> Promise<Awaited<Result>>
+Lock wait option
+  -> Omitted | 'nowait' | 'skipLocked'
+```
+
+- Preserve the model generic and writable/read-only distinction for each map value; check writable repositories before their read-only supertype in conditional mappings.
+- Reuse existing overloaded repository interfaces and query-result types rather than recreating every method using `Parameters` and `ReturnType`.
+- Infer callback results, including `void`, arrays, selected reads, populated reads, and directly returned `PromiseLike` builders.
+- Accept an explicitly keyed, already-typed repository map; a `const` type parameter can retain literal information where needed without requiring consumer assertions.
+- Align the optional arguments on `IReadonlyRepository.find()` and `.findOne()` with the existing implementations so the proposed `.find()` examples work through interface types.
+
+These mechanisms follow TypeScript's [mapped types](https://www.typescriptlang.org/docs/handbook/2/mapped-types.html) and [utility types](https://www.typescriptlang.org/docs/handbook/utility-types.html).
+An ordinary generic already preserves object keys in many cases; use `const` inference only where it demonstrably improves the public API.
+
+Do not promise that `initialize({ models: [Product] })` can infer a literal `Product` key and readonly decorator state from constructor names alone.
+Those are runtime metadata in today's design.
+A transaction helper also cannot recover types already erased to `Entity` by its input map.
+Improving initialization inference is separate work and is not a prerequisite for consumers with existing typed repositories.
+
+TypeScript cannot enforce connection identity, active database state, or callback lifetimes.
+Runtime guards remain necessary, even with branded transaction types.
+Avoid adding a transaction-state generic to every builder solely to suggest a guarantee the language cannot enforce.
+
+---
+
+## Implementation Units
+
+### U5. Bind typed repositories for an existing transaction owner
+
+**Requirements:** R1, R10. **Dependencies:** none.
+
+**Files:** new binding helper under `src/`, `src/ReadonlyRepository.ts`, `src/Repository.ts`, `src/IReadonlyRepository.ts`, and exports in `src/index.ts`.
+Proposed tests: `tests/bindRepositories.test.ts`, `tests/transactionTypes.test.ts`, and relation cases in `tests/readonlyRepository.test.ts`.
+
+Extract reusable repository binding from the existing constructor/metadata pattern, following KTD2.
+Preserve typed map keys and read/write capabilities, and carry the effective client into all relationship reads.
+Document current `initialize({ models, pool: connection })` usage alongside the new helper so consumers can adopt the pattern before upgrading.
+
+**Validation scenarios:**
+
+- Local reads and writes use the supplied executor while original repositories retain their original pools.
+- Relation and implicit junction queries inherit the binding even when omitted from the public map.
+- Mixed source connections and unsupported repository implementations fail without silent rebinding.
+- Binding does not run lifecycle SQL, release the client, rerun `expose`, or rediscover decorators.
+- A typed public map retains ordinary CRUD and selection inference without a consumer cast.
+
+### U1. Add write pool overrides without changing returns
+
+**Requirements:** R1, R2. **Dependencies:** none.
+
+**Files:** `src/Repository.ts`, `src/IRepository.ts`, write option types under `src/query/`, and `tests/repository.test.ts`.
+
+Extend all public overloads with optional execution options and route writes through the selected executor.
+Keep pool-only options distinct from options that explicitly suppress or request returned records.
+Cover concrete classes and public interfaces so overload resolution does not fall back to broad unions.
+
+**Validation scenarios:**
+
+- Single and bulk creates with only `pool` use the supplied executor and retain single/array return types.
+- Update and destroy pool-only options retain their respective array/void defaults.
+- `returnSelect`, `returnRecords: false`, conflict ignore/merge, and `.toJSON()` remain compatible with the override.
+- Hooks, timestamp/version handling, error propagation, and default-pool behavior remain unchanged.
+
+### U2. Add the managed lifetime and repository scope
+
+**Requirements:** R3-R8. **Dependencies:** U5; U1 only for optional per-operation override examples.
+
+**Files:** new transaction module and connection-capability types under `src/`; exports in `src/index.ts` and `src/types/index.ts`.
+Also `src/ReadonlyRepository.ts`, `src/Repository.ts`, `src/IReadonlyRepository.ts`, and relation execution paths.
+Proposed tests: `tests/transaction.test.ts`, `tests/transaction.integration.test.ts`, plus existing repository tests.
+
+Implement KTD1-KTD4 with one owned client and a shared execution guard.
+Reuse metadata and population behavior; include private junction repositories and membership checks at the execution boundary.
+Keep SQL lifecycle construction parameter-safe, using allowlisted isolation values rather than interpolating arbitrary strings.
+
+**Validation scenarios:**
+
+- Commit dependent creates and return their callback result; roll back all writes on a later callback or SQL failure.
+- Caught statement failures still prevent successful completion; rollback failure discards the client and preserves the primary error.
+- Acquire, begin, commit, rollback, and release failures follow KTD3, including uncertain commit outcomes.
+- Read-your-writes works with a configured read replica, ordinary population, and a many-to-many junction omitted from the public scope map.
+- Conflicting overrides, mismatched named connections, and custom repository implementations fail clearly before their SQL runs.
+- Concurrent transactions and unscoped queries retain their own clients; saved builders and raw methods fail after scope completion.
+- Pending hook/population work cannot access a released client; directly returned thenables complete before commit.
+- Helpers reuse scoped repositories, and detected attempts to start another managed transaction from that scope are rejected.
+
+### U3. Add row locking to existing reads
+
+**Requirements:** R9. **Dependencies:** no new write API; use U5/U2 for binding and managed-transaction integration coverage.
+
+**Files:** `src/SqlHelper.ts`, `src/ReadonlyRepository.ts`, `src/query/FindOneArgs.ts`, read result interfaces under `src/query/`.
+Tests: `tests/sqlHelper.test.ts`, `tests/readonlyRepository.test.ts`, and `tests/transaction.integration.test.ts`.
+
+Follow existing modifier mutation and option parsing conventions.
+Keep lock generation in `SqlHelper`; use the SQL rules and limitations specified under Proposed Syntax.
+
+**Validation scenarios:**
+
+- Options and fluent forms generate each allowed mode and wait policy without altering selected/populated result types.
+- Two real connections demonstrate waiting, `nowait` failure, and queue-style `skipLocked` behavior.
+- Base-table locks with joins and schema-qualified models use the correct `OF` reference; population does not inherit a lock clause.
+- Incompatible count/window/distinct combinations fail for both modifier orders and JSON result variants.
+- Locks release after commit and rollback; ordinary unscoped reads without an explicit client cannot silently request transaction locks.
+
+### U6. Correct conditional-upsert column qualification
+
+**Requirements:** R11. **Dependencies:** none.
+
+**Files:** `src/SqlHelper.ts`, `tests/sqlHelper.test.ts`, and a PostgreSQL regression case in `tests/transaction.integration.test.ts`.
+
+Start by reproducing the reported ambiguous merge predicate against PostgreSQL.
+Introduce an explicit target-row qualification context for the conflict action's `WHERE` clause; do not simulate a join to obtain a prefix.
+Keep INSERT column lists and the left side of `DO UPDATE SET` unqualified.
+Preserve the distinct context of partial-index target predicates and the existing `EXCLUDED` assignments.
+These scopes differ in [PostgreSQL's INSERT grammar](https://www.postgresql.org/docs/current/sql-insert.html).
+
+**Validation scenarios:**
+
+- A conflict merge with scalar, null, and OR predicates executes without ambiguous target-column errors.
+- Qualifying predicates select the existing row; true predicates update and false predicates leave it unchanged through a repository call with `returnRecords: false`.
+- Schemas, renamed columns, and existing conflict-target predicates retain their intended SQL.
+- Plain creates, unconditional merges, and conflict-ignore queries remain compatible.
+
+### U4. Prove public types and document adoption
+
+**Requirements:** R1-R11. **Dependencies:** accompany each unit; U2, U3, and U6 for complete coverage.
+
+**Files:** `tests/typeVariance.test.ts`, proposed `tests/transactionTypes.test.ts`, and proposed `docs/guide/transactions.md`.
+Update `docs/reference/configuration.md`, `docs/reference/api.md`, `docs/guide/querying.md`, `docs/guide/crud-operations.md`, `docs/advanced/bigal-vs-raw-sql.md`, and `skills/using-bigal/SKILL.md`.
+Add the transaction guide to `docs/.vitepress/config.ts` navigation.
+
+Document both adoption paths and the boundary around helpers, hooks, external effects, and specialized SQL.
+Use existing repository syntax throughout.
+Capture the non-obvious traps in the shared transaction guide: read-replica bypass, relation routing, lazy execution, and failed connection cleanup.
+
+**Validation scenarios:**
+
+- Public examples type-check without new consumer casts when given typed repositories.
+- Writable and read-only maps retain capabilities, custom keys remain known, and invalid model properties fail compilation.
+- Selections, population, joins, JSON conversion, callback results, and single/bulk/void mutations retain existing inference.
+- Type checks do not claim to restore types from broad initialization results or preserve unsupported custom subclasses.
+- Driver compatibility fixtures accept supported real pool/client types and reject query-only executors as managed transaction sources.
+
+---
+
+## Verification Contract
+
+Use existing mock-pool tests for routing, generated SQL, overload behavior, and failure injection.
+They do not prove rollback, lock lifetime, visibility, or concurrent transaction isolation.
+Add a real PostgreSQL integration fixture with two independent connections and deterministic synchronization for those guarantees.
+Inspect the current test/CI setup before adding that fixture; no integration infrastructure was established or run during planning.
+
+Implementation gates are `pnpm run check:types`, `pnpm test`, `pnpm run lint`, and `pnpm run build`, plus the new PostgreSQL integration suite.
+Verify actual driver declaration compatibility instead of relying solely on structural mock objects.
+Do not add runtime experiments or library changes to this planning revision.
+
+---
+
+## Definition of Done
+
+Ordinary multi-repository transactions use the existing BigAl CRUD API without manual query strings.
+Both external transaction owners and the managed callback path have documented syntax and preserved return types.
+Borrowed bindings clearly retain caller-owned lifecycle responsibilities.
+Real PostgreSQL tests prove commit/rollback, read-your-writes, relation routing, locking, and concurrent scope isolation.
+Failure tests prove that completed or damaged transaction connections cannot be reused through saved scopes.
+The documentation identifies which specialized SQL still needs the escape hatch and which application effects remain outside the transaction.
+
+Start with U5 to make the existing transaction-local repository pattern convenient and typed, then layer U2 over it.
+U6 can ship independently to restore conditional-upsert behavior; U3 removes manual locking queries in common read-modify-write flows.
+U1 is an optional parallel improvement for per-operation integration, with U4 documentation and type coverage accompanying each release.
+
+Implementation follow-up: `bigal-asa`. Conditional-upsert correctness follow-up: `bigal-7xb`.
