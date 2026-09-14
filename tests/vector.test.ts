@@ -455,6 +455,7 @@ describe('pgvector support', () => {
       expect(vectorParam).toContain('1.23456789');
     });
   });
+
   describe('constraint validation and joined-model support', () => {
     it('should combine multiple distance bounds with AND', async () => {
       mockedPool.query.mockResolvedValueOnce(getQueryResult([]));
