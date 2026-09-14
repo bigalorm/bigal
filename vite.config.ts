@@ -51,7 +51,7 @@ const config: UserConfig = defineConfig({
   pack: {
     entry: ['src/index.ts'],
     format: ['esm', 'cjs'],
-    dts: { oxc: true },
+    dts: { oxc: {} },
   },
   staged: {
     '*.md': ['vp fmt', 'markdownlint --config=.github/linters/.markdown-lint.yml --fix'],
