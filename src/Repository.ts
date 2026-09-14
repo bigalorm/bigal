@@ -8,15 +8,16 @@ import {
   type DeleteOptions,
   type DestroyResult,
   type DestroyResultWithRecords,
+  type DoNotReturnDeletedRecords,
   type DoNotReturnRecords,
   type ExecutionOptions,
+  type ReturnRecords,
   type ReturnSelect,
   type UpdateResult,
   type WhereQuery,
 } from './query/index.js';
 import { type OnConflictOptions } from './query/OnConflictOptions.js';
 import { ReadonlyRepository } from './ReadonlyRepository.js';
-import { executeRepositoryOperation } from './RepositoryPool.js';
 import { getDeleteQueryAndParams, getInsertQueryAndParams, getUpdateQueryAndParams } from './SqlHelper.js';
 import { type CreateUpdateParams, type OmitEntityCollections, type OmitFunctions, type QueryResult } from './types/index.js';
 
@@ -29,7 +30,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {object}
    */
-  public create(values: CreateUpdateParams<T>, options?: ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>>): CreateResult<T>;
+  public create(values: CreateUpdateParams<T>, options?: ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>> & ReturnRecords): CreateResult<T>;
 
   /**
    * Creates an object or objects using the specified values
@@ -49,7 +50,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public create(values: CreateUpdateParams<T>[], options?: ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>>): CreateResultArray<T>;
+  public create(values: CreateUpdateParams<T>[], options?: ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>> & ReturnRecords): CreateResultArray<T>;
 
   /**
    * Creates an object using the specified values
@@ -94,7 +95,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
         reject?: ((error: Error) => PromiseLike<TErrorResult> | TErrorResult) | null,
       ): Promise<TErrorResult | TResult> {
         try {
-          const executionResult = await executeRepositoryOperation(modelInstance._pool, modelInstance._pool, modelInstance._repositoriesByModelNameLowered, options?.pool, async (pool) => {
+          const executionResult = await modelInstance._executeWriteOperation(options?.pool, async (pool) => {
             if (isArray && !(values as CreateUpdateParams<T>[]).length) {
               return [];
             }
@@ -213,7 +214,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
         reject?: ((error: Error) => PromiseLike<TErrorResult> | TErrorResult) | null,
       ): Promise<TErrorResult | TResult> {
         try {
-          const executionResult = await executeRepositoryOperation(modelInstance._pool, modelInstance._pool, modelInstance._repositoriesByModelNameLowered, options?.pool, async (pool) => {
+          const executionResult = await modelInstance._executeWriteOperation(options?.pool, async (pool) => {
             if (modelInstance._type.beforeUpdate) {
               values = await modelInstance._type.beforeUpdate(values);
             }
@@ -255,7 +256,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {object} [where] - Object representing the where query
    * @returns {void}
    */
-  public destroy(where?: WhereQuery<T>, options?: ExecutionOptions & { returnRecords?: false; returnSelect?: never }): DestroyResult<T, void>;
+  public destroy(where?: WhereQuery<T>, options?: DoNotReturnDeletedRecords & ExecutionOptions): DestroyResult<T, void>;
 
   /**
    * Destroys object(s) matching the where query
@@ -304,7 +305,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
       ): Promise<TErrorResult | TResult> {
         try {
-          const executionResult = await executeRepositoryOperation(modelInstance._pool, modelInstance._pool, modelInstance._repositoriesByModelNameLowered, options?.pool, async (pool) => {
+          const executionResult = await modelInstance._executeWriteOperation(options?.pool, async (pool) => {
             if (typeof where === 'string') {
               throw new Error('The query cannot be a string, it must be an object');
             }

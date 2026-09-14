@@ -2,9 +2,10 @@ export type LockMode = 'noKeyUpdate' | 'update';
 
 export type LockWait = 'nowait' | 'skipLocked';
 
-export interface LockOptions {
-  mode: LockMode;
+export interface LockWaitOptions {
   wait?: LockWait;
 }
 
-export type LockWaitOptions = Omit<LockOptions, 'mode'>;
+export interface LockOptions extends LockWaitOptions {
+  mode: LockMode;
+}

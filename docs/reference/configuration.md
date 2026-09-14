@@ -62,6 +62,7 @@ const repos = initialize({
 ```
 
 `find()`, `findOne()`, and `count()` use `readonlyPool`. `create()`, `update()`, and `destroy()` use `pool`.
+Locking reads (`.lock()`) also use `pool`, because a replica cannot hold row locks.
 
 Individual queries can override the pool:
 

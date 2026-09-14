@@ -378,10 +378,9 @@ Modes are `'update'` (`FOR UPDATE`) and `'noKeyUpdate'` (`FOR NO KEY UPDATE`). O
 await productRepository.findOne({ pool: transactionConnection }).where({ id: productId }).lock('noKeyUpdate', { wait: 'nowait' });
 ```
 
-A locking read requires a managed transaction or an explicit pool override for a connection whose transaction lifecycle the caller owns.
+A locking read runs on the write pool, or on the `pool` override you pass, and PostgreSQL holds the lock only while a transaction is open on that connection.
 BigAl locks only base-table rows. Joins may filter those rows, while `populate()` queries do not inherit the lock.
 
-Locks are never added automatically. A query without `lock` keeps its existing SQL and behavior.
 Locking cannot be combined with `distinctOn()` or `withCount()`.
 See [Transactions](/guide/transactions#row-locking) for timeout parameters and safe locking protocols.
 

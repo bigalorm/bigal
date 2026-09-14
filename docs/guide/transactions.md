@@ -28,14 +28,14 @@ The callback result is returned after the commit succeeds. Throwing from the cal
 
 `transaction(options, callback)` accepts:
 
-| Option                       | Type                                                    | Required | Description                                                               |
-| ---------------------------- | ------------------------------------------------------- | -------- | ------------------------------------------------------------------------- |
-| `pool`                       | `TransactionPool`                                       | Yes      | Write pool with `connect()` support                                       |
-| `repositories`               | `Record<string, Repository \| ReadonlyRepository>`      | Yes      | Typed repositories from one `initialize()` call using the same write pool |
-| `isolationLevel`             | `'readCommitted' \| 'repeatableRead' \| 'serializable'` | No       | PostgreSQL isolation level; the database default is retained when omitted |
-| `lockTimeoutMs`              | `number`                                                | No       | Transaction-local maximum wait for any lock acquisition                   |
-| `statementTimeoutMs`         | `number`                                                | No       | Transaction-local maximum duration for each statement                     |
-| `idleInTransactionTimeoutMs` | `number`                                                | No       | Transaction-local maximum idle time before PostgreSQL closes the session  |
+| Option                       | Type                                                    | Required | Description                                                                    |
+| ---------------------------- | ------------------------------------------------------- | -------- | ------------------------------------------------------------------------------ |
+| `pool`                       | `TransactionPool`                                       | Yes      | Write pool with `connect()` support                                            |
+| `repositories`               | `Record<string, Repository \| ReadonlyRepository>`      | Yes      | Standard repositories whose write pool is `pool`, from any `initialize()` call |
+| `isolationLevel`             | `'readCommitted' \| 'repeatableRead' \| 'serializable'` | No       | PostgreSQL isolation level; the database default is retained when omitted      |
+| `lockTimeoutMs`              | `number`                                                | No       | Transaction-local maximum wait for any lock acquisition                        |
+| `statementTimeoutMs`         | `number`                                                | No       | Transaction-local maximum duration for each statement                          |
+| `idleInTransactionTimeoutMs` | `number`                                                | No       | Transaction-local maximum idle time before PostgreSQL closes the session       |
 
 Timeout values must be integers from `0` through `2_147_483_647`. An explicit `0` disables that PostgreSQL timeout for the transaction.
 BigAl supplies no timeout defaults and emits no timeout-setting SQL for omitted options.
@@ -67,7 +67,7 @@ await transaction(
 );
 ```
 
-Readonly repositories stay readonly. Custom repository subclasses and wrappers are not rebound in this release; pass a standard repository or use a per-operation pool override.
+Readonly repositories stay readonly. Custom repository subclasses and wrappers are rejected with a `TypeError`; pass the underlying standard repository or use a per-operation pool override.
 
 ## Raw SQL and existing helpers
 
@@ -80,7 +80,7 @@ await transaction({ pool, repositories }, async (transactionScope) => {
 });
 ```
 
-A repository used with `{ pool: transactionScope }` must originate from the same write pool. A scoped repository rejects a different pool override.
+A repository used with `{ pool: transactionScope }` must use the same write pool as the transaction. A scoped repository accepts its own scope as an override and rejects any other pool.
 
 ## Row locking
 
@@ -129,7 +129,10 @@ const product = await productRepository.findOne({ pool: transactionConnection })
 Locking is opt-in. Ordinary reads, including reads inside managed transactions, remain ordinary `SELECT` statements.
 Population queries use the same transaction connection but do not inherit the primary query's lock clause.
 
-Locking reads require either a managed transaction or an explicit pool override owned by an external transaction. Locks cannot be combined with `distinctOn()` or `withCount()`.
+A locking read runs on the write pool, or on the `pool` override you pass, never on a read replica.
+PostgreSQL releases a row lock when the transaction ends, so a lock taken outside a transaction block is released as soon as the statement completes.
+Take locks through scoped repositories, through repositories initialized with a transaction connection, or with a `{ pool: connection }` override on a global repository.
+Locks cannot be combined with `distinctOn()` or `withCount()`.
 
 ### Locking discipline
 
@@ -166,6 +169,7 @@ try {
 ```
 
 Include models needed by relationships and junctions, and do not configure a read replica for these local repositories.
+Repositories initialized this way can use `.lock()` directly because every query already runs on the transaction connection.
 `initialize()` does not begin, commit, roll back, release, or invalidate an externally owned connection.
 It retains its existing broad repository-map return type, so use your application's established typed wrapper or assertion for model-specific properties.
 

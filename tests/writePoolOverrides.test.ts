@@ -1,24 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { type PoolLike, type PoolQueryResult, type QueryResultRow, type Repository } from '../src/index.js';
+import { type Repository } from '../src/index.js';
 import { initialize } from '../src/index.js';
 
 import { Product, Store } from './models/index.js';
 import * as generator from './utils/generator.js';
-
-type PoolQuery = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
-
-function createMockPool() {
-  const pool = { query: vi.fn<PoolQuery>() };
-  return pool as PoolLike & typeof pool;
-}
-
-function getQueryResult<TRow extends QueryResultRow>(rows: TRow[] = []): PoolQueryResult<TRow> {
-  return {
-    rowCount: rows.length,
-    rows,
-  };
-}
+import { createMockPool, getQueryResult } from './utils/pool.js';
 
 describe('write pool overrides', () => {
   const defaultPool = createMockPool();

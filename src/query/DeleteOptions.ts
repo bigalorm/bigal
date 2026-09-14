@@ -13,9 +13,9 @@ interface ReturnRecords<T extends Entity, K extends keyof T> {
   returnSelect?: (K & string & keyof OmitFunctions<OmitEntityCollections<T>>)[];
 }
 
-interface DoNotReturnRecords {
+export interface DoNotReturnDeletedRecords {
   returnRecords?: false;
   returnSelect?: never;
 }
 
-export type DeleteOptions<T extends Entity, K extends keyof T = keyof T> = ExecutionOptions & (DoNotReturnRecords | ReturnRecords<T, K> | ReturnSelect<T, K>);
+export type DeleteOptions<T extends Entity, K extends keyof T = keyof T> = ExecutionOptions & (DoNotReturnDeletedRecords | ReturnRecords<T, K> | ReturnSelect<T, K>);

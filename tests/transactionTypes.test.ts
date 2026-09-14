@@ -1,8 +1,9 @@
 import { describe, expectTypeOf, it } from 'vitest';
 import { type Pool as PostgresPool } from 'postgres-pool';
 
-import { type PoolLike, type QueryResult, type ReadonlyRepository, type Repository, type TransactionPool, type UpdateResult } from '../src/index.js';
+import { type DoNotReturnRecords, type PoolLike, type QueryResult, type ReadonlyRepository, type Repository, type TransactionPool, type TransactionScope, type UpdateResult } from '../src/index.js';
 import { transaction } from '../src/index.js';
+import { type OnConflictOptions } from '../src/query/OnConflictOptions.js';
 
 import { type Product, type ReadonlyProduct } from './models/index.js';
 
@@ -56,9 +57,38 @@ async function _transactionTypeChecks(pool: TransactionPool, productRepository: 
   assertExact<Equals<typeof noResult, void>>();
 }
 
+function _transactionScopeIsPoolLike(transactionScope: TransactionScope<{ productRepository: Repository<Product> }>): PoolLike {
+  return transactionScope;
+}
+
+async function _writeOptionTypeChecks(pool: PoolLike, productRepository: Repository<Product>, forwardedOptions: DoNotReturnRecords & Partial<OnConflictOptions<Product>>): Promise<void> {
+  const forwardedResult = await productRepository.create({ name: 'Widget', store: 1 }, forwardedOptions);
+  assertExact<Equals<typeof forwardedResult, void>>();
+
+  const reusableOptions = { pool, returnRecords: false as const };
+  const reusableResult = await productRepository.create({ name: 'Widget', store: 1 }, reusableOptions);
+  assertExact<Equals<typeof reusableResult, void>>();
+
+  const bulkResult = await productRepository.create([{ name: 'Widget', store: 1 }], reusableOptions);
+  assertExact<Equals<typeof bulkResult, void>>();
+
+  const createdProduct = await productRepository.create({ name: 'Widget', store: 1 }, { pool, onConflict: { action: 'ignore', targets: ['sku'] } });
+  assertExact<Equals<typeof createdProduct, QueryResult<Product>>>();
+
+  const destroyResult = await productRepository.destroy({ id: 42 }, { pool });
+  assertExact<Equals<typeof destroyResult, void>>();
+
+  expectTypeOf(productRepository.find({ pool }).withCount()).not.toHaveProperty('lock');
+}
+
 describe('transaction types', () => {
   it('preserves repository keys, capabilities, selections, and callback results', () => {
     expectTypeOf(_transactionTypeChecks).toBeFunction();
     expectTypeOf(_postgresPoolCompatibility).toBeFunction();
+    expectTypeOf(_transactionScopeIsPoolLike).toBeFunction();
+  });
+
+  it('keeps returnRecords false on the void overloads when options are not object literals', () => {
+    expectTypeOf(_writeOptionTypeChecks).toBeFunction();
   });
 });

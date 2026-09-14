@@ -62,7 +62,7 @@ const result = await transaction(
 | Option                       | Type                                                    | Required | Description                                             |
 | ---------------------------- | ------------------------------------------------------- | -------- | ------------------------------------------------------- |
 | `pool`                       | `TransactionPool`                                       | Yes      | Pool that acquires a releasable PostgreSQL client       |
-| `repositories`               | `Record<string, Repository \| ReadonlyRepository>`      | Yes      | Repositories from one initialization and write pool     |
+| `repositories`               | `Record<string, Repository \| ReadonlyRepository>`      | Yes      | Standard repositories that share the write pool         |
 | `isolationLevel`             | `'readCommitted' \| 'repeatableRead' \| 'serializable'` | No       | Explicit isolation level; omitted uses database default |
 | `lockTimeoutMs`              | `number`                                                | No       | Transaction-local lock wait timeout                     |
 | `statementTimeoutMs`         | `number`                                                | No       | Transaction-local statement timeout                     |
@@ -324,7 +324,7 @@ await productRepository.find({
 });
 ```
 
-Locking requires a managed transaction or an explicit pool override for an externally managed transaction.
+A locking read runs on the write pool unless `pool` is supplied, and PostgreSQL holds the lock only while a transaction is open on that connection.
 It cannot be combined with `distinctOn()` or `withCount()`, and it does not propagate to `populate()` queries.
 
 ### toJSON()

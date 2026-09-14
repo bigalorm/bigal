@@ -29,7 +29,7 @@ import {
   type WhereQuery,
 } from './query/index.js';
 import { registerRepositoryOptions } from './RepositoryInternals.js';
-import { executeRepositoryOperation, isManagedTransactionPool } from './RepositoryPool.js';
+import { executeRepositoryOperation } from './RepositoryPool.js';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
 import {
   type GetValueType,
@@ -101,8 +101,8 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       modelMetadata,
       type,
       repositoriesByModelNameLowered,
-      pool,
-      readonlyPool: readonlyPool ?? pool,
+      pool: this._pool,
+      readonlyPool: this._readonlyPool,
     });
 
     for (const column of modelMetadata.columns) {
@@ -316,13 +316,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
       ): Promise<TErrorResult | TResult> {
         try {
-          const executionResult = await executeRepositoryOperation(modelInstance._readonlyPool, modelInstance._pool, modelInstance._repositoriesByModelNameLowered, poolOverride, async (pool) => {
+          const executionResult = await modelInstance._executeReadOperation({ lock: lockOptions, pool: poolOverride }, async (pool) => {
             if (typeof where === 'string') {
               throw new Error('The query cannot be a string, it must be an object');
-            }
-
-            if (lockOptions && !poolOverride && !isManagedTransactionPool(modelInstance._readonlyPool)) {
-              throw new Error('Locking reads require a managed transaction or an explicit pool override');
             }
 
             const { query, params } = getSelectQueryAndParams({
@@ -645,13 +641,9 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
       ): Promise<TErrorResult | TResult> {
         try {
-          const executionResult = await executeRepositoryOperation(modelInstance._readonlyPool, modelInstance._pool, modelInstance._repositoriesByModelNameLowered, poolOverride, async (pool) => {
+          const executionResult = await modelInstance._executeReadOperation({ lock: lockOptions, pool: poolOverride }, async (pool) => {
             if (typeof where === 'string') {
               throw new Error('The query cannot be a string, it must be an object');
-            }
-
-            if (lockOptions && !poolOverride && !isManagedTransactionPool(modelInstance._readonlyPool)) {
-              throw new Error('Locking reads require a managed transaction or an explicit pool override');
             }
 
             const { query, params } = getSelectQueryAndParams({
@@ -772,7 +764,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
       ): Promise<TErrorResult | TResult> {
         try {
-          const executionResult = await executeRepositoryOperation(modelInstance._readonlyPool, modelInstance._pool, modelInstance._repositoriesByModelNameLowered, poolOverride, async (pool) => {
+          const executionResult = await modelInstance._executeReadOperation({ pool: poolOverride }, async (pool) => {
             const { query, params } = getCountQueryAndParams({
               repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
               model: modelInstance.model,
@@ -969,6 +961,16 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     }
 
     return result;
+  }
+
+  protected _executeReadOperation<TResult>({ lock, pool: poolOverride }: Pick<FindOneArgs<T>, 'lock' | 'pool'>, operation: (pool: PoolLike) => Promise<TResult>): Promise<TResult> {
+    // Row locks are only held on the primary, so a locking read bypasses the read-only pool
+    const defaultPool = lock ? this._pool : this._readonlyPool;
+    return executeRepositoryOperation(defaultPool, this._pool, poolOverride, operation);
+  }
+
+  protected _executeWriteOperation<TResult>(poolOverride: PoolLike | undefined, operation: (pool: PoolLike) => Promise<TResult>): Promise<TResult> {
+    return executeRepositoryOperation(this._pool, this._pool, poolOverride, operation);
   }
 
   // NOTE: This will mutate `entities`

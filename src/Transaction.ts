@@ -1,11 +1,12 @@
 import { type Entity } from './Entity.js';
 import { type IReadonlyRepository } from './IReadonlyRepository.js';
 import { type IRepository } from './IRepository.js';
-import { ManagedTransactionExecutor } from './ManagedTransactionExecutor.js';
-import { ReadonlyRepository } from './ReadonlyRepository.js';
+import { ManagedTransactionExecutor, resolveManagedTransactionExecutor } from './ManagedTransactionExecutor.js';
+import { type IRepositoryOptions, ReadonlyRepository } from './ReadonlyRepository.js';
 import { Repository } from './Repository.js';
 import { getRepositoryOptions } from './RepositoryInternals.js';
-import { type PoolLike, type TransactionConnection, type TransactionPool } from './types/index.js';
+import { type RepositoryMap, type TransactionRepositories, TransactionScope } from './TransactionScope.js';
+import { type TransactionConnection, type TransactionPool } from './types/index.js';
 
 const MAX_POSTGRES_TIMEOUT_MS = 2_147_483_647;
 
@@ -15,32 +16,29 @@ const ISOLATION_LEVEL_SQL: Record<TransactionIsolationLevel, string> = {
   serializable: 'SERIALIZABLE',
 };
 
+const POSTGRES_SETTING_BY_TIMEOUT_OPTION: Record<TransactionTimeoutOption, string> = {
+  lockTimeoutMs: 'lock_timeout',
+  statementTimeoutMs: 'statement_timeout',
+  idleInTransactionTimeoutMs: 'idle_in_transaction_session_timeout',
+};
+
+const TIMEOUT_OPTION_NAMES: readonly TransactionTimeoutOption[] = ['lockTimeoutMs', 'statementTimeoutMs', 'idleInTransactionTimeoutMs'];
+
+type TransactionTimeoutOption = 'idleInTransactionTimeoutMs' | 'lockTimeoutMs' | 'statementTimeoutMs';
+
+type RepositoryRegistry = Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+
 interface CleanupErrorDetails extends Error {
   cleanupErrors?: readonly unknown[];
 }
 
-type RepositoryMap = Record<string, unknown>;
-
-type ScopedRepository<TRepository> =
-  TRepository extends Repository<infer TEntity>
-    ? Repository<TEntity>
-    : TRepository extends ReadonlyRepository<infer TEntity>
-      ? ReadonlyRepository<TEntity>
-      : TRepository extends IRepository<infer TEntity>
-        ? IRepository<TEntity>
-        : TRepository extends IReadonlyRepository<infer TEntity>
-          ? IReadonlyRepository<TEntity>
-          : never;
+interface SourceRepository {
+  name: string;
+  options: IRepositoryOptions<Entity>;
+  repository: ReadonlyRepository<Entity> | Repository<Entity>;
+}
 
 export type TransactionIsolationLevel = 'readCommitted' | 'repeatableRead' | 'serializable';
-
-export type TransactionRepositories<TRepositories extends RepositoryMap> = {
-  [TKey in keyof TRepositories]: ScopedRepository<TRepositories[TKey]>;
-};
-
-export interface TransactionScope<TRepositories extends RepositoryMap> extends PoolLike {
-  readonly repositories: TransactionRepositories<TRepositories>;
-}
 
 export interface TransactionOptions<TRepositories extends RepositoryMap> {
   pool: TransactionPool;
@@ -62,15 +60,15 @@ function assertTimeoutValue(name: string, value: number | undefined): void {
 }
 
 function validateOptions(options: TransactionOptions<RepositoryMap>): void {
-  assertTimeoutValue('idleInTransactionTimeoutMs', options.idleInTransactionTimeoutMs);
-  assertTimeoutValue('lockTimeoutMs', options.lockTimeoutMs);
-  assertTimeoutValue('statementTimeoutMs', options.statementTimeoutMs);
+  for (const optionName of TIMEOUT_OPTION_NAMES) {
+    assertTimeoutValue(optionName, options[optionName]);
+  }
 
   if (options.isolationLevel !== undefined && !Object.hasOwn(ISOLATION_LEVEL_SQL, options.isolationLevel)) {
     throw new RangeError(`Unsupported transaction isolation level: ${String(options.isolationLevel)}`);
   }
 
-  if (options.pool instanceof ManagedTransactionExecutor) {
+  if (resolveManagedTransactionExecutor(options.pool)) {
     throw new Error('A managed transaction cannot be started from another managed transaction scope');
   }
 }
@@ -83,82 +81,65 @@ function isStandardRepository(repository: unknown): repository is ReadonlyReposi
   return repository.constructor === ReadonlyRepository || repository.constructor === Repository;
 }
 
-function validateRepositories(repositories: RepositoryMap, pool: TransactionPool): object | undefined {
-  let sourceRegistry: object | undefined;
+function resolveSourceRepositories(repositories: RepositoryMap, pool: TransactionPool): SourceRepository[] {
+  const sourceRepositories: SourceRepository[] = [];
 
   for (const [name, repository] of Object.entries(repositories)) {
     if (!isStandardRepository(repository)) {
       throw new TypeError(`Transaction repository "${name}" must be a standard Repository or ReadonlyRepository instance`);
     }
 
-    const repositoryOptions = getRepositoryOptions(repository);
-    if (!repositoryOptions) {
-      throw new TypeError(`Unable to read the initialized configuration for transaction repository "${name}"`);
-    }
-
-    if (repositoryOptions.pool !== pool) {
+    const options = getRepositoryOptions(repository);
+    if (!options || options.pool !== pool) {
       throw new Error(`Transaction repository "${name}" belongs to a different connection than the transaction pool`);
     }
 
-    sourceRegistry ??= repositoryOptions.repositoriesByModelNameLowered;
-    if (sourceRegistry !== repositoryOptions.repositoriesByModelNameLowered) {
-      throw new Error('All transaction repositories must come from the same BigAl initialization');
-    }
+    sourceRepositories.push({ name, options, repository });
   }
 
-  return sourceRegistry;
+  return sourceRepositories;
 }
 
-function createScopedRepositories<TRepositories extends RepositoryMap>(repositories: TRepositories, executor: ManagedTransactionExecutor): TransactionRepositories<TRepositories> {
-  const firstRepository = Object.values(repositories)[0];
-  if (!firstRepository) {
-    const emptyRepositories = {} as TransactionRepositories<TRepositories>;
-    executor.bindRepositories(emptyRepositories);
-    return emptyRepositories;
-  }
+function createScopedRegistry(sourceRegistry: RepositoryRegistry, executor: ManagedTransactionExecutor, scopedRepositoriesBySource: Map<object, IReadonlyRepository<Entity>>): void {
+  const scopedRegistry: RepositoryRegistry = {};
 
-  if (!isStandardRepository(firstRepository)) {
-    throw new TypeError('Unable to read the initialized repository configuration');
-  }
-
-  const firstRepositoryOptions = getRepositoryOptions(firstRepository);
-  if (!firstRepositoryOptions) {
-    throw new TypeError('Unable to read the initialized repository configuration');
-  }
-
-  const scopedRegistry: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>> = {};
-  const scopedRepositoriesBySource = new Map<object, IReadonlyRepository<Entity>>();
-
-  for (const sourceRepository of Object.values(firstRepositoryOptions.repositoriesByModelNameLowered)) {
-    if (scopedRepositoriesBySource.has(sourceRepository) || !isStandardRepository(sourceRepository)) {
-      continue;
-    }
-
-    const sourceOptions = getRepositoryOptions(sourceRepository);
+  for (const [modelNameLowered, sourceRepository] of Object.entries(sourceRegistry)) {
+    const sourceOptions = isStandardRepository(sourceRepository) ? getRepositoryOptions(sourceRepository) : undefined;
     if (!sourceOptions || sourceOptions.pool !== executor.sourcePool) {
+      // Models on another connection cannot join this transaction, so relationships to them keep using their own pool
+      scopedRegistry[modelNameLowered] = sourceRepository;
       continue;
     }
 
-    const repositoryOptions = {
-      modelMetadata: sourceOptions.modelMetadata,
-      type: sourceOptions.type,
+    const scopedOptions: IRepositoryOptions<Entity> = {
+      ...sourceOptions,
       repositoriesByModelNameLowered: scopedRegistry,
       pool: executor,
       readonlyPool: executor,
     };
-    const scopedRepository = sourceRepository.constructor === Repository ? new Repository(repositoryOptions) : new ReadonlyRepository(repositoryOptions);
+    const scopedRepository = sourceRepository.constructor === Repository ? new Repository(scopedOptions) : new ReadonlyRepository(scopedOptions);
 
     scopedRepositoriesBySource.set(sourceRepository, scopedRepository);
-    scopedRegistry[sourceRepository.model.name.toLowerCase()] = scopedRepository;
+    scopedRegistry[modelNameLowered] = scopedRepository;
   }
+}
 
-  const scopedRepositories: Record<string, unknown> = {};
-  for (const [name, sourceRepository] of Object.entries(repositories)) {
-    if (!isStandardRepository(sourceRepository)) {
-      throw new TypeError(`Transaction repository "${name}" must be a standard Repository or ReadonlyRepository instance`);
+function createScopedRepositories<TRepositories extends RepositoryMap>(sourceRepositories: readonly SourceRepository[], executor: ManagedTransactionExecutor): TransactionRepositories<TRepositories> {
+  const scopedRepositoriesBySource = new Map<object, IReadonlyRepository<Entity>>();
+  const scopedSourceRegistries = new Set<RepositoryRegistry>();
+
+  for (const { options } of sourceRepositories) {
+    if (scopedSourceRegistries.has(options.repositoriesByModelNameLowered)) {
+      continue;
     }
 
-    const scopedRepository = scopedRepositoriesBySource.get(sourceRepository);
+    scopedSourceRegistries.add(options.repositoriesByModelNameLowered);
+    createScopedRegistry(options.repositoriesByModelNameLowered, executor, scopedRepositoriesBySource);
+  }
+
+  const scopedRepositories: Record<string, IReadonlyRepository<Entity>> = {};
+  for (const { name, repository } of sourceRepositories) {
+    const scopedRepository = scopedRepositoriesBySource.get(repository);
     if (!scopedRepository) {
       throw new Error(`Unable to create a transaction-scoped repository for "${name}"`);
     }
@@ -166,9 +147,7 @@ function createScopedRepositories<TRepositories extends RepositoryMap>(repositor
     scopedRepositories[name] = scopedRepository;
   }
 
-  const typedRepositories = scopedRepositories as TransactionRepositories<TRepositories>;
-  executor.bindRepositories(typedRepositories);
-  return typedRepositories;
+  return scopedRepositories as TransactionRepositories<TRepositories>;
 }
 
 function getBeginStatement(isolationLevel: TransactionIsolationLevel | undefined): string {
@@ -179,18 +158,25 @@ function getBeginStatement(isolationLevel: TransactionIsolationLevel | undefined
   return `BEGIN ISOLATION LEVEL ${ISOLATION_LEVEL_SQL[isolationLevel]}`;
 }
 
-async function setLocalTimeout(connection: TransactionConnection, setting: string, value: number | undefined): Promise<void> {
-  if (value === undefined) {
+async function applyTransactionSettings(connection: TransactionConnection, options: TransactionOptions<RepositoryMap>): Promise<void> {
+  const settingExpressions: string[] = [];
+  const params: string[] = [];
+
+  for (const optionName of TIMEOUT_OPTION_NAMES) {
+    const value = options[optionName];
+    if (value === undefined) {
+      continue;
+    }
+
+    params.push(POSTGRES_SETTING_BY_TIMEOUT_OPTION[optionName], `${value}ms`);
+    settingExpressions.push(`set_config($${params.length - 1}, $${params.length}, true)`);
+  }
+
+  if (!settingExpressions.length) {
     return;
   }
 
-  await connection.query('SELECT set_config($1, $2, true)', [setting, `${value}ms`]);
-}
-
-async function applyTransactionSettings(connection: TransactionConnection, options: TransactionOptions<RepositoryMap>): Promise<void> {
-  await setLocalTimeout(connection, 'lock_timeout', options.lockTimeoutMs);
-  await setLocalTimeout(connection, 'statement_timeout', options.statementTimeoutMs);
-  await setLocalTimeout(connection, 'idle_in_transaction_session_timeout', options.idleInTransactionTimeoutMs);
+  await connection.query(`SELECT ${settingExpressions.join(', ')}`, params);
 }
 
 function attachCleanupErrors(primaryError: unknown, cleanupErrors: readonly unknown[]): void {
@@ -207,7 +193,6 @@ async function cleanupFailedTransaction(connection: TransactionConnection, execu
 
   executor?.close();
   await executor?.waitForOperations();
-  executor?.finish();
 
   let shouldDiscardConnection = discardConnection || !began;
   if (began) {
@@ -233,7 +218,7 @@ export async function transaction<const TRepositories extends RepositoryMap, TRe
   callback: (transactionScope: TransactionScope<TRepositories>) => PromiseLike<TResult> | TResult,
 ): Promise<Awaited<TResult>> {
   validateOptions(options);
-  const sourceRepositoryRegistry = validateRepositories(options.repositories, options.pool);
+  const sourceRepositories = resolveSourceRepositories(options.repositories, options.pool);
 
   const connection = await options.pool.connect();
   let began = false;
@@ -246,10 +231,9 @@ export async function transaction<const TRepositories extends RepositoryMap, TRe
     began = true;
     await applyTransactionSettings(connection, options);
 
-    executor = new ManagedTransactionExecutor(connection, options.pool, sourceRepositoryRegistry);
-    createScopedRepositories(options.repositories, executor);
-    callbackResult = await callback(executor as TransactionScope<TRepositories>);
-    await Promise.resolve();
+    executor = new ManagedTransactionExecutor(connection, options.pool);
+    const transactionScope = new TransactionScope(executor, createScopedRepositories<TRepositories>(sourceRepositories, executor));
+    callbackResult = await callback(transactionScope);
 
     if (executor.queryFailure) {
       throw executor.queryFailure;
@@ -262,7 +246,6 @@ export async function transaction<const TRepositories extends RepositoryMap, TRe
     executor.close();
     commitStarted = true;
     await connection.query('COMMIT');
-    executor.finish();
   } catch (error) {
     const cleanupErrors = await cleanupFailedTransaction(connection, executor, began, commitStarted);
     attachCleanupErrors(error, cleanupErrors);

@@ -1,6 +1,6 @@
 import { type PoolLike, type PoolQueryResult, type QueryResultRow, type TransactionConnection, type TransactionPool } from './types/index.js';
 
-type TransactionState = 'closed' | 'closing' | 'open';
+const executorsByScope = new WeakMap<PoolLike, ManagedTransactionExecutor>();
 
 export class ManagedTransactionExecutor implements PoolLike {
   private readonly activeOperations = new Set<Promise<unknown>>();
@@ -9,18 +9,13 @@ export class ManagedTransactionExecutor implements PoolLike {
 
   private firstQueryFailure: Error | undefined;
 
-  private repositoriesByName: Record<string, unknown> = {};
-
-  private state: TransactionState = 'open';
+  private isOpen = true;
 
   public readonly sourcePool: TransactionPool;
 
-  public readonly sourceRepositoryRegistry: object | undefined;
-
-  public constructor(connection: TransactionConnection, sourcePool: TransactionPool, sourceRepositoryRegistry: object | undefined) {
+  public constructor(connection: TransactionConnection, sourcePool: TransactionPool) {
     this.connection = connection;
     this.sourcePool = sourcePool;
-    this.sourceRepositoryRegistry = sourceRepositoryRegistry;
   }
 
   public get hasPendingOperations(): boolean {
@@ -31,20 +26,8 @@ export class ManagedTransactionExecutor implements PoolLike {
     return this.firstQueryFailure;
   }
 
-  public get repositories(): Record<string, unknown> {
-    return this.repositoriesByName;
-  }
-
-  public bindRepositories(repositories: Record<string, unknown>): void {
-    this.repositoriesByName = repositories;
-  }
-
   public close(): void {
-    this.state = 'closing';
-  }
-
-  public finish(): void {
-    this.state = 'closed';
+    this.isOpen = false;
   }
 
   public query<TRow extends QueryResultRow = QueryResultRow>(text: string, values?: readonly unknown[]): Promise<PoolQueryResult<TRow>> {
@@ -60,7 +43,7 @@ export class ManagedTransactionExecutor implements PoolLike {
   }
 
   public trackOperation<TResult>(operation: () => Promise<TResult>): Promise<TResult> {
-    if (this.state !== 'open') {
+    if (!this.isOpen) {
       return Promise.reject(new Error('Cannot execute a query after the managed transaction scope has closed'));
     }
 
@@ -77,4 +60,16 @@ export class ManagedTransactionExecutor implements PoolLike {
   public async waitForOperations(): Promise<void> {
     await Promise.allSettled(this.activeOperations);
   }
+}
+
+export function bindTransactionScope(scope: PoolLike, executor: ManagedTransactionExecutor): void {
+  executorsByScope.set(scope, executor);
+}
+
+export function resolveManagedTransactionExecutor(pool: PoolLike): ManagedTransactionExecutor | undefined {
+  if (pool instanceof ManagedTransactionExecutor) {
+    return pool;
+  }
+
+  return executorsByScope.get(pool);
 }

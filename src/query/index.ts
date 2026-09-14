@@ -19,6 +19,7 @@ export * from './FindResult.js';
 export * from './FindWithCountResult.js';
 export * from './PaginateOptions.js';
 export * from './PopulateArgs.js';
+export * from './ReturnRecords.js';
 export * from './ReturnSelect.js';
 export * from './Sort.js';
 export * from './WhereQuery.js';

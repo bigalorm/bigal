@@ -1,51 +1,44 @@
-import { ManagedTransactionExecutor } from './ManagedTransactionExecutor.js';
+import { resolveManagedTransactionExecutor } from './ManagedTransactionExecutor.js';
 import { type PoolLike } from './types/index.js';
 
-export function getRepositoryPool(defaultPool: PoolLike, sourceWritePool: PoolLike, sourceRepositoryRegistry: object, override?: PoolLike): PoolLike {
+function resolveRepositoryPool(defaultPool: PoolLike, sourceWritePool: PoolLike, override: PoolLike | undefined): PoolLike {
   if (!override) {
     return defaultPool;
   }
 
-  if (defaultPool instanceof ManagedTransactionExecutor) {
-    if (override !== defaultPool) {
+  const defaultExecutor = resolveManagedTransactionExecutor(defaultPool);
+  const overrideExecutor = resolveManagedTransactionExecutor(override);
+
+  if (defaultExecutor) {
+    if (overrideExecutor !== defaultExecutor) {
       throw new Error('A repository scoped to a managed transaction cannot use a different pool');
     }
 
-    return defaultPool;
+    return defaultExecutor;
   }
 
-  if (override instanceof ManagedTransactionExecutor) {
-    if (override.sourcePool !== sourceWritePool) {
-      throw new Error('The repository belongs to a different connection than the managed transaction');
-    }
-
-    if (override.sourceRepositoryRegistry !== sourceRepositoryRegistry) {
-      throw new Error('The repository belongs to a different BigAl initialization than the managed transaction');
-    }
+  if (!overrideExecutor) {
+    return override;
   }
 
-  return override;
-}
-
-export function isManagedTransactionPool(pool: PoolLike): boolean {
-  return pool instanceof ManagedTransactionExecutor;
-}
-
-export function trackRepositoryOperation<TResult>(pool: PoolLike, operation: () => Promise<TResult>): Promise<TResult> {
-  if (pool instanceof ManagedTransactionExecutor) {
-    return pool.trackOperation(operation);
+  if (overrideExecutor.sourcePool !== sourceWritePool) {
+    throw new Error('The repository belongs to a different connection than the managed transaction');
   }
 
-  return operation();
+  return overrideExecutor;
 }
 
 export function executeRepositoryOperation<TResult>(
   defaultPool: PoolLike,
   sourceWritePool: PoolLike,
-  sourceRepositoryRegistry: object,
   override: PoolLike | undefined,
   operation: (pool: PoolLike) => Promise<TResult>,
 ): Promise<TResult> {
-  const pool = getRepositoryPool(defaultPool, sourceWritePool, sourceRepositoryRegistry, override);
-  return trackRepositoryOperation(pool, async () => operation(pool));
+  const pool = resolveRepositoryPool(defaultPool, sourceWritePool, override);
+  const executor = resolveManagedTransactionExecutor(pool);
+  if (!executor) {
+    return operation(pool);
+  }
+
+  return executor.trackOperation(async () => operation(executor));
 }

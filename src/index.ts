@@ -18,6 +18,7 @@ export * from './IRepository.js';
 export * from './ReadonlyRepository.js';
 export * from './Repository.js';
 export * from './Transaction.js';
+export * from './TransactionScope.js';
 
 export interface IConnection {
   pool: PoolLike;

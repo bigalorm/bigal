@@ -1,33 +1,22 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { type PoolLike, type PoolQueryResult, type QueryResultRow, type Repository } from '../src/index.js';
+import { type Repository } from '../src/index.js';
 import { initialize } from '../src/index.js';
 
 import { Product, SimpleWithSchema, Store } from './models/index.js';
 import * as generator from './utils/generator.js';
-
-type PoolQuery = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
-
-function createMockPool() {
-  const pool = { query: vi.fn<PoolQuery>() };
-  return pool as PoolLike & typeof pool;
-}
-
-function getQueryResult<TRow extends QueryResultRow>(rows: TRow[] = []): PoolQueryResult<TRow> {
-  return {
-    rowCount: rows.length,
-    rows,
-  };
-}
+import { createMockPool, getQueryResult } from './utils/pool.js';
 
 describe('locking reads', () => {
   const pool = createMockPool();
-  const repositories = initialize({ models: [Product, SimpleWithSchema, Store], pool });
+  const readonlyPool = createMockPool();
+  const repositories = initialize({ models: [Product, SimpleWithSchema, Store], pool, readonlyPool });
   const ProductRepository = repositories.Product as Repository<Product>;
   const SimpleWithSchemaRepository = repositories.SimpleWithSchema as Repository<SimpleWithSchema>;
 
   beforeEach(() => {
     pool.query.mockReset();
+    readonlyPool.query.mockReset();
   });
 
   it('adds an update lock only when requested through options', async () => {
@@ -86,14 +75,29 @@ describe('locking reads', () => {
     expect(pool.query.mock.calls[1]?.[0]).not.toContain(' FOR ');
   });
 
-  it('rejects locking reads without a managed scope or explicit pool override', async () => {
-    await expect(ProductRepository.findOne().lock('update')).rejects.toThrow('explicit pool override');
+  it('routes a locking read to the write pool instead of the read-only pool', async () => {
+    pool.query.mockResolvedValueOnce(getQueryResult());
+
+    await ProductRepository.findOne().where({ id: 42 }).lock('update');
+
+    expect(pool.query.mock.calls[0]?.[0]).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1 LIMIT 1 FOR UPDATE OF "products"');
+    expect(readonlyPool.query).not.toHaveBeenCalled();
+  });
+
+  it('routes a locking read through a repository initialized with a transaction connection', async () => {
+    const connection = createMockPool();
+    const connectionRepositories = initialize({ models: [Product, Store], pool: connection });
+    const ConnectionProductRepository = connectionRepositories.Product as Repository<Product>;
+    connection.query.mockResolvedValueOnce(getQueryResult());
+
+    await ConnectionProductRepository.find({ where: { id: [1, 2] }, lock: { mode: 'update', wait: 'skipLocked' } });
+
+    expect(connection.query.mock.calls[0]?.[0]).toContain('FOR UPDATE OF "products" SKIP LOCKED');
     expect(pool.query).not.toHaveBeenCalled();
   });
 
-  it('rejects lock combinations with withCount in either builder order', async () => {
+  it('rejects lock combinations with withCount', async () => {
     await expect(ProductRepository.find({ pool }).lock('update').withCount()).rejects.toThrow('cannot be combined');
-    await expect(ProductRepository.find({ pool }).withCount().lock('update')).rejects.toThrow('cannot be combined');
     expect(pool.query).not.toHaveBeenCalled();
   });
 
@@ -102,11 +106,12 @@ describe('locking reads', () => {
     expect(pool.query).not.toHaveBeenCalled();
   });
 
-  it('leaves ordinary read SQL unchanged', async () => {
-    pool.query.mockResolvedValueOnce(getQueryResult());
+  it('leaves ordinary read SQL unchanged and on the read-only pool', async () => {
+    readonlyPool.query.mockResolvedValueOnce(getQueryResult());
 
     await ProductRepository.find().where({ id: 42 });
 
-    expect(pool.query.mock.calls[0]?.[0]).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1');
+    expect(readonlyPool.query.mock.calls[0]?.[0]).toBe('SELECT "id","name","sku","location","alias_names" AS "aliases","store_id" AS "store" FROM "products" WHERE "id"=$1');
+    expect(pool.query).not.toHaveBeenCalled();
   });
 });

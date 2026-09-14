@@ -2,21 +2,14 @@ import assert from 'node:assert';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { type PoolLike, type PoolQueryResult, type QueryResultRow, type Repository, type TransactionConnection, type TransactionPool, type TransactionScope } from '../src/index.js';
+import { type PoolQueryResult, type QueryResultRow, type Repository, type TransactionConnection, type TransactionPool, type TransactionScope } from '../src/index.js';
 import { initialize, transaction } from '../src/index.js';
 
 import { Category, Product, ProductCategory, ReadonlyProduct, Store } from './models/index.js';
 import * as generator from './utils/generator.js';
+import { createMockPool, getQueryResult, type PoolQuery } from './utils/pool.js';
 
-type PoolQuery = (text: string, values?: readonly unknown[]) => Promise<PoolQueryResult<QueryResultRow>>;
 type ReleaseConnection = (removeConnection?: boolean) => Promise<void>;
-
-function getQueryResult<TRow extends QueryResultRow>(rows: TRow[] = []): PoolQueryResult<TRow> {
-  return {
-    rowCount: rows.length,
-    rows,
-  };
-}
 
 function createTransactionHarness() {
   const connection = {
@@ -39,7 +32,7 @@ function createTransactionHarness() {
 
 describe('transaction', () => {
   const transactionHarness = createTransactionHarness();
-  const readonlyPool = { query: vi.fn<PoolQuery>() } as PoolLike & { query: ReturnType<typeof vi.fn<PoolQuery>> };
+  const readonlyPool = createMockPool();
   const repositories = initialize({
     models: [Category, Product, ProductCategory, ReadonlyProduct, Store],
     pool: transactionHarness.pool,
@@ -235,8 +228,7 @@ describe('transaction', () => {
     expect(result).toBe(42);
     expect(transactionHarness.connection.query.mock.calls).toStrictEqual([
       ['BEGIN ISOLATION LEVEL REPEATABLE READ'],
-      ['SELECT set_config($1, $2, true)', ['lock_timeout', '0ms']],
-      ['SELECT set_config($1, $2, true)', ['statement_timeout', '5000ms']],
+      ['SELECT set_config($1, $2, true), set_config($3, $4, true)', ['lock_timeout', '0ms', 'statement_timeout', '5000ms']],
       ['COMMIT'],
     ]);
   });
@@ -338,25 +330,72 @@ describe('transaction', () => {
     expect(transactionHarness.pool.query).not.toHaveBeenCalled();
   });
 
-  it('rejects a pool override from a separate BigAl initialization', async () => {
+  it('allows a pool override from another initialization that shares the write pool', async () => {
     const otherRepositories = initialize({ models: [Product, Store], pool: transactionHarness.pool });
     const OtherProductRepository = otherRepositories.Product as Repository<Product>;
-    transactionHarness.connection.query.mockResolvedValue(getQueryResult());
+    const product = generator.product({ store: generator.store().id });
+    transactionHarness.connection.query
+      .mockResolvedValueOnce(getQueryResult())
+      .mockResolvedValueOnce(getQueryResult([product]))
+      .mockResolvedValueOnce(getQueryResult());
 
-    const operation = transaction(
+    const createdProduct = await transaction(
       {
         pool: transactionHarness.pool,
         repositories: { Product: ProductRepository },
       },
-      async (transactionScope) => OtherProductRepository.create({ name: 'Wrong initialization', store: 42 }, { pool: transactionScope }),
+      async (transactionScope) => OtherProductRepository.create({ name: product.name, store: product.store }, { pool: transactionScope }),
     );
 
-    await expect(operation).rejects.toThrow('different BigAl initialization');
-    expect(transactionHarness.connection.query.mock.calls.map(([query]) => query)).toStrictEqual(['BEGIN', 'ROLLBACK']);
+    expect(createdProduct).toStrictEqual(product);
+    expect(transactionHarness.connection.query.mock.calls.map(([query]) => query)).toStrictEqual(['BEGIN', expect.stringContaining('INSERT INTO "products"'), 'COMMIT']);
+    expect(transactionHarness.pool.query).not.toHaveBeenCalled();
+  });
+
+  it('allows pool overrides on global repositories when the transaction has no repositories', async () => {
+    const product = generator.product({ store: generator.store().id });
+    transactionHarness.connection.query
+      .mockResolvedValueOnce(getQueryResult())
+      .mockResolvedValueOnce(getQueryResult())
+      .mockResolvedValueOnce(getQueryResult([product]))
+      .mockResolvedValueOnce(getQueryResult());
+
+    const createdProduct = await transaction({ pool: transactionHarness.pool, repositories: {} }, async (transactionScope) => {
+      await transactionScope.query('SELECT pg_advisory_xact_lock($1::bigint)', [42]);
+      return ProductRepository.create({ name: product.name, store: product.store }, { pool: transactionScope });
+    });
+
+    expect(createdProduct).toStrictEqual(product);
+    expect(transactionHarness.connection.query.mock.calls.map(([query]) => query)).toStrictEqual([
+      'BEGIN',
+      'SELECT pg_advisory_xact_lock($1::bigint)',
+      expect.stringContaining('INSERT INTO "products"'),
+      'COMMIT',
+    ]);
+    expect(transactionHarness.pool.query).not.toHaveBeenCalled();
+  });
+
+  it('accepts its own scope as a pool override on a scoped repository', async () => {
+    const product = generator.product({ store: generator.store().id });
+    transactionHarness.connection.query
+      .mockResolvedValueOnce(getQueryResult())
+      .mockResolvedValueOnce(getQueryResult([product]))
+      .mockResolvedValueOnce(getQueryResult());
+
+    const foundProduct = await transaction(
+      {
+        pool: transactionHarness.pool,
+        repositories: { Product: ProductRepository },
+      },
+      async (transactionScope) => transactionScope.repositories.Product.findOne({ pool: transactionScope, where: { id: product.id } }),
+    );
+
+    expect(foundProduct).toStrictEqual(product);
+    expect(transactionHarness.connection.query).toHaveBeenCalledTimes(3);
   });
 
   it('rejects a conflicting pool override on a scoped repository', async () => {
-    const otherPool = { query: vi.fn<PoolQuery>() } as PoolLike & { query: ReturnType<typeof vi.fn<PoolQuery>> };
+    const otherPool = createMockPool();
     transactionHarness.connection.query.mockResolvedValue(getQueryResult());
 
     const operation = transaction(
@@ -387,20 +426,37 @@ describe('transaction', () => {
     expect(otherHarness.pool.connect).not.toHaveBeenCalled();
   });
 
-  it('rejects repositories from separate initializations before acquiring a connection', async () => {
+  it('scopes repositories from separate initializations that share the write pool', async () => {
     const otherRepositories = initialize({ models: [Product, Store], pool: transactionHarness.pool });
     const OtherStoreRepository = otherRepositories.Store as Repository<Store>;
+    const store = generator.store();
+    const product = generator.product({ store: store.id });
+    transactionHarness.connection.query
+      .mockResolvedValueOnce(getQueryResult())
+      .mockResolvedValueOnce(getQueryResult([store]))
+      .mockResolvedValueOnce(getQueryResult([product]))
+      .mockResolvedValueOnce(getQueryResult());
 
-    await expect(
-      transaction(
-        {
-          pool: transactionHarness.pool,
-          repositories: { Product: ProductRepository, Store: OtherStoreRepository },
-        },
-        () => undefined,
-      ),
-    ).rejects.toThrow('same BigAl initialization');
-    expect(transactionHarness.pool.connect).not.toHaveBeenCalled();
+    const result = await transaction(
+      {
+        pool: transactionHarness.pool,
+        repositories: { Product: ProductRepository, Store: OtherStoreRepository },
+      },
+      async (transactionScope) => {
+        expect(transactionScope.repositories.Store).not.toBe(OtherStoreRepository);
+
+        const createdStore = await transactionScope.repositories.Store.create({ name: store.name });
+        return transactionScope.repositories.Product.create({ name: product.name, store: createdStore.id });
+      },
+    );
+
+    expect(result).toStrictEqual(product);
+    expect(transactionHarness.connection.query.mock.calls.map(([query]) => query)).toStrictEqual([
+      'BEGIN',
+      expect.stringContaining('INSERT INTO "stores"'),
+      expect.stringContaining('INSERT INTO "products"'),
+      'COMMIT',
+    ]);
   });
 
   it('rejects unsupported repository wrappers before acquiring a connection', async () => {
@@ -416,6 +472,18 @@ describe('transaction', () => {
       ),
     ).rejects.toThrow('standard Repository or ReadonlyRepository');
     expect(transactionHarness.pool.connect).not.toHaveBeenCalled();
+  });
+
+  it('rejects starting a managed transaction from a transaction scope', async () => {
+    transactionHarness.connection.query.mockResolvedValue(getQueryResult());
+
+    const operation = transaction({ pool: transactionHarness.pool, repositories: {} }, async (transactionScope) =>
+      transaction({ pool: transactionScope as unknown as TransactionPool, repositories: {} }, () => undefined),
+    );
+
+    await expect(operation).rejects.toThrow('cannot be started from another managed transaction scope');
+    expect(transactionHarness.pool.connect).toHaveBeenCalledOnce();
+    expect(transactionHarness.connection.query.mock.calls.map(([query]) => query)).toStrictEqual(['BEGIN', 'ROLLBACK']);
   });
 
   it('preserves read-only repository capabilities in the scoped map', async () => {
