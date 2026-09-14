@@ -14,6 +14,8 @@ BigAl is a good fit for standard CRUD operations and queries that map naturally 
 - Subqueries with aggregates
 - DISTINCT ON queries
 - Upserts with ON CONFLICT
+- Managed multi-repository transactions
+- Explicit `FOR UPDATE` and `FOR NO KEY UPDATE` row locks
 
 ## When to use raw SQL
 
@@ -22,7 +24,7 @@ Drop to raw SQL (via your pool directly) when:
 - You need CTEs (WITH clauses)
 - Window functions beyond what DISTINCT ON provides
 - Complex recursive queries
-- Bulk operations with custom locking (SELECT FOR UPDATE)
+- Locking modes beyond `FOR UPDATE` and `FOR NO KEY UPDATE`
 - Database-specific features BigAl does not wrap
 
 ## Translation reference
@@ -65,6 +67,15 @@ BigAl does not lock you in. Use the same pool for raw queries:
 
 ```ts
 const { rows } = await pool.query('SELECT * FROM products WHERE tsv @@ plainto_tsquery($1)', ['search term']);
+```
+
+Inside a managed transaction, use the scope so raw SQL runs on the same checked-out connection:
+
+```ts
+await transaction({ pool, repositories }, async (transactionScope) => {
+  await transactionScope.query('SELECT pg_advisory_xact_lock($1::bigint)', [resourceKey]);
+  return transactionScope.repositories.Product.update({ id: productId }, { name: 'Renamed' });
+});
 ```
 
 Use BigAl for the 90% of queries that are straightforward, and raw SQL for the rest.

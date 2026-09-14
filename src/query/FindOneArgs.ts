@@ -1,6 +1,7 @@
 import { type Entity } from '../Entity.js';
 import { type OmitEntityCollections, type OmitFunctions, type PoolLike } from '../types/index.js';
 
+import { type LockOptions } from './LockOptions.js';
 import { type Sort } from './Sort.js';
 import { type WhereQuery } from './WhereQuery.js';
 
@@ -9,4 +10,5 @@ export interface FindOneArgs<T extends Entity, K extends keyof T = string & keyo
   where?: WhereQuery<T>;
   sort?: Sort<T>;
   pool?: PoolLike;
+  lock?: LockOptions;
 }

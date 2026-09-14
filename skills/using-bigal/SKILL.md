@@ -5,7 +5,7 @@ description: >-
   defining Entity models with decorators, writing WhereQuery filters,
   using Repository patterns, or deciding between BigAl and raw SQL.
   Covers model definition, fluent query building, joins, subqueries,
-  pagination, JSONB querying, and common gotchas.
+  pagination, JSONB querying, managed transactions, row locking, and common gotchas.
 ---
 
 # Using BigAl
@@ -52,13 +52,15 @@ const products = await productRepository
 - Subqueries with aggregates
 - DISTINCT ON queries
 - Upserts with ON CONFLICT
+- Managed multi-repository transactions
+- Explicit `FOR UPDATE` and `FOR NO KEY UPDATE` row locks
 
 **Drop to raw SQL for:**
 
 - CTEs (WITH clauses)
 - Window functions beyond DISTINCT ON
 - Complex recursive queries
-- Bulk operations with custom locking (SELECT FOR UPDATE)
+- Locking modes beyond `FOR UPDATE` and `FOR NO KEY UPDATE`
 - Database-specific features BigAl does not wrap
 
 BigAl wraps your existing connection pool - `postgres-pool`, `pg`, or `@neondatabase/serverless`.
@@ -104,6 +106,61 @@ Use BigAl for the 90% of queries that fit its fluent API, and raw SQL for the re
 | `SELECT DISTINCT ON (store_id) * ... ORDER BY store_id, created_at DESC`        | `.distinctOn(['store']).sort('store').sort('createdAt desc')`                           |
 | `ON CONFLICT (sku) DO NOTHING`                                                  | `{ onConflict: { action: 'ignore', targets: ['sku'] } }`                                |
 | `ON CONFLICT (sku) DO UPDATE SET name = EXCLUDED.name`                          | `{ onConflict: { action: 'merge', targets: ['sku'], merge: ['name'] } }`                |
+
+## Transactions
+
+Use `transaction()` when BigAl should acquire one connection and manage commit, rollback, and release:
+
+```ts
+import { transaction } from 'bigal';
+
+const result = await transaction(
+  {
+    pool,
+    repositories: { Product: productRepo, Store: storeRepo },
+    lockTimeoutMs: 2_000,
+    statementTimeoutMs: 5_000,
+  },
+  async ({ repositories }) => {
+    const store = await repositories.Store.findOne().where({ id: storeId }).lock('noKeyUpdate');
+    if (!store) throw new Error('Store not found');
+
+    return repositories.Product.create({ name: 'Widget', store: store.id });
+  },
+);
+```
+
+Options:
+
+- `pool`: connect-capable `TransactionPool`.
+- `repositories`: standard repositories from one `initialize()` call and the same write pool.
+- `isolationLevel`: `'readCommitted'`, `'repeatableRead'`, or `'serializable'`.
+- `lockTimeoutMs`, `statementTimeoutMs`, and `idleInTransactionTimeoutMs`: optional nonnegative integer PostgreSQL transaction-local settings. Omitted settings are untouched.
+
+The callback scope has typed `repositories` and a parameterized `query()` escape hatch.
+Reads, writes, population, and raw queries use the same client. Return or await every lazy query.
+A database query failure causes rollback even when callback code catches it.
+
+For an externally managed transaction, initialize local repositories with the checked-out connection or use write/read `{ pool: connection }` overrides.
+A pool override routes a query but does not manage the lifecycle.
+
+### Locking reads
+
+```ts
+await productRepo.findOne({ pool: transactionConnection }).where({ id: productId }).lock('update', { wait: 'nowait' });
+
+await jobRepo.find({
+  pool: transactionConnection,
+  where: { status: 'queued' },
+  lock: { mode: 'update', wait: 'skipLocked' },
+});
+```
+
+Lock modes are `'update'` and `'noKeyUpdate'`; wait behavior is omitted, `'nowait'`, or `'skipLocked'`.
+Locks are opt-in, apply only to base-table rows, do not propagate to population queries, and cannot be combined with `distinctOn()` or `withCount()`.
+
+Keep transactions short, acquire resources in a stable order, and ensure every participating writer follows the same locking protocol.
+Prefer constraints and conditional updates when they can express the invariant.
 
 ## Model Definition
 

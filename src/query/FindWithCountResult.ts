@@ -4,6 +4,7 @@ import { type GetValueType, type ModelRelationshipKeys, type OmitFunctions, type
 import { type SubqueryJoinOnCondition } from './JoinDefinition.js';
 import { type AnyJoinInfo, type JoinedSort } from './JoinedSort.js';
 import { type JoinedWhereQuery, type JoinInfo, type SubqueryJoinInfo } from './JoinedWhereQuery.js';
+import { type LockMode, type LockWaitOptions } from './LockOptions.js';
 import { type PaginateOptions } from './PaginateOptions.js';
 import { type PopulateArgs } from './PopulateArgs.js';
 import { type SubqueryBuilderLike, type TypedSubqueryBuilder } from './SubqueryBuilder.js';
@@ -42,6 +43,7 @@ export interface FindQueryWithCountJSON<T extends Entity, TReturn, TJoins extend
     options: { on: SubqueryJoinOnCondition },
   ): FindQueryWithCountJSON<T, TReturn, SubqueryJoinInfo<TAlias, TColumns> | TJoins>;
   leftJoin(subquery: SubqueryBuilderLike, alias: string, options: { on: SubqueryJoinOnCondition }): FindQueryWithCountJSON<T, TReturn, TJoins>;
+  lock(mode: LockMode, options?: LockWaitOptions): FindQueryWithCountJSON<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindQueryWithCountJSON<T, TReturn, TJoins>;
   limit(value: number): FindQueryWithCountJSON<T, TReturn, TJoins>;
   skip(value: number): FindQueryWithCountJSON<T, TReturn, TJoins>;
@@ -76,6 +78,7 @@ export interface FindQueryWithCount<T extends Entity, TReturn, TJoins extends An
     options: { on: SubqueryJoinOnCondition },
   ): FindQueryWithCount<T, TReturn, SubqueryJoinInfo<TAlias, TColumns> | TJoins>;
   leftJoin(subquery: SubqueryBuilderLike, alias: string, options: { on: SubqueryJoinOnCondition }): FindQueryWithCount<T, TReturn, TJoins>;
+  lock(mode: LockMode, options?: LockWaitOptions): FindQueryWithCount<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindQueryWithCount<T, TReturn, TJoins>;
   limit(value: number): FindQueryWithCount<T, TReturn, TJoins>;
   skip(value: number): FindQueryWithCount<T, TReturn, TJoins>;

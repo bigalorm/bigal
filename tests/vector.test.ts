@@ -487,7 +487,7 @@ describe('pgvector support', () => {
     it('should reject a non-finite distance threshold', async () => {
       await expect(
         DocumentRepository.find().where({
-          embedding: { nearestTo: [1, 2, 3], distance: { '<': undefined } } as never,
+          embedding: { nearestTo: [1, 2, 3], distance: { '<': undefined } },
         }),
       ).rejects.toThrow('"embedding" distance threshold must be a finite number');
     });
@@ -496,7 +496,7 @@ describe('pgvector support', () => {
       await expect(
         DocumentRepository.find().sort({
           title: { nearestTo: [1, 2, 3] },
-        } as never),
+        }),
       ).rejects.toThrow('"title" is not a vector column and cannot be sorted by distance');
     });
 
@@ -532,7 +532,7 @@ describe('pgvector support', () => {
           document: {
             embedding: { nearestTo: [1, 2, 3], distance: { '<': 0.5 } },
           },
-        } as never);
+        });
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
       expect(query).toContain('"document"."embedding" <=> $1 < $2');
@@ -562,7 +562,7 @@ describe('pgvector support', () => {
           document: {
             embedding: [1, 2, 3],
           },
-        } as never);
+        });
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
       expect(query).toContain('"document"."embedding"=$1');
