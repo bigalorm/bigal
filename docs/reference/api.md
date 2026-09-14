@@ -1,5 +1,5 @@
 ---
-description: Complete API reference for BigAl - initialize(), Repository, ReadonlyRepository, query builder methods, subquery(), decorators, and types.
+description: Complete API reference for BigAl - initialization, transactions, repositories, query builders, subqueries, decorators, and types.
 ---
 
 # API Reference
@@ -33,6 +33,45 @@ const repos = initialize({
 | `expose`       | `(repo, metadata) => void`    | No       | Callback invoked for each created repository  |
 
 **Returns:** `Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>`
+
+## transaction()
+
+Acquires one client and runs a callback with repositories bound to it.
+
+```ts
+import { transaction } from 'bigal';
+
+const result = await transaction(
+  {
+    pool,
+    repositories: { Product: productRepository, Store: storeRepository },
+    isolationLevel: 'readCommitted',
+    lockTimeoutMs: 2_000,
+    statementTimeoutMs: 5_000,
+    idleInTransactionTimeoutMs: 10_000,
+  },
+  async (transactionScope) => {
+    await transactionScope.query('SELECT pg_advisory_xact_lock($1::bigint)', [resourceKey]);
+    return transactionScope.repositories.Product.findOne().where({ id: productId });
+  },
+);
+```
+
+**Parameters:** `TransactionOptions<TRepositories>`
+
+| Option                       | Type                                                    | Required | Description                                             |
+| ---------------------------- | ------------------------------------------------------- | -------- | ------------------------------------------------------- |
+| `pool`                       | `TransactionPool`                                       | Yes      | Pool that acquires a releasable PostgreSQL client       |
+| `repositories`               | `Record<string, Repository \| ReadonlyRepository>`      | Yes      | Standard repositories that share the write pool         |
+| `isolationLevel`             | `'readCommitted' \| 'repeatableRead' \| 'serializable'` | No       | Explicit isolation level; omitted uses database default |
+| `lockTimeoutMs`              | `number`                                                | No       | Transaction-local lock wait timeout                     |
+| `statementTimeoutMs`         | `number`                                                | No       | Transaction-local statement timeout                     |
+| `idleInTransactionTimeoutMs` | `number`                                                | No       | Transaction-local idle transaction timeout              |
+
+The callback receives `TransactionScope<TRepositories>`, containing the same repository keys and a `PoolLike`-compatible `query()` method.
+The helper returns the awaited callback result after commit. It rolls back on callback or database query failure and releases the client.
+
+See [Transactions](/guide/transactions) for locking, failure behavior, and external-owner syntax.
 
 ## Repository
 
@@ -69,7 +108,7 @@ repository.create(values, options?): Promise<QueryResult<T>>
 repository.create(values[], options?): Promise<QueryResult<T>[]>
 ```
 
-Insert one or multiple records. Options: `{ returnRecords?, returnSelect?, onConflict? }`.
+Insert one or multiple records. Options: `{ returnRecords?, returnSelect?, onConflict?, pool? }`.
 
 An array inserts in a single statement. Prefer this over calling `create()` in a loop, which costs one round trip per record.
 
@@ -81,7 +120,8 @@ An array inserts in a single statement. Prefer this over calling `create()` in a
 repository.update(where, values, options?): Promise<QueryResult<T>[]>
 ```
 
-Update matching records. Options: `{ returnRecords?, returnSelect? }`. As with `create()`, use `returnSelect` to return only the columns you need or `returnRecords: false` to skip the returned rows.
+Update matching records. Options: `{ returnRecords?, returnSelect?, pool? }`.
+As with `create()`, use `returnSelect` to return only the columns you need or `returnRecords: false` to skip the returned rows.
 
 ### destroy()
 
@@ -90,7 +130,7 @@ repository.destroy(where, options?): Promise<void>
 repository.destroy(where, { returnRecords: true }): Promise<QueryResult<T>[]>
 ```
 
-Delete matching records. Options: `{ returnRecords?, returnSelect? }`.
+Delete matching records. Options: `{ returnRecords?, returnSelect?, pool? }`.
 Unlike `create()`/`update()`, `destroy()` does not return records by default (plain `DELETE`, no `RETURNING`); pass `returnRecords: true` or `returnSelect` to get the deleted rows back.
 
 ## ReadonlyRepository
@@ -115,6 +155,7 @@ awaited. Each call to `find()`, `findOne()`, or `count()` starts a fresh query.
 | `.join(propertyName, alias?)`          | find, findOne        | INNER JOIN                       |
 | `.leftJoin(propertyName, alias?, on?)` | find, findOne        | LEFT JOIN                        |
 | `.distinctOn(columns)`                 | find                 | PostgreSQL DISTINCT ON           |
+| `.lock(mode, options?)`                | find, findOne        | Lock matching base-table rows    |
 | `.toJSON()`                            | find, findOne        | Return plain objects             |
 | `.UNSAFE_withOriginalFieldType(name)`  | find, findOne        | Type-level escape hatch          |
 | `.UNSAFE_withFieldValue(name, value)`  | findOne              | Set a field after the query      |
@@ -265,6 +306,26 @@ with the same columns in the same order, and `.distinctOn()` cannot be combined 
 ```ts
 const latestPerStore = await productRepository.find().distinctOn(['store']).sort('store').sort('createdAt desc');
 ```
+
+### lock()
+
+```ts
+query.lock('noKeyUpdate');
+query.lock('update', { wait: 'nowait' });
+```
+
+Adds `FOR NO KEY UPDATE` or `FOR UPDATE` for the base table. Optional `wait` is `'nowait'` or `'skipLocked'`. The same option can be supplied to `find()` or `findOne()`:
+
+```ts
+await productRepository.find({
+  pool: transactionConnection,
+  where: { id: productIds },
+  lock: { mode: 'update', wait: 'skipLocked' },
+});
+```
+
+A locking read runs on the write pool unless `pool` is supplied, and PostgreSQL holds the lock only while a transaction is open on that connection.
+It cannot be combined with `distinctOn()` or `withCount()`, and it does not propagate to `populate()` queries.
 
 ### toJSON()
 

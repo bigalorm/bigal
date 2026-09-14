@@ -5,7 +5,7 @@ description: >-
   defining Entity models with decorators, writing WhereQuery filters,
   using Repository patterns, or deciding between BigAl and raw SQL.
   Covers model definition, fluent query building, joins, subqueries,
-  pagination, JSONB querying, and common gotchas.
+  pagination, JSONB querying, managed transactions, row locking, and common gotchas.
 ---
 
 # Using BigAl
@@ -52,13 +52,15 @@ const products = await productRepository
 - Subqueries with aggregates
 - DISTINCT ON queries
 - Upserts with ON CONFLICT
+- Managed multi-repository transactions
+- Explicit `FOR UPDATE` and `FOR NO KEY UPDATE` row locks
 
 **Drop to raw SQL for:**
 
 - CTEs (WITH clauses)
 - Window functions beyond DISTINCT ON
 - Complex recursive queries
-- Bulk operations with custom locking (SELECT FOR UPDATE)
+- Locking modes beyond `FOR UPDATE` and `FOR NO KEY UPDATE`
 - Database-specific features BigAl does not wrap
 
 BigAl wraps your existing connection pool - `postgres-pool`, `pg`, or `@neondatabase/serverless`.
@@ -132,6 +134,74 @@ const results = await pool.query<UserRow>(`SELECT id, email FROM users WHERE org
 | `SELECT DISTINCT ON (store_id) * ... ORDER BY store_id, created_at DESC`        | `.distinctOn(['store']).sort('store').sort('createdAt desc')`                           |
 | `ON CONFLICT (sku) DO NOTHING`                                                  | `{ onConflict: { action: 'ignore', targets: ['sku'] } }`                                |
 | `ON CONFLICT (sku) DO UPDATE SET name = EXCLUDED.name`                          | `{ onConflict: { action: 'merge', targets: ['sku'], merge: ['name'] } }`                |
+
+## Transactions
+
+Use `transaction()` when BigAl should acquire one connection and manage commit, rollback, and release:
+
+```ts
+import { transaction } from 'bigal';
+
+const result = await transaction(
+  {
+    pool,
+    repositories: { Product: productRepo, Store: storeRepo },
+    lockTimeoutMs: 2_000,
+    statementTimeoutMs: 5_000,
+  },
+  async ({ repositories }) => {
+    const store = await repositories.Store.findOne().where({ id: storeId }).lock('noKeyUpdate');
+    if (!store) throw new Error('Store not found');
+
+    const productCount = await repositories.Product.count({ where: { store: store.id } });
+    if (productCount >= capacity) throw new Error('Store capacity reached');
+
+    return repositories.Product.create({ name: 'Widget', store: store.id });
+  },
+);
+```
+
+Options:
+
+- `pool`: connect-capable `TransactionPool`.
+- `repositories`: instances returned by `initialize()` whose write pool is `pool`.
+  Subclasses and wrapper objects are rejected with a `TypeError`; pass the underlying repository, or give the wrapper `{ pool: transactionScope }` per operation.
+- `isolationLevel`: `'readCommitted'`, `'repeatableRead'`, or `'serializable'`.
+- `lockTimeoutMs`, `statementTimeoutMs`, and `idleInTransactionTimeoutMs`: integers from `0` to `2_147_483_647`, applied as transaction-local settings.
+  `0` disables that timeout; an omitted option emits nothing.
+
+The callback scope has typed `repositories` and a parameterized `query()` escape hatch, and any repository on the same write pool accepts it as `{ pool: transactionScope }`.
+Reads, writes, population, and raw queries use the same client. Return or await every lazy query.
+A database query failure causes rollback even when callback code catches it.
+
+Scoped repositories are valid only inside the callback. A query started after the callback returns is rejected, and a callback that finishes with a query still in flight fails instead of committing.
+`transaction()` cannot be nested on a scope, and BigAl provides no savepoints or automatic retry, so retry the whole call only when the full operation is idempotent.
+
+For an externally managed transaction, initialize local repositories with the checked-out connection or use write/read `{ pool: connection }` overrides.
+A pool override routes a query but does not manage the lifecycle.
+
+### Locking reads
+
+```ts
+// `connection` is either the transactionScope passed to a transaction() callback
+// or a client you checked out with pool.connect() and began yourself.
+await productRepo.findOne({ pool: connection }).where({ id: productId }).lock('update', { wait: 'nowait' });
+
+await jobRepo.find({
+  pool: connection,
+  where: { status: 'queued' },
+  lock: { mode: 'update', wait: 'skipLocked' },
+});
+```
+
+Lock modes are `'update'` and `'noKeyUpdate'`; wait behavior is omitted, `'nowait'`, or `'skipLocked'`.
+A locking read runs on the write pool, or on the `pool` override you pass.
+PostgreSQL releases the lock when the statement ends unless a transaction is open on that connection.
+Lock through scoped repositories, repositories initialized with a transaction connection, or an explicit `{ pool: connection }` override.
+Locks apply only to base-table rows, do not propagate to population queries, and cannot be combined with `distinctOn()` or `withCount()`.
+
+A query locks only rows it finds, so lock an existing parent row when guarding creation of child rows. Every writer that participates in the invariant must take the same lock.
+Keep transactions short and acquire resources in a stable order. Prefer constraints and conditional updates when they can express the invariant.
 
 ## Model Definition
 
@@ -601,6 +671,8 @@ After applying this skill, verify:
 - [ ] Model names in decorators are strings (`'Store'`) to avoid circular imports
 - [ ] `QueryResult<T>` is used for derived types involving relationships
 - [ ] Queries return only needed data: `select` on `find()`/`findOne()`/`populate()`, and `returnSelect` / `returnRecords: false` on `create()`/`update()`/`destroy()` when the full row is not needed
+- [ ] Locking reads (`.lock()` / `lock:`) run on a scoped repository, a connection-initialized repository, or a `pool` override inside an open transaction, and never with `distinctOn()` or `withCount()`
+- [ ] Inside `transaction()` every query is awaited or returned, and no scoped repository or builder is used after the callback resolves
 
 ## Further Reading
 
@@ -611,6 +683,7 @@ After applying this skill, verify:
 - [Relationships](https://bigalorm.github.io/bigal/guide/relationships) - many-to-one, one-to-many, many-to-many, QueryResult
 - [Subqueries and Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) - subquery builder, aggregates, GROUP BY
 - [Views](https://bigalorm.github.io/bigal/guide/views) - readonly models and ReadonlyRepository
+- [Transactions](https://bigalorm.github.io/bigal/guide/transactions) - managed transactions, row locks, isolation levels, timeouts
 - [API Reference](https://bigalorm.github.io/bigal/reference/api) - all exports and method signatures
 - [Configuration](https://bigalorm.github.io/bigal/reference/configuration) - pools, read replicas, multi-database
 - [BigAl vs Raw SQL](https://bigalorm.github.io/bigal/advanced/bigal-vs-raw-sql) - decision framework

@@ -8,7 +8,10 @@ import {
   type DeleteOptions,
   type DestroyResult,
   type DestroyResultWithRecords,
+  type DoNotReturnDeletedRecords,
   type DoNotReturnRecords,
+  type ExecutionOptions,
+  type ReturnRecords,
   type ReturnSelect,
   type UpdateResult,
   type WhereQuery,
@@ -27,7 +30,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {object}
    */
-  public create(values: CreateUpdateParams<T>, options?: OnConflictOptions<T> | (Partial<OnConflictOptions<T>> & ReturnSelect<T>)): CreateResult<T>;
+  public create(values: CreateUpdateParams<T>, options?: ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>> & ReturnRecords): CreateResult<T>;
 
   /**
    * Creates an object or objects using the specified values
@@ -37,7 +40,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {void}
    */
-  public create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options: DoNotReturnRecords & Partial<OnConflictOptions<T>>): Promise<void>;
+  public create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options: DoNotReturnRecords & ExecutionOptions & Partial<OnConflictOptions<T>>): Promise<void>;
 
   /**
    * Creates objects using the specified values
@@ -47,7 +50,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public create(values: CreateUpdateParams<T>[], options?: (OnConflictOptions<T> & Partial<ReturnSelect<T>>) | (Partial<OnConflictOptions<T>> & ReturnSelect<T>)): CreateResultArray<T>;
+  public create(values: CreateUpdateParams<T>[], options?: ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>> & ReturnRecords): CreateResultArray<T>;
 
   /**
    * Creates an object using the specified values
@@ -92,45 +95,47 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
         reject?: ((error: Error) => PromiseLike<TErrorResult> | TErrorResult) | null,
       ): Promise<TErrorResult | TResult> {
         try {
-          if (isArray && !(values as CreateUpdateParams<T>[]).length) {
-            return resolve ? await resolve([]) : ([] as unknown as TResult);
-          }
-
-          const beforeCreate = modelInstance._type.beforeCreate;
-          if (beforeCreate) {
-            if (isArray) {
-              values = await Promise.all((values as CreateUpdateParams<T>[]).map(async (value) => beforeCreate(value)));
-            } else {
-              values = await beforeCreate(values as CreateUpdateParams<T>);
+          const executionResult = await modelInstance._executeWriteOperation(options?.pool, async (pool) => {
+            if (isArray && !(values as CreateUpdateParams<T>[]).length) {
+              return [];
             }
-          }
 
-          const { query, params } = getInsertQueryAndParams({
-            repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
-            model: modelInstance.model,
-            values,
-            returnRecords,
-            returnSelect,
-            onConflict: options?.onConflict,
+            const beforeCreate = modelInstance._type.beforeCreate;
+            if (beforeCreate) {
+              if (isArray) {
+                values = await Promise.all((values as CreateUpdateParams<T>[]).map(async (value) => beforeCreate(value)));
+              } else {
+                values = await beforeCreate(values as CreateUpdateParams<T>);
+              }
+            }
+
+            const { query, params } = getInsertQueryAndParams({
+              repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+              model: modelInstance.model,
+              values,
+              returnRecords,
+              returnSelect,
+              onConflict: options?.onConflict,
+            });
+
+            const results = await pool.query<Partial<QueryResult<T>>>(query, params);
+            if (returnRecords) {
+              if (isArray) {
+                return returnAsPlainObjects ? modelInstance._buildPlainObjects(results.rows) : modelInstance._buildInstances(results.rows);
+              }
+
+              const firstResult = results.rows[0];
+              if (firstResult) {
+                return returnAsPlainObjects ? modelInstance._buildPlainObject(firstResult) : modelInstance._buildInstance(firstResult);
+              }
+
+              throw new Error('Unknown error getting created rows back from the database');
+            }
+
+            return undefined;
           });
 
-          const results = await modelInstance._pool.query<Partial<QueryResult<T>>>(query, params);
-          if (returnRecords) {
-            if (isArray) {
-              const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(results.rows) : modelInstance._buildInstances(results.rows);
-              return resolve ? await resolve(entities) : (entities as unknown as TResult);
-            }
-
-            const firstResult = results.rows[0];
-            if (firstResult) {
-              const entity = returnAsPlainObjects ? modelInstance._buildPlainObject(firstResult) : modelInstance._buildInstance(firstResult);
-              return resolve ? await resolve(entity) : (entity as unknown as TResult);
-            }
-
-            throw new Error('Unknown error getting created rows back from the database');
-          }
-
-          return resolve ? await resolve(undefined) : (undefined as unknown as TResult);
+          return resolve ? await resolve(executionResult) : (executionResult as TResult);
         } catch (ex) {
           if (reject) {
             return reject(ex as Error);
@@ -152,7 +157,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {boolean} options.returnRecords - Determines if inserted records should be returned
    * @returns {void}
    */
-  public update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options: DoNotReturnRecords): Promise<void>;
+  public update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options: DoNotReturnRecords & ExecutionOptions): Promise<void>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -162,7 +167,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: ReturnSelect<T>): UpdateResult<T>;
+  public update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: ExecutionOptions & Partial<ReturnSelect<T>>): UpdateResult<T>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -209,27 +214,30 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
         reject?: ((error: Error) => PromiseLike<TErrorResult> | TErrorResult) | null,
       ): Promise<TErrorResult | TResult> {
         try {
-          if (modelInstance._type.beforeUpdate) {
-            values = await modelInstance._type.beforeUpdate(values);
-          }
+          const executionResult = await modelInstance._executeWriteOperation(options?.pool, async (pool) => {
+            if (modelInstance._type.beforeUpdate) {
+              values = await modelInstance._type.beforeUpdate(values);
+            }
 
-          const { query, params } = getUpdateQueryAndParams({
-            repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
-            model: modelInstance.model,
-            where,
-            values,
-            returnRecords,
-            returnSelect,
+            const { query, params } = getUpdateQueryAndParams({
+              repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+              model: modelInstance.model,
+              where,
+              values,
+              returnRecords,
+              returnSelect,
+            });
+
+            const results = await pool.query<Partial<QueryResult<T>>>(query, params);
+
+            if (returnRecords) {
+              return returnAsPlainObjects ? modelInstance._buildPlainObjects(results.rows) : modelInstance._buildInstances(results.rows);
+            }
+
+            return undefined;
           });
 
-          const results = await modelInstance._pool.query<Partial<QueryResult<T>>>(query, params);
-
-          if (returnRecords) {
-            const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(results.rows) : modelInstance._buildInstances(results.rows);
-            return resolve ? await resolve(entities) : (entities as unknown as TResult);
-          }
-
-          return resolve ? await resolve(undefined) : (undefined as unknown as TResult);
+          return resolve ? await resolve(executionResult) : (executionResult as TResult);
         } catch (ex) {
           if (reject) {
             return reject(ex as Error);
@@ -248,7 +256,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {object} [where] - Object representing the where query
    * @returns {void}
    */
-  public destroy(where?: WhereQuery<T>): DestroyResult<T, void>;
+  public destroy(where?: WhereQuery<T>, options?: DoNotReturnDeletedRecords & ExecutionOptions): DestroyResult<T, void>;
 
   /**
    * Destroys object(s) matching the where query
@@ -296,27 +304,30 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
         resolve: (result: QueryResult<T>[] | void) => PromiseLike<TResult> | TResult,
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
       ): Promise<TErrorResult | TResult> {
-        if (typeof where === 'string') {
-          return reject(new Error('The query cannot be a string, it must be an object'));
-        }
-
         try {
-          const { query, params } = getDeleteQueryAndParams({
-            repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
-            model: modelInstance.model,
-            where,
-            returnRecords,
-            returnSelect,
+          const executionResult = await modelInstance._executeWriteOperation(options?.pool, async (pool) => {
+            if (typeof where === 'string') {
+              throw new Error('The query cannot be a string, it must be an object');
+            }
+
+            const { query, params } = getDeleteQueryAndParams({
+              repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+              model: modelInstance.model,
+              where,
+              returnRecords,
+              returnSelect,
+            });
+
+            const queryResult = await pool.query<Partial<QueryResult<T>>>(query, params);
+
+            if (returnRecords) {
+              return returnAsPlainObjects ? modelInstance._buildPlainObjects(queryResult.rows) : modelInstance._buildInstances(queryResult.rows);
+            }
+
+            return undefined;
           });
 
-          const queryResult = await modelInstance._pool.query<Partial<QueryResult<T>>>(query, params);
-
-          if (returnRecords) {
-            const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(queryResult.rows) : modelInstance._buildInstances(queryResult.rows);
-            return await resolve(entities);
-          }
-
-          return await resolve();
+          return await resolve(executionResult);
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {

@@ -1,5 +1,5 @@
 ---
-description: Fluent query builder for find, findOne, and count with WHERE operators, JSONB querying, pagination, sorting, DISTINCT ON, and populate.
+description: Fluent query builder for find, findOne, and count with filters, pagination, sorting, opt-in row locks, DISTINCT ON, and populate.
 ---
 
 # Querying
@@ -356,6 +356,33 @@ Requirements:
 
 - `ORDER BY` is required and must start with the `DISTINCT ON` columns
 - Cannot be combined with `withCount()`
+
+## Row locking
+
+`find()` and `findOne()` support explicit PostgreSQL row locks:
+
+```ts
+const product = await productRepository.findOne({ pool: transactionConnection }).where({ id: productId }).lock('update');
+
+const queuedJobs = await jobRepository.find({
+  pool: transactionConnection,
+  where: { status: 'queued' },
+  lock: { mode: 'update', wait: 'skipLocked' },
+  limit: 10,
+});
+```
+
+Modes are `'update'` (`FOR UPDATE`) and `'noKeyUpdate'` (`FOR NO KEY UPDATE`). Optional wait behavior is `'nowait'` or `'skipLocked'`:
+
+```ts
+await productRepository.findOne({ pool: transactionConnection }).where({ id: productId }).lock('noKeyUpdate', { wait: 'nowait' });
+```
+
+A locking read runs on the write pool, or on the `pool` override you pass, and PostgreSQL holds the lock only while a transaction is open on that connection.
+BigAl locks only base-table rows. Joins may filter those rows, while `populate()` queries do not inherit the lock.
+
+Locking cannot be combined with `distinctOn()` or `withCount()`.
+See [Transactions](/guide/transactions#row-locking) for timeout parameters and safe locking protocols.
 
 ## Populate
 
