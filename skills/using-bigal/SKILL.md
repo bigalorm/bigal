@@ -65,10 +65,38 @@ BigAl wraps your existing connection pool - `postgres-pool`, `pg`, or `@neondata
 The pool is always accessible for raw queries, so you can eject to SQL at any point:
 
 ```ts
-const { rows } = await pool.query('SELECT * FROM products WHERE tsv @@ plainto_tsquery($1)', ['search term']);
+const { rows } = await pool.query('SELECT * FROM products WHERE tsv @@ plainto_tsquery(@term)', { term: 'search term' });
 ```
 
 Use BigAl for the 90% of queries that fit its fluent API, and raw SQL for the rest.
+
+### Raw SQL parameters
+
+- **Named parameters only**: Pass values as `@name` tokens with an object of values - never positional `$1`/`$2` with an array
+- **No interpolation**: Never build a query by concatenating or interpolating values into the SQL string
+- **Positional-only clients**: `postgres-pool` converts `@name` tokens in `Pool.query` only. When the client lacks named-parameter support
+  (a raw `PoolClient` from `pool.connect()`, or a plain `pg` / `@neondatabase/serverless` pool), still write the query with `@name` tokens and convert to positional at the call site
+
+Positional parameters tie a query's meaning to argument order. Reorder a filter or insert one, and the query binds the wrong value
+with no type error, and often no test failure until the data is wrong. Named tokens read at the site where they are used.
+
+```ts
+// Standard
+const results = await pool.query<UserRow>(
+  `SELECT id, email
+    FROM users
+    WHERE organization_id = @organizationId
+      AND is_deleted = false
+    LIMIT @limit`,
+  { organizationId, limit },
+);
+
+// Non-Standard - positional parameters
+const results = await pool.query<UserRow>('SELECT id, email FROM users WHERE organization_id = $1 AND is_deleted = false LIMIT $2', [organizationId, limit]);
+
+// Non-Standard - interpolated values
+const results = await pool.query<UserRow>(`SELECT id, email FROM users WHERE organization_id = '${organizationId}'`);
+```
 
 ## SQL-to-BigAl Translation Table
 
@@ -564,6 +592,7 @@ After applying this skill, verify:
 
 - [ ] Models extend `Entity` and use `@table()`, `@primaryColumn()`, `@column()` decorators
 - [ ] Queries use the fluent builder pattern (not raw SQL strings)
+- [ ] Raw SQL binds values as `@name` tokens with an object of values (no `$1` arrays, no interpolated values)
 - [ ] CRUD uses Repository methods: `create()`, `update()`, `destroy()`
 - [ ] Query chains are awaited (not fire-and-forget)
 - [ ] Each query is built as a single chain (builders are not branched into multiple queries)
