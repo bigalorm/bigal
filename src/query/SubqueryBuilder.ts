@@ -124,7 +124,7 @@ export class SubqueryBuilder<T extends Entity, TColumns extends string = never> 
       if (typeof item === 'string') {
         cloned._select.push(item);
       } else if (typeof item === 'function') {
-        const fn = item as (builder: SelectBuilder<T>) => AggregateBuilder | SelectAggregateExpression;
+        const fn = item;
         const result = fn(selectBuilder);
         const expr = '_expression' in result ? result._expression : result;
         cloned._selectExpressions.push(expr);
@@ -176,7 +176,7 @@ export class SubqueryBuilder<T extends Entity, TColumns extends string = never> 
 
   public sort(value: Sort<T>): SubqueryBuilder<T, TColumns> {
     const cloned = this.cloneBuilder<TColumns>();
-    cloned._sort = value as SortObject<T> | string;
+    cloned._sort = value;
     return cloned;
   }
 

@@ -14,6 +14,7 @@ import { type FindQueryWithCount, type FindQueryWithCountJSON } from './FindWith
 import { type SubqueryJoinOnCondition } from './JoinDefinition.js';
 import { type AnyJoinInfo, type JoinedSort } from './JoinedSort.js';
 import { type JoinedWhereQuery, type JoinInfo, type SubqueryJoinInfo } from './JoinedWhereQuery.js';
+import { type LockMode, type LockWaitOptions } from './LockOptions.js';
 import { type PaginateOptions } from './PaginateOptions.js';
 import { type PopulateArgs } from './PopulateArgs.js';
 import { type SubqueryBuilderLike, type TypedSubqueryBuilder } from './SubqueryBuilder.js';
@@ -73,6 +74,7 @@ export interface FindResultJSON<T extends Entity, TReturn, TJoins extends AnyJoi
    * @param columns - Column names for DISTINCT ON clause
    */
   distinctOn(columns: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]): FindResultJSON<T, TReturn, TJoins>;
+  lock(mode: LockMode, options?: LockWaitOptions): FindResultJSON<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindResultJSON<T, TReturn, TJoins>;
   limit(value: number): FindResultJSON<T, TReturn, TJoins>;
   skip(value: number): FindResultJSON<T, TReturn, TJoins>;
@@ -135,6 +137,7 @@ export interface FindResult<T extends Entity, TReturn, TJoins extends AnyJoinInf
    * @param columns - Column names for DISTINCT ON clause
    */
   distinctOn(columns: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]): FindResult<T, TReturn, TJoins>;
+  lock(mode: LockMode, options?: LockWaitOptions): FindResult<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindResult<T, TReturn, TJoins>;
   limit(value: number): FindResult<T, TReturn, TJoins>;
   skip(value: number): FindResult<T, TReturn, TJoins>;

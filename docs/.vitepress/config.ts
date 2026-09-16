@@ -65,6 +65,7 @@ export default defineConfig({
           { text: 'Models', link: '/guide/models' },
           { text: 'Querying', link: '/guide/querying' },
           { text: 'CRUD Operations', link: '/guide/crud-operations' },
+          { text: 'Transactions', link: '/guide/transactions' },
           { text: 'Relationships', link: '/guide/relationships' },
           { text: 'Subqueries & Joins', link: '/guide/subqueries-and-joins' },
           { text: 'Views', link: '/guide/views' },

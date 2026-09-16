@@ -18,3 +18,4 @@ export * from './Populated.js';
 export * from './QueryResult.js';
 export * from './QueryResultPopulated.js';
 export * from './QueryResultOptionalPopulated.js';
+export * from './TransactionPool.js';
