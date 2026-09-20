@@ -792,8 +792,8 @@ packages:
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
 
-  copy-anything@4.1.0:
-    resolution: {integrity: sha512-ufbM3smX/Jbnpk5wcQjzd1MgBpzmqfNETUAyZNrGwU9foRlyHoGzMMBBCRzEhQLBjZfFDE1W2ufPXX2vdWkV8Q==}
+  copy-anything@4.1.1:
+    resolution: {integrity: sha512-AoT6Imdr98feSpFfmFwTFN73ccdr7uFPf27cBCgYvyyRyn1BzLRxMvrHNmwXO5LJMddRy4Rdhw2b1h7vSMKsEw==}
     engines: {node: '>=18'}
 
   csstype@3.2.3:
@@ -1799,7 +1799,7 @@ snapshots:
 
   comma-separated-tokens@2.0.3: {}
 
-  copy-anything@4.1.0: {}
+  copy-anything@4.1.1: {}
 
   csstype@3.2.3: {}
 
@@ -2300,7 +2300,7 @@ snapshots:
 
   superjson@2.2.6:
     dependencies:
-      copy-anything: 4.1.0
+      copy-anything: 4.1.1
 
   tabbable@6.5.0: {}
 
