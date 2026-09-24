@@ -2,8 +2,9 @@ import { EventEmitter } from 'node:events';
 
 import { describe, expect, it, vi } from 'vitest';
 
-import { transaction, type TransactionConnection, type TransactionPool } from '../src/index.js';
+import { initialize, transaction, type TransactionConnection, type TransactionPool } from '../src/index.js';
 
+import { Category, Product, ProductCategory, Store } from './models/index.js';
 import { getQueryResult, type PoolQuery } from './utils/pool.js';
 
 function createConnectionHarness() {
@@ -29,9 +30,25 @@ describe('managed connection errors', () => {
 
     const operation = transaction({ pool, repositories: {} }, async (scope) => {
       expect(() => events.emit('error', connectionError)).not.toThrow();
-      await expect(scope.query('SELECT 1')).rejects.toThrow('scope has closed');
+      await expect(scope.query('SELECT 1')).rejects.toBe(connectionError);
       events.emit('error', new Error('subsequent connection error'));
       return 'must not commit';
+    });
+
+    await expect(operation).rejects.toBe(connectionError);
+    expect(connection.query.mock.calls.map(([query]) => query)).toStrictEqual(['BEGIN', 'ROLLBACK']);
+    expect(connection.release).toHaveBeenCalledExactlyOnceWith(true);
+    expect(events.listenerCount('error')).toBe(0);
+  });
+
+  it.each(['raw', 'repository'])('preserves the fatal error when a subsequent %s query rejects the callback', async (queryType) => {
+    const { events, connection, pool } = createConnectionHarness();
+    const repositories = initialize({ models: [Category, Product, ProductCategory, Store], pool });
+    const connectionError = Object.assign(new Error('terminating connection due to idle-in-transaction timeout'), { code: '25P03' });
+
+    const operation = transaction({ pool, repositories }, async (scope) => {
+      events.emit('error', connectionError);
+      return queryType === 'raw' ? scope.query('SELECT 1') : scope.repositories.Store!.findOne({ id: 1 });
     });
 
     await expect(operation).rejects.toBe(connectionError);

@@ -24,6 +24,7 @@ const product = await transaction({ pool, repositories }, async (transactionScop
 
 The callback result is returned after the commit succeeds. Throwing from the callback, or encountering a database query error, rolls the transaction back.
 For clients with `on` and `removeListener`, BigAl also handles fatal connection errors, including an expired idle transaction timeout, and discards the failed connection.
+Queries attempted after that failure reject with the recorded database error, preserving its SQLSTATE when the driver provides one.
 The timeout closes the database session; it does not cancel external work already running inside the callback.
 Keep the application's pool-level error handler: drivers such as `postgres-pool` can also forward checked-out client errors to the pool.
 Adapters exposing only `query()` and `release()` remain supported and must report their connection failures through rejected queries.
@@ -200,6 +201,8 @@ Pass scoped repositories or the scope itself into helpers instead of capturing g
 Queries started after the callback completes are rejected, including saved lazy builders and raw `query()` calls.
 
 Return or await every query from the callback. A callback that completes while already-started database work is pending fails rather than committing around unfinished work.
+Cleanup waits for those queries before rolling back and releasing the connection, even when the callback throws.
+An application timeout such as `Promise.race()` does not cancel a database query; use `lockTimeoutMs` or `statementTimeoutMs` to bound its wait.
 
 BigAl does not automatically retry, provide nested transactions or savepoints, or make external side effects atomic.
 Perform external effects after `transaction()` resolves, or write an outbox record inside the transaction.

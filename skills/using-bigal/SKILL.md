@@ -148,10 +148,13 @@ Related models and junctions must share the transaction's write pool; other-pool
 Explicit population pool overrides must refer to the same managed scope, including on global repositories queried with `{ pool: transactionScope }`.
 A database query failure causes rollback even when callback code catches it.
 BigAl handles fatal client errors when the connection provides `on` and `removeListener`, then discards that connection.
+Subsequent queries reject with the recorded database error, preserving any driver-provided SQLSTATE.
 Keep an application pool-level error handler because drivers such as `postgres-pool` can also forward checked-out client errors to the pool.
 Query/release-only adapters remain supported and must reject queries when their connection fails.
 
 Scoped repositories are valid only inside the callback. A query started after the callback returns is rejected, and a callback that finishes with a query still in flight fails instead of committing.
+Cleanup waits for in-flight queries before rollback and release, including when the callback throws.
+An application timeout does not cancel them; use `lockTimeoutMs` or `statementTimeoutMs` to bound database waits.
 `transaction()` cannot be nested on a scope, and BigAl provides no savepoints or automatic retry, so retry the whole call only when the full operation is idempotent.
 
 For an externally managed transaction, initialize local repositories with the checked-out connection or use write/read `{ pool: connection }` overrides.

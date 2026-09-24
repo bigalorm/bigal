@@ -67,15 +67,19 @@ describe.skipIf(!DATABASE_URL)('managed transactions against PostgreSQL', () => 
     await pool.end();
   });
 
-  it('rejects with the fatal idle timeout and leaves the pool usable', async () => {
+  it.each([false, true])('preserves the fatal idle timeout and pool usability (query after timeout: %s)', async (queryAfterTimeout) => {
     assert(DATABASE_URL);
     const timeoutPool = new Pool({ connectionString: DATABASE_URL, poolSize: 1 });
     const onPoolError = vi.fn<(error: Error) => void>();
     timeoutPool.on('error', onPoolError);
 
     try {
-      const operation = transaction({ pool: timeoutPool, repositories: {}, idleInTransactionTimeoutMs: 100 }, async () => {
+      const repositories = initialize({ models: [TransactionAccount, TransactionItem], pool: timeoutPool });
+      const operation = transaction({ pool: timeoutPool, repositories, idleInTransactionTimeoutMs: 100 }, async (scope) => {
         await setTimeout(250);
+        if (queryAfterTimeout) {
+          await scope.repositories.TransactionAccount!.findOne({ id: 1 });
+        }
       });
 
       await expect(operation).rejects.toMatchObject({ code: '25P03' });

@@ -58,7 +58,8 @@ export class ManagedTransactionExecutor implements PoolLike {
 
   public trackOperation<TResult>(operation: () => Promise<TResult>): Promise<TResult> {
     if (!this.isOpen) {
-      return Promise.reject(new Error('Cannot execute a query after the managed transaction scope has closed'));
+      const scopeError = this.connectionFailed && this.firstQueryFailure ? this.firstQueryFailure : new Error('Cannot execute a query after the managed transaction scope has closed');
+      return Promise.reject(scopeError);
     }
 
     const operationPromise = operation();
