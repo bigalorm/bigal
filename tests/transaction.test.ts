@@ -208,6 +208,108 @@ describe('transaction', () => {
     expect(transactionHarness.pool.connect).not.toHaveBeenCalled();
   });
 
+  describe.each(['find', 'findOne'] as const)('%s with a managed pool override', (method) => {
+    it.each(['store', 'categories', 'products'] as const)('rejects an explicit outside pool for %s population', async (propertyName) => {
+      const otherPool = createMockPool();
+      const store = generator.store();
+      const product = generator.product({ store: store.id });
+      transactionHarness.connection.query
+        .mockResolvedValueOnce(getQueryResult())
+        .mockResolvedValueOnce(getQueryResult([propertyName === 'products' ? store : product]))
+        .mockResolvedValueOnce(getQueryResult());
+
+      const operation = transaction({ pool: transactionHarness.pool, repositories: {} }, async (scope) => {
+        if (propertyName === 'products') {
+          return StoreRepository[method]({ where: { id: store.id }, pool: scope }).populate('products', { pool: otherPool });
+        }
+
+        return ProductRepository[method]({ where: { id: product.id }, pool: scope }).populate(propertyName, { pool: otherPool });
+      });
+
+      await expect(operation).rejects.toThrow('cannot populate using a different pool');
+      expect(otherPool.query).not.toHaveBeenCalled();
+      expect(transactionHarness.pool.query).not.toHaveBeenCalled();
+      expect(readonlyPool.query).not.toHaveBeenCalled();
+      expect(transactionHarness.connection.query.mock.calls.map(([query]) => query)).toStrictEqual(['BEGIN', expect.stringContaining('SELECT'), 'ROLLBACK']);
+    });
+
+    it.each([false, true])('keeps belongs-to population on the managed connection (explicit override: %s)', async (explicitOverride) => {
+      const store = generator.store();
+      const product = generator.product({ store: store.id });
+      transactionHarness.connection.query
+        .mockResolvedValueOnce(getQueryResult())
+        .mockResolvedValueOnce(getQueryResult([product]))
+        .mockResolvedValueOnce(getQueryResult([store]))
+        .mockResolvedValueOnce(getQueryResult());
+
+      const result = await transaction({ pool: transactionHarness.pool, repositories: {} }, async (scope) =>
+        ProductRepository[method]({ where: { id: product.id }, pool: scope }).populate('store', explicitOverride ? { pool: scope } : undefined),
+      );
+
+      const populatedProduct = Array.isArray(result) ? result[0] : result;
+      expect(populatedProduct?.store).toStrictEqual(store);
+      expect(transactionHarness.connection.query).toHaveBeenCalledTimes(4);
+      expect(transactionHarness.pool.query).not.toHaveBeenCalled();
+      expect(readonlyPool.query).not.toHaveBeenCalled();
+    });
+
+    it('keeps one-to-many population on the managed connection', async () => {
+      const store = generator.store();
+      const product = generator.product({ store: store.id });
+      transactionHarness.connection.query
+        .mockResolvedValueOnce(getQueryResult())
+        .mockResolvedValueOnce(getQueryResult([store]))
+        .mockResolvedValueOnce(getQueryResult([product]))
+        .mockResolvedValueOnce(getQueryResult());
+
+      const result = await transaction({ pool: transactionHarness.pool, repositories: {} }, async (scope) => StoreRepository[method]({ where: { id: store.id }, pool: scope }).populate('products'));
+
+      const populatedStore = Array.isArray(result) ? result[0] : result;
+      expect(populatedStore?.products).toStrictEqual([product]);
+      expect(transactionHarness.connection.query).toHaveBeenCalledTimes(4);
+      expect(transactionHarness.pool.query).not.toHaveBeenCalled();
+      expect(readonlyPool.query).not.toHaveBeenCalled();
+    });
+
+    it('keeps many-to-many population and the junction on the managed connection', async () => {
+      const product = generator.product({ store: generator.store().id });
+      const category = generator.category();
+      const productCategory = generator.productCategory(product, category);
+      transactionHarness.connection.query
+        .mockResolvedValueOnce(getQueryResult())
+        .mockResolvedValueOnce(getQueryResult([product]))
+        .mockResolvedValueOnce(getQueryResult([productCategory]))
+        .mockResolvedValueOnce(getQueryResult([category]))
+        .mockResolvedValueOnce(getQueryResult());
+
+      const result = await transaction({ pool: transactionHarness.pool, repositories: {} }, async (scope) =>
+        ProductRepository[method]({ where: { id: product.id }, pool: scope }).populate('categories'),
+      );
+
+      const populatedProduct = Array.isArray(result) ? result[0] : result;
+      expect(populatedProduct?.categories).toStrictEqual([category]);
+      expect(transactionHarness.connection.query).toHaveBeenCalledTimes(5);
+      expect(transactionHarness.pool.query).not.toHaveBeenCalled();
+      expect(readonlyPool.query).not.toHaveBeenCalled();
+    });
+  });
+
+  it.each(['find', 'findOne'] as const)('preserves an ordinary explicit population pool override with %s', async (method) => {
+    const otherPool = createMockPool();
+    const store = generator.store();
+    const product = generator.product({ store: store.id });
+    readonlyPool.query.mockResolvedValueOnce(getQueryResult([product]));
+    otherPool.query.mockResolvedValueOnce(getQueryResult([store]));
+
+    const result = await ProductRepository[method]({ where: { id: product.id } }).populate('store', { pool: otherPool });
+
+    const populatedProduct = Array.isArray(result) ? result[0] : result;
+    expect(populatedProduct?.store).toStrictEqual(store);
+    expect(readonlyPool.query).toHaveBeenCalledOnce();
+    expect(otherPool.query).toHaveBeenCalledOnce();
+    expect(transactionHarness.pool.connect).not.toHaveBeenCalled();
+  });
+
   it('allows scoped reads with unrelated models on another connection', async () => {
     const secondaryPool = createMockPool();
     const remoteRepositories = initialize({

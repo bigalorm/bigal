@@ -145,7 +145,11 @@ Options:
 The callback scope has typed `repositories` and a parameterized `query()` escape hatch, and any repository on the same write pool accepts it as `{ pool: transactionScope }`.
 Reads, writes, population, and raw queries use the same client. Return or await every lazy query.
 Related models and junctions must share the transaction's write pool; other-pool repositories are excluded from the scope, so populating them fails before their SQL runs.
+Explicit population pool overrides must refer to the same managed scope, including on global repositories queried with `{ pool: transactionScope }`.
 A database query failure causes rollback even when callback code catches it.
+BigAl handles fatal client errors when the connection provides `on` and `removeListener`, then discards that connection.
+Keep an application pool-level error handler because drivers such as `postgres-pool` can also forward checked-out client errors to the pool.
+Query/release-only adapters remain supported and must reject queries when their connection fails.
 
 Scoped repositories are valid only inside the callback. A query started after the callback returns is rejected, and a callback that finishes with a query still in flight fails instead of committing.
 `transaction()` cannot be nested on a scope, and BigAl provides no savepoints or automatic retry, so retry the whole call only when the full operation is idempotent.
@@ -168,6 +172,8 @@ await jobRepo.find({
 ```
 
 Lock modes are `'update'` and `'noKeyUpdate'`; wait behavior is omitted, `'nowait'`, or `'skipLocked'`.
+For models with a `lock` column, shorthand `{ lock: value }` remains a column filter, including JSON values containing `mode`.
+Use `.lock()` or an explicit `{ where: {}, lock: { mode: 'update' } }` options wrapper to request locking on those models. An undefined `lock` option is omitted.
 A locking read runs on the write pool, or on the `pool` override you pass.
 PostgreSQL releases the lock when the statement ends unless a transaction is open on that connection.
 Lock through scoped repositories, repositories initialized with a transaction connection, or an explicit `{ pool: connection }` override.

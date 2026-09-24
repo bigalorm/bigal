@@ -1,6 +1,7 @@
 import assert from 'node:assert';
+import { setTimeout } from 'node:timers/promises';
 
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Pool } from 'postgres-pool';
 
 import { initialize, type Repository, transaction } from '../src/index.js';
@@ -64,6 +65,25 @@ describe.skipIf(!DATABASE_URL)('managed transactions against PostgreSQL', () => 
     await pool.query(`DROP TABLE IF EXISTS "${ITEM_TABLE}"`);
     await pool.query(`DROP TABLE IF EXISTS "${ACCOUNT_TABLE}"`);
     await pool.end();
+  });
+
+  it('rejects with the fatal idle timeout and leaves the pool usable', async () => {
+    assert(DATABASE_URL);
+    const timeoutPool = new Pool({ connectionString: DATABASE_URL, poolSize: 1 });
+    const onPoolError = vi.fn<(error: Error) => void>();
+    timeoutPool.on('error', onPoolError);
+
+    try {
+      const operation = transaction({ pool: timeoutPool, repositories: {}, idleInTransactionTimeoutMs: 100 }, async () => {
+        await setTimeout(250);
+      });
+
+      await expect(operation).rejects.toMatchObject({ code: '25P03' });
+      expect(onPoolError).toHaveBeenCalled();
+      await expect(timeoutPool.query('SELECT 1 AS value')).resolves.toMatchObject({ rows: [{ value: 1 }] });
+    } finally {
+      await timeoutPool.end();
+    }
   });
 
   it('commits dependent writes and reads populated data on the transaction connection', async () => {

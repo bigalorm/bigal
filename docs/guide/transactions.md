@@ -23,6 +23,10 @@ const product = await transaction({ pool, repositories }, async (transactionScop
 ```
 
 The callback result is returned after the commit succeeds. Throwing from the callback, or encountering a database query error, rolls the transaction back.
+For clients with `on` and `removeListener`, BigAl also handles fatal connection errors, including an expired idle transaction timeout, and discards the failed connection.
+The timeout closes the database session; it does not cancel external work already running inside the callback.
+Keep the application's pool-level error handler: drivers such as `postgres-pool` can also forward checked-out client errors to the pool.
+Adapters exposing only `query()` and `release()` remain supported and must report their connection failures through rejected queries.
 
 ## Parameters and callback scope
 
@@ -81,6 +85,8 @@ await transaction({ pool, repositories }, async (transactionScope) => {
 ```
 
 A repository used with `{ pool: transactionScope }` must use the same write pool as the transaction. A scoped repository accepts its own scope as an override and rejects any other pool.
+Population inherits that managed connection. An explicit `populate(..., { pool })` override must refer to the same transaction scope.
+This also applies when the parent query uses a global repository with `{ pool: transactionScope }`.
 
 ## Row locking
 
@@ -127,6 +133,9 @@ const product = await productRepository.findOne({ pool: transactionConnection })
 ```
 
 Locking is opt-in. Ordinary reads, including reads inside managed transactions, remain ordinary `SELECT` statements.
+If a model has a column named `lock`, shorthand `find({ lock: value })` and `findOne({ lock: value })` filter that column, even when its JSON value contains `mode`.
+Request a row lock with the fluent `.lock()` method or an explicit options wrapper such as `{ where: {}, lock: { mode: 'update' } }`.
+An undefined `lock` option is treated as omitted.
 Population queries use the same transaction connection but do not inherit the primary query's lock clause.
 Related models and junction tables must use the transaction's write pool, even when omitted from the public `repositories` map.
 Repositories on other pools are excluded from the managed scope; attempting to populate them raises a missing-repository error before their SQL runs.

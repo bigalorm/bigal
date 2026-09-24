@@ -21,10 +21,17 @@ import { type OnConflictOptions } from './query/OnConflictOptions.js';
 import { type SelectAggregateExpression } from './query/SelectBuilder.js';
 import { type HavingCondition, type SubqueryBuilderLike } from './query/Subquery.js';
 import { ScalarSubquery, SubqueryBuilder } from './query/Subquery.js';
+import { type TransactionIsolationLevel } from './Transaction.js';
 import { type CreateUpdateParams, type OmitEntityCollections, type OmitFunctions } from './types/index.js';
 
 // Valid PostgreSQL identifier: starts with letter or underscore, contains letters, digits, underscores, or dots (for alias.column notation)
 const VALID_SQL_IDENTIFIER = /^[A-Z_a-z][\w.]*$/;
+
+const ISOLATION_LEVEL_SQL: Record<TransactionIsolationLevel, string> = {
+  readCommitted: 'READ COMMITTED',
+  repeatableRead: 'REPEATABLE READ',
+  serializable: 'SERIALIZABLE',
+};
 
 function assertValidSqlIdentifier(value: string, context: string): void {
   if (!VALID_SQL_IDENTIFIER.test(value)) {
@@ -47,6 +54,23 @@ function getBaseColumnPrefix<T extends Entity>(model: ModelMetadata<T>, joins?: 
 interface QueryAndParams {
   query: string;
   params: readonly unknown[];
+}
+
+/**
+ * Builds the transaction start statement after validating its isolation level.
+ * @param {TransactionIsolationLevel} [isolationLevel] - Optional transaction isolation level
+ * @returns {string} Transaction start SQL
+ */
+export function getTransactionBeginQuery(isolationLevel: TransactionIsolationLevel | undefined): string {
+  if (isolationLevel === undefined) {
+    return 'BEGIN';
+  }
+
+  if (!Object.hasOwn(ISOLATION_LEVEL_SQL, isolationLevel)) {
+    throw new RangeError(`Unsupported transaction isolation level: ${String(isolationLevel)}`);
+  }
+
+  return `BEGIN ISOLATION LEVEL ${ISOLATION_LEVEL_SQL[isolationLevel]}`;
 }
 
 /**

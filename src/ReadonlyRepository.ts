@@ -29,7 +29,7 @@ import {
   type WhereQuery,
 } from './query/index.js';
 import { registerRepositoryOptions } from './RepositoryInternals.js';
-import { executeRepositoryOperation } from './RepositoryPool.js';
+import { executeRepositoryOperation, resolvePopulatePool } from './RepositoryPool.js';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
 import {
   type GetValueType,
@@ -71,6 +71,10 @@ type PrimaryId = number | string;
 
 function isLockOptions(value: unknown): value is LockOptions {
   return typeof value === 'object' && value !== null && 'mode' in value;
+}
+
+function hasLockColumnCriteria<T extends Entity>(args: object, model: ModelMetadata<T>): boolean {
+  return 'lock' in args && !('where' in args) && model.columns.some((column) => column.propertyName === 'lock');
 }
 
 export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository<T> {
@@ -132,12 +136,13 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     const { stack } = new Error(`${this.model.name}.findOne()`);
 
     let select: Set<string> | undefined;
-    let where: WhereQuery<T> = {};
+    const lockColumnCriteria = hasLockColumnCriteria(args, this.model);
+    let where: WhereQuery<T> = lockColumnCriteria ? (args as WhereQuery<T>) : {};
     let sort: SortObject<T> | string | null = null;
     let poolOverride: PoolLike | undefined;
     let lockOptions: LockOptions | undefined;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
-    for (const [name, value] of Object.entries(args)) {
+    for (const [name, value] of Object.entries(lockColumnCriteria ? {} : args)) {
       let isWhereCriteria = false;
 
       switch (name) {
@@ -157,6 +162,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           poolOverride = value as PoolLike;
           break;
         case 'lock':
+          if (value === undefined) {
+            break;
+          }
+
           if (isLockOptions(value)) {
             lockOptions = value;
           } else {
@@ -168,6 +177,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
           break;
         default:
+          lockOptions = undefined;
           select = undefined;
           where = args as WhereQuery<T>;
           sort = null;
@@ -339,7 +349,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
               const result = returnAsPlainObjects ? modelInstance._buildPlainObject(firstResult) : modelInstance._buildInstance(firstResult);
 
               if (populates.length) {
-                const populatesWithFlag = populates.map((pop) => ({ ...pop, asPlainObjects: returnAsPlainObjects }));
+                const populatesWithFlag = populates.map((pop) => ({ ...pop, pool: resolvePopulatePool(pool, pop.pool), asPlainObjects: returnAsPlainObjects }));
                 await modelInstance.populateFields([result], populatesWithFlag);
               }
 
@@ -383,14 +393,15 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     const { stack } = new Error(`${this.model.name}.find()`);
 
     let select: Set<string> | undefined;
-    let where: WhereQuery<T> = {};
+    const lockColumnCriteria = hasLockColumnCriteria(args, this.model);
+    let where: WhereQuery<T> = lockColumnCriteria ? (args as WhereQuery<T>) : {};
     let sort: SortObject<T> | string | null = null;
     let skip: number | null = null;
     let limit: number | null = null;
     let poolOverride: PoolLike | undefined;
     let lockOptions: LockOptions | undefined;
     // Args can be a FindArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
-    for (const [name, value] of Object.entries(args)) {
+    for (const [name, value] of Object.entries(lockColumnCriteria ? {} : args)) {
       let isWhereCriteria = false;
 
       switch (name) {
@@ -416,6 +427,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
           poolOverride = value as PoolLike;
           break;
         case 'lock':
+          if (value === undefined) {
+            break;
+          }
+
           if (isLockOptions(value)) {
             lockOptions = value;
           } else {
@@ -429,6 +444,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
           break;
         default:
+          lockOptions = undefined;
           select = undefined;
           where = args as WhereQuery<T>;
           sort = null;
@@ -678,7 +694,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(rows) : modelInstance._buildInstances(rows);
 
             if (populates.length) {
-              const populatesWithFlag = populates.map((pop) => ({ ...pop, asPlainObjects: returnAsPlainObjects }));
+              const populatesWithFlag = populates.map((pop) => ({ ...pop, pool: resolvePopulatePool(pool, pop.pool), asPlainObjects: returnAsPlainObjects }));
               await modelInstance.populateFields(entities, populatesWithFlag);
             }
 

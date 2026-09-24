@@ -4,19 +4,95 @@ import { type Repository } from '../src/index.js';
 import { initialize } from '../src/index.js';
 
 import { Product, SimpleWithSchema, Store } from './models/index.js';
+import { LockValue } from './models/LockValue.js';
 import * as generator from './utils/generator.js';
 import { createMockPool, getQueryResult } from './utils/pool.js';
 
 describe('locking reads', () => {
   const pool = createMockPool();
   const readonlyPool = createMockPool();
-  const repositories = initialize({ models: [Product, SimpleWithSchema, Store], pool, readonlyPool });
+  const repositories = initialize({ models: [LockValue, Product, SimpleWithSchema, Store], pool, readonlyPool });
+  const LockValueRepository = repositories.LockValue as Repository<LockValue>;
   const ProductRepository = repositories.Product as Repository<Product>;
   const SimpleWithSchemaRepository = repositories.SimpleWithSchema as Repository<SimpleWithSchema>;
 
   beforeEach(() => {
     pool.query.mockReset();
     readonlyPool.query.mockReset();
+  });
+
+  describe.each(['find', 'findOne'] as const)('%s lock argument compatibility', (method) => {
+    it.each([
+      { criteria: { lock: { mode: 'update' } }, expectedParams: ['update'] },
+      { criteria: { lock: { mode: 'update' }, id: 42 }, expectedParams: ['update', 42] },
+      { criteria: { id: 42, lock: { mode: 'update' } }, expectedParams: [42, 'update'] },
+      { criteria: { lock: { mode: 'update' }, select: 'saved' }, expectedParams: ['update', 'saved'] },
+      { criteria: { select: 'saved', lock: { mode: 'update' } }, expectedParams: ['saved', 'update'] },
+    ])('preserves JSON lock-column shorthand: $criteria', async ({ criteria, expectedParams }) => {
+      readonlyPool.query.mockResolvedValueOnce(getQueryResult());
+
+      await LockValueRepository[method](criteria);
+
+      const [query, params] = readonlyPool.query.mock.calls[0]!;
+      expect(query).toContain(' WHERE ');
+      expect(query).toContain('"lock"->>\'mode\'=$');
+      expect(params).toStrictEqual(expectedParams);
+      expect(query).not.toContain(' FOR ');
+      expect(pool.query).not.toHaveBeenCalled();
+    });
+
+    it('recognizes an explicit options wrapper even when the model has a lock column', async () => {
+      pool.query.mockResolvedValue(getQueryResult());
+
+      await LockValueRepository[method]({ where: { id: 42 }, lock: { mode: 'update' } });
+      await LockValueRepository[method]({ lock: { mode: 'update' }, where: { id: 42 } });
+
+      for (const [query, params] of pool.query.mock.calls) {
+        expect(query).toContain('WHERE "id"=$1');
+        expect(query).toContain('FOR UPDATE OF "lock_values"');
+        expect(params).toStrictEqual([42]);
+      }
+
+      expect(readonlyPool.query).not.toHaveBeenCalled();
+    });
+
+    it('treats an undefined optional lock as omitted in options', async () => {
+      readonlyPool.query.mockResolvedValue(getQueryResult());
+
+      await ProductRepository[method]({ where: { id: 42 }, lock: undefined });
+      await ProductRepository[method]({ lock: undefined, where: { id: 42 } });
+      await LockValueRepository[method]({ where: { id: 42 }, lock: undefined });
+      await LockValueRepository[method]({ lock: undefined, where: { id: 42 } });
+
+      for (const [query, params] of readonlyPool.query.mock.calls) {
+        expect(query).toContain('WHERE "id"=$1');
+        expect(query).not.toContain(' FOR ');
+        expect(params).toStrictEqual([42]);
+      }
+
+      expect(pool.query).not.toHaveBeenCalled();
+    });
+
+    it('supports unfiltered lock-only options without a lock column', async () => {
+      pool.query.mockResolvedValueOnce(getQueryResult());
+
+      await ProductRepository[method]({ lock: { mode: 'update' } });
+
+      expect(pool.query.mock.calls[0]?.[0]).toContain('FOR UPDATE OF "products"');
+      expect(pool.query.mock.calls[0]?.[1]).toStrictEqual([]);
+      expect(readonlyPool.query).not.toHaveBeenCalled();
+    });
+
+    it('can add a fluent lock to JSON lock-column criteria', async () => {
+      pool.query.mockResolvedValueOnce(getQueryResult());
+
+      await LockValueRepository[method]({ lock: { mode: 'update' } }).lock('noKeyUpdate');
+
+      expect(pool.query.mock.calls[0]?.[0]).toContain(' WHERE ');
+      expect(pool.query.mock.calls[0]?.[0]).toContain('FOR NO KEY UPDATE OF "lock_values"');
+      expect(pool.query.mock.calls[0]?.[1]).toContain('update');
+      expect(readonlyPool.query).not.toHaveBeenCalled();
+    });
   });
 
   it('adds an update lock only when requested through options', async () => {

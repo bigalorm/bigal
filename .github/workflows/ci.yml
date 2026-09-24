@@ -19,6 +19,21 @@ jobs:
       matrix:
         node-version: ['22', '24', '26']
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: bigal_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bigal_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -37,6 +52,7 @@ jobs:
       - run: pnpm test
         env:
           CI: true
+          BIGAL_TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/bigal_test
   lint:
     name: 'Lint'
     runs-on: ubuntu-latest

@@ -5,17 +5,11 @@ import { ManagedTransactionExecutor, resolveManagedTransactionExecutor } from '.
 import { type IRepositoryOptions, ReadonlyRepository } from './ReadonlyRepository.js';
 import { Repository } from './Repository.js';
 import { getRepositoryOptions } from './RepositoryInternals.js';
-import { getTransactionSettingsQueryAndParams } from './SqlHelper.js';
+import { getTransactionBeginQuery, getTransactionSettingsQueryAndParams } from './SqlHelper.js';
 import { type RepositoryMap, type TransactionRepositories, TransactionScope } from './TransactionScope.js';
 import { type TransactionConnection, type TransactionPool } from './types/index.js';
 
 const MAX_POSTGRES_TIMEOUT_MS = 2_147_483_647;
-
-const ISOLATION_LEVEL_SQL: Record<TransactionIsolationLevel, string> = {
-  readCommitted: 'READ COMMITTED',
-  repeatableRead: 'REPEATABLE READ',
-  serializable: 'SERIALIZABLE',
-};
 
 const POSTGRES_SETTING_BY_TIMEOUT_OPTION: Record<TransactionTimeoutOption, string> = {
   lockTimeoutMs: 'lock_timeout',
@@ -63,10 +57,6 @@ function assertTimeoutValue(name: string, value: number | undefined): void {
 function validateOptions(options: TransactionOptions<RepositoryMap>): void {
   for (const optionName of TIMEOUT_OPTION_NAMES) {
     assertTimeoutValue(optionName, options[optionName]);
-  }
-
-  if (options.isolationLevel !== undefined && !Object.hasOwn(ISOLATION_LEVEL_SQL, options.isolationLevel)) {
-    throw new RangeError(`Unsupported transaction isolation level: ${String(options.isolationLevel)}`);
   }
 
   if (resolveManagedTransactionExecutor(options.pool)) {
@@ -150,14 +140,6 @@ function createScopedRepositories<TRepositories extends RepositoryMap>(sourceRep
   return scopedRepositories as TransactionRepositories<TRepositories>;
 }
 
-function getBeginStatement(isolationLevel: TransactionIsolationLevel | undefined): string {
-  if (!isolationLevel) {
-    return 'BEGIN';
-  }
-
-  return `BEGIN ISOLATION LEVEL ${ISOLATION_LEVEL_SQL[isolationLevel]}`;
-}
-
 async function applyTransactionSettings(connection: TransactionConnection, options: TransactionOptions<RepositoryMap>): Promise<void> {
   const settings: Record<string, string> = {};
 
@@ -187,11 +169,11 @@ function attachCleanupErrors(primaryError: unknown, cleanupErrors: readonly unkn
   errorWithDetails.cleanupErrors = cleanupErrors;
 }
 
-async function cleanupFailedTransaction(connection: TransactionConnection, executor: ManagedTransactionExecutor | undefined, began: boolean, discardConnection: boolean): Promise<readonly unknown[]> {
+async function cleanupFailedTransaction(connection: TransactionConnection, executor: ManagedTransactionExecutor, began: boolean, discardConnection: boolean): Promise<readonly unknown[]> {
   const cleanupErrors: unknown[] = [];
 
-  executor?.close();
-  await executor?.waitForOperations();
+  executor.close();
+  await executor.waitForOperations();
 
   let shouldDiscardConnection = discardConnection || !began;
   if (began) {
@@ -204,7 +186,7 @@ async function cleanupFailedTransaction(connection: TransactionConnection, execu
   }
 
   try {
-    await connection.release(shouldDiscardConnection);
+    await connection.release(shouldDiscardConnection || executor.hasConnectionFailure);
   } catch (error) {
     cleanupErrors.push(error);
   }
@@ -217,45 +199,54 @@ export async function transaction<const TRepositories extends RepositoryMap, TRe
   callback: (transactionScope: TransactionScope<TRepositories>) => PromiseLike<TResult> | TResult,
 ): Promise<Awaited<TResult>> {
   validateOptions(options);
+  const beginQuery = getTransactionBeginQuery(options.isolationLevel);
   const sourceRepositories = resolveSourceRepositories(options.repositories, options.pool);
 
   const connection = await options.pool.connect();
   let began = false;
   let commitStarted = false;
-  let executor: ManagedTransactionExecutor | undefined;
+  const executor = new ManagedTransactionExecutor(connection, options.pool);
+  const onConnectionError = executor.failConnection.bind(executor);
   let callbackResult: Awaited<TResult>;
 
   try {
-    await connection.query(getBeginStatement(options.isolationLevel));
-    began = true;
-    await applyTransactionSettings(connection, options);
+    try {
+      if (connection.on && connection.removeListener) {
+        connection.on('error', onConnectionError);
+      }
 
-    executor = new ManagedTransactionExecutor(connection, options.pool);
-    const transactionScope = new TransactionScope(executor, createScopedRepositories<TRepositories>(sourceRepositories, executor));
-    callbackResult = await callback(transactionScope);
+      await connection.query(beginQuery);
+      began = true;
+      await applyTransactionSettings(connection, options);
 
-    if (executor.queryFailure) {
-      throw executor.queryFailure;
+      executor.throwIfFailed();
+
+      const transactionScope = new TransactionScope(executor, createScopedRepositories<TRepositories>(sourceRepositories, executor));
+      callbackResult = await callback(transactionScope);
+
+      executor.throwIfFailed();
+
+      if (executor.hasPendingOperations) {
+        throw new Error('The transaction callback completed while database operations were still pending');
+      }
+
+      executor.close();
+      commitStarted = true;
+      await connection.query('COMMIT');
+    } catch (error) {
+      const cleanupErrors = await cleanupFailedTransaction(connection, executor, began, commitStarted || executor.hasConnectionFailure);
+      attachCleanupErrors(error, cleanupErrors);
+      throw error;
     }
 
-    if (executor.hasPendingOperations) {
-      throw new Error('The transaction callback completed while database operations were still pending');
+    try {
+      await connection.release(executor.hasConnectionFailure);
+    } catch (error) {
+      throw new Error('The transaction committed, but releasing its connection failed', { cause: error });
     }
 
-    executor.close();
-    commitStarted = true;
-    await connection.query('COMMIT');
-  } catch (error) {
-    const cleanupErrors = await cleanupFailedTransaction(connection, executor, began, commitStarted);
-    attachCleanupErrors(error, cleanupErrors);
-    throw error;
+    return callbackResult;
+  } finally {
+    connection.removeListener?.('error', onConnectionError);
   }
-
-  try {
-    await connection.release(false);
-  } catch (error) {
-    throw new Error('The transaction committed, but releasing its connection failed', { cause: error });
-  }
-
-  return callbackResult;
 }

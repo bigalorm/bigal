@@ -9,6 +9,8 @@ export class ManagedTransactionExecutor implements PoolLike {
 
   private firstQueryFailure: Error | undefined;
 
+  private connectionFailed = false;
+
   private isOpen = true;
 
   public readonly sourcePool: TransactionPool;
@@ -22,8 +24,20 @@ export class ManagedTransactionExecutor implements PoolLike {
     return Boolean(this.activeOperations.size);
   }
 
-  public get queryFailure(): Error | undefined {
-    return this.firstQueryFailure;
+  public throwIfFailed(): void {
+    if (this.firstQueryFailure) {
+      throw this.firstQueryFailure;
+    }
+  }
+
+  public get hasConnectionFailure(): boolean {
+    return this.connectionFailed;
+  }
+
+  public failConnection(error: Error): void {
+    this.firstQueryFailure ??= error;
+    this.connectionFailed = true;
+    this.close();
   }
 
   public close(): void {

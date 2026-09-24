@@ -89,6 +89,11 @@ Passing a pool changes only query routing. It does not begin or complete a trans
 `transaction()` works with PostgreSQL pools whose `connect()` method returns a client with `query()` and `release()` methods.
 This includes the pool APIs shown above. Query-only HTTP or batch executors can initialize repositories but cannot own an interactive managed transaction.
 
+`TransactionConnection` also supports optional `on('error', listener)` and `removeListener('error', listener)` methods.
+When both are available, BigAl listens for fatal client errors throughout the transaction and cleanup, discards a failed connection, and removes its listener after release.
+Custom adapters with only `query()` and `release()` remain valid and must surface connection failures through query rejections.
+Applications still need a pool-level error handler for events the driver sends to the pool, including checked-out client errors forwarded by `postgres-pool`.
+
 ```ts
 import { transaction } from 'bigal';
 
