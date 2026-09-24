@@ -144,6 +144,7 @@ Options:
 
 The callback scope has typed `repositories` and a parameterized `query()` escape hatch, and any repository on the same write pool accepts it as `{ pool: transactionScope }`.
 Reads, writes, population, and raw queries use the same client. Return or await every lazy query.
+Related models and junctions must share the transaction's write pool; other-pool repositories are excluded from the scope, so populating them fails before their SQL runs.
 A database query failure causes rollback even when callback code catches it.
 
 Scoped repositories are valid only inside the callback. A query started after the callback returns is rejected, and a callback that finishes with a query still in flight fails instead of committing.

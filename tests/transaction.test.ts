@@ -6,6 +6,8 @@ import { type PoolQueryResult, type QueryResultRow, type Repository, type Transa
 import { initialize, transaction } from '../src/index.js';
 
 import { Category, Product, ProductCategory, ReadonlyProduct, Store } from './models/index.js';
+import { ProductWithRemoteStore } from './models/ProductWithRemoteStore.js';
+import { RemoteStore } from './models/RemoteStore.js';
 import * as generator from './utils/generator.js';
 import { createMockPool, getQueryResult, type PoolQuery } from './utils/pool.js';
 
@@ -154,6 +156,100 @@ describe('transaction', () => {
     expect(readonlyPool.query).not.toHaveBeenCalled();
   });
 
+  it.each(['findOne', 'find'] as const)('rejects cross-connection population with %s before querying the other pool', async (method) => {
+    const secondaryPool = createMockPool();
+    const remoteRepositories = initialize({
+      models: [ProductWithRemoteStore, RemoteStore],
+      pool: transactionHarness.pool,
+      connections: { secondary: { pool: secondaryPool } },
+    });
+    const productRepository = remoteRepositories.ProductWithRemoteStore as Repository<ProductWithRemoteStore>;
+    const store = generator.store();
+    const product = generator.product({ store: store.id });
+    transactionHarness.connection.query
+      .mockResolvedValueOnce(getQueryResult())
+      .mockResolvedValueOnce(getQueryResult([product]))
+      .mockResolvedValueOnce(getQueryResult());
+    secondaryPool.query.mockResolvedValue(getQueryResult([store]));
+
+    const operation = transaction({ pool: transactionHarness.pool, repositories: { Product: productRepository } }, async (scope) => {
+      if (method === 'findOne') {
+        return scope.repositories.Product.findOne({ id: product.id }).populate('store');
+      }
+
+      return scope.repositories.Product.find({ where: { id: product.id } }).populate('store');
+    });
+
+    await expect(operation).rejects.toThrow('Unable to find populate repository by entity name: RemoteStore');
+    expect(secondaryPool.query).not.toHaveBeenCalled();
+    expect(transactionHarness.pool.query).not.toHaveBeenCalled();
+    expect(transactionHarness.connection.query.mock.calls.map(([query]) => query)).toStrictEqual(['BEGIN', expect.stringContaining('SELECT'), 'ROLLBACK']);
+    expect(transactionHarness.connection.release).toHaveBeenCalledWith(false);
+  });
+
+  it('keeps ordinary cross-connection population available outside managed transactions', async () => {
+    const secondaryPool = createMockPool();
+    const remoteRepositories = initialize({
+      models: [ProductWithRemoteStore, RemoteStore],
+      pool: transactionHarness.pool,
+      connections: { secondary: { pool: secondaryPool } },
+    });
+    const productRepository = remoteRepositories.ProductWithRemoteStore as Repository<ProductWithRemoteStore>;
+    const store = generator.store();
+    const product = generator.product({ store: store.id });
+    transactionHarness.pool.query.mockResolvedValue(getQueryResult([product]));
+    secondaryPool.query.mockResolvedValue(getQueryResult([store]));
+
+    const populatedProduct = await productRepository.findOne({ id: product.id }).populate('store');
+
+    expect(populatedProduct?.store).toBeInstanceOf(RemoteStore);
+    expect(populatedProduct?.store).toMatchObject({ id: store.id, name: store.name });
+    expect(secondaryPool.query).toHaveBeenCalledOnce();
+    expect(transactionHarness.pool.connect).not.toHaveBeenCalled();
+  });
+
+  it('allows scoped reads with unrelated models on another connection', async () => {
+    const secondaryPool = createMockPool();
+    const remoteRepositories = initialize({
+      models: [ProductWithRemoteStore, RemoteStore],
+      pool: transactionHarness.pool,
+      connections: { secondary: { pool: secondaryPool } },
+    });
+    const productRepository = remoteRepositories.ProductWithRemoteStore as Repository<ProductWithRemoteStore>;
+    const product = generator.product({ store: generator.store().id });
+    transactionHarness.connection.query
+      .mockResolvedValueOnce(getQueryResult())
+      .mockResolvedValueOnce(getQueryResult([product]))
+      .mockResolvedValueOnce(getQueryResult());
+
+    const result = await transaction({ pool: transactionHarness.pool, repositories: { Product: productRepository } }, (scope) => scope.repositories.Product.findOne({ id: product.id }));
+
+    expect(result?.store).toBe(product.store);
+    expect(secondaryPool.query).not.toHaveBeenCalled();
+    expect(transactionHarness.connection.query.mock.calls.map(([query]) => query)).toStrictEqual(['BEGIN', expect.stringContaining('SELECT'), 'COMMIT']);
+  });
+
+  it('rejects collection population on another connection before querying that pool', async () => {
+    const otherPool = createMockPool();
+    const remoteRepositories = initialize({
+      models: [Product, RemoteStore],
+      pool: otherPool,
+      connections: { secondary: { pool: transactionHarness.pool } },
+    });
+    const storeRepository = remoteRepositories.RemoteStore as Repository<RemoteStore>;
+    const store = generator.store();
+    transactionHarness.connection.query
+      .mockResolvedValueOnce(getQueryResult())
+      .mockResolvedValueOnce(getQueryResult([store]))
+      .mockResolvedValueOnce(getQueryResult());
+
+    const operation = transaction({ pool: transactionHarness.pool, repositories: { Store: storeRepository } }, (scope) => scope.repositories.Store.findOne({ id: store.id }).populate('products'));
+
+    await expect(operation).rejects.toThrow('Unable to find populate repository for collection by name Product');
+    expect(otherPool.query).not.toHaveBeenCalled();
+    expect(transactionHarness.connection.query.mock.calls.map(([query]) => query)).toStrictEqual(['BEGIN', expect.stringContaining('SELECT'), 'ROLLBACK']);
+  });
+
   it('supports locking reads inside a managed transaction', async () => {
     const store = generator.store();
     transactionHarness.connection.query
@@ -221,6 +317,7 @@ describe('transaction', () => {
         isolationLevel: 'repeatableRead',
         lockTimeoutMs: 0,
         statementTimeoutMs: 5_000,
+        idleInTransactionTimeoutMs: 2_147_483_647,
       },
       () => 42,
     );
@@ -228,7 +325,10 @@ describe('transaction', () => {
     expect(result).toBe(42);
     expect(transactionHarness.connection.query.mock.calls).toStrictEqual([
       ['BEGIN ISOLATION LEVEL REPEATABLE READ'],
-      ['SELECT set_config($1, $2, true), set_config($3, $4, true)', ['lock_timeout', '0ms', 'statement_timeout', '5000ms']],
+      [
+        'SELECT set_config($1, $2, true), set_config($3, $4, true), set_config($5, $6, true)',
+        ['lock_timeout', '0ms', 'statement_timeout', '5000ms', 'idle_in_transaction_session_timeout', '2147483647ms'],
+      ],
       ['COMMIT'],
     ]);
   });
@@ -263,6 +363,11 @@ describe('transaction', () => {
 
   it.each([-1, 1.5, Number.POSITIVE_INFINITY, 2_147_483_648])('rejects invalid timeout values before acquiring a connection: %s', async (lockTimeoutMs) => {
     await expect(transaction({ pool: transactionHarness.pool, repositories: {}, lockTimeoutMs }, () => undefined)).rejects.toBeInstanceOf(RangeError);
+    expect(transactionHarness.pool.connect).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid idle transaction timeout before acquiring a connection', async () => {
+    await expect(transaction({ pool: transactionHarness.pool, repositories: {}, idleInTransactionTimeoutMs: 2_147_483_648 }, () => undefined)).rejects.toBeInstanceOf(RangeError);
     expect(transactionHarness.pool.connect).not.toHaveBeenCalled();
   });
 
@@ -532,6 +637,37 @@ describe('transaction', () => {
 
     await expect(operation).rejects.toThrow('operations were still pending');
     expect(transactionHarness.connection.query.mock.calls.map(([query]) => query)).toStrictEqual(['BEGIN', 'SELECT pending', 'ROLLBACK']);
+  });
+
+  it.each(['scoped', 'override'])('waits for a pending %s repository read before rollback and release', async (routing) => {
+    const queryStarted = Promise.withResolvers<void>();
+    const pendingQuery = Promise.withResolvers<PoolQueryResult<QueryResultRow>>();
+    transactionHarness.connection.query
+      .mockResolvedValueOnce(getQueryResult())
+      .mockImplementationOnce(() => {
+        queryStarted.resolve();
+        return pendingQuery.promise;
+      })
+      .mockResolvedValueOnce(getQueryResult());
+
+    const operation = transaction({ pool: transactionHarness.pool, repositories: { Product: ProductRepository } }, async (scope) => {
+      const query = routing === 'scoped' ? scope.repositories.Product.findOne({ id: 1 }) : ProductRepository.findOne({ where: { id: 1 }, pool: scope });
+      void query.then(
+        () => undefined,
+        () => undefined,
+      );
+      await queryStarted.promise;
+      setImmediate(() => {
+        expect(transactionHarness.connection.release).not.toHaveBeenCalled();
+        pendingQuery.resolve(getQueryResult());
+      });
+    });
+
+    await expect(operation).rejects.toThrow('operations were still pending');
+    expect(transactionHarness.connection.query.mock.calls.map(([query]) => query)).toStrictEqual(['BEGIN', expect.stringContaining('SELECT'), 'ROLLBACK']);
+    expect(transactionHarness.connection.release).toHaveBeenCalledOnce();
+    expect(transactionHarness.pool.query).not.toHaveBeenCalled();
+    expect(readonlyPool.query).not.toHaveBeenCalled();
   });
 
   it('discards a connection after an uncertain commit failure', async () => {

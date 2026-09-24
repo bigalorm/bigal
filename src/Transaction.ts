@@ -5,6 +5,7 @@ import { ManagedTransactionExecutor, resolveManagedTransactionExecutor } from '.
 import { type IRepositoryOptions, ReadonlyRepository } from './ReadonlyRepository.js';
 import { Repository } from './Repository.js';
 import { getRepositoryOptions } from './RepositoryInternals.js';
+import { getTransactionSettingsQueryAndParams } from './SqlHelper.js';
 import { type RepositoryMap, type TransactionRepositories, TransactionScope } from './TransactionScope.js';
 import { type TransactionConnection, type TransactionPool } from './types/index.js';
 
@@ -106,8 +107,7 @@ function createScopedRegistry(sourceRegistry: RepositoryRegistry, executor: Mana
   for (const [modelNameLowered, sourceRepository] of Object.entries(sourceRegistry)) {
     const sourceOptions = isStandardRepository(sourceRepository) ? getRepositoryOptions(sourceRepository) : undefined;
     if (!sourceOptions || sourceOptions.pool !== executor.sourcePool) {
-      // Models on another connection cannot join this transaction, so relationships to them keep using their own pool
-      scopedRegistry[modelNameLowered] = sourceRepository;
+      // Leaving these out makes relation traversal fail instead of escaping the transaction.
       continue;
     }
 
@@ -159,8 +159,7 @@ function getBeginStatement(isolationLevel: TransactionIsolationLevel | undefined
 }
 
 async function applyTransactionSettings(connection: TransactionConnection, options: TransactionOptions<RepositoryMap>): Promise<void> {
-  const settingExpressions: string[] = [];
-  const params: string[] = [];
+  const settings: Record<string, string> = {};
 
   for (const optionName of TIMEOUT_OPTION_NAMES) {
     const value = options[optionName];
@@ -168,15 +167,15 @@ async function applyTransactionSettings(connection: TransactionConnection, optio
       continue;
     }
 
-    params.push(POSTGRES_SETTING_BY_TIMEOUT_OPTION[optionName], `${value}ms`);
-    settingExpressions.push(`set_config($${params.length - 1}, $${params.length}, true)`);
+    settings[POSTGRES_SETTING_BY_TIMEOUT_OPTION[optionName]] = `${value}ms`;
   }
 
-  if (!settingExpressions.length) {
+  const queryAndParams = getTransactionSettingsQueryAndParams(settings);
+  if (!queryAndParams) {
     return;
   }
 
-  await connection.query(`SELECT ${settingExpressions.join(', ')}`, params);
+  await connection.query(queryAndParams.query, queryAndParams.params);
 }
 
 function attachCleanupErrors(primaryError: unknown, cleanupErrors: readonly unknown[]): void {

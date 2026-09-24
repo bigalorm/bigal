@@ -128,6 +128,8 @@ const product = await productRepository.findOne({ pool: transactionConnection })
 
 Locking is opt-in. Ordinary reads, including reads inside managed transactions, remain ordinary `SELECT` statements.
 Population queries use the same transaction connection but do not inherit the primary query's lock clause.
+Related models and junction tables must use the transaction's write pool, even when omitted from the public `repositories` map.
+Repositories on other pools are excluded from the managed scope; attempting to populate them raises a missing-repository error before their SQL runs.
 
 A locking read runs on the write pool, or on the `pool` override you pass, never on a read replica.
 PostgreSQL releases a row lock when the transaction ends, so a lock taken outside a transaction block is released as soon as the statement completes.

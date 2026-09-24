@@ -50,6 +50,27 @@ interface QueryAndParams {
 }
 
 /**
+ * Builds one parameterized statement for transaction-local settings.
+ * @param {object} settings - PostgreSQL setting names and values
+ * @returns {object|undefined} SQL and parameters, or undefined when no settings were supplied
+ */
+export function getTransactionSettingsQueryAndParams(settings: Readonly<Record<string, string>>): QueryAndParams | undefined {
+  const settingExpressions: string[] = [];
+  const params: string[] = [];
+
+  for (const [name, value] of Object.entries(settings)) {
+    params.push(name, value);
+    settingExpressions.push(`set_config($${params.length - 1}, $${params.length}, true)`);
+  }
+
+  if (!settingExpressions.length) {
+    return undefined;
+  }
+
+  return { query: `SELECT ${settingExpressions.join(', ')}`, params };
+}
+
+/**
  * Gets the select syntax for the specified model and filters
  * @param {object} args - Arguments
  * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by model name
