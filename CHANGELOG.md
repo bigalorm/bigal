@@ -1,3 +1,9 @@
+## [16.2.0](https://github.com/bigalorm/bigal/compare/v16.1.0...v16.2.0) (2026-09-25)
+
+### Features
+
+- add share and key-share row locks ([ee99285](https://github.com/bigalorm/bigal/commit/ee992852e24c91b133c2298ceb755bebbcbb3072))
+
 ## [16.1.0](https://github.com/bigalorm/bigal/compare/v16.0.1...v16.1.0) (2026-09-25)
 
 ### Features
