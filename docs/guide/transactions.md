@@ -115,10 +115,15 @@ await transaction(
 
 Available lock modes:
 
-| Mode            | PostgreSQL clause   | Use when                                                          |
-| --------------- | ------------------- | ----------------------------------------------------------------- |
-| `'noKeyUpdate'` | `FOR NO KEY UPDATE` | Coordinating ordinary updates without blocking foreign-key checks |
-| `'update'`      | `FOR UPDATE`        | Deletion or referenced-key changes need protection                |
+| Mode            | PostgreSQL clause   | Use when                                                                |
+| --------------- | ------------------- | ----------------------------------------------------------------------- |
+| `'update'`      | `FOR UPDATE`        | Deletion or referenced-key changes need protection                      |
+| `'noKeyUpdate'` | `FOR NO KEY UPDATE` | Coordinating ordinary updates without blocking foreign-key checks       |
+| `'share'`       | `FOR SHARE`         | Reading rows that must not change until commit, alongside other readers |
+| `'keyShare'`    | `FOR KEY SHARE`     | Rows must not be deleted or have their key changed; updates may proceed |
+
+Share modes let several transactions lock the same row at once while blocking writers that conflict with them.
+`'share'` blocks every update and delete of the row, while `'keyShare'` blocks only deletes and key changes, as a foreign-key check does.
 
 The optional `wait` behavior is `'nowait'` or `'skipLocked'`:
 

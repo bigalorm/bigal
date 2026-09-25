@@ -372,7 +372,7 @@ const queuedJobs = await jobRepository.find({
 });
 ```
 
-Modes are `'update'` (`FOR UPDATE`) and `'noKeyUpdate'` (`FOR NO KEY UPDATE`). Optional wait behavior is `'nowait'` or `'skipLocked'`:
+Modes are `'update'` (`FOR UPDATE`), `'noKeyUpdate'` (`FOR NO KEY UPDATE`), `'share'` (`FOR SHARE`), and `'keyShare'` (`FOR KEY SHARE`). Optional wait behavior is `'nowait'` or `'skipLocked'`:
 
 ```ts
 await productRepository.findOne({ pool: transactionConnection }).where({ id: productId }).lock('noKeyUpdate', { wait: 'nowait' });

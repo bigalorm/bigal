@@ -120,6 +120,17 @@ describe('locking reads', () => {
     expect(pool.query.mock.calls[0]?.[0]).toContain('FOR NO KEY UPDATE OF "products" SKIP LOCKED');
   });
 
+  it('supports share and key-share locks through options and the fluent builder', async () => {
+    pool.query.mockResolvedValue(getQueryResult());
+
+    await ProductRepository.find({ where: { id: [1, 2] }, lock: { mode: 'share' } });
+    await ProductRepository.findOne().where({ id: 1 }).lock('keyShare', { wait: 'nowait' });
+
+    expect(pool.query.mock.calls[0]?.[0]).toMatch(/ FOR SHARE OF "products"$/);
+    expect(pool.query.mock.calls[1]?.[0]).toMatch(/ FOR KEY SHARE OF "products" NOWAIT$/);
+    expect(readonlyPool.query).not.toHaveBeenCalled();
+  });
+
   it('uses the unqualified visible table name for schema-qualified models', async () => {
     pool.query.mockResolvedValueOnce(getQueryResult());
 
