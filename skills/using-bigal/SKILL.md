@@ -687,15 +687,15 @@ After applying this skill, verify:
 
 ## Further Reading
 
-- [Getting Started](https://bigalorm.github.io/bigal/getting-started) - install, first model, first query
-- [Models](https://bigalorm.github.io/bigal/guide/models) - decorators, column options, relationships
-- [Querying](https://bigalorm.github.io/bigal/guide/querying) - operators, pagination, JSONB, DISTINCT ON
-- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) - create, update, destroy, upserts
-- [Relationships](https://bigalorm.github.io/bigal/guide/relationships) - many-to-one, one-to-many, many-to-many, QueryResult
-- [Subqueries and Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) - subquery builder, aggregates, GROUP BY
-- [Views](https://bigalorm.github.io/bigal/guide/views) - readonly models and ReadonlyRepository
-- [Transactions](https://bigalorm.github.io/bigal/guide/transactions) - managed transactions, row locks, isolation levels, timeouts
-- [API Reference](https://bigalorm.github.io/bigal/reference/api) - all exports and method signatures
-- [Configuration](https://bigalorm.github.io/bigal/reference/configuration) - pools, read replicas, multi-database
-- [BigAl vs Raw SQL](https://bigalorm.github.io/bigal/advanced/bigal-vs-raw-sql) - decision framework
-- [Known Issues](https://bigalorm.github.io/bigal/advanced/known-issues) - workarounds and debugging
+- [Getting Started](https://bigalorm.dev/getting-started) - install, first model, first query
+- [Models](https://bigalorm.dev/guide/models) - decorators, column options, relationships
+- [Querying](https://bigalorm.dev/guide/querying) - operators, pagination, JSONB, DISTINCT ON
+- [CRUD Operations](https://bigalorm.dev/guide/crud-operations) - create, update, destroy, upserts
+- [Relationships](https://bigalorm.dev/guide/relationships) - many-to-one, one-to-many, many-to-many, QueryResult
+- [Subqueries and Joins](https://bigalorm.dev/guide/subqueries-and-joins) - subquery builder, aggregates, GROUP BY
+- [Views](https://bigalorm.dev/guide/views) - readonly models and ReadonlyRepository
+- [Transactions](https://bigalorm.dev/guide/transactions) - managed transactions, row locks, isolation levels, timeouts
+- [API Reference](https://bigalorm.dev/reference/api) - all exports and method signatures
+- [Configuration](https://bigalorm.dev/reference/configuration) - pools, read replicas, multi-database
+- [BigAl vs Raw SQL](https://bigalorm.dev/advanced/bigal-vs-raw-sql) - decision framework
+- [Known Issues](https://bigalorm.dev/advanced/known-issues) - workarounds and debugging

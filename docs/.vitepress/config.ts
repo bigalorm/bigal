@@ -1,13 +1,12 @@
 import { defineConfig } from 'vitepress';
 import llmstxt from 'vitepress-plugin-llms';
 
-const SITE_URL = 'https://bigalorm.github.io/bigal';
+const SITE_URL = 'https://bigalorm.dev';
 const SITE_DESCRIPTION = 'A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js, Bun, and Deno';
 
 export default defineConfig({
   title: 'BigAl',
   description: SITE_DESCRIPTION,
-  base: '/bigal/',
   cleanUrls: true,
   lastUpdated: true,
   srcExclude: ['plans/**', 'research/**'],
@@ -26,7 +25,7 @@ export default defineConfig({
         href: 'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Source+Code+Pro:wght@400;500&family=Source+Sans+3:wght@400;500;600&display=swap',
       },
     ],
-    ['link', { rel: 'llms-txt', href: '/bigal/llms.txt' }],
+    ['link', { rel: 'llms-txt', href: '/llms.txt' }],
     ['meta', { property: 'og:site_name', content: 'BigAl' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { name: 'twitter:card', content: 'summary' }],
