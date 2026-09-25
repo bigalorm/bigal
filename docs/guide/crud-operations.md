@@ -171,3 +171,20 @@ const products = await productRepository.destroy({ id: [42, 43] }, { returnSelec
 ```
 
 > The primary key is always included. Pass an empty array to return only the primary key.
+
+## Pool overrides
+
+Every write method accepts `pool`. This is useful when a helper receives an externally managed transaction connection or a BigAl `TransactionScope`:
+
+```ts
+await productRepository.create({ name: 'Widget', store: storeId }, { pool: connection });
+
+const products = await productRepository.update({ id: productIds }, { location: 'A-12' }, { pool: connection });
+
+await productRepository.destroy({ id: obsoleteProductIds }, { pool: connection });
+```
+
+Pool-only options preserve each method's default return behavior: single and bulk creates return records, updates return an array, and destroys return `void`.
+Combine `pool` with `returnSelect`, `returnRecords`, and `onConflict` as usual.
+
+The override only routes the statement; it does not begin, commit, roll back, or release a transaction. See [Transactions](/guide/transactions).

@@ -6,6 +6,7 @@ import { type ColumnBaseMetadata, type ColumnCollectionMetadata, type ColumnMode
 import {
   type Comparer,
   type JoinDefinition,
+  type LockOptions,
   type ModelJoinDefinition,
   type OrderBy,
   type SubqueryJoinDefinition,
@@ -20,10 +21,17 @@ import { type OnConflictOptions } from './query/OnConflictOptions.js';
 import { type SelectAggregateExpression } from './query/SelectBuilder.js';
 import { type HavingCondition, type SubqueryBuilderLike } from './query/Subquery.js';
 import { ScalarSubquery, SubqueryBuilder } from './query/Subquery.js';
+import { type TransactionIsolationLevel } from './Transaction.js';
 import { type CreateUpdateParams, type OmitEntityCollections, type OmitFunctions } from './types/index.js';
 
 // Valid PostgreSQL identifier: starts with letter or underscore, contains letters, digits, underscores, or dots (for alias.column notation)
 const VALID_SQL_IDENTIFIER = /^[A-Z_a-z][\w.]*$/;
+
+const ISOLATION_LEVEL_SQL: Record<TransactionIsolationLevel, string> = {
+  readCommitted: 'READ COMMITTED',
+  repeatableRead: 'REPEATABLE READ',
+  serializable: 'SERIALIZABLE',
+};
 
 function assertValidSqlIdentifier(value: string, context: string): void {
   if (!VALID_SQL_IDENTIFIER.test(value)) {
@@ -49,6 +57,44 @@ interface QueryAndParams {
 }
 
 /**
+ * Builds the transaction start statement after validating its isolation level.
+ * @param {TransactionIsolationLevel} [isolationLevel] - Optional transaction isolation level
+ * @returns {string} Transaction start SQL
+ */
+export function getTransactionBeginQuery(isolationLevel: TransactionIsolationLevel | undefined): string {
+  if (isolationLevel === undefined) {
+    return 'BEGIN';
+  }
+
+  if (!Object.hasOwn(ISOLATION_LEVEL_SQL, isolationLevel)) {
+    throw new RangeError(`Unsupported transaction isolation level: ${String(isolationLevel)}`);
+  }
+
+  return `BEGIN ISOLATION LEVEL ${ISOLATION_LEVEL_SQL[isolationLevel]}`;
+}
+
+/**
+ * Builds one parameterized statement for transaction-local settings.
+ * @param {object} settings - PostgreSQL setting names and values
+ * @returns {object|undefined} SQL and parameters, or undefined when no settings were supplied
+ */
+export function getTransactionSettingsQueryAndParams(settings: Readonly<Record<string, string>>): QueryAndParams | undefined {
+  const settingExpressions: string[] = [];
+  const params: string[] = [];
+
+  for (const [name, value] of Object.entries(settings)) {
+    params.push(name, value);
+    settingExpressions.push(`set_config($${params.length - 1}, $${params.length}, true)`);
+  }
+
+  if (!settingExpressions.length) {
+    return undefined;
+  }
+
+  return { query: `SELECT ${settingExpressions.join(', ')}`, params };
+}
+
+/**
  * Gets the select syntax for the specified model and filters
  * @param {object} args - Arguments
  * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by model name
@@ -61,6 +107,7 @@ interface QueryAndParams {
  * @param {JoinDefinition[]} [args.joins] - Array of join definitions
  * @param {boolean} [args.includeCount] - If true, includes COUNT(*) OVER() for total count
  * @param {string[]} [args.distinctOn] - Column names for DISTINCT ON clause
+ * @param {LockOptions} [args.lock] - Optional row lock applied to the base table
  * @returns {{query: string, params: object[]}}
  */
 export function getSelectQueryAndParams<T extends Entity>({
@@ -74,6 +121,7 @@ export function getSelectQueryAndParams<T extends Entity>({
   joins,
   includeCount,
   distinctOn,
+  lock,
 }: {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   model: ModelMetadata<T>;
@@ -85,7 +133,12 @@ export function getSelectQueryAndParams<T extends Entity>({
   joins?: readonly JoinDefinition[];
   includeCount?: boolean;
   distinctOn?: readonly string[];
+  lock?: LockOptions;
 }): QueryAndParams {
+  if (lock && (distinctOn?.length || includeCount)) {
+    throw new QueryError('Locking reads cannot be combined with distinctOn or withCount', model);
+  }
+
   // Validate DISTINCT ON usage
   if (distinctOn?.length) {
     if (!sorts.length) {
@@ -207,6 +260,10 @@ export function getSelectQueryAndParams<T extends Entity>({
     query += ` OFFSET ${skip}`;
   }
 
+  if (lock) {
+    query += ` ${getLockClause(model, lock)}`;
+  }
+
   if (process.env.DEBUG_BIGAL?.toLowerCase() === 'true') {
     // eslint-disable-next-line no-console
     console.log(`BigAl: ${query}`);
@@ -216,6 +273,38 @@ export function getSelectQueryAndParams<T extends Entity>({
     query,
     params,
   };
+}
+
+function getLockClause<T extends Entity>(model: ModelMetadata<T>, lock: LockOptions): string {
+  let mode: string;
+
+  switch (lock.mode) {
+    case 'noKeyUpdate':
+      mode = 'NO KEY UPDATE';
+      break;
+    case 'update':
+      mode = 'UPDATE';
+      break;
+    default:
+      throw new QueryError(`Unsupported lock mode: ${String(lock.mode)}`, model);
+  }
+
+  let wait = '';
+
+  switch (lock.wait) {
+    case undefined:
+      break;
+    case 'nowait':
+      wait = ' NOWAIT';
+      break;
+    case 'skipLocked':
+      wait = ' SKIP LOCKED';
+      break;
+    default:
+      throw new QueryError(`Unsupported lock wait behavior: ${String(lock.wait)}`, model);
+  }
+
+  return `FOR ${mode} OF "${model.tableName}"${wait}`;
 }
 
 /**
@@ -948,11 +1037,11 @@ function buildSubquerySelectSQL({
 
   sql += `${selectParts.join(',')} FROM "${subqueryModel.tableName}"`;
 
-  if (subquery._where && Object.keys(subquery._where as object).length) {
+  if (subquery._where && Object.keys(subquery._where).length) {
     const { whereStatement } = buildWhereStatement({
       repositoriesByModelNameLowered,
       model: subqueryModel,
-      where: subquery._where as WhereQuery<Entity>,
+      where: subquery._where,
       params,
     });
 
@@ -1520,7 +1609,7 @@ function buildWhere<T extends Entity>({
           const { column: vectorColumn, columnReference } = resolvedVectorProperty;
           if (value.every((item) => typeof item === 'number')) {
             validateVectorArray(value as number[], vectorColumn.propertyName, model, 'vector value');
-            params.push(serializeVector(value as number[]));
+            params.push(serializeVector(value));
             return `${columnReference}${isNegated ? '<>' : '='}$${params.length}`;
           }
 
@@ -1579,7 +1668,7 @@ function buildWhere<T extends Entity>({
               model,
               propertyName,
               isNegated,
-              value: valueWithoutNull[0] as WhereClauseValue<T>,
+              value: valueWithoutNull[0],
               params,
               joins,
             }),
@@ -1600,7 +1689,7 @@ function buildWhere<T extends Entity>({
                     model,
                     propertyName,
                     isNegated,
-                    value: val as WhereClauseValue<T>,
+                    value: val,
                     params,
                     joins,
                   }),

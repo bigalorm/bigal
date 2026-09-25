@@ -437,7 +437,7 @@ describe('sqlHelper', () => {
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           select: ['id', 'name'],
-          where: { id: [1, 2], store: { name: 'Acme' } } as WhereQuery<Product>,
+          where: { id: [1, 2], store: { name: 'Acme' } },
           sorts: [{ propertyName: 'id' }],
           skip: 0,
           limit: 10,
@@ -458,7 +458,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
-          where: { id: { in: storeSubquery } } as WhereQuery<Product>,
+          where: { id: { in: storeSubquery } },
           joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
         });
 
@@ -470,7 +470,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
-          where: { aliases: [] } as WhereQuery<Product>,
+          where: { aliases: [] },
           joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
         });
 
@@ -482,7 +482,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
-          where: { name: ['Widget', 'Gadget'] } as WhereQuery<Product>,
+          where: { name: ['Widget', 'Gadget'] },
           joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
         });
 
@@ -494,7 +494,7 @@ describe('sqlHelper', () => {
         const { whereStatement, params } = sqlHelper.buildWhereStatement({
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.simplewithrelationandjson.model as ModelMetadata<SimpleWithRelationAndJson>,
-          where: { message: { id: 'abc' } } as WhereQuery<SimpleWithRelationAndJson>,
+          where: { message: { id: 'abc' } },
           joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
         });
 
@@ -525,7 +525,7 @@ describe('sqlHelper', () => {
           repositoriesByModelNameLowered,
           model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
           select: ['id', 'name'],
-          where: { id: [1, 2] } as WhereQuery<Product>,
+          where: { id: [1, 2] },
           sorts: [{ propertyName: 'id' }],
           skip: 0,
           limit: 10,
@@ -2612,7 +2612,7 @@ describe('sqlHelper', () => {
               bar: {
                 like: 'foo',
               },
-            } as WhereQuery<SimpleWithJson>,
+            },
           });
         }
 
@@ -2629,7 +2629,7 @@ describe('sqlHelper', () => {
               bar: {
                 startsWith: 'foo',
               },
-            } as WhereQuery<SimpleWithJson>,
+            },
           });
         }
 
@@ -2646,7 +2646,7 @@ describe('sqlHelper', () => {
               bar: {
                 endsWith: 'foo',
               },
-            } as WhereQuery<SimpleWithJson>,
+            },
           });
         }
 
@@ -2664,7 +2664,7 @@ describe('sqlHelper', () => {
             bar: {
               theme: 'dark',
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2680,7 +2680,7 @@ describe('sqlHelper', () => {
             bar: {
               retryCount: { '>=': 3 },
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2696,7 +2696,7 @@ describe('sqlHelper', () => {
             bar: {
               active: true,
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2712,7 +2712,7 @@ describe('sqlHelper', () => {
             bar: {
               status: { '!': 'archived' },
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2729,7 +2729,7 @@ describe('sqlHelper', () => {
               retryCount: { '<': 3 },
               stage: 'transcription',
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2745,7 +2745,7 @@ describe('sqlHelper', () => {
             bar: {
               deletedAt: null,
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2762,7 +2762,7 @@ describe('sqlHelper', () => {
               contains: { type: 'recovery' },
               retryCount: { '<': 3 },
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2778,7 +2778,7 @@ describe('sqlHelper', () => {
             bar: {
               stage: ['transcription', 'summarization'],
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2796,7 +2796,7 @@ describe('sqlHelper', () => {
                 retryCount: { '>=': 5 },
               },
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2814,7 +2814,7 @@ describe('sqlHelper', () => {
                 theme: 'dark',
               },
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2830,7 +2830,7 @@ describe('sqlHelper', () => {
             bar: {
               deletedAt: { '!': null },
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2850,7 +2850,7 @@ describe('sqlHelper', () => {
               bar: {
                 count: { [op]: 10 },
               },
-            } as WhereQuery<SimpleWithJson>,
+            },
           });
 
           assert(whereStatement);
@@ -2867,7 +2867,7 @@ describe('sqlHelper', () => {
                   count: { [op]: 10 },
                 },
               },
-            } as WhereQuery<SimpleWithJson>,
+            },
           });
 
           assert(negatedWhere);
@@ -2886,7 +2886,7 @@ describe('sqlHelper', () => {
                 stage: 'transcription',
               },
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2902,7 +2902,7 @@ describe('sqlHelper', () => {
             bar: {
               a: { b: { c: 'value' } },
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2920,7 +2920,7 @@ describe('sqlHelper', () => {
                 retryCount: { '>=': 3 },
               },
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2939,7 +2939,7 @@ describe('sqlHelper', () => {
                 code: { '>=': 400 },
               },
             },
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2954,7 +2954,7 @@ describe('sqlHelper', () => {
           where: {
             bar: { '!': '{}' },
             name: 'pizza',
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);
@@ -2969,7 +2969,7 @@ describe('sqlHelper', () => {
           where: {
             bar: { theme: 'dark' },
             name: 'pizza',
-          } as WhereQuery<SimpleWithJson>,
+          },
         });
 
         assert(whereStatement);

@@ -14,6 +14,9 @@ import {
   type FindResultJSON,
   type FindWithCountResult,
   type JoinDefinition,
+  type LockMode,
+  type LockOptions,
+  type LockWaitOptions,
   type OrderBy,
   type PaginateOptions,
   type PopulateArgs,
@@ -25,6 +28,8 @@ import {
   type VectorDistanceSort,
   type WhereQuery,
 } from './query/index.js';
+import { registerRepositoryOptions } from './RepositoryInternals.js';
+import { executeRepositoryOperation, resolvePopulatePool } from './RepositoryPool.js';
 import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
 import {
   type GetValueType,
@@ -64,6 +69,14 @@ interface Populate {
 
 type PrimaryId = number | string;
 
+function isLockOptions(value: unknown): value is LockOptions {
+  return typeof value === 'object' && value !== null && 'mode' in value;
+}
+
+function hasLockColumnCriteria<T extends Entity>(args: object, model: ModelMetadata<T>): boolean {
+  return 'lock' in args && !('where' in args) && model.columns.some((column) => column.propertyName === 'lock');
+}
+
 export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository<T> {
   private readonly _modelMetadata: ModelMetadata<T>;
 
@@ -87,6 +100,14 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     this._pool = pool;
     this._readonlyPool = readonlyPool ?? pool;
     this._repositoriesByModelNameLowered = repositoriesByModelNameLowered;
+
+    registerRepositoryOptions(this, {
+      modelMetadata,
+      type,
+      repositoriesByModelNameLowered,
+      pool: this._pool,
+      readonlyPool: this._readonlyPool,
+    });
 
     for (const column of modelMetadata.columns) {
       if ((column as ColumnTypeMetadata).type === 'float') {
@@ -115,11 +136,13 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     const { stack } = new Error(`${this.model.name}.findOne()`);
 
     let select: Set<string> | undefined;
-    let where: WhereQuery<T> = {};
+    const lockColumnCriteria = hasLockColumnCriteria(args, this.model);
+    let where: WhereQuery<T> = lockColumnCriteria ? (args as WhereQuery<T>) : {};
     let sort: SortObject<T> | string | null = null;
     let poolOverride: PoolLike | undefined;
+    let lockOptions: LockOptions | undefined;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
-    for (const [name, value] of Object.entries(args)) {
+    for (const [name, value] of Object.entries(lockColumnCriteria ? {} : args)) {
       let isWhereCriteria = false;
 
       switch (name) {
@@ -138,7 +161,23 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         case 'pool':
           poolOverride = value as PoolLike;
           break;
+        case 'lock':
+          if (value === undefined) {
+            break;
+          }
+
+          if (isLockOptions(value)) {
+            lockOptions = value;
+          } else {
+            select = undefined;
+            where = args as WhereQuery<T>;
+            sort = null;
+            isWhereCriteria = true;
+          }
+
+          break;
         default:
+          lockOptions = undefined;
           select = undefined;
           where = args as WhereQuery<T>;
           sort = null;
@@ -255,6 +294,14 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
+      lock(mode: LockMode, options?: LockWaitOptions): FindOneResult<T, TReturn> {
+        lockOptions = {
+          mode,
+          ...options,
+        };
+
+        return this;
+      },
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(_propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>> {
         return this as FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
@@ -279,41 +326,45 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
       ): Promise<TErrorResult | TResult> {
         try {
-          if (typeof where === 'string') {
-            return await reject(new Error('The query cannot be a string, it must be an object'));
-          }
+          const executionResult = await modelInstance._executeReadOperation({ lock: lockOptions, pool: poolOverride }, async (pool) => {
+            if (typeof where === 'string') {
+              throw new Error('The query cannot be a string, it must be an object');
+            }
 
-          const { query, params } = getSelectQueryAndParams({
-            repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
-            model: modelInstance.model,
-            select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
-            where,
-            sorts,
-            limit: 1,
-            skip: 0,
-            joins,
+            const { query, params } = getSelectQueryAndParams({
+              repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+              model: modelInstance.model,
+              select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
+              where,
+              sorts,
+              limit: 1,
+              skip: 0,
+              joins,
+              lock: lockOptions,
+            });
+
+            const results = await pool.query<Partial<QueryResult<T>>>(query, params);
+            const firstResult = results.rows[0];
+            if (firstResult) {
+              const result = returnAsPlainObjects ? modelInstance._buildPlainObject(firstResult) : modelInstance._buildInstance(firstResult);
+
+              if (populates.length) {
+                const populatesWithFlag = populates.map((pop) => ({ ...pop, pool: resolvePopulatePool(pool, pop.pool), asPlainObjects: returnAsPlainObjects }));
+                await modelInstance.populateFields([result], populatesWithFlag);
+              }
+
+              for (const manuallySetField of manuallySetFields) {
+                // @ts-expect-error - Ignoring unknown is not a key
+                result[manuallySetField.propertyName as string & keyof T] = manuallySetField.value;
+              }
+
+              return result as unknown as TReturn;
+            }
+
+            return null;
           });
 
-          const pool = poolOverride ?? modelInstance._readonlyPool;
-          const results = await pool.query<Partial<QueryResult<T>>>(query, params);
-          const firstResult = results.rows[0];
-          if (firstResult) {
-            const result = returnAsPlainObjects ? modelInstance._buildPlainObject(firstResult) : modelInstance._buildInstance(firstResult);
-
-            if (populates.length) {
-              const populatesWithFlag = populates.map((pop) => ({ ...pop, asPlainObjects: returnAsPlainObjects }));
-              await modelInstance.populateFields([result], populatesWithFlag);
-            }
-
-            for (const manuallySetField of manuallySetFields) {
-              // @ts-expect-error - Ignoring unknown is not a key
-              result[manuallySetField.propertyName as string & keyof T] = manuallySetField.value;
-            }
-
-            return await resolve(result as unknown as TReturn);
-          }
-
-          return await resolve(null);
+          return await resolve(executionResult);
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
@@ -342,13 +393,15 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     const { stack } = new Error(`${this.model.name}.find()`);
 
     let select: Set<string> | undefined;
-    let where: WhereQuery<T> = {};
+    const lockColumnCriteria = hasLockColumnCriteria(args, this.model);
+    let where: WhereQuery<T> = lockColumnCriteria ? (args as WhereQuery<T>) : {};
     let sort: SortObject<T> | string | null = null;
     let skip: number | null = null;
     let limit: number | null = null;
     let poolOverride: PoolLike | undefined;
+    let lockOptions: LockOptions | undefined;
     // Args can be a FindArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
-    for (const [name, value] of Object.entries(args)) {
+    for (const [name, value] of Object.entries(lockColumnCriteria ? {} : args)) {
       let isWhereCriteria = false;
 
       switch (name) {
@@ -373,7 +426,25 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         case 'pool':
           poolOverride = value as PoolLike;
           break;
+        case 'lock':
+          if (value === undefined) {
+            break;
+          }
+
+          if (isLockOptions(value)) {
+            lockOptions = value;
+          } else {
+            select = undefined;
+            where = args as WhereQuery<T>;
+            sort = null;
+            skip = null;
+            limit = null;
+            isWhereCriteria = true;
+          }
+
+          break;
         default:
+          lockOptions = undefined;
           select = undefined;
           where = args as WhereQuery<T>;
           sort = null;
@@ -515,6 +586,14 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
+      lock(mode: LockMode, options?: LockWaitOptions): FindResult<T, TReturn> {
+        lockOptions = {
+          mode,
+          ...options,
+        };
+
+        return this;
+      },
       /**
        * Limits results returned by the query
        * @param {number} value
@@ -578,54 +657,62 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
       ): Promise<TErrorResult | TResult> {
         try {
-          if (typeof where === 'string') {
-            return await reject(new Error('The query cannot be a string, it must be an object'));
-          }
+          const executionResult = await modelInstance._executeReadOperation({ lock: lockOptions, pool: poolOverride }, async (pool) => {
+            if (typeof where === 'string') {
+              throw new Error('The query cannot be a string, it must be an object');
+            }
 
-          const { query, params } = getSelectQueryAndParams({
-            repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
-            model: modelInstance.model,
-            select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
-            where,
-            sorts,
-            skip: skip ?? 0,
-            limit: limit ?? 0,
-            joins,
-            includeCount,
-            distinctOn: distinctOnColumns,
+            const { query, params } = getSelectQueryAndParams({
+              repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+              model: modelInstance.model,
+              select: select ? (Array.from(select) as (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]) : undefined,
+              where,
+              sorts,
+              skip: skip ?? 0,
+              limit: limit ?? 0,
+              joins,
+              includeCount,
+              distinctOn: distinctOnColumns,
+              lock: lockOptions,
+            });
+
+            const results = await pool.query<Partial<QueryResult<T>> & { __total_count__?: string }>(query, params);
+
+            let totalCount = 0;
+            if (includeCount && results.rows.length > 0 && results.rows[0]?.__total_count__ !== undefined) {
+              totalCount = Number(results.rows[0].__total_count__);
+            }
+
+            const rows = includeCount
+              ? results.rows.map((row) => {
+                  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                  const { __total_count__, ...rest } = row;
+                  return rest as Partial<QueryResult<T>>;
+                })
+              : results.rows;
+
+            const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(rows) : modelInstance._buildInstances(rows);
+
+            if (populates.length) {
+              const populatesWithFlag = populates.map((pop) => ({ ...pop, pool: resolvePopulatePool(pool, pop.pool), asPlainObjects: returnAsPlainObjects }));
+              await modelInstance.populateFields(entities, populatesWithFlag);
+            }
+
+            if (includeCount) {
+              return {
+                results: entities as unknown as TReturn[],
+                totalCount,
+              };
+            }
+
+            return entities as unknown as TReturn[];
           });
 
-          const pool = poolOverride ?? modelInstance._readonlyPool;
-          const results = await pool.query<Partial<QueryResult<T>> & { __total_count__?: string }>(query, params);
-
-          let totalCount = 0;
-          if (includeCount && results.rows.length > 0 && results.rows[0]?.__total_count__ !== undefined) {
-            totalCount = Number(results.rows[0].__total_count__);
-          }
-
-          const rows = includeCount
-            ? results.rows.map((row) => {
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                const { __total_count__, ...rest } = row;
-                return rest as Partial<QueryResult<T>>;
-              })
-            : results.rows;
-
-          const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(rows) : modelInstance._buildInstances(rows);
-
-          if (populates.length) {
-            const populatesWithFlag = populates.map((pop) => ({ ...pop, asPlainObjects: returnAsPlainObjects }));
-            await modelInstance.populateFields(entities, populatesWithFlag);
-          }
-
           if (includeCount) {
-            return await (resolve as unknown as (result: FindWithCountResult<TReturn>) => PromiseLike<TResult> | TResult)({
-              results: entities as unknown as TReturn[],
-              totalCount,
-            });
+            return await (resolve as unknown as (result: FindWithCountResult<TReturn>) => PromiseLike<TResult> | TResult)(executionResult as FindWithCountResult<TReturn>);
           }
 
-          return await resolve(entities as unknown as TReturn[]);
+          return await resolve(executionResult as TReturn[]);
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
@@ -693,18 +780,21 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
         reject: (error: Error) => PromiseLike<TErrorResult> | TErrorResult,
       ): Promise<TErrorResult | TResult> {
         try {
-          const { query, params } = getCountQueryAndParams({
-            repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
-            model: modelInstance.model,
-            where,
+          const executionResult = await modelInstance._executeReadOperation({ pool: poolOverride }, async (pool) => {
+            const { query, params } = getCountQueryAndParams({
+              repositoriesByModelNameLowered: modelInstance._repositoriesByModelNameLowered,
+              model: modelInstance.model,
+              where,
+            });
+
+            const result = await pool.query<{ count: string }>(query, params);
+
+            const firstResult = result.rows[0];
+            const originalValue = firstResult ? firstResult.count : 0;
+            return Number(originalValue);
           });
 
-          const pool = poolOverride ?? modelInstance._readonlyPool;
-          const result = await pool.query<{ count: string }>(query, params);
-
-          const firstResult = result.rows[0];
-          const originalValue = firstResult ? firstResult.count : 0;
-          return await resolve(Number(originalValue));
+          return await resolve(executionResult);
         } catch (ex) {
           const typedException = ex as Error;
           if (typedException.stack) {
@@ -887,6 +977,16 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     }
 
     return result;
+  }
+
+  protected _executeReadOperation<TResult>({ lock, pool: poolOverride }: Pick<FindOneArgs<T>, 'lock' | 'pool'>, operation: (pool: PoolLike) => Promise<TResult>): Promise<TResult> {
+    // Row locks are only held on the primary, so a locking read bypasses the read-only pool
+    const defaultPool = lock ? this._pool : this._readonlyPool;
+    return executeRepositoryOperation(defaultPool, this._pool, poolOverride, operation);
+  }
+
+  protected _executeWriteOperation<TResult>(poolOverride: PoolLike | undefined, operation: (pool: PoolLike) => Promise<TResult>): Promise<TResult> {
+    return executeRepositoryOperation(this._pool, this._pool, poolOverride, operation);
   }
 
   // NOTE: This will mutate `entities`

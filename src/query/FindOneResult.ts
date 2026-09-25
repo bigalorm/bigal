@@ -3,6 +3,7 @@ import { type GetValueType, type ModelRelationshipKeys, type OmitFunctions, type
 
 import { type JoinedSort } from './JoinedSort.js';
 import { type JoinedWhereQuery, type JoinInfo } from './JoinedWhereQuery.js';
+import { type LockMode, type LockWaitOptions } from './LockOptions.js';
 import { type PopulateArgs } from './PopulateArgs.js';
 import { type WhereQuery } from './WhereQuery.js';
 
@@ -22,6 +23,7 @@ export interface FindOneResultJSON<T extends Entity, TReturn, TJoins extends Joi
     alias?: TAlias,
     on?: WhereQuery<GetValueType<T[TProperty], Entity>>,
   ): FindOneResultJSON<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
+  lock(mode: LockMode, options?: LockWaitOptions): FindOneResultJSON<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindOneResultJSON<T, TReturn, TJoins>;
   UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(
     propertyName: TProperty,
@@ -48,6 +50,7 @@ export interface FindOneResult<T extends Entity, TReturn, TJoins extends JoinInf
     alias?: TAlias,
     on?: WhereQuery<GetValueType<T[TProperty], Entity>>,
   ): FindOneResult<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
+  lock(mode: LockMode, options?: LockWaitOptions): FindOneResult<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindOneResult<T, TReturn, TJoins>;
   UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>, TJoins>;
   UNSAFE_withFieldValue<TProperty extends string & keyof T, TValue extends T[TProperty]>(
