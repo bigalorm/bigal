@@ -314,7 +314,8 @@ query.lock('noKeyUpdate');
 query.lock('update', { wait: 'nowait' });
 ```
 
-Adds `FOR NO KEY UPDATE` or `FOR UPDATE` for the base table. Optional `wait` is `'nowait'` or `'skipLocked'`. The same option can be supplied to `find()` or `findOne()`:
+Adds `FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE`, or `FOR KEY SHARE` for the base table, from `'update'`, `'noKeyUpdate'`, `'share'`, or `'keyShare'`.
+Optional `wait` is `'nowait'` or `'skipLocked'`. The same option can be supplied to `find()` or `findOne()`:
 
 ```ts
 await productRepository.find({

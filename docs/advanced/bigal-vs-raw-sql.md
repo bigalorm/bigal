@@ -15,7 +15,7 @@ BigAl is a good fit for standard CRUD operations and queries that map naturally 
 - DISTINCT ON queries
 - Upserts with ON CONFLICT
 - Managed multi-repository transactions
-- Explicit `FOR UPDATE` and `FOR NO KEY UPDATE` row locks
+- Explicit `FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE`, and `FOR KEY SHARE` row locks
 
 ## When to use raw SQL
 
@@ -24,7 +24,7 @@ Drop to raw SQL (via your pool directly) when:
 - You need CTEs (WITH clauses)
 - Window functions beyond what DISTINCT ON provides
 - Complex recursive queries
-- Locking modes beyond `FOR UPDATE` and `FOR NO KEY UPDATE`
+- Table-level (`LOCK TABLE`), advisory, or joined-table row locks
 - Database-specific features BigAl does not wrap
 
 ## Translation reference

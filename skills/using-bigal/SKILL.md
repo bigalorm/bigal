@@ -53,14 +53,14 @@ const products = await productRepository
 - DISTINCT ON queries
 - Upserts with ON CONFLICT
 - Managed multi-repository transactions
-- Explicit `FOR UPDATE` and `FOR NO KEY UPDATE` row locks
+- Explicit `FOR UPDATE`, `FOR NO KEY UPDATE`, `FOR SHARE`, and `FOR KEY SHARE` row locks
 
 **Drop to raw SQL for:**
 
 - CTEs (WITH clauses)
 - Window functions beyond DISTINCT ON
 - Complex recursive queries
-- Locking modes beyond `FOR UPDATE` and `FOR NO KEY UPDATE`
+- Table-level (`LOCK TABLE`), advisory, or joined-table row locks
 - Database-specific features BigAl does not wrap
 
 BigAl wraps your existing connection pool - `postgres-pool`, `pg`, or `@neondatabase/serverless`.
@@ -202,7 +202,8 @@ await jobRepo.find({
 });
 ```
 
-Lock modes are `'update'` and `'noKeyUpdate'`; wait behavior is omitted, `'nowait'`, or `'skipLocked'`.
+Lock modes are `'update'`, `'noKeyUpdate'`, `'share'`, and `'keyShare'`; wait behavior is omitted, `'nowait'`, or `'skipLocked'`.
+Use `'share'` or `'keyShare'` when several transactions read a row that must not change or be deleted until they commit; they do not block each other.
 For models with a `lock` column, shorthand `{ lock: value }` remains a column filter, including JSON values containing `mode`.
 Use `.lock()` or an explicit `{ where: {}, lock: { mode: 'update' } }` options wrapper to request locking on those models. An undefined `lock` option is omitted.
 A locking read runs on the write pool, or on the `pool` override you pass.

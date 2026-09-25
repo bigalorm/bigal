@@ -1,4 +1,4 @@
-export type LockMode = 'noKeyUpdate' | 'update';
+export type LockMode = 'keyShare' | 'noKeyUpdate' | 'share' | 'update';
 
 export type LockWait = 'nowait' | 'skipLocked';
 

@@ -190,6 +190,45 @@ describe.skipIf(!DATABASE_URL)('managed transactions against PostgreSQL', () => 
     }
   });
 
+  it('lets share locks coexist across transactions while an update to the row waits', async () => {
+    const account = await AccountRepository.create({ name: 'Shared', capacity: 1 });
+    const firstShareAcquired = Promise.withResolvers<void>();
+    const secondShareAcquired = Promise.withResolvers<void>();
+    const releaseShares = Promise.withResolvers<void>();
+
+    const firstShareTransaction = transaction({ pool, repositories: { Account: AccountRepository } }, async (transactionScope) => {
+      await transactionScope.repositories.Account.findOne({ id: account.id }).lock('share');
+      firstShareAcquired.resolve();
+      await releaseShares.promise;
+    });
+
+    await firstShareAcquired.promise;
+
+    const secondShareTransaction = transaction({ pool, repositories: { Account: AccountRepository } }, async (transactionScope) => {
+      await transactionScope.repositories.Account.findOne({ id: account.id }).lock('share', { wait: 'nowait' });
+      secondShareAcquired.resolve();
+      await releaseShares.promise;
+    });
+
+    try {
+      await Promise.race([secondShareAcquired.promise, secondShareTransaction]);
+
+      const blockedUpdate = transaction(
+        {
+          pool,
+          repositories: { Account: AccountRepository },
+          lockTimeoutMs: 100,
+        },
+        async (transactionScope) => transactionScope.repositories.Account.update({ id: account.id }, { capacity: 2 }),
+      );
+
+      await expect(blockedUpdate).rejects.toMatchObject({ code: '55P03' });
+    } finally {
+      releaseShares.resolve();
+      await Promise.all([firstShareTransaction, secondShareTransaction]);
+    }
+  });
+
   it('rolls back a deadlock victim while allowing the other transaction to finish', async () => {
     const [firstAccount, secondAccount] = await AccountRepository.create([
       { name: 'First', capacity: 1 },

@@ -279,8 +279,14 @@ function getLockClause<T extends Entity>(model: ModelMetadata<T>, lock: LockOpti
   let mode: string;
 
   switch (lock.mode) {
+    case 'keyShare':
+      mode = 'KEY SHARE';
+      break;
     case 'noKeyUpdate':
       mode = 'NO KEY UPDATE';
+      break;
+    case 'share':
+      mode = 'SHARE';
       break;
     case 'update':
       mode = 'UPDATE';
