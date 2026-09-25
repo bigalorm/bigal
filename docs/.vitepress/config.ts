@@ -83,6 +83,15 @@ export default defineConfig({
         ],
       },
       {
+        text: 'Compare',
+        items: [
+          { text: 'BigAl vs Prisma', link: '/compare/bigal-vs-prisma' },
+          { text: 'BigAl vs Drizzle', link: '/compare/bigal-vs-drizzle' },
+          { text: 'BigAl vs TypeORM', link: '/compare/bigal-vs-typeorm' },
+          { text: 'BigAl vs Kysely', link: '/compare/bigal-vs-kysely' },
+        ],
+      },
+      {
         text: 'Advanced',
         items: [
           { text: 'BigAl vs Raw SQL', link: '/advanced/bigal-vs-raw-sql' },
