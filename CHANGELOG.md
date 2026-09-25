@@ -1,3 +1,9 @@
+## [16.1.0](https://github.com/bigalorm/bigal/compare/v16.0.1...v16.1.0) (2026-09-25)
+
+### Features
+
+- add managed transactions and opt-in row locking ([3a54b89](https://github.com/bigalorm/bigal/commit/3a54b89eb597ab948c50a9ee501ddda1474964b3))
+
 ## [16.0.1](https://github.com/bigalorm/bigal/compare/v16.0.0...v16.0.1) (2026-07-13)
 
 ### Bug Fixes
