@@ -1,5 +1,8 @@
 ---
 layout: home
+title: BigAl
+titleTemplate: Type-safe PostgreSQL ORM for TypeScript
+description: Type-safe TypeScript ORM built only for PostgreSQL. Runs on Node.js, Bun, and Deno, with a fluent query builder, JSONB, DISTINCT ON, upserts, pgvector, and transactions.
 hero:
   text: PostgreSQL-optimized TypeScript ORM
   tagline: Built exclusively for Postgres. Type-safe fluent query builder, decorator-based models, and queries tuned for Postgres performance.

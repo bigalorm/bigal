@@ -1,6 +1,6 @@
 {
   "projectTitle": "BigAl",
-  "description": "Type-safe PostgreSQL ORM for Node.js/TypeScript with fluent query builder, decorator-based models, and immutable query state.",
+  "description": "Type-safe PostgreSQL ORM for TypeScript on Node.js, Bun, and Deno, with a fluent query builder and decorator-based models.",
   "folders": ["docs/", "src/", "README.md"],
   "excludeFolders": ["internal/", "tests/", "node_modules/"],
   "excludeFiles": ["*.test.ts", "*.spec.ts"],

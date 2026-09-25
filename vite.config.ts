@@ -55,7 +55,7 @@ const config: UserConfig = defineConfig({
   },
   staged: {
     '*.md': ['vp fmt', 'markdownlint --config=.github/linters/.markdown-lint.yml --fix'],
-    '*.{js,cjs,mjs,ts}': ['vp fmt', 'vp lint --fix'],
+    '*.{js,cjs,mjs,ts}': ['vp fmt', 'vp lint --fix --no-error-on-unmatched-pattern'],
     '*.{json5,yml}': ['vp fmt'],
   },
 });

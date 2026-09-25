@@ -4,7 +4,9 @@
 [![node version](https://img.shields.io/node/v/bigal.svg?style=flat)](https://nodejs.org)
 [![Known Vulnerabilities](https://snyk.io/test/npm/bigal/badge.svg)](https://snyk.io/test/npm/bigal)
 
-A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js. BigAl uses a fluent builder pattern for queries
+**Documentation: [bigalorm.github.io/bigal](https://bigalorm.github.io/bigal/)**
+
+A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js, Bun, and Deno. BigAl uses a fluent builder pattern for queries
 and decorator-based models. Built exclusively for Postgres - queries are tuned for
 Postgres performance with native support for JSONB, DISTINCT ON, subquery joins, ON CONFLICT upserts, and pgvector.
 
@@ -91,7 +93,7 @@ npx skills add bigalorm/bigal
 ## Compatibility
 
 - [PostgreSQL](http://www.postgresql.org/) 14 or above
-- Node.js 22.11.0 or above
+- Node.js 22.11.0 or above, Bun, or Deno 2 (models need `experimentalDecorators` enabled; see [Runtimes](https://bigalorm.github.io/bigal/getting-started#runtimes))
 
 ## License
 
