@@ -4,7 +4,7 @@
 [![node version](https://img.shields.io/node/v/bigal.svg?style=flat)](https://nodejs.org)
 [![Known Vulnerabilities](https://snyk.io/test/npm/bigal/badge.svg)](https://snyk.io/test/npm/bigal)
 
-**Documentation: [bigalorm.github.io/bigal](https://bigalorm.github.io/bigal/)**
+**Documentation: [bigalorm.dev](https://bigalorm.dev/)**
 
 A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js, Bun, and Deno. BigAl uses a fluent builder pattern for queries
 and decorator-based models. Built exclusively for Postgres - queries are tuned for
@@ -64,23 +64,23 @@ await productRepository.create({ name: 'Widget', sku: 'WDG-001', priceCents: 999
 
 ## Documentation
 
-Full documentation is available at **[bigalorm.github.io/bigal](https://bigalorm.github.io/bigal/)**.
+Full documentation is available at **[bigalorm.dev](https://bigalorm.dev/)**.
 
-- [Getting Started](https://bigalorm.github.io/bigal/getting-started) - install, first model, first query
-- [Models](https://bigalorm.github.io/bigal/guide/models) - decorators, column options, relationships
-- [Querying](https://bigalorm.github.io/bigal/guide/querying) - operators, pagination, JSONB, DISTINCT ON
-- [CRUD Operations](https://bigalorm.github.io/bigal/guide/crud-operations) - create, update, destroy, upserts
-- [Subqueries & Joins](https://bigalorm.github.io/bigal/guide/subqueries-and-joins) - subquery builder, aggregates
-- [API Reference](https://bigalorm.github.io/bigal/reference/api) - all exports and method signatures
+- [Getting Started](https://bigalorm.dev/getting-started) - install, first model, first query
+- [Models](https://bigalorm.dev/guide/models) - decorators, column options, relationships
+- [Querying](https://bigalorm.dev/guide/querying) - operators, pagination, JSONB, DISTINCT ON
+- [CRUD Operations](https://bigalorm.dev/guide/crud-operations) - create, update, destroy, upserts
+- [Subqueries & Joins](https://bigalorm.dev/guide/subqueries-and-joins) - subquery builder, aggregates
+- [API Reference](https://bigalorm.dev/reference/api) - all exports and method signatures
 
 ## Machine-Readable Documentation
 
 BigAl provides machine-readable documentation for LLMs and AI-powered tools:
 
-| Resource      | URL                                                                                      |
-| ------------- | ---------------------------------------------------------------------------------------- |
-| llms.txt      | [bigalorm.github.io/bigal/llms.txt](https://bigalorm.github.io/bigal/llms.txt)           |
-| llms-full.txt | [bigalorm.github.io/bigal/llms-full.txt](https://bigalorm.github.io/bigal/llms-full.txt) |
+| Resource      | URL                                                              |
+| ------------- | ---------------------------------------------------------------- |
+| llms.txt      | [bigalorm.dev/llms.txt](https://bigalorm.dev/llms.txt)           |
+| llms-full.txt | [bigalorm.dev/llms-full.txt](https://bigalorm.dev/llms-full.txt) |
 
 ### Agent skill
 
@@ -93,7 +93,7 @@ npx skills add bigalorm/bigal
 ## Compatibility
 
 - [PostgreSQL](http://www.postgresql.org/) 14 or above
-- Node.js 22.11.0 or above, Bun, or Deno 2 (models need `experimentalDecorators` enabled; see [Runtimes](https://bigalorm.github.io/bigal/getting-started#runtimes))
+- Node.js 22.11.0 or above, Bun, or Deno 2 (models need `experimentalDecorators` enabled; see [Runtimes](https://bigalorm.dev/getting-started#runtimes))
 
 ## License
 

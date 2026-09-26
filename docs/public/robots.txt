@@ -23,4 +23,4 @@ Allow: /
 User-agent: Bytespider
 Allow: /
 
-Sitemap: https://bigalorm.github.io/bigal/sitemap.xml
+Sitemap: https://bigalorm.dev/sitemap.xml
