@@ -69,7 +69,7 @@
     "eslint": "10.11.0",
     "eslint-plugin-jsdoc": "64.5.4",
     "eslint-plugin-security": "4.0.1",
-    "eslint-plugin-unicorn": "75.0.0",
+    "eslint-plugin-unicorn": "76.0.0",
     "markdownlint-cli": "0.49.1",
     "npm-run-all2": "9.0.3",
     "oxlint-config-decent": "5.0.0",
