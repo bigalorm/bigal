@@ -23,6 +23,21 @@ npm install pg
 npm install @neondatabase/serverless
 ```
 
+## Runtimes
+
+BigAl runs on Node.js 22.11+, Bun, and Deno 2. Models use TypeScript legacy decorators, so enable them in your
+compiler options. For Node.js and Bun, add this to `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "experimentalDecorators": true
+  }
+}
+```
+
+For Deno, put the same `compilerOptions` in `deno.json`.
+
 ## Define a model
 
 Models extend `Entity` and use decorators to map to database tables.

@@ -2,15 +2,19 @@ import { defineConfig } from 'vitepress';
 import llmstxt from 'vitepress-plugin-llms';
 
 const SITE_URL = 'https://bigalorm.github.io/bigal';
-const SITE_DESCRIPTION = 'A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js';
+const SITE_DESCRIPTION = 'A PostgreSQL-optimized, type-safe TypeScript ORM for Node.js, Bun, and Deno';
 
 export default defineConfig({
   title: 'BigAl',
   description: SITE_DESCRIPTION,
   base: '/bigal/',
+  cleanUrls: true,
+  lastUpdated: true,
+  srcExclude: ['plans/**', 'research/**'],
   appearance: 'force-dark',
   sitemap: {
-    hostname: SITE_URL,
+    // Trailing slash is required: without it, URL resolution drops the /bigal segment from every sitemap entry
+    hostname: `${SITE_URL}/`,
   },
   head: [
     ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
@@ -29,12 +33,13 @@ export default defineConfig({
   ],
   transformPageData(pageData) {
     const isHome = pageData.frontmatter.layout === 'home';
-    const title = isHome ? 'BigAl — PostgreSQL-optimized TypeScript ORM' : `${pageData.title} | BigAl`;
+    const title = isHome ? 'BigAl | Type-safe PostgreSQL ORM for TypeScript' : `${pageData.title} | BigAl`;
     const description = pageData.frontmatter.description || SITE_DESCRIPTION;
     const canonicalUrl = `${SITE_URL}/${pageData.relativePath}`.replace(/index\.md$/, '').replace(/\.md$/, '');
 
     pageData.frontmatter.head ??= [];
     pageData.frontmatter.head.push(
+      ['link', { rel: 'canonical', href: canonicalUrl }],
       ['meta', { property: 'og:title', content: title }],
       ['meta', { property: 'og:description', content: description }],
       ['meta', { property: 'og:url', content: canonicalUrl }],
