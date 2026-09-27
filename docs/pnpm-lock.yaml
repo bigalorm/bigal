@@ -1059,8 +1059,8 @@ packages:
       preact-render-to-string:
         optional: true
 
-  pretty-bytes@7.1.3:
-    resolution: {integrity: sha512-U2KZ675nqba6XSBppSjU2pRgc9Ffx9+uUtd/RTWYmOawVkZuUbBYuwdtFZQmLv+yMgQ2TQxWWuOpyNje67J9tg==}
+  pretty-bytes@7.2.0:
+    resolution: {integrity: sha512-T2kroepGB5DRVbkN/nOpW03+VRWqdtJhZNuCW3wYk3chdPjgi4GcTBOaxWfHq1MIM0ypidxsSWbQaAiRpxnXmg==}
     engines: {node: '>=20'}
 
   property-information@7.2.0:
@@ -2174,7 +2174,7 @@ snapshots:
 
   preact@10.29.8: {}
 
-  pretty-bytes@7.1.3: {}
+  pretty-bytes@7.2.0: {}
 
   property-information@7.2.0: {}
 
@@ -2379,7 +2379,7 @@ snapshots:
       minimatch: 10.2.6
       path-to-regexp: 6.3.0
       picocolors: 1.1.1
-      pretty-bytes: 7.1.3
+      pretty-bytes: 7.2.0
       remark: 15.0.1
       remark-frontmatter: 5.0.0
       tokenx: 1.6.0
