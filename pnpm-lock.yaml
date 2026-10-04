@@ -220,8 +220,8 @@ importers:
         specifier: 65.0.1
         version: 65.0.1(@typescript/typescript6@6.0.2)(eslint@10.11.0(supports-color@7.2.0))(supports-color@7.2.0)
       eslint-plugin-security:
-        specifier: 4.1.0
-        version: 4.1.0
+        specifier: 4.2.0
+        version: 4.2.0
       eslint-plugin-unicorn:
         specifier: 76.0.0
         version: 76.0.0(eslint@10.11.0(supports-color@7.2.0))
@@ -233,7 +233,7 @@ importers:
         version: 9.0.3
       oxlint-config-decent:
         specifier: 5.0.0
-        version: 5.0.0(3eb27a73e25fa526416ec86ce4ce3772)
+        version: 5.0.0(7746ac225482547daf8f871aed68712b)
       oxlint-plugin-eslint:
         specifier: 1.86.0
         version: 1.86.0
@@ -1936,8 +1936,8 @@ packages:
       typescript:
         optional: true
 
-  eslint-plugin-security@4.1.0:
-    resolution: {integrity: sha512-cB4H72o/w8C0cm4uHJOnXMJz7MYTTuOwhn2X7PMuzZwfwqUoHK/ASHT6WKP+95lFk5Hkf3xfpiXB8a1+cef4rg==}
+  eslint-plugin-security@4.2.0:
+    resolution: {integrity: sha512-LL5jbxRzlNv0vkSyBtbO7qAPofqd3xlseAFTDevyDTMmScjBrLv2/VkQ7ZFQxBaFYsa3dhpE7NcV+JkwJ9l6RQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
   eslint-plugin-unicorn@76.0.0:
@@ -5014,7 +5014,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-plugin-security@4.1.0:
+  eslint-plugin-security@4.2.0:
     dependencies:
       safe-regex: 2.1.1
 
@@ -5896,13 +5896,13 @@ snapshots:
       '@oxfmt/binding-win32-x64-msvc': 0.70.0
       vite-plus: 1.0.0(@types/node@26.5.1)(@typescript/typescript6@6.0.2)(yaml@2.9.0)
 
-  oxlint-config-decent@5.0.0(3eb27a73e25fa526416ec86ce4ce3772):
+  oxlint-config-decent@5.0.0(7746ac225482547daf8f871aed68712b):
     dependencies:
       '@stylistic/eslint-plugin': 5.10.0(eslint@10.11.0(supports-color@7.2.0))
       '@typescript-eslint/eslint-plugin': 8.58.2(@typescript-eslint/parser@8.58.2(@typescript/typescript6@6.0.2)(eslint@10.11.0(supports-color@7.2.0))(supports-color@7.2.0))(@typescript/typescript6@6.0.2)(eslint@10.11.0(supports-color@7.2.0))(supports-color@7.2.0)
       eslint: 10.11.0(supports-color@7.2.0)
       eslint-plugin-jsdoc: 65.0.1(@typescript/typescript6@6.0.2)(eslint@10.11.0(supports-color@7.2.0))(supports-color@7.2.0)
-      eslint-plugin-security: 4.1.0
+      eslint-plugin-security: 4.2.0
       eslint-plugin-unicorn: 76.0.0(eslint@10.11.0(supports-color@7.2.0))
       oxlint-plugin-eslint: 1.86.0
     optionalDependencies:
