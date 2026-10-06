@@ -21,7 +21,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:18@sha256:5a5a84b19854a9ffaa54082c166ff4ec27473a361e496e5ea167f298f2da9722
+        image: postgres:18@sha256:6737476511d43c91c7cee9aa027b5d30458b7ed0f3af663ff8715c14ce4355b6
         env:
           POSTGRES_DB: bigal_test
           POSTGRES_USER: postgres
