@@ -76,7 +76,7 @@
     "eslint": "10.12.0",
     "eslint-plugin-jsdoc": "65.1.0",
     "eslint-plugin-security": "4.2.0",
-    "eslint-plugin-unicorn": "76.0.0",
+    "eslint-plugin-unicorn": "77.0.0",
     "markdownlint-cli": "0.49.1",
     "npm-run-all2": "9.0.3",
     "oxlint-config-decent": "5.0.0",
