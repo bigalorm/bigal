@@ -223,6 +223,8 @@ Tag queries so you can find them in `pg_stat_statements` and AWS Performance Ins
 - `.comment()`: a camelCase call-site name, such as `listStoreProducts`.
 
 ```ts
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 const queryTag = new AsyncLocalStorage<() => string | undefined>(); // a function, so the route is read after routing
 const repos = initialize({ models, pool, queryComment: () => queryTag.getStore()?.() });
 
