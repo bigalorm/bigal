@@ -1,5 +1,5 @@
 ---
-description: Configure connection pools (postgres-pool, pg, Neon), read replicas, multiple databases, and debug logging.
+description: Configure connection pools (postgres-pool, pg, Neon), read replicas, multiple databases, query comments, and debug logging.
 ---
 
 # Configuration
@@ -145,6 +145,24 @@ const repos = initialize({
   },
 });
 ```
+
+## Query comments
+
+`queryComment` returns text that BigAl adds to every repository query as a SQL comment. Use it to tag queries by route or job:
+
+```ts
+import { AsyncLocalStorage } from 'node:async_hooks';
+
+const queryTag = new AsyncLocalStorage<string>();
+
+const repos = initialize({
+  models,
+  pool,
+  queryComment: () => queryTag.getStore(),
+});
+```
+
+See [Query Comments](/guide/query-comments) for per-query comments, full examples, and instructions for finding tagged queries.
 
 ## Debugging
 

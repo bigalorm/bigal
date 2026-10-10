@@ -2,6 +2,7 @@ import { type Entity } from './Entity.js';
 import { type IRepository } from './IRepository.js';
 import { type CreateOptions } from './query/CreateOptions.js';
 import {
+  type CommentOptions,
   type CreateResult,
   type CreateResultArray,
   type CreateUpdateOptions,
@@ -30,7 +31,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {object}
    */
-  public create(values: CreateUpdateParams<T>, options?: ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>> & ReturnRecords): CreateResult<T>;
+  public create(values: CreateUpdateParams<T>, options?: CommentOptions & ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>> & ReturnRecords): CreateResult<T>;
 
   /**
    * Creates an object or objects using the specified values
@@ -40,7 +41,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {void}
    */
-  public create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options: DoNotReturnRecords & ExecutionOptions & Partial<OnConflictOptions<T>>): Promise<void>;
+  public create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options: CommentOptions & DoNotReturnRecords & ExecutionOptions & Partial<OnConflictOptions<T>>): Promise<void>;
 
   /**
    * Creates objects using the specified values
@@ -50,7 +51,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public create(values: CreateUpdateParams<T>[], options?: ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>> & ReturnRecords): CreateResultArray<T>;
+  public create(values: CreateUpdateParams<T>[], options?: CommentOptions & ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>> & ReturnRecords): CreateResultArray<T>;
 
   /**
    * Creates an object using the specified values
@@ -118,7 +119,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
               onConflict: options?.onConflict,
             });
 
-            const results = await pool.query<Partial<QueryResult<T>>>(query, params);
+            const results = await pool.query<Partial<QueryResult<T>>>(modelInstance._addQueryComments(query, options?.comment), params);
             if (returnRecords) {
               if (isArray) {
                 return returnAsPlainObjects ? modelInstance._buildPlainObjects(results.rows) : modelInstance._buildInstances(results.rows);
@@ -157,7 +158,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {boolean} options.returnRecords - Determines if inserted records should be returned
    * @returns {void}
    */
-  public update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options: DoNotReturnRecords & ExecutionOptions): Promise<void>;
+  public update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options: CommentOptions & DoNotReturnRecords & ExecutionOptions): Promise<void>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -167,7 +168,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  public update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: ExecutionOptions & Partial<ReturnSelect<T>>): UpdateResult<T>;
+  public update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: CommentOptions & ExecutionOptions & Partial<ReturnSelect<T>>): UpdateResult<T>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -228,7 +229,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
               returnSelect,
             });
 
-            const results = await pool.query<Partial<QueryResult<T>>>(query, params);
+            const results = await pool.query<Partial<QueryResult<T>>>(modelInstance._addQueryComments(query, options?.comment), params);
 
             if (returnRecords) {
               return returnAsPlainObjects ? modelInstance._buildPlainObjects(results.rows) : modelInstance._buildInstances(results.rows);
@@ -256,7 +257,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
    * @param {object} [where] - Object representing the where query
    * @returns {void}
    */
-  public destroy(where?: WhereQuery<T>, options?: DoNotReturnDeletedRecords & ExecutionOptions): DestroyResult<T, void>;
+  public destroy(where?: WhereQuery<T>, options?: CommentOptions & DoNotReturnDeletedRecords & ExecutionOptions): DestroyResult<T, void>;
 
   /**
    * Destroys object(s) matching the where query
@@ -318,7 +319,7 @@ export class Repository<T extends Entity> extends ReadonlyRepository<T> implemen
               returnSelect,
             });
 
-            const queryResult = await pool.query<Partial<QueryResult<T>>>(query, params);
+            const queryResult = await pool.query<Partial<QueryResult<T>>>(modelInstance._addQueryComments(query, options?.comment), params);
 
             if (returnRecords) {
               return returnAsPlainObjects ? modelInstance._buildPlainObjects(queryResult.rows) : modelInstance._buildInstances(queryResult.rows);

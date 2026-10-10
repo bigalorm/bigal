@@ -188,3 +188,13 @@ Pool-only options preserve each method's default return behavior: single and bul
 Combine `pool` with `returnSelect`, `returnRecords`, and `onConflict` as usual.
 
 The override only routes the statement; it does not begin, commit, roll back, or release a transaction. See [Transactions](/guide/transactions).
+
+## Query comments
+
+Every write method accepts `comment`. The comment tags the statement so you can find it in `pg_stat_statements` or AWS Performance Insights:
+
+```ts
+await productRepository.update({ id: productIds }, { location: 'A-12' }, { comment: 'restockProducts' });
+```
+
+See [Query Comments](/guide/query-comments).

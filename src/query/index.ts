@@ -1,3 +1,4 @@
+export * from './CommentOptions.js';
 export * from './Comparer.js';
 export * from './CountResult.js';
 export * from './CreateResult.js';

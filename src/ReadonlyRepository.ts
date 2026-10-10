@@ -30,7 +30,7 @@ import {
 } from './query/index.js';
 import { registerRepositoryOptions } from './RepositoryInternals.js';
 import { executeRepositoryOperation, resolvePopulatePool } from './RepositoryPool.js';
-import { getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
+import { addQueryComments, getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
 import {
   type GetValueType,
   type OmitEntityCollections,
@@ -50,6 +50,7 @@ export interface IRepositoryOptions<T extends Entity> {
   repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
   pool: PoolLike;
   readonlyPool?: PoolLike;
+  queryComment?: () => string | undefined;
 }
 
 interface Populate {
@@ -61,6 +62,7 @@ interface Populate {
   limit?: number;
   pool?: PoolLike;
   asPlainObjects?: boolean;
+  comment?: string;
   through?: {
     where?: Record<string, unknown>;
     sort?: SortObject<Entity> | string;
@@ -88,18 +90,21 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
   protected _repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
 
+  protected _queryComment: (() => string | undefined) | undefined;
+
   protected _floatProperties: string[] = [];
 
   protected _intProperties: string[] = [];
 
   protected _vectorProperties: string[] = [];
 
-  public constructor({ modelMetadata, type, pool, readonlyPool, repositoriesByModelNameLowered }: IRepositoryOptions<T>) {
+  public constructor({ modelMetadata, type, pool, readonlyPool, repositoriesByModelNameLowered, queryComment }: IRepositoryOptions<T>) {
     this._modelMetadata = modelMetadata;
     this._type = type;
     this._pool = pool;
     this._readonlyPool = readonlyPool ?? pool;
     this._repositoriesByModelNameLowered = repositoriesByModelNameLowered;
+    this._queryComment = queryComment;
 
     registerRepositoryOptions(this, {
       modelMetadata,
@@ -107,6 +112,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       repositoriesByModelNameLowered,
       pool: this._pool,
       readonlyPool: this._readonlyPool,
+      queryComment,
     });
 
     for (const column of modelMetadata.columns) {
@@ -141,6 +147,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     let sort: SortObject<T> | string | null = null;
     let poolOverride: PoolLike | undefined;
     let lockOptions: LockOptions | undefined;
+    let comment: string | undefined;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
     for (const [name, value] of Object.entries(lockColumnCriteria ? {} : args)) {
       let isWhereCriteria = false;
@@ -302,6 +309,16 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
+      /**
+       * Adds a SQL comment to the query and any populate queries
+       * @param {string} value - Comment text. Cannot contain `/*` or `*\/`
+       * @returns Query instance
+       */
+      comment(value: string): FindOneResult<T, TReturn> {
+        comment = value;
+
+        return this;
+      },
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(_propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>> {
         return this as FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>>;
@@ -343,13 +360,13 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
               lock: lockOptions,
             });
 
-            const results = await pool.query<Partial<QueryResult<T>>>(query, params);
+            const results = await pool.query<Partial<QueryResult<T>>>(modelInstance._addQueryComments(query, comment), params);
             const firstResult = results.rows[0];
             if (firstResult) {
               const result = returnAsPlainObjects ? modelInstance._buildPlainObject(firstResult) : modelInstance._buildInstance(firstResult);
 
               if (populates.length) {
-                const populatesWithFlag = populates.map((pop) => ({ ...pop, pool: resolvePopulatePool(pool, pop.pool), asPlainObjects: returnAsPlainObjects }));
+                const populatesWithFlag = populates.map((pop) => ({ ...pop, pool: resolvePopulatePool(pool, pop.pool), asPlainObjects: returnAsPlainObjects, comment }));
                 await modelInstance.populateFields([result], populatesWithFlag);
               }
 
@@ -400,6 +417,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     let limit: number | null = null;
     let poolOverride: PoolLike | undefined;
     let lockOptions: LockOptions | undefined;
+    let comment: string | undefined;
     // Args can be a FindArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
     for (const [name, value] of Object.entries(lockColumnCriteria ? {} : args)) {
       let isWhereCriteria = false;
@@ -586,6 +604,16 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
         return this;
       },
+      /**
+       * Adds a SQL comment to the query and any populate queries
+       * @param {string} value - Comment text. Cannot contain `/*` or `*\/`
+       * @returns Query instance
+       */
+      comment(value: string): FindResult<T, TReturn> {
+        comment = value;
+
+        return this;
+      },
       lock(mode: LockMode, options?: LockWaitOptions): FindResult<T, TReturn> {
         lockOptions = {
           mode,
@@ -676,7 +704,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
               lock: lockOptions,
             });
 
-            const results = await pool.query<Partial<QueryResult<T>> & { __total_count__?: string }>(query, params);
+            const results = await pool.query<Partial<QueryResult<T>> & { __total_count__?: string }>(modelInstance._addQueryComments(query, comment), params);
 
             let totalCount = 0;
             if (includeCount && results.rows.length > 0 && results.rows[0]?.__total_count__ !== undefined) {
@@ -694,7 +722,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
             const entities = returnAsPlainObjects ? modelInstance._buildPlainObjects(rows) : modelInstance._buildInstances(rows);
 
             if (populates.length) {
-              const populatesWithFlag = populates.map((pop) => ({ ...pop, pool: resolvePopulatePool(pool, pop.pool), asPlainObjects: returnAsPlainObjects }));
+              const populatesWithFlag = populates.map((pop) => ({ ...pop, pool: resolvePopulatePool(pool, pop.pool), asPlainObjects: returnAsPlainObjects, comment }));
               await modelInstance.populateFields(entities, populatesWithFlag);
             }
 
@@ -739,6 +767,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
 
     let where: WhereQuery<T> = {};
     let poolOverride: PoolLike | undefined;
+    let comment: string | undefined;
     // Args can be a FindOneArgs type or a query object. If args has a key other than select, where, or sort, treat it as a query object
     for (const [name, value] of Object.entries(args)) {
       let isWhereCriteria = false;
@@ -770,8 +799,18 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
        * @param {object} value - Object representing the where query
        * @returns Count result
        */
-      where(value: WhereQuery<T>): CountResult<T> | number {
+      where(value: WhereQuery<T>): CountResult<T> {
         where = value;
+
+        return this;
+      },
+      /**
+       * Adds a SQL comment to the query
+       * @param {string} value - Comment text. Cannot contain `/*` or `*\/`
+       * @returns Count result
+       */
+      comment(value: string): CountResult<T> {
+        comment = value;
 
         return this;
       },
@@ -787,7 +826,7 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
               where,
             });
 
-            const result = await pool.query<{ count: string }>(query, params);
+            const result = await pool.query<{ count: string }>(modelInstance._addQueryComments(query, comment), params);
 
             const firstResult = result.rows[0];
             const originalValue = firstResult ? firstResult.count : 0;
@@ -979,6 +1018,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
     return result;
   }
 
+  protected _addQueryComments(query: string, comment: string | undefined): string {
+    return addQueryComments(query, [this._queryComment?.(), comment]);
+  }
+
   protected _executeReadOperation<TResult>({ lock, pool: poolOverride }: Pick<FindOneArgs<T>, 'lock' | 'pool'>, operation: (pool: PoolLike) => Promise<TResult>): Promise<TResult> {
     // Row locks are only held on the primary, so a locking read bypasses the read-only pool
     const defaultPool = lock ? this._pool : this._readonlyPool;
@@ -1087,6 +1130,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       sort: populate.sort,
       pool: populate.pool,
     } as FindArgs<Entity>);
+    if (populate.comment) {
+      findQuery.comment(populate.comment);
+    }
+
     const populateResults = populate.asPlainObjects ? await findQuery.toJSON() : await findQuery;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const populateResultsById = keyBy(populateResults, populateRepository.model.primaryKeyColumn.propertyName) as Record<number | string, any>;
@@ -1122,6 +1169,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       limit: populate.limit,
       pool: populate.pool,
     } as FindArgs<Entity>);
+    if (populate.comment) {
+      findQuery.comment(populate.comment);
+    }
+
     const populateResults = populate.asPlainObjects ? await findQuery.toJSON() : await findQuery;
 
     if (entities.length === 1) {
@@ -1177,12 +1228,17 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       ...populate.through?.where,
     } as WhereQuery<T>;
 
-    const mapRecords = await throughRepository.find({
+    const throughQuery = throughRepository.find({
       select: [column.via, relatedModelColumn.via],
       where: throughWhere,
       sort: populate.through?.sort,
       pool: populate.pool,
     });
+    if (populate.comment) {
+      throughQuery.comment(populate.comment);
+    }
+
+    const mapRecords = await throughQuery;
 
     const populateIds = new Set<PrimaryId>();
     const populateIdsByEntityId: Record<PrimaryId, PrimaryId[]> = {};
@@ -1218,6 +1274,10 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
       limit: populate.limit,
       pool: populate.pool,
     } as FindArgs<Entity>);
+    if (populate.comment) {
+      findQuery.comment(populate.comment);
+    }
+
     const populateResults = populate.asPlainObjects ? await findQuery.toJSON() : await findQuery;
 
     const populateResultsById = keyBy(populateResults, populateModelPrimaryKeyPropertyName as string) as Record<PrimaryId, Entity>;

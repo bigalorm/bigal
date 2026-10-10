@@ -118,6 +118,33 @@ describe('sqlHelper', () => {
     }
   });
 
+  describe('#addQueryComments()', () => {
+    it('should add each comment as its own block comment after the first keyword', () => {
+      expect(sqlHelper.addQueryComments('SELECT 1', ['route=GET /users', 'listUsers'])).toBe('SELECT /* route=GET /users */ /* listUsers */ 1');
+    });
+
+    it('should skip undefined, null, and empty comments', () => {
+      expect(sqlHelper.addQueryComments('SELECT 1', [undefined, null, '', 'listUsers'])).toBe('SELECT /* listUsers */ 1');
+      expect(sqlHelper.addQueryComments('SELECT 1', [])).toBe('SELECT 1');
+    });
+
+    it('should append comments to a query without a space', () => {
+      expect(sqlHelper.addQueryComments('BEGIN', ['importJob'])).toBe('BEGIN /* importJob */');
+    });
+
+    it('should allow comment text that starts or ends with a delimiter character', () => {
+      expect(sqlHelper.addQueryComments('SELECT 1', ['*important*', '/users/'])).toBe('SELECT /* *important* */ /* /users/ */ 1');
+    });
+
+    it.each(['a */ b', 'a /* b', '*/', '/*'])('should throw for comment text containing a comment delimiter: %s', (comment) => {
+      expect(() => sqlHelper.addQueryComments('SELECT 1', [comment])).toThrow('Query comment cannot contain "/*" or "*/"');
+    });
+
+    it.each([[['*/ SELECT 42 AS count; --']], [42], [{ toString: () => '*/ SELECT 42' }]])('should throw for a comment that is not a string: %j', (comment) => {
+      expect(() => sqlHelper.addQueryComments('SELECT 1', [comment])).toThrow(TypeError);
+    });
+  });
+
   describe('#getSelectQueryAndParams()', () => {
     describe('select', () => {
       it('should include all columns if select is undefined', () => {

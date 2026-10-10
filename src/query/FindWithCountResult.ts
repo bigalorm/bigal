@@ -42,6 +42,11 @@ export interface FindQueryWithCountJSON<T extends Entity, TReturn, TJoins extend
     options: { on: SubqueryJoinOnCondition },
   ): FindQueryWithCountJSON<T, TReturn, SubqueryJoinInfo<TAlias, TColumns> | TJoins>;
   leftJoin(subquery: SubqueryBuilderLike, alias: string, options: { on: SubqueryJoinOnCondition }): FindQueryWithCountJSON<T, TReturn, TJoins>;
+  /**
+   * Adds a SQL comment to the query and any populate queries, to identify it in tools like pg_stat_statements and Performance Insights
+   * @param value - Comment text. Cannot contain `/*` or `*\/`
+   */
+  comment(value: string): FindQueryWithCountJSON<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindQueryWithCountJSON<T, TReturn, TJoins>;
   limit(value: number): FindQueryWithCountJSON<T, TReturn, TJoins>;
   skip(value: number): FindQueryWithCountJSON<T, TReturn, TJoins>;
@@ -76,6 +81,11 @@ export interface FindQueryWithCount<T extends Entity, TReturn, TJoins extends An
     options: { on: SubqueryJoinOnCondition },
   ): FindQueryWithCount<T, TReturn, SubqueryJoinInfo<TAlias, TColumns> | TJoins>;
   leftJoin(subquery: SubqueryBuilderLike, alias: string, options: { on: SubqueryJoinOnCondition }): FindQueryWithCount<T, TReturn, TJoins>;
+  /**
+   * Adds a SQL comment to the query and any populate queries, to identify it in tools like pg_stat_statements and Performance Insights
+   * @param value - Comment text. Cannot contain `/*` or `*\/`
+   */
+  comment(value: string): FindQueryWithCount<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindQueryWithCount<T, TReturn, TJoins>;
   limit(value: number): FindQueryWithCount<T, TReturn, TJoins>;
   skip(value: number): FindQueryWithCount<T, TReturn, TJoins>;

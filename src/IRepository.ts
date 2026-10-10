@@ -2,6 +2,7 @@ import { type Entity } from './Entity.js';
 import { type IReadonlyRepository } from './IReadonlyRepository.js';
 import { type CreateOptions } from './query/CreateOptions.js';
 import {
+  type CommentOptions,
   type CreateResult,
   type CreateResultArray,
   type CreateUpdateOptions,
@@ -28,7 +29,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {object}
    */
-  create(values: CreateUpdateParams<T>, options?: ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>> & ReturnRecords): CreateResult<T>;
+  create(values: CreateUpdateParams<T>, options?: CommentOptions & ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>> & ReturnRecords): CreateResult<T>;
 
   /**
    * Creates an object or objects using the specified values
@@ -38,7 +39,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {object} [options.onConflict] - Options to handle conflicts due to a unique constraint or exclusion constraint error during insert
    * @returns {void}
    */
-  create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options: DoNotReturnRecords & ExecutionOptions & Partial<OnConflictOptions<T>>): Promise<void>;
+  create(values: CreateUpdateParams<T> | CreateUpdateParams<T>[], options: CommentOptions & DoNotReturnRecords & ExecutionOptions & Partial<OnConflictOptions<T>>): Promise<void>;
 
   /**
    * Creates objects using the specified values
@@ -48,7 +49,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  create(values: CreateUpdateParams<T>[], options?: ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>> & ReturnRecords): CreateResultArray<T>;
+  create(values: CreateUpdateParams<T>[], options?: CommentOptions & ExecutionOptions & Partial<OnConflictOptions<T>> & Partial<ReturnSelect<T>> & ReturnRecords): CreateResultArray<T>;
 
   /**
    * Creates an object using the specified values
@@ -70,7 +71,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {{returnRecords: false}} options
    * @returns {void}
    */
-  update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options: DoNotReturnRecords & ExecutionOptions): Promise<void>;
+  update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options: CommentOptions & DoNotReturnRecords & ExecutionOptions): Promise<void>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -80,7 +81,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {string[]} [options.returnSelect] - Array of model property names to return from the query.
    * @returns {object[]}
    */
-  update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: ExecutionOptions & Partial<ReturnSelect<T>>): UpdateResult<T>;
+  update(where: WhereQuery<T>, values: CreateUpdateParams<T>, options?: CommentOptions & ExecutionOptions & Partial<ReturnSelect<T>>): UpdateResult<T>;
 
   /**
    * Updates object(s) matching the where query, with the specified values
@@ -98,7 +99,7 @@ export interface IRepository<T extends Entity> extends IReadonlyRepository<T> {
    * @param {object} [where] - Object representing the where query
    * @returns {void}
    */
-  destroy(where?: WhereQuery<T>, options?: DoNotReturnDeletedRecords & ExecutionOptions): DestroyResult<T, void>;
+  destroy(where?: WhereQuery<T>, options?: CommentOptions & DoNotReturnDeletedRecords & ExecutionOptions): DestroyResult<T, void>;
 
   /**
    * Destroys object(s) matching the where query

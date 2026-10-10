@@ -384,6 +384,16 @@ BigAl locks only base-table rows. Joins may filter those rows, while `populate()
 Locking cannot be combined with `distinctOn()` or `withCount()`.
 See [Transactions](/guide/transactions#row-locking) for timeout parameters and safe locking protocols.
 
+## Query comments
+
+Use `.comment()` to tag a query and find it in `pg_stat_statements` or AWS Performance Insights. Populate queries inherit the comment:
+
+```ts
+const products = await productRepository.find().where({ store: storeId }).populate('categories').comment('listStoreProducts');
+```
+
+See [Query Comments](/guide/query-comments) for instructions on tagging every query by route or job and finding tagged queries.
+
 ## Populate
 
 `populate(propertyName, options?)` loads related entities onto the results. It is available on `find()` and
