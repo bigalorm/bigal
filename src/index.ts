@@ -29,6 +29,12 @@ export interface InitializeOptions extends IConnection {
   models: EntityStatic<Entity>[];
   connections?: Record<string, IConnection>;
   expose?: (repository: ReadonlyRepository<Entity> | Repository<Entity>, tableMetadata: ModelMetadata<Entity>) => void;
+  /**
+   * Called before every repository query. The returned text is added to the query as a SQL comment, to identify it in tools like
+   * pg_stat_statements and Performance Insights. Read request context here (e.g. from `AsyncLocalStorage`) to tag queries by route or job.
+   * The text cannot contain `/*` or `*\/`
+   */
+  queryComment?: () => string | undefined;
 }
 
 type ModelClass = EntityStatic<Entity> & {
@@ -60,9 +66,10 @@ function getInheritanceTree(model: ModelClass): ModelClass[] {
  * @param {object} [readonlyPool] - Postgres Pool for `find` and `findOne` operations. If not defined, `pool` will be used
  * @param {object} [connections] - Key: name of the connection; Value: { pool, readonlyPool }
  * @param {Function} [expose] - Used to expose model classes
+ * @param {Function} [queryComment] - Returns text to add to every repository query as a SQL comment
  * @returns {object} Repositories by model name
  */
-export function initialize({ models, pool, readonlyPool = pool, connections = {}, expose }: InitializeOptions): Record<string, IReadonlyRepository<Entity> | IRepository<Entity>> {
+export function initialize({ models, pool, readonlyPool = pool, connections = {}, expose, queryComment }: InitializeOptions): Record<string, IReadonlyRepository<Entity> | IRepository<Entity>> {
   if (!models.length) {
     throw new Error('Models need to be specified to read all model information from decorators');
   }
@@ -240,6 +247,7 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
         repositoriesByModelNameLowered,
         pool: modelPool,
         readonlyPool: modelReadonlyPool,
+        queryComment,
       });
 
       repositoriesByModelNameLowered[model.name.toLowerCase()] = repository;
@@ -251,6 +259,7 @@ export function initialize({ models, pool, readonlyPool = pool, connections = {}
         repositoriesByModelNameLowered,
         pool: modelPool,
         readonlyPool: modelReadonlyPool,
+        queryComment,
       });
 
       repositoriesByModelNameLowered[model.name.toLowerCase()] = repository;

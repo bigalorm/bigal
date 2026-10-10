@@ -19,6 +19,7 @@ const repos = initialize({
   readonlyPool,
   connections,
   expose,
+  queryComment,
 });
 ```
 
@@ -31,6 +32,7 @@ const repos = initialize({
 | `readonlyPool` | `PoolLike`                    | No       | Pool for read operations (defaults to `pool`) |
 | `connections`  | `Record<string, IConnection>` | No       | Named connections for multi-database setups   |
 | `expose`       | `(repo, metadata) => void`    | No       | Callback invoked for each created repository  |
+| `queryComment` | `() => string \| undefined`   | No       | Adds a SQL comment to every repository query  |
 
 **Returns:** `Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>`
 
@@ -108,7 +110,7 @@ repository.create(values, options?): Promise<QueryResult<T>>
 repository.create(values[], options?): Promise<QueryResult<T>[]>
 ```
 
-Insert one or multiple records. Options: `{ returnRecords?, returnSelect?, onConflict?, pool? }`.
+Insert one or multiple records. Options: `{ returnRecords?, returnSelect?, onConflict?, pool?, comment? }`.
 
 An array inserts in a single statement. Prefer this over calling `create()` in a loop, which costs one round trip per record.
 
@@ -120,7 +122,7 @@ An array inserts in a single statement. Prefer this over calling `create()` in a
 repository.update(where, values, options?): Promise<QueryResult<T>[]>
 ```
 
-Update matching records. Options: `{ returnRecords?, returnSelect?, pool? }`.
+Update matching records. Options: `{ returnRecords?, returnSelect?, pool?, comment? }`.
 As with `create()`, use `returnSelect` to return only the columns you need or `returnRecords: false` to skip the returned rows.
 
 ### destroy()
@@ -130,7 +132,7 @@ repository.destroy(where, options?): Promise<void>
 repository.destroy(where, { returnRecords: true }): Promise<QueryResult<T>[]>
 ```
 
-Delete matching records. Options: `{ returnRecords?, returnSelect?, pool? }`.
+Delete matching records. Options: `{ returnRecords?, returnSelect?, pool?, comment? }`.
 Unlike `create()`/`update()`, `destroy()` does not return records by default (plain `DELETE`, no `RETURNING`); pass `returnRecords: true` or `returnSelect` to get the deleted rows back.
 
 ## ReadonlyRepository
@@ -156,6 +158,7 @@ awaited. Each call to `find()`, `findOne()`, or `count()` starts a fresh query.
 | `.leftJoin(propertyName, alias?, on?)` | find, findOne        | LEFT JOIN                        |
 | `.distinctOn(columns)`                 | find                 | PostgreSQL DISTINCT ON           |
 | `.lock(mode, options?)`                | find, findOne        | Lock matching base-table rows    |
+| `.comment(text)`                       | find, findOne, count | Add a SQL comment to the query   |
 | `.toJSON()`                            | find, findOne        | Return plain objects             |
 | `.UNSAFE_withOriginalFieldType(name)`  | find, findOne        | Type-level escape hatch          |
 | `.UNSAFE_withFieldValue(name, value)`  | findOne              | Set a field after the query      |
@@ -327,6 +330,22 @@ await productRepository.find({
 
 A locking read runs on the write pool unless `pool` is supplied, and PostgreSQL holds the lock only while a transaction is open on that connection.
 It cannot be combined with `distinctOn()` or `withCount()`, and it does not propagate to `populate()` queries.
+
+### comment()
+
+```ts
+query.comment('listStoreProducts');
+```
+
+Adds `/* listStoreProducts */` after the query's first keyword. You can then find the query in `pg_stat_statements` and AWS Performance Insights.
+
+Populate queries inherit the comment. Write methods accept the same text through the `comment` option:
+
+```ts
+await productRepository.update({ id: 42 }, { name: 'Renamed' }, { comment: 'renameProduct' });
+```
+
+The text cannot contain `/*` or `*/`. See [Query Comments](/guide/query-comments).
 
 ### toJSON()
 

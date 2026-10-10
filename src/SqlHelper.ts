@@ -95,6 +95,45 @@ export function getTransactionSettingsQueryAndParams(settings: Readonly<Record<s
 }
 
 /**
+ * Adds each comment to the query as a SQL block comment, right after the first keyword. PostgreSQL 18 drops comments that come before the first
+ * keyword from pg_stat_statements, and pg_stat_activity truncates long query text, so this placement keeps comments visible in both
+ * @param {string} query - SQL query that starts with a keyword
+ * @param {Array} comments - Comment text for each block comment. Undefined, null, and empty values are skipped
+ * @returns {string} Query with the block comments added
+ */
+export function addQueryComments(query: string, comments: readonly unknown[]): string {
+  let commentsSql = '';
+  for (const comment of comments) {
+    if (comment == null || comment === '') {
+      continue;
+    }
+
+    // Values typed as `any` reach here unchecked, and an array would pass the delimiter check below element by element
+    if (typeof comment !== 'string') {
+      throw new TypeError(`Query comment must be a string. Received: ${typeof comment}`);
+    }
+
+    // PostgreSQL nests block comments, so an unmatched "/*" would comment out the rest of the query
+    if (comment.includes('/*') || comment.includes('*/')) {
+      throw new Error(`Query comment cannot contain "/*" or "*/": ${comment}`);
+    }
+
+    commentsSql += ` /* ${comment} */`;
+  }
+
+  if (!commentsSql) {
+    return query;
+  }
+
+  const firstKeywordEnd = query.indexOf(' ');
+  if (firstKeywordEnd === -1) {
+    return `${query}${commentsSql}`;
+  }
+
+  return `${query.slice(0, firstKeywordEnd)}${commentsSql}${query.slice(firstKeywordEnd)}`;
+}
+
+/**
  * Gets the select syntax for the specified model and filters
  * @param {object} args - Arguments
  * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by model name

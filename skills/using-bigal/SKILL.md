@@ -214,6 +214,19 @@ Locks apply only to base-table rows, do not propagate to population queries, and
 A query locks only rows it finds, so lock an existing parent row when guarding creation of child rows. Every writer that participates in the invariant must take the same lock.
 Keep transactions short and acquire resources in a stable order. Prefer constraints and conditional updates when they can express the invariant.
 
+## Query Comments
+
+Tag queries to find them in `pg_stat_statements` and AWS Performance Insights:
+
+```ts
+const repos = initialize({ models, pool, queryComment: () => queryTag.getStore() }); // e.g. an AsyncLocalStorage<string> holding the route or job
+await productRepo.find().where({ store: storeId }).comment('listStoreProducts'); // also findOne() and count()
+await productRepo.update({ id: 42 }, { name: 'Renamed' }, { comment: 'renameProduct' }); // also create() and destroy()
+```
+
+Comments go after the first keyword (`SELECT /* tag */ ...`). Populate queries inherit the per-query comment. Text containing `/*` or `*/` throws.
+Do not pass `comment` inside `find()`/`findOne()`/`count()` args. Unknown keys there are where criteria.
+
 ## Model Definition
 
 ### Decorators

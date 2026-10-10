@@ -74,6 +74,11 @@ export interface FindResultJSON<T extends Entity, TReturn, TJoins extends AnyJoi
    * @param columns - Column names for DISTINCT ON clause
    */
   distinctOn(columns: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]): FindResultJSON<T, TReturn, TJoins>;
+  /**
+   * Adds a SQL comment to the query and any populate queries, to identify it in tools like pg_stat_statements and Performance Insights
+   * @param value - Comment text. Cannot contain `/*` or `*\/`
+   */
+  comment(value: string): FindResultJSON<T, TReturn, TJoins>;
   lock(mode: LockMode, options?: LockWaitOptions): FindResultJSON<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindResultJSON<T, TReturn, TJoins>;
   limit(value: number): FindResultJSON<T, TReturn, TJoins>;
@@ -137,6 +142,11 @@ export interface FindResult<T extends Entity, TReturn, TJoins extends AnyJoinInf
    * @param columns - Column names for DISTINCT ON clause
    */
   distinctOn(columns: (string & keyof OmitFunctions<OmitEntityCollections<T>>)[]): FindResult<T, TReturn, TJoins>;
+  /**
+   * Adds a SQL comment to the query and any populate queries, to identify it in tools like pg_stat_statements and Performance Insights
+   * @param value - Comment text. Cannot contain `/*` or `*\/`
+   */
+  comment(value: string): FindResult<T, TReturn, TJoins>;
   lock(mode: LockMode, options?: LockWaitOptions): FindResult<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindResult<T, TReturn, TJoins>;
   limit(value: number): FindResult<T, TReturn, TJoins>;

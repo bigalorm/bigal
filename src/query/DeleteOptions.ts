@@ -1,6 +1,7 @@
 import { type Entity } from '../Entity.js';
 import { type OmitEntityCollections, type OmitFunctions } from '../types/index.js';
 
+import { type CommentOptions } from './CommentOptions.js';
 import { type ExecutionOptions } from './ExecutionOptions.js';
 
 interface ReturnSelect<T extends Entity, K extends keyof T> {
@@ -18,4 +19,4 @@ export interface DoNotReturnDeletedRecords {
   returnSelect?: never;
 }
 
-export type DeleteOptions<T extends Entity, K extends keyof T = keyof T> = ExecutionOptions & (DoNotReturnDeletedRecords | ReturnRecords<T, K> | ReturnSelect<T, K>);
+export type DeleteOptions<T extends Entity, K extends keyof T = keyof T> = CommentOptions & ExecutionOptions & (DoNotReturnDeletedRecords | ReturnRecords<T, K> | ReturnSelect<T, K>);

@@ -15,6 +15,7 @@ Built exclusively for Postgres. Type-safe fluent query builder, decorator-based 
 - [Models](https://bigalorm.dev/guide/models)
 - [Querying](https://bigalorm.dev/guide/querying)
 - [CRUD Operations](https://bigalorm.dev/guide/crud-operations)
+- [Query Comments](https://bigalorm.dev/guide/query-comments)
 - [Relationships](https://bigalorm.dev/guide/relationships)
 - [Subqueries and Joins](https://bigalorm.dev/guide/subqueries-and-joins)
 - [Views and Readonly Repositories](https://bigalorm.dev/guide/views)

@@ -1,4 +1,5 @@
 import assert from 'node:assert';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { setTimeout } from 'node:timers/promises';
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -285,5 +286,37 @@ describe.skipIf(!DATABASE_URL)('managed transactions against PostgreSQL', () => 
 
     expect(outcomes.filter(Boolean)).toHaveLength(1);
     await expect(ItemRepository.count()).resolves.toBe(1);
+  });
+
+  it('runs commented statements, including populate queries, in a managed transaction', async () => {
+    const queryTag = new AsyncLocalStorage<string>();
+    const repositories = initialize({ models: [TransactionAccount, TransactionItem], pool, queryComment: () => queryTag.getStore() });
+    const TaggedAccountRepository = repositories.TransactionAccount as Repository<TransactionAccount>;
+    const TaggedItemRepository = repositories.TransactionItem as Repository<TransactionItem>;
+
+    const items = await queryTag.run('job=integration', async () =>
+      transaction({ pool, repositories: { Account: TaggedAccountRepository, Item: TaggedItemRepository } }, async (scope) => {
+        const account = await scope.repositories.Account.create({ name: 'Tagged', capacity: 2 }, { comment: 'createAccount' });
+        await scope.repositories.Item.create(
+          [
+            { name: 'First', account: account.id },
+            { name: 'Second', account: account.id },
+          ],
+          { comment: 'createItems', returnRecords: false },
+        );
+        await scope.repositories.Item.update({ name: 'First' }, { name: 'Renamed' }, { comment: 'renameItem', returnRecords: false });
+        await scope.repositories.Item.destroy({ name: 'Second' }, { comment: 'removeItem' });
+
+        return scope.repositories.Item.find()
+          .where({ account: account.id })
+          .populate('account', { select: ['name'] })
+          .comment('listItems');
+      }),
+    );
+
+    expect(items).toHaveLength(1);
+    expect(items[0]?.name).toBe('Renamed');
+    expect(items[0]?.account.name).toBe('Tagged');
+    await expect(TaggedAccountRepository.count().where({ name: 'Tagged' }).comment('countAccounts')).resolves.toBe(1);
   });
 });

@@ -23,6 +23,11 @@ export interface FindOneResultJSON<T extends Entity, TReturn, TJoins extends Joi
     alias?: TAlias,
     on?: WhereQuery<GetValueType<T[TProperty], Entity>>,
   ): FindOneResultJSON<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
+  /**
+   * Adds a SQL comment to the query and any populate queries, to identify it in tools like pg_stat_statements and Performance Insights
+   * @param value - Comment text. Cannot contain `/*` or `*\/`
+   */
+  comment(value: string): FindOneResultJSON<T, TReturn, TJoins>;
   lock(mode: LockMode, options?: LockWaitOptions): FindOneResultJSON<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindOneResultJSON<T, TReturn, TJoins>;
   UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(
@@ -50,6 +55,11 @@ export interface FindOneResult<T extends Entity, TReturn, TJoins extends JoinInf
     alias?: TAlias,
     on?: WhereQuery<GetValueType<T[TProperty], Entity>>,
   ): FindOneResult<T, TReturn, JoinInfo<TProperty, TAlias, GetValueType<T[TProperty], Entity>> | TJoins>;
+  /**
+   * Adds a SQL comment to the query and any populate queries, to identify it in tools like pg_stat_statements and Performance Insights
+   * @param value - Comment text. Cannot contain `/*` or `*\/`
+   */
+  comment(value: string): FindOneResult<T, TReturn, TJoins>;
   lock(mode: LockMode, options?: LockWaitOptions): FindOneResult<T, TReturn, TJoins>;
   sort(value?: JoinedSort<T, TJoins>): FindOneResult<T, TReturn, TJoins>;
   UNSAFE_withOriginalFieldType<TProperty extends string & keyof PickByValueType<T, Entity> & keyof T>(propertyName: TProperty): FindOneResult<T, Omit<TReturn, TProperty> & Pick<T, TProperty>, TJoins>;
