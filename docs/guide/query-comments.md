@@ -151,9 +151,9 @@ The Top SQL tab in Performance Insights shows the first 500 bytes of each statem
 
 ## Rules and limits
 
-1. **Placement:** Comments go immediately after the first keyword. PostgreSQL 18 drops comments that come before the first keyword from `pg_stat_statements`.
-   `pg_stat_activity` cuts query text off at `track_activity_query_size`, which is 1024 bytes by default. That can hide a comment at the end of a long query.
-2. **Allowed text:** A comment cannot contain `/*` or `*/`. PostgreSQL nests block comments, so either sequence could change the SQL that runs.
-   BigAl throws instead of running the query. It also throws when the comment is not a string.
-3. **Order:** When a query has both types of comment, the `queryComment` text comes first.
-4. **Not tagged:** Raw queries that you run on a pool, `TransactionScope.query()`, and transaction statements such as `BEGIN` and `COMMIT`.
+- **Placement:** Comments go immediately after the first keyword. PostgreSQL 18 drops comments that come before the first keyword from `pg_stat_statements`.
+  `pg_stat_activity` cuts query text off at `track_activity_query_size`, which is 1024 bytes by default. That can hide a comment at the end of a long query.
+- **Allowed text:** A comment cannot contain `/*` or `*/`. PostgreSQL nests block comments, so either sequence could change the SQL that runs.
+  BigAl throws instead of running the query. It also throws when the comment is not a string.
+- **Order:** When a query has both types of comment, the `queryComment` text comes first.
+- **Not tagged:** Raw queries that you run on a pool, `TransactionScope.query()`, and transaction statements such as `BEGIN` and `COMMIT`.
