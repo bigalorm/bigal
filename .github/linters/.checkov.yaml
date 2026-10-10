@@ -1,0 +1,9 @@
+---
+# Don't report passed checks in output (super-linter's default, which this file replaces)
+quiet: true
+# Checkov scans the whole tree on every run and, by default, parses each JSON and
+# YAML file against every framework it knows. github_actions is the only framework
+# with checks here (196 on Oct 10, 2026), and secrets scans every file.
+framework:
+  - github_actions
+  - secrets
