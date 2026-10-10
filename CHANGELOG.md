@@ -1,3 +1,9 @@
+## [16.3.0](https://github.com/bigalorm/bigal/compare/v16.2.0...v16.3.0) (2026-10-10)
+
+### Features
+
+- add SQL comment tags to queries ([71789b4](https://github.com/bigalorm/bigal/commit/71789b45322e001a6d56438a1a659d221667db7b))
+
 ## [16.2.0](https://github.com/bigalorm/bigal/compare/v16.1.0...v16.2.0) (2026-09-25)
 
 ### Features

@@ -1,6 +1,6 @@
 {
   "name": "bigal",
-  "version": "16.2.0",
+  "version": "16.3.0",
   "description": "A type-safe PostgreSQL ORM for TypeScript on Node.js, Bun, and Deno. Fluent query builder, decorator-based models, and queries tuned for Postgres.",
   "keywords": [
     "bun",
