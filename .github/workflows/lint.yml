@@ -8,6 +8,11 @@ on:
   pull_request:
     branches: ['main']
 
+# A new push to a PR supersedes its older runs. Runs on main always finish.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
   packages: read
@@ -17,6 +22,7 @@ jobs:
   super_lint:
     name: Super Duper Linter
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -32,6 +38,9 @@ jobs:
         env:
           # To report GitHub Actions status checks
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Posting the summary comment needs pull-requests: write, which this workflow
+          # does not grant, so the comment 403s on every PR run if left on.
+          ENABLE_GITHUB_PULL_REQUEST_SUMMARY_COMMENT: false
           FIX_CSS_PRETTIER: false
           VALIDATE_ALL_CODEBASE: false
           VALIDATE_ANSIBLE: false
@@ -49,7 +58,6 @@ jobs:
           VALIDATE_JSON_PRETTIER: false
           VALIDATE_JAVASCRIPT_ES: false
           VALIDATE_JAVASCRIPT_PRETTIER: false
-          VALIDATE_JAVASCRIPT_STANDARD: false
           VALIDATE_GITHUB_ACTIONS_ZIZMOR: false
           VALIDATE_MARKDOWN_PRETTIER: false
           VALIDATE_NATURAL_LANGUAGE: false
@@ -57,6 +65,5 @@ jobs:
           VALIDATE_TSX: false
           VALIDATE_TYPESCRIPT_ES: false
           VALIDATE_TYPESCRIPT_PRETTIER: false
-          VALIDATE_TYPESCRIPT_STANDARD: false
           VALIDATE_YAML_PRETTIER: false
           DEFAULT_BRANCH: main
