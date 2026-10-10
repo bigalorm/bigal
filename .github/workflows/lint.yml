@@ -8,10 +8,12 @@ on:
   pull_request:
     branches: ['main']
 
-# A new push to a PR supersedes its older runs. Runs on main always finish.
+# A new push to a PR supersedes its older runs. Other runs get a group of their own,
+# so runs on main always finish. cancel-in-progress stays a literal: Checkov skips
+# a workflow whose cancel-in-progress is an expression, without reporting it.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
