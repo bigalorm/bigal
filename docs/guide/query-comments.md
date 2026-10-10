@@ -15,6 +15,17 @@ There are two ways to tag queries, and you can use both:
 1. **Tag one query** with `.comment()` on a read or the `comment` option on a write.
 2. **Tag every query** from a request or job with the `queryComment` option on `initialize()`.
 
+## Tag conventions
+
+Use the same tag shapes everywhere, so one search finds every query from a route or job:
+
+- **Requests:** `route=<METHOD> <route pattern>`, such as `route=GET /stores/:id`. Use the router's pattern, not the URL.
+  A raw URL such as `/stores/42` creates a new tag for every ID and can copy user data into monitoring tools.
+- **Background work:** `job=<job name>`, such as `job=nightlyReindex`.
+- **One query:** Use a camelCase verb and noun that names the call site, such as `listStoreProducts`. Give each call site its own name.
+
+Keep tags short. Performance Insights shows the first 500 bytes of each statement.
+
 ## Tag one query
 
 ### Reads
@@ -72,53 +83,64 @@ DELETE /* removeObsoleteProducts */ FROM "products" WHERE "id"=ANY($1::INTEGER[]
 
 ## Tag every query from a request or job
 
-BigAl calls `queryComment` before each repository query. The function returns the text to add or `undefined` to leave the query untagged.
+BigAl calls `queryComment` before each repository query. It returns the text to add, or `undefined` to leave the query untagged.
 
-Store the tag in `AsyncLocalStorage`, so each request or job carries its own:
+Keep the tag in `AsyncLocalStorage`. Store a function rather than a string.
+Frameworks match the route after your middleware runs, and BigAl calls the function when each query runs, after the route is known.
 
 ```ts
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { initialize } from 'bigal';
 
-const queryTag = new AsyncLocalStorage<string>();
-
-export function withQueryTag<T>(tag: string, callback: () => Promise<T>): Promise<T> {
-  return queryTag.run(tag, callback);
-}
+// Returns the tag for the current request or job
+export const queryTag = new AsyncLocalStorage<() => string | undefined>();
 
 export const repositories = initialize({
   models,
   pool,
-  queryComment: () => queryTag.getStore(),
+  queryComment: () => queryTag.getStore()?.(),
 });
 ```
 
-Wrap each request handler and job in `withQueryTag()`:
+### Express
+
+Register this middleware before your routes:
 
 ```ts
-app.get('/stores/:id', async (req, res) => {
-  const store = await withQueryTag('route=GET /stores/:id', async () =>
-    storeRepository
-      .findOne()
-      .where({ id: Number(req.params.id) })
-      .populate('products')
-      .comment('loadStoreWithProducts'),
-  );
-
-  res.json(store);
+app.use((req, res, next) => {
+  queryTag.run(() => (req.route ? `route=${req.method} ${req.baseUrl}${req.route.path}` : undefined), next);
 });
-
-await withQueryTag('job=nightlyReindex', async () => reindexProducts());
 ```
 
-Every repository query inside the callback receives the tag. This includes populate queries and queries in a managed `transaction()`.
+This works in Express 4 and 5, including routers mounted with `app.use('/api', router)`.
+
+Express sets `req.route` only after it matches a route. Queries in earlier middleware, such as a session lookup, run untagged.
+
+### Fastify
+
+```ts
+fastify.addHook('onRequest', (request, reply, done) => {
+  queryTag.run(() => (request.routeOptions.url ? `route=${request.method} ${request.routeOptions.url}` : undefined), done);
+});
+```
+
+`request.routeOptions.url` includes plugin prefixes. Requests that match no route run untagged.
+
+### Jobs and scripts
+
+```ts
+await queryTag.run(
+  () => 'job=nightlyReindex',
+  async () => reindexProducts(),
+);
+```
+
+Every repository query inside the request or callback receives the tag. This includes populate queries and queries in a managed `transaction()`.
 If a query also has its own comment, the `queryComment` text comes first:
 
 ```sql
 SELECT /* route=GET /stores/:id */ /* loadStoreWithProducts */ "id","name" FROM "stores" WHERE "id"=$1 LIMIT 1
 ```
-
-Use route patterns such as `/stores/:id`, not raw URLs such as `/stores/42`. A raw URL creates a new tag for every ID and can copy user data into your monitoring tools.
 
 ## Find tagged queries
 
@@ -152,8 +174,9 @@ The Top SQL tab in Performance Insights shows the first 500 bytes of each statem
 ## Rules and limits
 
 - **Placement:** Comments go immediately after the first keyword. PostgreSQL 18 drops comments that come before the first keyword from `pg_stat_statements`.
-  `pg_stat_activity` cuts query text off at `track_activity_query_size`, which is 1024 bytes by default. That can hide a comment at the end of a long query.
-- **Allowed text:** A comment cannot contain `/*` or `*/`. PostgreSQL nests block comments, so either sequence could change the SQL that runs.
-  BigAl throws instead of running the query. It also throws when the comment is not a string.
+  `pg_stat_activity` cuts query text off at `track_activity_query_size`, which is 1024 bytes by default. A comment at the end of a long query may be hidden.
+- **Allowed text:** Text passed to `.comment()` or the `comment` option cannot contain `/*` or `*/`. PostgreSQL nests block comments, so either sequence could change the SQL that runs.
+  BigAl throws instead of running the query. It also throws when a comment is not a string.
+- **Hook text:** BigAl inserts a space inside any `/*` or `*/` that `queryComment` returns. A wildcard route such as `/files/*` becomes `/files/ *` instead of failing every query in the request.
 - **Order:** When a query has both types of comment, the `queryComment` text comes first.
 - **Not tagged:** Raw queries that you run on a pool, `TransactionScope.query()`, and transaction statements such as `BEGIN` and `COMMIT`.
