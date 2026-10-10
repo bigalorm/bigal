@@ -95,6 +95,17 @@ export function getTransactionSettingsQueryAndParams(settings: Readonly<Record<s
 }
 
 /**
+ * Breaks up comment delimiters so the text can sit inside a SQL block comment. Used for `queryComment` values, which often hold request
+ * data such as a wildcard route pattern (`/files/*`) that would otherwise make every query in the request throw
+ * @param {string} comment - Comment text
+ * @returns {string} The text with a space inside every `/*` and `*\/`
+ */
+export function neutralizeCommentDelimiters(comment: string): string {
+  // Splitting every "*/" first leaves no "*" directly before a "/", so splitting "/*" afterwards cannot form a new "*/"
+  return comment.replaceAll('*/', '* /').replaceAll('/*', '/ *');
+}
+
+/**
  * Adds each comment to the query as a SQL block comment, right after the first keyword. PostgreSQL 18 drops comments that come before the first
  * keyword from pg_stat_statements, and pg_stat_activity truncates long query text, so this placement keeps comments visible in both
  * @param {string} query - SQL query that starts with a keyword

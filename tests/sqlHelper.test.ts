@@ -118,6 +118,27 @@ describe('sqlHelper', () => {
     }
   });
 
+  describe('#neutralizeCommentDelimiters()', () => {
+    it('should insert a space inside each comment delimiter', () => {
+      expect(sqlHelper.neutralizeCommentDelimiters('route=GET /files/*')).toBe('route=GET /files/ *');
+      expect(sqlHelper.neutralizeCommentDelimiters('*/ SELECT 1; /*')).toBe('* / SELECT 1; / *');
+      expect(sqlHelper.neutralizeCommentDelimiters('route=GET /stores/:id')).toBe('route=GET /stores/:id');
+    });
+
+    it('should leave no delimiter and change nothing but spaces for any mix of slashes and asterisks', () => {
+      let inputs = [''];
+      for (let length = 1; length <= 8; length++) {
+        inputs = inputs.flatMap((input) => [`${input}/`, `${input}*`, `${input}a`]);
+        for (const input of inputs) {
+          const neutralized = sqlHelper.neutralizeCommentDelimiters(input);
+
+          expect(neutralized).not.toMatch(/\/\*|\*\//);
+          expect(neutralized.replaceAll(' ', '')).toBe(input);
+        }
+      }
+    });
+  });
+
   describe('#addQueryComments()', () => {
     it('should add each comment as its own block comment after the first keyword', () => {
       expect(sqlHelper.addQueryComments('SELECT 1', ['route=GET /users', 'listUsers'])).toBe('SELECT /* route=GET /users */ /* listUsers */ 1');

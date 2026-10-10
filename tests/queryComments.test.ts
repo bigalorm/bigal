@@ -192,10 +192,16 @@ describe('query comments', () => {
       expect(countQuery).toMatch(/^SELECT \/\* job=reindex \*\/ count\(\*\)/);
     });
 
-    it('rejects hook text containing a comment delimiter', async () => {
-      await expect(requestContext.run('*/ DROP TABLE products', async () => ProductRepository.find())).rejects.toThrow('Query comment cannot contain "/*" or "*/"');
+    it.each([
+      ['route=GET /files/*', 'route=GET /files/ *'],
+      ['route=GET /files/*splat', 'route=GET /files/ *splat'],
+      ['*/ DROP TABLE products; /*', '* / DROP TABLE products; / *'],
+    ])('neutralizes comment delimiters in hook text: %s', async (hookText, expectedComment) => {
+      pool.query.mockResolvedValueOnce(getQueryResult([]));
 
-      expect(pool.query).not.toHaveBeenCalled();
+      await requestContext.run(hookText, async () => ProductRepository.find().comment('listFiles'));
+
+      expect(getPoolQueries()).toStrictEqual([`SELECT /* ${expectedComment} */ /* listFiles */ ${PRODUCT_COLUMNS_AND_TABLE}`]);
     });
 
     it('applies the hook to repositories scoped to a managed transaction', async () => {

@@ -32,7 +32,7 @@ export interface InitializeOptions extends IConnection {
   /**
    * Called before every repository query. The returned text is added to the query as a SQL comment, to identify it in tools like
    * pg_stat_statements and Performance Insights. Read request context here (e.g. from `AsyncLocalStorage`) to tag queries by route or job.
-   * The text cannot contain `/*` or `*\/`
+   * A space is inserted inside any `/*` or `*\/` in the text, so route patterns such as `/files/*` are safe to return
    */
   queryComment?: () => string | undefined;
 }

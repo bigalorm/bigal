@@ -153,16 +153,17 @@ const repos = initialize({
 ```ts
 import { AsyncLocalStorage } from 'node:async_hooks';
 
-const queryTag = new AsyncLocalStorage<string>();
+// Returns the tag for the current request or job
+const queryTag = new AsyncLocalStorage<() => string | undefined>();
 
 const repos = initialize({
   models,
   pool,
-  queryComment: () => queryTag.getStore(),
+  queryComment: () => queryTag.getStore()?.(),
 });
 ```
 
-See [Query Comments](/guide/query-comments) for per-query comments, full examples, and instructions for finding tagged queries.
+See [Query Comments](/guide/query-comments) for the tag format, Express and Fastify middleware, per-query comments, and how to find tagged queries.
 
 ## Debugging
 

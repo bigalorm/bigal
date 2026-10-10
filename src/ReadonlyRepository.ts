@@ -30,7 +30,7 @@ import {
 } from './query/index.js';
 import { registerRepositoryOptions } from './RepositoryInternals.js';
 import { executeRepositoryOperation, resolvePopulatePool } from './RepositoryPool.js';
-import { addQueryComments, getCountQueryAndParams, getSelectQueryAndParams } from './SqlHelper.js';
+import { addQueryComments, getCountQueryAndParams, getSelectQueryAndParams, neutralizeCommentDelimiters } from './SqlHelper.js';
 import {
   type GetValueType,
   type OmitEntityCollections,
@@ -1019,7 +1019,8 @@ export class ReadonlyRepository<T extends Entity> implements IReadonlyRepository
   }
 
   protected _addQueryComments(query: string, comment: string | undefined): string {
-    return addQueryComments(query, [this._queryComment?.(), comment]);
+    const hookComment: unknown = this._queryComment?.();
+    return addQueryComments(query, [typeof hookComment === 'string' ? neutralizeCommentDelimiters(hookComment) : hookComment, comment]);
   }
 
   protected _executeReadOperation<TResult>({ lock, pool: poolOverride }: Pick<FindOneArgs<T>, 'lock' | 'pool'>, operation: (pool: PoolLike) => Promise<TResult>): Promise<TResult> {
