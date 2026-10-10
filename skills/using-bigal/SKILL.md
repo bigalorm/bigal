@@ -216,16 +216,41 @@ Keep transactions short and acquire resources in a stable order. Prefer constrai
 
 ## Query Comments
 
-Tag queries to find them in `pg_stat_statements` and AWS Performance Insights:
+Tag queries so you can find them in `pg_stat_statements` and AWS Performance Insights. Use these formats:
+
+- Requests: `route=<METHOD> <route pattern>`, using the router's pattern, never the raw URL.
+- Background work: `job=<job name>`.
+- `.comment()`: a camelCase call-site name, such as `listStoreProducts`.
 
 ```ts
-const repos = initialize({ models, pool, queryComment: () => queryTag.getStore() }); // e.g. an AsyncLocalStorage<string> holding the route or job
+const queryTag = new AsyncLocalStorage<() => string | undefined>(); // a function, so the route is read after routing
+const repos = initialize({ models, pool, queryComment: () => queryTag.getStore()?.() });
+
+// Express: register before routes
+app.use((req, res, next) => {
+  queryTag.run(() => (req.route ? `route=${req.method} ${req.baseUrl}${req.route.path}` : undefined), next);
+});
+
+// Fastify
+fastify.addHook('onRequest', (request, reply, done) => {
+  queryTag.run(() => (request.routeOptions.url ? `route=${request.method} ${request.routeOptions.url}` : undefined), done);
+});
+
+// Jobs and scripts
+await queryTag.run(
+  () => 'job=nightlyReindex',
+  async () => reindexProducts(),
+);
+
 await productRepo.find().where({ store: storeId }).comment('listStoreProducts'); // also findOne() and count()
 await productRepo.update({ id: 42 }, { name: 'Renamed' }, { comment: 'renameProduct' }); // also create() and destroy()
 ```
 
-Comments go after the first keyword (`SELECT /* tag */ ...`). Populate queries inherit the per-query comment. Text containing `/*` or `*/` throws.
-Do not pass `comment` inside `find()`/`findOne()`/`count()` args. Unknown keys there are where criteria.
+Comments follow the first keyword: `SELECT /* tag */ ...`. Populate queries inherit the per-query comment.
+
+`.comment()` throws when its text contains `/*` or `*/`. BigAl inserts a space inside `/*` or `*/` in `queryComment` text instead, so wildcard routes such as `/files/*` are safe.
+
+Do not pass `comment` inside `find()`/`findOne()`/`count()` arguments. BigAl treats unknown keys there as where criteria.
 
 ## Model Definition
 
