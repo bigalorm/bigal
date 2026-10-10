@@ -1,3 +1,9 @@
+## [16.3.2](https://github.com/bigalorm/bigal/compare/v16.3.1...v16.3.2) (2026-10-10)
+
+### Bug Fixes
+
+- neutralize comment delimiters in queryComment text ([6acc174](https://github.com/bigalorm/bigal/commit/6acc17471f02ebad3ac6a3056515070ce384bf6e))
+
 ## [16.3.1](https://github.com/bigalorm/bigal/compare/v16.3.0...v16.3.1) (2026-10-10)
 
 ## [16.3.0](https://github.com/bigalorm/bigal/compare/v16.2.0...v16.3.0) (2026-10-10)
