@@ -1635,6 +1635,10 @@ function buildWhere<T extends Entity>({
       }
 
       if (Array.isArray(value)) {
+        if (comparer === '<' || comparer === '<=' || comparer === '>' || comparer === '>=') {
+          throw new QueryError(`Expected a single value for "${comparer}" constraint, not an array. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
+        }
+
         const resolvedArrayColumn =
           (propertyName ? resolveWhereColumn({ propertyName, model, joins, repositoriesByModelNameLowered }) : undefined) ??
           (comparer ? resolveWhereColumn({ propertyName: comparer, model, joins, repositoriesByModelNameLowered }) : undefined);
@@ -1795,8 +1799,12 @@ function buildWhere<T extends Entity>({
               case 'uuid[]':
                 castType = '::UUID[]';
                 break;
-              default:
+              case 'string':
                 castType = '::TEXT[]';
+                break;
+              default:
+                // Let PostgreSQL infer the array type from the column (eg date, datetime, or a subquery join column)
+                castType = '';
                 break;
             }
 
@@ -1869,18 +1877,18 @@ function buildWhere<T extends Entity>({
 
         const andValues: string[] = [];
         for (const [key, where] of Object.entries(value)) {
-          if (!propertyName && isJoinAlias({ aliasOrPropertyName: key, joins }) && isPlainObject(where)) {
-            const joinedClause = buildWhere({
-              repositoriesByModelNameLowered,
-              model,
-              isNegated,
-              value: qualifyJoinedWhere({ joinAliasOrPropertyName: key, joinedWhere: where, model }) as WhereQuery<T>,
-              params,
-              joins,
-            });
-
-            if (joinedClause) {
-              andValues.push(joinedClause);
+          if (!propertyName && isJoinAlias({ aliasOrPropertyName: key, joins }) && isWhereObject(where)) {
+            if (Object.keys(where).length) {
+              andValues.push(
+                buildWhere({
+                  repositoriesByModelNameLowered,
+                  model,
+                  isNegated,
+                  value: qualifyJoinedWhere({ joinAliasOrPropertyName: key, joinedWhere: where, model }) as WhereQuery<T>,
+                  params,
+                  joins,
+                }),
+              );
             }
 
             continue;
@@ -1909,6 +1917,11 @@ function buildWhere<T extends Entity>({
                 );
                 continue;
               }
+
+              throw new QueryError(
+                `Unexpected "${key}" in the where clause for property ${propertyName} on model ${model.name}. Use an operator, or join the relationship to filter on its properties.`,
+                model,
+              );
             }
 
             iterationPropertyName = key;
@@ -1961,6 +1974,10 @@ function buildOrOperatorStatement<T extends Entity>({
   params: unknown[];
   joins?: readonly JoinDefinition[];
 }): string {
+  if (!value.length) {
+    throw new QueryError('Expected "or" to contain at least one where clause', model);
+  }
+
   const orClauses = [];
   for (const constraint of value) {
     const orClause = buildWhere({
@@ -2007,6 +2024,10 @@ function buildAndOperatorStatement<T extends Entity>({
   params: unknown[];
   joins?: readonly JoinDefinition[];
 }): string {
+  if (!value.length) {
+    throw new QueryError('Expected "and" to contain at least one where clause', model);
+  }
+
   const andClauses = [];
   for (const constraint of value) {
     const andClause = buildWhere({
@@ -2028,7 +2049,7 @@ function buildAndOperatorStatement<T extends Entity>({
   }
 
   if (isNegated) {
-    return andClauses.join(' OR ');
+    return `(${andClauses.join(' OR ')})`;
   }
 
   if (andClauses.length) {
@@ -2258,13 +2279,8 @@ function isJoinAlias({ aliasOrPropertyName, joins }: { aliasOrPropertyName: stri
   return !!matchingJoin && !isSubqueryJoin(matchingJoin);
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
+function isWhereObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date);
 }
 
 /**
@@ -2292,7 +2308,7 @@ function qualifyJoinedWhere<T extends Entity>({
     switch (key) {
       case 'and':
       case 'or':
-        if (!Array.isArray(value) || !value.every(isPlainObject)) {
+        if (!Array.isArray(value) || !value.every(isWhereObject)) {
           throw new QueryError(`Expected "${key}" in the where clause for join "${joinAliasOrPropertyName}" to be an array of objects`, model);
         }
 
@@ -2306,7 +2322,7 @@ function qualifyJoinedWhere<T extends Entity>({
         break;
       case '!':
       case 'not':
-        if (!isPlainObject(value)) {
+        if (!isWhereObject(value)) {
           throw new QueryError(`Expected "${key}" in the where clause for join "${joinAliasOrPropertyName}" to wrap an object of joined model properties`, model);
         }
 

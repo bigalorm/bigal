@@ -10,6 +10,8 @@ import { getJoinedFilterProductTable, getJoinedFilterStoreTable } from './integr
 const DATABASE_URL = process.env.BIGAL_TEST_DATABASE_URL;
 const STORE_TABLE = getJoinedFilterStoreTable();
 const PRODUCT_TABLE = getJoinedFilterProductTable();
+const ACME_OPENED_AT = new Date('2026-01-15T12:00:00Z');
+const GLOBEX_OPENED_AT = new Date('2026-03-01T12:00:00Z');
 
 function getNames(products: readonly Pick<JoinedFilterProduct, 'name'>[]): string[] {
   return products.map((product) => product.name);
@@ -33,7 +35,8 @@ describe.skipIf(!DATABASE_URL)('nested where clauses for joined relationships ag
       CREATE TABLE IF NOT EXISTS "${STORE_TABLE}" (
         "id" SERIAL PRIMARY KEY,
         "name" TEXT NOT NULL,
-        "manager" TEXT
+        "manager" TEXT,
+        "opened_at" TIMESTAMPTZ NOT NULL
       )
     `);
     await pool.query(`
@@ -49,8 +52,8 @@ describe.skipIf(!DATABASE_URL)('nested where clauses for joined relationships ag
     StoreRepository = repositories.JoinedFilterStore as Repository<JoinedFilterStore>;
     ProductRepository = repositories.JoinedFilterProduct as Repository<JoinedFilterProduct>;
 
-    const managedStore = await StoreRepository.create({ name: 'Acme', manager: 'Ann' });
-    const unmanagedStore = await StoreRepository.create({ name: 'Globex', manager: null });
+    const managedStore = await StoreRepository.create({ name: 'Acme', manager: 'Ann', openedAt: ACME_OPENED_AT });
+    const unmanagedStore = await StoreRepository.create({ name: 'Globex', manager: null, openedAt: GLOBEX_OPENED_AT });
     await ProductRepository.create([
       { name: 'Acme crew', kind: 'crew', store: managedStore.id },
       { name: 'Acme dm', kind: 'dm', store: managedStore.id },
@@ -103,6 +106,15 @@ describe.skipIf(!DATABASE_URL)('nested where clauses for joined relationships ag
       .sort('name asc');
 
     expect(getNames(products)).toStrictEqual(['Globex channel', 'Globex crew']);
+  });
+
+  it('matches multiple datetime values on a joined column', async () => {
+    const products = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ store: { openedAt: [ACME_OPENED_AT, new Date('2026-12-31T00:00:00Z')] } })
+      .sort('name asc');
+
+    expect(getNames(products)).toStrictEqual(['Acme crew', 'Acme dm']);
   });
 
   it('combines joined filters inside "or"', async () => {

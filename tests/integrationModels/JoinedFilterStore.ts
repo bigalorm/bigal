@@ -12,4 +12,7 @@ export class JoinedFilterStore extends Entity {
 
   @column({ type: 'string' })
   public manager?: string | null;
+
+  @column({ type: 'datetime', name: 'opened_at', required: true })
+  public openedAt!: Date;
 }
