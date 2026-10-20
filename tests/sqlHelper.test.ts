@@ -4727,6 +4727,48 @@ describe('sqlHelper', () => {
       ).toThrow('Expected a single value for ">" constraint, not an array');
     });
 
+    it('should compare a hydrated relationship with a null primary key to the foreign key', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: { store: { id: null } } as WhereQuery<Product>,
+      });
+
+      expect(whereStatement).toBe('WHERE "store_id" IS NULL');
+      expect(params).toStrictEqual([]);
+    });
+
+    it('should treat "and" under a JSON column as a JSON property name', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.simplewithrelationandjson.model as ModelMetadata<SimpleWithRelationAndJson>,
+        where: { name: 'Widget', message: { and: { status: 'active' } } } as WhereQuery<SimpleWithRelationAndJson>,
+      });
+
+      expect(whereStatement).toBe(`WHERE "name"=$1 AND "message"->'and'->>'status'=$2`);
+      expect(params).toStrictEqual(['Widget', 'active']);
+    });
+
+    it('should throw for an empty constraint object', () => {
+      expect(() =>
+        sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: { sku: 'ABC', name: {} } as WhereQuery<Product>,
+        }),
+      ).toThrow('Expected at least one constraint for property name on model Product');
+    });
+
+    it('should throw for an empty where clause inside "or"', () => {
+      expect(() =>
+        sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: { or: [{}, { name: 'Widget' }] },
+        }),
+      ).toThrow('Expected each "or" where clause to contain at least one constraint');
+    });
+
     it('should let PostgreSQL infer the array type for multiple datetime values', () => {
       const firstDate = new Date('2026-10-01T00:00:00Z');
       const secondDate = new Date('2026-10-02T00:00:00Z');

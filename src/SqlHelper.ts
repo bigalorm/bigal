@@ -1591,7 +1591,7 @@ function buildWhere<T extends Entity>({
         if (column && typeof value === 'object' && value !== null) {
           if (column.primary) {
             const primaryKeyValue = (value as unknown as Partial<T>)[column.propertyName as string & keyof T];
-            if (primaryKeyValue != null) {
+            if (primaryKeyValue !== undefined) {
               // Treat `value` as a hydrated object
               return buildWhere({
                 repositoriesByModelNameLowered,
@@ -1617,7 +1617,7 @@ function buildWhere<T extends Entity>({
             }
 
             const primaryKeyValue = (value as unknown as Partial<T>)[relatedModelPrimaryKey.propertyName as string & keyof T];
-            if (primaryKeyValue != null) {
+            if (primaryKeyValue !== undefined) {
               // Treat `value` as a hydrated object
               return buildWhere({
                 repositoriesByModelNameLowered,
@@ -1875,6 +1875,10 @@ function buildWhere<T extends Entity>({
           }
         }
 
+        if (propertyName && !Object.keys(value).length) {
+          throw new QueryError(`Expected at least one constraint for property ${propertyName} on model ${model.name}`, model);
+        }
+
         const andValues: string[] = [];
         for (const [key, where] of Object.entries(value)) {
           if (!propertyName && isJoinAlias({ aliasOrPropertyName: key, joins }) && isWhereObject(where)) {
@@ -1894,6 +1898,26 @@ function buildWhere<T extends Entity>({
             continue;
           }
 
+          // JSON columns treat "and" and "or" as property names, matching JsonPropertyConstraint
+          if (propertyName && (!isComparer(key) || key === 'and' || key === 'or')) {
+            const resolvedParentColumn = resolveWhereColumn({ propertyName, model, joins, repositoriesByModelNameLowered });
+            const parentColumn = resolvedParentColumn?.column as ColumnTypeMetadata | undefined;
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            if (resolvedParentColumn && parentColumn?.type?.toLowerCase() === 'json') {
+              andValues.push(
+                buildJsonPropertyClause({
+                  tablePrefix: resolvedParentColumn.tablePrefix,
+                  columnName: parentColumn.name,
+                  path: [key],
+                  isNegated,
+                  constraint: where,
+                  params,
+                }),
+              );
+              continue;
+            }
+          }
+
           // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
           let subQueryComparer: Comparer | string | undefined;
           let iterationPropertyName = propertyName;
@@ -1901,23 +1925,6 @@ function buildWhere<T extends Entity>({
             subQueryComparer = key;
           } else {
             if (propertyName) {
-              const resolvedParentColumn = resolveWhereColumn({ propertyName, model, joins, repositoriesByModelNameLowered });
-              const parentColumn = resolvedParentColumn?.column as ColumnTypeMetadata | undefined;
-              // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-              if (resolvedParentColumn && parentColumn?.type?.toLowerCase() === 'json') {
-                andValues.push(
-                  buildJsonPropertyClause({
-                    tablePrefix: resolvedParentColumn.tablePrefix,
-                    columnName: parentColumn.name,
-                    path: [key],
-                    isNegated,
-                    constraint: where,
-                    params,
-                  }),
-                );
-                continue;
-              }
-
               throw new QueryError(
                 `Unexpected "${key}" in the where clause for property ${propertyName} on model ${model.name}. Use an operator, or join the relationship to filter on its properties.`,
                 model,
@@ -1989,9 +1996,11 @@ function buildOrOperatorStatement<T extends Entity>({
       joins,
     });
 
-    if (orClause) {
-      orClauses.push(`(${orClause})`);
+    if (!orClause) {
+      throw new QueryError('Expected each "or" where clause to contain at least one constraint', model);
     }
+
+    orClauses.push(`(${orClause})`);
   }
 
   if (orClauses.length === 1) {
