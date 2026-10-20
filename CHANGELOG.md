@@ -1,3 +1,9 @@
+## [16.3.3](https://github.com/bigalorm/bigal/compare/v16.3.2...v16.3.3) (2026-10-20)
+
+### Bug Fixes
+
+- apply every where operator to filters on joined relations ([#736](https://github.com/bigalorm/bigal/issues/736)) ([0dd4eca](https://github.com/bigalorm/bigal/commit/0dd4eca9a090aca007ac6f5a333800bccc39700e))
+
 ## [16.3.2](https://github.com/bigalorm/bigal/compare/v16.3.1...v16.3.2) (2026-10-10)
 
 ### Bug Fixes
