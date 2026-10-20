@@ -4408,6 +4408,234 @@ describe('sqlHelper', () => {
       expect(thrownError).toBeDefined();
       expect(thrownError!.message).toContain('Unable to find property "nonExistentProperty" on model');
     });
+
+    it('should compare a dot-notation path to multiple values with =ANY', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: { name: 'Widget', 'store.name': ['Acme', 'Globex'] } as WhereQuery<Product>,
+        joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
+      });
+
+      expect(whereStatement).toBe('WHERE "products"."name"=$1 AND "store"."name"=ANY($2::TEXT[])');
+      expect(params).toStrictEqual(['Widget', ['Acme', 'Globex']]);
+    });
+
+    it('should exclude multiple values from a dot-notation path with <>ALL', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: { 'store.name': { '!': ['Acme', 'Globex'] } } as WhereQuery<Product>,
+        joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
+      });
+
+      expect(whereStatement).toBe('WHERE "store"."name"<>ALL($1::TEXT[])');
+      expect(params).toStrictEqual([['Acme', 'Globex']]);
+    });
+
+    it('should filter a dot-notation path with an "in" subquery', () => {
+      const storeSubquery = subquery(repositoriesByModelNameLowered.store as IRepository<Store>)
+        .select(['id'])
+        .where({ name: 'Acme' });
+
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: { 'store.id': { in: storeSubquery } } as WhereQuery<Product>,
+        joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
+      });
+
+      expect(whereStatement).toBe('WHERE "store"."id" IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
+      expect(params).toStrictEqual(['Acme']);
+    });
+
+    it('should throw when multiple values are compared to an unknown property', () => {
+      expect(() =>
+        sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: { name: 'Widget', unknownProperty: ['a', 'b'] } as WhereQuery<Product>,
+        }),
+      ).toThrow('Unable to find property unknownProperty on model Product');
+    });
+  });
+
+  describe('nested where clauses for joined relationships', () => {
+    const storeJoin = [{ propertyName: 'store', alias: 'store', type: 'inner' as const }];
+
+    it('should filter a joined column with an "in" subquery alongside base constraints', () => {
+      const storeSubquery = subquery(repositoriesByModelNameLowered.store as IRepository<Store>)
+        .select(['id'])
+        .where({ name: 'Acme' });
+
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: { name: 'Widget', store: { id: { in: storeSubquery } } } as WhereQuery<Product>,
+        joins: storeJoin,
+      });
+
+      expect(whereStatement).toBe('WHERE "products"."name"=$1 AND "store"."id" IN (SELECT "id" FROM "stores" WHERE "name"=$2)');
+      expect(params).toStrictEqual(['Widget', 'Acme']);
+    });
+
+    it('should negate an "in" subquery on a joined column', () => {
+      const storeSubquery = subquery(repositoriesByModelNameLowered.store as IRepository<Store>)
+        .select(['id'])
+        .where({ name: 'Acme' });
+
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: { store: { id: { '!': { in: storeSubquery } } } } as WhereQuery<Product>,
+        joins: storeJoin,
+      });
+
+      expect(whereStatement).toBe('WHERE "store"."id" NOT IN (SELECT "id" FROM "stores" WHERE "name"=$1)');
+      expect(params).toStrictEqual(['Acme']);
+    });
+
+    it('should exclude multiple values from a joined column with <>ALL', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: { store: { name: { '!': ['Acme', 'Globex'] } } } as WhereQuery<Product>,
+        joins: storeJoin,
+      });
+
+      expect(whereStatement).toBe('WHERE "store"."name"<>ALL($1::TEXT[])');
+      expect(params).toStrictEqual([['Acme', 'Globex']]);
+    });
+
+    it('should match null alongside other values on a joined column', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: { store: { name: ['Acme', null] } } as WhereQuery<Product>,
+        joins: storeJoin,
+      });
+
+      expect(whereStatement).toBe('WHERE ("store"."name" IS NULL OR "store"."name"=$1)');
+      expect(params).toStrictEqual(['Acme']);
+    });
+
+    it('should negate a where clause on the joined relationship', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: { store: { '!': { name: null } } } as WhereQuery<Product>,
+        joins: storeJoin,
+      });
+
+      expect(whereStatement).toBe('WHERE "store"."name" IS NOT NULL');
+      expect(params).toStrictEqual([]);
+    });
+
+    it('should support "not" on a joined column', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: { store: { name: { not: 'Acme' } } } as WhereQuery<Product>,
+        joins: storeJoin,
+      });
+
+      expect(whereStatement).toBe('WHERE "store"."name"<>$1');
+      expect(params).toStrictEqual(['Acme']);
+    });
+
+    it('should apply an outer negation to a joined relationship filter', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: { '!': { store: { name: 'Acme' } } } as WhereQuery<Product>,
+        joins: storeJoin,
+      });
+
+      expect(whereStatement).toBe('WHERE "store"."name"<>$1');
+      expect(params).toStrictEqual(['Acme']);
+    });
+
+    it('should split "contains" with multiple values on a joined column into ILIKE constraints', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: { store: { name: { contains: ['Acme', 'Globex'] } } } as WhereQuery<Product>,
+        joins: storeJoin,
+      });
+
+      expect(whereStatement).toBe('WHERE ("store"."name" ILIKE $1 OR "store"."name" ILIKE $2)');
+      expect(params).toStrictEqual(['%Acme%', '%Globex%']);
+    });
+
+    it('should support "or" containing negations on a joined relationship', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+        where: { store: { or: [{ name: { '!': 'Acme' } }, { name: null }] } } as WhereQuery<Product>,
+        joins: storeJoin,
+      });
+
+      expect(whereStatement).toBe('WHERE (("store"."name"<>$1) OR ("store"."name" IS NULL))');
+      expect(params).toStrictEqual(['Acme']);
+    });
+
+    it('should compare a string array column on a joined model with =ANY', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.productcategory.model as ModelMetadata<ProductCategory>,
+        where: { product: { aliases: 'Gadget' } } as WhereQuery<ProductCategory>,
+        joins: [{ propertyName: 'product', alias: 'product', type: 'inner' }],
+      });
+
+      expect(whereStatement).toBe('WHERE $1=ANY("product"."alias_names")');
+      expect(params).toStrictEqual(['Gadget']);
+    });
+
+    it('should compare a hydrated relationship on a joined model by its primary key', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.productcategory.model as ModelMetadata<ProductCategory>,
+        where: { product: { store: { id: 5 } } } as WhereQuery<ProductCategory>,
+        joins: [{ propertyName: 'product', alias: 'product', type: 'inner' }],
+      });
+
+      expect(whereStatement).toBe('WHERE "product"."store_id"=$1');
+      expect(params).toStrictEqual([5]);
+    });
+
+    it('should not treat a JSON property that shares a join alias as a joined relationship', () => {
+      const { whereStatement, params } = sqlHelper.buildWhereStatement({
+        repositoriesByModelNameLowered,
+        model: repositoriesByModelNameLowered.simplewithrelationandjson.model as ModelMetadata<SimpleWithRelationAndJson>,
+        where: { message: { store: { '!': 'Acme' } } } as WhereQuery<SimpleWithRelationAndJson>,
+        joins: storeJoin,
+      });
+
+      expect(whereStatement).toBe(`WHERE "simple"."message"->>'store'<>$1`);
+      expect(params).toStrictEqual(['Acme']);
+    });
+
+    it('should throw when negating a joined relationship with a non-object value', () => {
+      expect(() =>
+        sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: { store: { '!': 5 } } as WhereQuery<Product>,
+          joins: storeJoin,
+        }),
+      ).toThrow(QueryError);
+    });
+
+    it('should throw for an unknown operator on a joined column', () => {
+      expect(() =>
+        sqlHelper.buildWhereStatement({
+          repositoriesByModelNameLowered,
+          model: repositoriesByModelNameLowered.product.model as ModelMetadata<Product>,
+          where: { sku: 'ABC', store: { name: { unknownOperator: 'Acme' } } } as WhereQuery<Product>,
+          joins: storeJoin,
+        }),
+      ).toThrow(QueryError);
+    });
   });
 
   describe('subqueries', () => {

@@ -1396,7 +1396,7 @@ function buildWhere<T extends Entity>({
       });
     case 'contains': {
       // Check if this is a JSON column
-      const containsColumn = propertyName ? (model.columnsByPropertyName[propertyName] as ColumnTypeMetadata) : null;
+      const containsColumn = propertyName ? (resolveWhereColumn({ propertyName, model, joins, repositoriesByModelNameLowered })?.column as ColumnTypeMetadata | undefined) : undefined;
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       const containsColumnType = containsColumn?.type?.toLowerCase();
 
@@ -1539,10 +1539,12 @@ function buildWhere<T extends Entity>({
           throw new QueryError(`Property name is required for 'in' operator with subquery`, model);
         }
 
-        const column = model.columnsByPropertyName[propertyName];
-        if (!column) {
-          throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
-        }
+        const { column, tablePrefix } = resolveRequiredWhereColumn({
+          propertyName,
+          model,
+          joins,
+          repositoriesByModelNameLowered,
+        });
 
         const subquerySQL = buildSubquerySQL({
           subquery: value,
@@ -1550,7 +1552,7 @@ function buildWhere<T extends Entity>({
           repositoriesByModelNameLowered,
         });
 
-        return `${getBaseColumnPrefix(model, joins)}"${column.name}"${isNegated ? ' NOT' : ''} IN (${subquerySQL})`;
+        return `${tablePrefix}"${column.name}"${isNegated ? ' NOT' : ''} IN (${subquerySQL})`;
       }
 
       throw new QueryError(`Expected subquery value for 'in' operator. Property (${propertyName ?? ''}) in model (${model.name}).`, model);
@@ -1585,8 +1587,7 @@ function buildWhere<T extends Entity>({
       }
 
       if (propertyName) {
-        const column = model.columnsByPropertyName[propertyName] as ColumnModelMetadata;
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        const column = resolveWhereColumn({ propertyName, model, joins, repositoriesByModelNameLowered })?.column as ColumnModelMetadata | undefined;
         if (column && typeof value === 'object' && value !== null) {
           if (column.primary) {
             const primaryKeyValue = (value as unknown as Partial<T>)[column.propertyName as string & keyof T];
@@ -1634,16 +1635,17 @@ function buildWhere<T extends Entity>({
       }
 
       if (Array.isArray(value)) {
-        if (!value.length) {
-          const columnTypeFromPropertyName = propertyName ? (model.columnsByPropertyName[propertyName] as ColumnTypeMetadata) : null;
-          const columnTypeFromComparer = comparer ? (model.columnsByPropertyName[comparer] as ColumnTypeMetadata) : null;
-          const arrayColumn = columnTypeFromPropertyName ?? columnTypeFromComparer;
+        const resolvedArrayColumn =
+          (propertyName ? resolveWhereColumn({ propertyName, model, joins, repositoriesByModelNameLowered }) : undefined) ??
+          (comparer ? resolveWhereColumn({ propertyName: comparer, model, joins, repositoriesByModelNameLowered }) : undefined);
 
-          if (arrayColumn) {
+        if (!value.length) {
+          if (resolvedArrayColumn) {
+            const arrayColumn = resolvedArrayColumn.column as ColumnTypeMetadata;
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             const arrayColumnType = arrayColumn.type ? arrayColumn.type.toLowerCase() : '';
             if (arrayColumnType === 'array' || arrayColumnType === 'string[]' || arrayColumnType === 'integer[]' || arrayColumnType === 'float[]' || arrayColumnType === 'boolean[]') {
-              return `${getBaseColumnPrefix(model, joins)}"${arrayColumn.name}"${isNegated ? '<>' : '='}'{}'`;
+              return `${resolvedArrayColumn.tablePrefix}"${arrayColumn.name}"${isNegated ? '<>' : '='}'{}'`;
             }
           }
 
@@ -1730,80 +1732,77 @@ function buildWhere<T extends Entity>({
             }),
           );
         } else if (valueWithoutNull.length) {
-          const columnTypeFromPropertyName = propertyName ? (model.columnsByPropertyName[propertyName] as ColumnTypeMetadata) : null;
-          const columnTypeFromComparer = comparer ? (model.columnsByPropertyName[comparer] as ColumnTypeMetadata) : null;
-          const columnType = columnTypeFromPropertyName ?? columnTypeFromComparer;
-
-          if (columnType) {
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            let columnTypeLowered = columnType.type ? columnType.type.toLowerCase() : '';
-            if (columnTypeLowered === 'array' || columnTypeLowered === 'string[]' || columnTypeLowered === 'integer[]' || columnTypeLowered === 'float[]' || columnTypeLowered === 'boolean[]') {
-              for (const val of valueWithoutNull) {
-                orConstraints.push(
-                  buildWhere({
-                    repositoriesByModelNameLowered,
-                    model,
-                    propertyName,
-                    isNegated,
-                    value: val,
-                    params,
-                    joins,
-                  }),
-                );
-              }
-            } else {
-              // If it's an array of values for a model relationship, try to find the type of the primary key for the related model
-              if (!columnTypeLowered) {
-                const columnAsModelType = columnType as unknown as ColumnModelMetadata;
-                if (columnAsModelType.model) {
-                  const relatedModelRepository = repositoriesByModelNameLowered[columnAsModelType.model.toLowerCase()];
-
-                  if (!relatedModelRepository) {
-                    throw new QueryError(`Unable to find model schema (${columnAsModelType.model}) specified in where clause for "${columnAsModelType.propertyName}"`, model);
-                  }
-
-                  const relatedModelPrimaryKey = relatedModelRepository.model.primaryKeyColumn as ColumnTypeMetadata;
-                  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                  if (!relatedModelPrimaryKey) {
-                    throw new QueryError(`Unable to find primary key column for ${columnAsModelType.model} specified in where clause for ${model.name}.${columnAsModelType.propertyName}`, model);
-                  }
-
-                  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                  columnTypeLowered = relatedModelPrimaryKey.type ? relatedModelPrimaryKey.type.toLowerCase() : '';
-                }
-              }
-
-              let castType;
-
-              switch (columnTypeLowered) {
-                case 'int':
-                case 'integer':
-                case 'integer[]':
-                  castType = '::INTEGER[]';
-                  break;
-                case 'float':
-                case 'float[]':
-                  castType = '::NUMERIC[]';
-                  break;
-                case 'boolean':
-                case 'boolean[]':
-                  castType = '::BOOLEAN[]';
-                  break;
-                case 'uuid':
-                case 'uuid[]':
-                  castType = '::UUID[]';
-                  break;
-                default:
-                  castType = '::TEXT[]';
-                  break;
-              }
-
-              params.push(valueWithoutNull);
-              orConstraints.push(`${getBaseColumnPrefix(model, joins)}"${columnType.name}"${isNegated ? '<>ALL' : '=ANY'}($${params.length}${castType})`);
-            }
+          if (!resolvedArrayColumn) {
+            throw new QueryError(`Unable to find property ${propertyName ?? comparer ?? ''} on model ${model.name}`, model);
           }
 
-          // TODO: Validate that when columnType is null, it is expected to return existing constraints
+          const columnType = resolvedArrayColumn.column as ColumnTypeMetadata;
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          let columnTypeLowered = columnType.type ? columnType.type.toLowerCase() : '';
+          if (columnTypeLowered === 'array' || columnTypeLowered === 'string[]' || columnTypeLowered === 'integer[]' || columnTypeLowered === 'float[]' || columnTypeLowered === 'boolean[]') {
+            for (const val of valueWithoutNull) {
+              orConstraints.push(
+                buildWhere({
+                  repositoriesByModelNameLowered,
+                  model,
+                  propertyName,
+                  isNegated,
+                  value: val,
+                  params,
+                  joins,
+                }),
+              );
+            }
+          } else {
+            // If it's an array of values for a model relationship, try to find the type of the primary key for the related model
+            if (!columnTypeLowered) {
+              const columnAsModelType = columnType as unknown as ColumnModelMetadata;
+              if (columnAsModelType.model) {
+                const relatedModelRepository = repositoriesByModelNameLowered[columnAsModelType.model.toLowerCase()];
+
+                if (!relatedModelRepository) {
+                  throw new QueryError(`Unable to find model schema (${columnAsModelType.model}) specified in where clause for "${columnAsModelType.propertyName}"`, model);
+                }
+
+                const relatedModelPrimaryKey = relatedModelRepository.model.primaryKeyColumn as ColumnTypeMetadata;
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                if (!relatedModelPrimaryKey) {
+                  throw new QueryError(`Unable to find primary key column for ${columnAsModelType.model} specified in where clause for ${model.name}.${columnAsModelType.propertyName}`, model);
+                }
+
+                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+                columnTypeLowered = relatedModelPrimaryKey.type ? relatedModelPrimaryKey.type.toLowerCase() : '';
+              }
+            }
+
+            let castType;
+
+            switch (columnTypeLowered) {
+              case 'int':
+              case 'integer':
+              case 'integer[]':
+                castType = '::INTEGER[]';
+                break;
+              case 'float':
+              case 'float[]':
+                castType = '::NUMERIC[]';
+                break;
+              case 'boolean':
+              case 'boolean[]':
+                castType = '::BOOLEAN[]';
+                break;
+              case 'uuid':
+              case 'uuid[]':
+                castType = '::UUID[]';
+                break;
+              default:
+                castType = '::TEXT[]';
+                break;
+            }
+
+            params.push(valueWithoutNull);
+            orConstraints.push(`${resolvedArrayColumn.tablePrefix}"${columnType.name}"${isNegated ? '<>ALL' : '=ANY'}($${params.length}${castType})`);
+          }
         }
 
         if (orConstraints.length === 1) {
@@ -1840,16 +1839,13 @@ function buildWhere<T extends Entity>({
             throw new QueryError('Property name is required for vector distance constraint', model);
           }
 
-          const resolvedProperty = resolvePropertyPath({
-            propertyPath: propertyName,
+          const resolvedColumn = resolveRequiredWhereColumn({
+            propertyName,
             model,
             joins,
             repositoriesByModelNameLowered,
           });
-          const column = (resolvedProperty?.column ?? model.columnsByPropertyName[propertyName]) as ColumnTypeMetadata | undefined;
-          if (!column) {
-            throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
-          }
+          const column = resolvedColumn.column as ColumnTypeMetadata;
 
           // json columns may contain a literal nearestTo key and keep their normal handling
           if (column.type === 'vector') {
@@ -1857,10 +1853,8 @@ function buildWhere<T extends Entity>({
               throw new QueryError(`Negation is not supported for vector distance constraints on "${propertyName}". Negate the distance comparison instead (eg distance: { '>=': threshold })`, model);
             }
 
-            const columnReference = resolvedProperty ? `"${resolvedProperty.tableAlias}"."${column.name}"` : `${getBaseColumnPrefix(model, joins)}"${column.name}"`;
-
             return buildVectorDistanceWhereClause({
-              columnReference,
+              columnReference: `${resolvedColumn.tablePrefix}"${column.name}"`,
               constraint: value as unknown as VectorDistanceConstraint,
               propertyName,
               model,
@@ -1875,29 +1869,21 @@ function buildWhere<T extends Entity>({
 
         const andValues: string[] = [];
         for (const [key, where] of Object.entries(value)) {
-          if (typeof where === 'object' && where !== null && !Array.isArray(where) && !(where instanceof Date)) {
-            const resolvedJoin = resolveJoinAlias({
-              aliasOrPropertyName: key,
-              model,
-              joins,
+          if (!propertyName && isJoinAlias({ aliasOrPropertyName: key, joins }) && isPlainObject(where)) {
+            const joinedClause = buildWhere({
               repositoriesByModelNameLowered,
+              model,
+              isNegated,
+              value: qualifyJoinedWhere({ joinAliasOrPropertyName: key, joinedWhere: where, model }) as WhereQuery<T>,
+              params,
+              joins,
             });
 
-            if (resolvedJoin) {
-              const nestedClause = buildNestedJoinWhere({
-                repositoriesByModelNameLowered,
-                joinedModel: resolvedJoin.joinedModel,
-                tableAlias: resolvedJoin.tableAlias,
-                nestedWhere: where as Record<string, unknown>,
-                params,
-              });
-
-              if (nestedClause) {
-                andValues.push(nestedClause);
-              }
-
-              continue;
+            if (joinedClause) {
+              andValues.push(joinedClause);
             }
+
+            continue;
           }
 
           // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
@@ -1907,12 +1893,13 @@ function buildWhere<T extends Entity>({
             subQueryComparer = key;
           } else {
             if (propertyName) {
-              const parentColumn = model.columnsByPropertyName[propertyName] as ColumnTypeMetadata;
+              const resolvedParentColumn = resolveWhereColumn({ propertyName, model, joins, repositoriesByModelNameLowered });
+              const parentColumn = resolvedParentColumn?.column as ColumnTypeMetadata | undefined;
               // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-              if (parentColumn?.type?.toLowerCase() === 'json') {
+              if (resolvedParentColumn && parentColumn?.type?.toLowerCase() === 'json') {
                 andValues.push(
                   buildJsonPropertyClause({
-                    tablePrefix: getBaseColumnPrefix(model, joins),
+                    tablePrefix: resolvedParentColumn.tablePrefix,
                     columnName: parentColumn.name,
                     path: [key],
                     isNegated,
@@ -2071,7 +2058,7 @@ interface JsonContainmentStatementParams<T extends Entity> extends Omit<Comparis
   value: unknown;
 }
 
-interface SingleValueStatementContext {
+interface ResolvedColumn {
   column: ColumnBaseMetadata;
   tablePrefix: string;
 }
@@ -2084,12 +2071,64 @@ interface ArrayOrSingleStatementParams<T extends Entity> {
   value: unknown;
   params: unknown[];
   joins?: readonly JoinDefinition[];
-  buildNonNullStatement: (context: SingleValueStatementContext, nonNullValue: unknown, params: unknown[]) => string;
+  buildNonNullStatement: (context: ResolvedColumn, nonNullValue: unknown, params: unknown[]) => string;
 }
 
 interface ResolvedProperty {
   column: ColumnBaseMetadata;
   tableAlias: string;
+}
+
+interface ResolveWhereColumnParams<T extends Entity> {
+  propertyName: string;
+  model: ModelMetadata<T>;
+  joins?: readonly JoinDefinition[];
+  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
+}
+
+/**
+ * Resolves a where-clause property, either a base-table property or a dot-notation path into a joined table
+ * @param {object} args - Arguments
+ * @param {string} args.propertyName - Base-table property name or dot-notation path (eg "store.name")
+ * @param {object} args.model - Model schema of the base table
+ * @param {JoinDefinition[]} [args.joins] - Join definitions for the query
+ * @param {object} args.repositoriesByModelNameLowered - All model schemas organized by global id
+ * @returns {object|undefined} Column metadata and its table prefix, or undefined if a base-table property does not exist
+ * @private
+ */
+function resolveWhereColumn<T extends Entity>({ propertyName, model, joins, repositoriesByModelNameLowered }: ResolveWhereColumnParams<T>): ResolvedColumn | undefined {
+  const resolvedProperty = resolvePropertyPath({
+    propertyPath: propertyName,
+    model,
+    joins,
+    repositoriesByModelNameLowered,
+  });
+
+  if (resolvedProperty) {
+    return {
+      column: resolvedProperty.column,
+      tablePrefix: `"${resolvedProperty.tableAlias}".`,
+    };
+  }
+
+  const column = model.columnsByPropertyName[propertyName];
+  if (!column) {
+    return undefined;
+  }
+
+  return {
+    column,
+    tablePrefix: getBaseColumnPrefix(model, joins),
+  };
+}
+
+function resolveRequiredWhereColumn<T extends Entity>(params: ResolveWhereColumnParams<T>): ResolvedColumn {
+  const resolvedColumn = resolveWhereColumn(params);
+  if (!resolvedColumn) {
+    throw new QueryError(`Unable to find property ${params.propertyName} on model ${params.model.name}`, params.model);
+  }
+
+  return resolvedColumn;
 }
 
 function resolvePropertyPath<T extends Entity>({
@@ -2198,249 +2237,92 @@ function buildArrayOrSingleStatement<T extends Entity>({
     value = value[0];
   }
 
-  const resolved = resolvePropertyPath({
-    propertyPath: propertyName,
+  const resolvedColumn = resolveRequiredWhereColumn({
+    propertyName,
     model,
     joins,
     repositoriesByModelNameLowered,
   });
 
-  let column: ColumnBaseMetadata;
-  let tablePrefix: string;
-
-  if (resolved) {
-    column = resolved.column;
-    tablePrefix = `"${resolved.tableAlias}".`;
-  } else {
-    const localColumn = model.columnsByPropertyName[propertyName];
-    if (!localColumn) {
-      throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
-    }
-
-    column = localColumn;
-    tablePrefix = getBaseColumnPrefix(model, joins);
-  }
-
   if (value === null) {
-    return `${tablePrefix}"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
+    return `${resolvedColumn.tablePrefix}"${resolvedColumn.column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;
   }
 
-  return buildNonNullStatement({ column, tablePrefix }, value, params);
+  return buildNonNullStatement(resolvedColumn, value, params);
 }
 
-interface ResolvedJoin {
-  joinedModel: ModelMetadata<Entity>;
-  tableAlias: string;
+function isJoinAlias({ aliasOrPropertyName, joins }: { aliasOrPropertyName: string; joins?: readonly JoinDefinition[] }): boolean {
+  const matchingJoin = joins?.find((join) => join.alias === aliasOrPropertyName || (!isSubqueryJoin(join) && join.propertyName === aliasOrPropertyName));
+
+  // Subquery joins are filtered with dot-notation on their column aliases instead
+  return !!matchingJoin && !isSubqueryJoin(matchingJoin);
 }
 
-function resolveJoinAlias<T extends Entity>({
-  aliasOrPropertyName,
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+
+  const prototype: unknown = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+/**
+ * Rewrites a where clause nested under a joined relationship into dot-notation paths on the base model, so
+ * joined columns compile through the same operators as base-table columns
+ * @param {object} args - Arguments
+ * @param {string} args.joinAliasOrPropertyName - Join alias or relationship property the clause is nested under
+ * @param {object} args.joinedWhere - Where clause for the joined model
+ * @param {object} args.model - Model schema of the base table
+ * @returns {object} Where clause keyed by dot-notation paths
+ * @private
+ */
+function qualifyJoinedWhere<T extends Entity>({
+  joinAliasOrPropertyName,
+  joinedWhere,
   model,
-  joins,
-  repositoriesByModelNameLowered,
 }: {
-  aliasOrPropertyName: string;
+  joinAliasOrPropertyName: string;
+  joinedWhere: Record<string, unknown>;
   model: ModelMetadata<T>;
-  joins?: readonly JoinDefinition[];
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
-}): ResolvedJoin | null {
-  if (!joins?.length) {
-    return null;
-  }
+}): Record<string, unknown> {
+  const qualifiedWhere: Record<string, unknown> = {};
 
-  const matchingJoin = joins.find((join) => join.alias === aliasOrPropertyName || (!isSubqueryJoin(join) && join.propertyName === aliasOrPropertyName));
-  if (!matchingJoin) {
-    return null;
-  }
+  for (const [key, value] of Object.entries(joinedWhere)) {
+    switch (key) {
+      case 'and':
+      case 'or':
+        if (!Array.isArray(value) || !value.every(isPlainObject)) {
+          throw new QueryError(`Expected "${key}" in the where clause for join "${joinAliasOrPropertyName}" to be an array of objects`, model);
+        }
 
-  // Subquery joins don't have a related model in the same way
-  if (isSubqueryJoin(matchingJoin)) {
-    return null;
-  }
-
-  const relationshipColumn = model.columnsByPropertyName[matchingJoin.propertyName] as ColumnModelMetadata | undefined;
-  if (!relationshipColumn?.model) {
-    return null;
-  }
-
-  const relatedRepository = repositoriesByModelNameLowered[relationshipColumn.model.toLowerCase()];
-  if (!relatedRepository) {
-    return null;
-  }
-
-  return {
-    joinedModel: relatedRepository.model,
-    tableAlias: matchingJoin.alias,
-  };
-}
-
-function buildNestedJoinWhere({
-  repositoriesByModelNameLowered,
-  joinedModel,
-  tableAlias,
-  nestedWhere,
-  params,
-}: {
-  repositoriesByModelNameLowered: Record<string, IReadonlyRepository<Entity> | IRepository<Entity>>;
-  joinedModel: ModelMetadata<Entity>;
-  tableAlias: string;
-  nestedWhere: Record<string, unknown>;
-  params: unknown[];
-}): string {
-  const andClauses: string[] = [];
-
-  for (const [key, whereValue] of Object.entries(nestedWhere)) {
-    if (key === 'and' || key === 'or') {
-      const subClauses = (whereValue as Record<string, unknown>[]).map((subWhere) =>
-        buildNestedJoinWhere({
-          repositoriesByModelNameLowered,
-          joinedModel,
-          tableAlias,
-          nestedWhere: subWhere,
-          params,
-        }),
-      );
-
-      if (key === 'or') {
-        andClauses.push(`(${subClauses.join(' OR ')})`);
-      } else {
-        andClauses.push(subClauses.join(' AND '));
-      }
-
-      continue;
-    }
-
-    const column = joinedModel.columnsByPropertyName[key];
-    if (!column) {
-      throw new QueryError(`Unable to find property "${key}" on joined model "${joinedModel.name}"`, joinedModel);
-    }
-
-    if (whereValue === null) {
-      andClauses.push(`"${tableAlias}"."${column.name}" IS NULL`);
-    } else if (typeof whereValue === 'object' && !Array.isArray(whereValue)) {
-      if ((column as ColumnTypeMetadata).type === 'vector' && 'nearestTo' in (whereValue as Record<string, unknown>)) {
-        andClauses.push(
-          buildVectorDistanceWhereClause({
-            columnReference: `"${tableAlias}"."${column.name}"`,
-            constraint: whereValue as unknown as VectorDistanceConstraint,
-            propertyName: key,
-            model: joinedModel,
-            params,
+        qualifiedWhere[key] = value.map((constraint) =>
+          qualifyJoinedWhere({
+            joinAliasOrPropertyName,
+            joinedWhere: constraint,
+            model,
           }),
         );
-
-        continue;
-      }
-
-      for (const [op, opValue] of Object.entries(whereValue as Record<string, unknown>)) {
-        if (op === '!') {
-          if (opValue === null) {
-            andClauses.push(`"${tableAlias}"."${column.name}" IS NOT NULL`);
-          } else if (typeof opValue === 'object' && !Array.isArray(opValue)) {
-            // Handle negated nested operators like { '!': { contains: {...} } }
-            for (const [nestedOp, nestedOpValue] of Object.entries(opValue as Record<string, unknown>)) {
-              if (nestedOp === 'like' || nestedOp === 'contains' || nestedOp === 'startsWith' || nestedOp === 'endsWith') {
-                // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-                const negatedColumnType = (column as ColumnTypeMetadata).type?.toLowerCase();
-
-                if (negatedColumnType === 'json') {
-                  if (nestedOp !== 'contains') {
-                    throw new QueryError(
-                      `"${nestedOp}" operator is not supported for JSON columns. Use "contains" with an object value for JSON containment. Property (${key}) in model (${joinedModel.name}).`,
-                      joinedModel,
-                    );
-                  }
-
-                  params.push(nestedOpValue);
-                  andClauses.push(`NOT "${tableAlias}"."${column.name}"@>$${params.length}::jsonb`);
-                } else {
-                  let likeValue = nestedOpValue as string;
-                  if (nestedOp === 'contains') {
-                    likeValue = `%${likeValue}%`;
-                  } else if (nestedOp === 'startsWith') {
-                    likeValue = `${likeValue}%`;
-                  } else if (nestedOp === 'endsWith') {
-                    likeValue = `%${likeValue}`;
-                  }
-
-                  params.push(likeValue);
-                  andClauses.push(`"${tableAlias}"."${column.name}" NOT ILIKE $${params.length}`);
-                }
-              } else if (nestedOp === '>' || nestedOp === '>=' || nestedOp === '<' || nestedOp === '<=') {
-                params.push(nestedOpValue);
-                const negatedComparisonOps: Record<string, string> = { '>': '<=', '>=': '<', '<': '>=', '<=': '>' };
-                andClauses.push(`"${tableAlias}"."${column.name}"${negatedComparisonOps[nestedOp]}$${params.length}`);
-              }
-            }
-          } else {
-            if ((column as ColumnTypeMetadata).type === 'vector' && Array.isArray(opValue) && opValue.every((item) => typeof item === 'number')) {
-              validateVectorArray(opValue, key, joinedModel, 'vector value');
-              params.push(serializeVector(opValue));
-            } else {
-              params.push(opValue);
-            }
-
-            andClauses.push(`"${tableAlias}"."${column.name}"<>$${params.length}`);
-          }
-        } else if (op === 'like' || op === 'contains' || op === 'startsWith' || op === 'endsWith') {
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-          const nestedColumnType = (column as ColumnTypeMetadata).type?.toLowerCase();
-
-          if (nestedColumnType === 'json') {
-            if (op !== 'contains') {
-              throw new QueryError(
-                `"${op}" operator is not supported for JSON columns. Use "contains" with an object value for JSON containment. Property (${key}) in model (${joinedModel.name}).`,
-                joinedModel,
-              );
-            }
-
-            params.push(opValue);
-            andClauses.push(`"${tableAlias}"."${column.name}"@>$${params.length}::jsonb`);
-          } else {
-            let likeValue = opValue as string;
-            if (op === 'contains') {
-              likeValue = `%${likeValue}%`;
-            } else if (op === 'startsWith') {
-              likeValue = `${likeValue}%`;
-            } else if (op === 'endsWith') {
-              likeValue = `%${likeValue}`;
-            }
-
-            params.push(likeValue);
-            andClauses.push(`"${tableAlias}"."${column.name}" ILIKE $${params.length}`);
-          }
-        } else if (op === '>' || op === '>=' || op === '<' || op === '<=') {
-          params.push(opValue);
-          andClauses.push(`"${tableAlias}"."${column.name}"${op}$${params.length}`);
+        break;
+      case '!':
+      case 'not':
+        if (!isPlainObject(value)) {
+          throw new QueryError(`Expected "${key}" in the where clause for join "${joinAliasOrPropertyName}" to wrap an object of joined model properties`, model);
         }
-      }
-    } else if (Array.isArray(whereValue)) {
-      if (whereValue.length === 0) {
-        andClauses.push('1<>1');
-      } else if ((column as ColumnTypeMetadata).type === 'vector' && whereValue.every((item) => typeof item === 'number')) {
-        validateVectorArray(whereValue, key, joinedModel, 'vector value');
-        params.push(serializeVector(whereValue));
-        andClauses.push(`"${tableAlias}"."${column.name}"=$${params.length}`);
-      } else if ((column as ColumnTypeMetadata).type === 'vector' && whereValue.every((item) => Array.isArray(item) && item.every((element: unknown) => typeof element === 'number'))) {
-        const vectorConstraints = whereValue.map((vector) => {
-          validateVectorArray(vector, key, joinedModel, 'vector value');
-          params.push(serializeVector(vector));
-          return `"${tableAlias}"."${column.name}"=$${params.length}`;
-        });
 
-        const [singleVectorConstraint] = vectorConstraints;
-        andClauses.push(vectorConstraints.length === 1 && singleVectorConstraint ? singleVectorConstraint : `(${vectorConstraints.join(' OR ')})`);
-      } else {
-        params.push(whereValue);
-        andClauses.push(`"${tableAlias}"."${column.name}"=ANY($${params.length})`);
-      }
-    } else {
-      params.push(whereValue);
-      andClauses.push(`"${tableAlias}"."${column.name}"=$${params.length}`);
+        qualifiedWhere[key] = qualifyJoinedWhere({
+          joinAliasOrPropertyName,
+          joinedWhere: value,
+          model,
+        });
+        break;
+      default:
+        qualifiedWhere[`${joinAliasOrPropertyName}.${key}`] = value;
+        break;
     }
   }
 
-  return andClauses.join(' AND ');
+  return qualifiedWhere;
 }
 
 function buildJsonContainmentStatement<T extends Entity>({ repositoriesByModelNameLowered, model, propertyName, isNegated, value, params, joins }: JsonContainmentStatementParams<T>): string {
@@ -2619,28 +2501,12 @@ function buildComparisonOperatorStatement<T extends Entity>({
   params,
   joins,
 }: ComparisonOperatorStatementParams<T>): string {
-  const resolved = resolvePropertyPath({
-    propertyPath: propertyName,
+  const { column, tablePrefix } = resolveRequiredWhereColumn({
+    propertyName,
     model,
     joins,
     repositoriesByModelNameLowered,
   });
-
-  let column: ColumnBaseMetadata;
-  let tablePrefix: string;
-
-  if (resolved) {
-    column = resolved.column;
-    tablePrefix = `"${resolved.tableAlias}".`;
-  } else {
-    const localColumn = model.columnsByPropertyName[propertyName];
-    if (!localColumn) {
-      throw new QueryError(`Unable to find property ${propertyName} on model ${model.name}`, model);
-    }
-
-    column = localColumn;
-    tablePrefix = getBaseColumnPrefix(model, joins);
-  }
 
   if (value === null) {
     return `${tablePrefix}"${column.name}" ${isNegated ? 'IS NOT' : 'IS'} NULL`;

@@ -116,6 +116,21 @@ const products = await productRepository
 const products = await productRepository.find().leftJoin('store', 'activeStore', { isActive: true });
 ```
 
+A filter nested under a joined relation accepts the same operators as a filter on the base table, including `in` subqueries, negated arrays, and `'!'` around the whole relation filter:
+
+```ts
+const products = await productRepository
+  .find()
+  .join('store')
+  .where({
+    store: {
+      id: { in: subquery(storeRepository).select(['id']).where({ isActive: true }) },
+      name: { '!': ['Acme', 'Globex'] },
+      '!': { isActive: false },
+    },
+  });
+```
+
 When a query includes any join, BigAl automatically qualifies the base table's own columns (in `SELECT`, `WHERE`, `ORDER BY`, and `DISTINCT ON`) with the base table name.
 This keeps columns that share a name across the base and joined tables (most commonly `id`) from being ambiguous, so `.join()` is safe to use without falling back to raw SQL.
 
