@@ -1433,7 +1433,7 @@ describe('ReadonlyRepository', () => {
       expect(result).toStrictEqual(simple);
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
-      expect(query).toBe('SELECT "id","name","status" FROM "simple" WHERE "status"=ANY($1::TEXT[]) LIMIT 1');
+      expect(query).toBe('SELECT "id","name","status" FROM "simple" WHERE "status"=ANY($1) LIMIT 1');
       assert(params);
       expect(params).toStrictEqual([['Bar', 'Foo']]);
     });
@@ -1451,7 +1451,7 @@ describe('ReadonlyRepository', () => {
       expect(result).toStrictEqual(simple);
 
       const [query, params] = mockedPool.query.mock.calls[0]!;
-      expect(query).toBe('SELECT "id","name","status" FROM "simple" WHERE "status"<>ALL($1::TEXT[]) LIMIT 1');
+      expect(query).toBe('SELECT "id","name","status" FROM "simple" WHERE "status"<>ALL($1) LIMIT 1');
       assert(params);
       expect(params).toStrictEqual([['Bar', 'Foo']]);
     });
@@ -2196,7 +2196,7 @@ describe('ReadonlyRepository', () => {
       expect(threes[1]!.three).toBe(three2.three);
 
       const [levelOneQuery, levelOneQueryParams] = mockedPool.query.mock.calls[0]!;
-      expect(levelOneQuery).toBe('SELECT "one","id" FROM "level_one" WHERE "foo"=ANY($1::TEXT[])');
+      expect(levelOneQuery).toBe('SELECT "one","id" FROM "level_one" WHERE "foo"=ANY($1)');
       assert(levelOneQueryParams);
       expect(levelOneQueryParams).toStrictEqual([[one.foo, two.foo, three1.foo.toUpperCase(), three2.foo.toUpperCase()]]);
 
@@ -2206,7 +2206,7 @@ describe('ReadonlyRepository', () => {
       expect(levelTwoQueryParams).toStrictEqual([]);
 
       const [levelThreeQuery, levelThreeQueryParams] = mockedPool.query.mock.calls[2]!;
-      expect(levelThreeQuery).toBe('SELECT "three","foo","id" FROM "level_three" WHERE "foo"=ANY($1::TEXT[])');
+      expect(levelThreeQuery).toBe('SELECT "three","foo","id" FROM "level_three" WHERE "foo"=ANY($1)');
       assert(levelThreeQueryParams);
       expect(levelThreeQueryParams).toStrictEqual([[three1.foo, three2.foo]]);
     });
@@ -3748,7 +3748,7 @@ describe('ReadonlyRepository', () => {
         assert(parkingSpaceQueryParams);
         expect(parkingSpaceQueryParams).toStrictEqual([parkingSpace.id]);
         const [teacherClassroomQuery, teacherClassroomQueryParams] = mockedPool.query.mock.calls[2]!;
-        expect(teacherClassroomQuery).toBe('SELECT "teacher_id" AS "teacher","classroom_id" AS "classroom","id" FROM "teacher__classroom" WHERE "teacher_id"=ANY($1::TEXT[])');
+        expect(teacherClassroomQuery).toBe('SELECT "teacher_id" AS "teacher","classroom_id" AS "classroom","id" FROM "teacher__classroom" WHERE "teacher_id"=ANY($1)');
         assert(teacherClassroomQueryParams);
         expect(teacherClassroomQueryParams).toStrictEqual([[teacher1.id, teacher2.id]]);
         const [categoryQuery, categoryQueryParams] = mockedPool.query.mock.lastCall!;
@@ -3790,7 +3790,7 @@ describe('ReadonlyRepository', () => {
         assert(sourceQueryParams);
         expect(sourceQueryParams).toStrictEqual([]);
         const [translationsQuery, translationsQueryParams] = mockedPool.query.mock.calls[1]!;
-        expect(translationsQuery).toBe('SELECT "id","name","source_id" AS "source" FROM "simple" WHERE "source_id"=ANY($1::TEXT[])');
+        expect(translationsQuery).toBe('SELECT "id","name","source_id" AS "source" FROM "simple" WHERE "source_id"=ANY($1)');
         assert(translationsQueryParams);
         expect(translationsQueryParams).toStrictEqual([[source1.id, source2.id]]);
       });

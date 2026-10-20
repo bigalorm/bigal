@@ -467,6 +467,12 @@ await productRepo
   .leftJoin('store')
   .where({ store: { name: 'Acme' } });
 
+// A joined filter takes the same operators as a base-table filter
+await productRepo
+  .find()
+  .join('store')
+  .where({ store: { name: { '!': ['Acme', 'Globex'] }, '!': { isActive: false } } });
+
 // Subquery join with aggregates
 const productCounts = subquery(productRepo)
   .select(['store', (sb) => sb.count().as('productCount')])
