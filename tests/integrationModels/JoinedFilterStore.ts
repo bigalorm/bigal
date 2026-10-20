@@ -21,4 +21,7 @@ export class JoinedFilterStore extends Entity {
 
   @column({ type: 'string', required: true })
   public tier!: 'bronze' | 'gold' | 'silver';
+
+  @column({ type: 'string[]', required: true })
+  public tags!: string[];
 }

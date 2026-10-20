@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Pool } from 'postgres-pool';
 
-import { initialize, type Repository, subquery } from '../src/index.js';
+import { initialize, type Repository, subquery, type WhereQuery } from '../src/index.js';
 
 import { JoinedFilterProduct } from './integrationModels/JoinedFilterProduct.js';
 import { JoinedFilterStore } from './integrationModels/JoinedFilterStore.js';
@@ -41,7 +41,8 @@ describe.skipIf(!DATABASE_URL)('nested where clauses for joined relationships ag
         "manager" TEXT,
         "opened_at" TIMESTAMPTZ NOT NULL,
         "code" CITEXT NOT NULL,
-        "tier" "${TIER_TYPE}" NOT NULL
+        "tier" "${TIER_TYPE}" NOT NULL,
+        "tags" TEXT[] NOT NULL
       )
     `);
     await pool.query(`
@@ -49,7 +50,8 @@ describe.skipIf(!DATABASE_URL)('nested where clauses for joined relationships ag
         "id" SERIAL PRIMARY KEY,
         "name" TEXT NOT NULL,
         "kind" TEXT NOT NULL,
-        "store_id" INTEGER NOT NULL REFERENCES "${STORE_TABLE}"("id")
+        "store_id" INTEGER NOT NULL REFERENCES "${STORE_TABLE}"("id"),
+        "details" JSONB
       )
     `);
 
@@ -57,13 +59,13 @@ describe.skipIf(!DATABASE_URL)('nested where clauses for joined relationships ag
     StoreRepository = repositories.JoinedFilterStore as Repository<JoinedFilterStore>;
     ProductRepository = repositories.JoinedFilterProduct as Repository<JoinedFilterProduct>;
 
-    const managedStore = await StoreRepository.create({ name: 'Acme', manager: 'Ann', openedAt: ACME_OPENED_AT, code: 'ACME', tier: 'gold' });
-    const unmanagedStore = await StoreRepository.create({ name: 'Globex', manager: null, openedAt: GLOBEX_OPENED_AT, code: 'GLOBEX', tier: 'silver' });
+    const managedStore = await StoreRepository.create({ name: 'Acme', manager: 'Ann', openedAt: ACME_OPENED_AT, code: 'ACME', tier: 'gold', tags: ['retail', 'east'] });
+    const unmanagedStore = await StoreRepository.create({ name: 'Globex', manager: null, openedAt: GLOBEX_OPENED_AT, code: 'GLOBEX', tier: 'silver', tags: ['wholesale'] });
     await ProductRepository.create([
-      { name: 'Acme crew', kind: 'crew', store: managedStore.id },
-      { name: 'Acme dm', kind: 'dm', store: managedStore.id },
-      { name: 'Globex channel', kind: 'channel', store: unmanagedStore.id },
-      { name: 'Globex crew', kind: 'crew', store: unmanagedStore.id },
+      { name: 'Acme crew', kind: 'crew', store: managedStore.id, details: { store: 'north', and: { status: 'active' } } },
+      { name: 'Acme dm', kind: 'dm', store: managedStore.id, details: { store: 'south', and: { status: 'inactive' } } },
+      { name: 'Globex channel', kind: 'channel', store: unmanagedStore.id, details: { store: 'north' } },
+      { name: 'Globex crew', kind: 'crew', store: unmanagedStore.id, details: null },
     ]);
   });
 
@@ -158,5 +160,128 @@ describe.skipIf(!DATABASE_URL)('nested where clauses for joined relationships ag
       .sort('name asc');
 
     expect(getNames(products)).toStrictEqual(['Acme dm', 'Globex channel']);
+  });
+
+  it('excludes rows matched by an "in" subquery on a joined column', async () => {
+    const managedStores = subquery(StoreRepository)
+      .select(['id'])
+      .where({ manager: { '!': null } });
+
+    const products = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ store: { id: { '!': { in: managedStores } } } })
+      .sort('name asc');
+
+    expect(getNames(products)).toStrictEqual(['Globex channel', 'Globex crew']);
+  });
+
+  it('supports "not" on a joined column', async () => {
+    const products = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ store: { name: { not: 'Acme' } } })
+      .sort('name asc');
+
+    expect(getNames(products)).toStrictEqual(['Globex channel', 'Globex crew']);
+  });
+
+  it('applies an outer negation to a joined relationship filter', async () => {
+    const products = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ '!': { store: { name: 'Acme' } } } as WhereQuery<JoinedFilterProduct>)
+      .sort('name asc');
+
+    expect(getNames(products)).toStrictEqual(['Globex channel', 'Globex crew']);
+  });
+
+  it('matches any of several "contains" values on a joined column', async () => {
+    const products = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ store: { name: { contains: ['cm', 'nitech'] } } })
+      .sort('name asc');
+
+    expect(getNames(products)).toStrictEqual(['Acme crew', 'Acme dm']);
+  });
+
+  it('supports negations inside "or" on a joined relationship', async () => {
+    const products = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ store: { or: [{ name: { '!': 'Globex' } }, { code: 'INITECH' }] } })
+      .sort('name asc');
+
+    expect(getNames(products)).toStrictEqual(['Acme crew', 'Acme dm']);
+  });
+
+  it('matches values inside a string array column on a joined model', async () => {
+    const containing = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ store: { tags: 'east' } })
+      .sort('name asc');
+    const like = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ store: { tags: { like: 'whole%' } } })
+      .sort('name asc');
+
+    expect(getNames(containing)).toStrictEqual(['Acme crew', 'Acme dm']);
+    expect(getNames(like)).toStrictEqual(['Globex channel', 'Globex crew']);
+  });
+
+  it('filters on an entity instance passed for a custom join alias', async () => {
+    const acmeStore = await StoreRepository.findOne({ name: 'Acme' });
+    expect(acmeStore).toBeDefined();
+
+    const products = await ProductRepository.find({ select: ['name'] })
+      .join('store', 'primaryStore')
+      .where({ primaryStore: acmeStore! })
+      .sort('name asc');
+
+    expect(getNames(products)).toStrictEqual(['Acme crew', 'Acme dm']);
+  });
+
+  it('filters joined columns through dot-notation paths', async () => {
+    const managedStores = subquery(StoreRepository)
+      .select(['id'])
+      .where({ manager: { '!': null } });
+
+    const included = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ kind: 'crew', 'store.name': ['Acme', 'Initech'] } as WhereQuery<JoinedFilterProduct>)
+      .sort('name asc');
+    const excluded = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ 'store.name': { '!': ['Acme', 'Initech'] } } as WhereQuery<JoinedFilterProduct>)
+      .sort('name asc');
+    const inSubquery = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ 'store.id': { in: managedStores } } as WhereQuery<JoinedFilterProduct>)
+      .sort('name asc');
+
+    expect(getNames(included)).toStrictEqual(['Acme crew']);
+    expect(getNames(excluded)).toStrictEqual(['Globex channel', 'Globex crew']);
+    expect(getNames(inSubquery)).toStrictEqual(['Acme crew', 'Acme dm']);
+  });
+
+  it('keeps a negated "and" grouped so it does not bypass sibling constraints', async () => {
+    const products = await ProductRepository.find({ select: ['name'] })
+      .where({ kind: 'crew', '!': { and: [{ name: 'Acme crew' }, { kind: 'dm' }] } } as WhereQuery<JoinedFilterProduct>)
+      .sort('name asc');
+
+    expect(getNames(products)).toStrictEqual(['Acme crew', 'Globex crew']);
+  });
+
+  it('treats a JSON property named like a join alias as JSON when the relationship is joined', async () => {
+    const products = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ details: { store: { '!': 'south' } } })
+      .sort('name asc');
+
+    expect(getNames(products)).toStrictEqual(['Acme crew', 'Globex channel']);
+  });
+
+  it('treats "and" under a JSON column as a JSON property name', async () => {
+    const products = await ProductRepository.find({ select: ['name'] })
+      .where({ details: { and: { status: 'active' } } })
+      .sort('name asc');
+
+    expect(getNames(products)).toStrictEqual(['Acme crew']);
   });
 });
