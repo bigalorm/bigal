@@ -1799,11 +1799,8 @@ function buildWhere<T extends Entity>({
               case 'uuid[]':
                 castType = '::UUID[]';
                 break;
-              case 'string':
-                castType = '::TEXT[]';
-                break;
               default:
-                // Let PostgreSQL infer the array type from the column (eg date, datetime, or a subquery join column)
+                // Let PostgreSQL infer the array type from the column. A ::TEXT[] cast would break enum columns and make citext comparisons case-sensitive
                 castType = '';
                 break;
             }

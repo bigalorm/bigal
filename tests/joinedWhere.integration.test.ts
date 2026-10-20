@@ -5,11 +5,12 @@ import { initialize, type Repository, subquery } from '../src/index.js';
 
 import { JoinedFilterProduct } from './integrationModels/JoinedFilterProduct.js';
 import { JoinedFilterStore } from './integrationModels/JoinedFilterStore.js';
-import { getJoinedFilterProductTable, getJoinedFilterStoreTable } from './integrationModels/joinedFilterTableNames.js';
+import { getJoinedFilterProductTable, getJoinedFilterStoreTable, getJoinedFilterTierType } from './integrationModels/joinedFilterTableNames.js';
 
 const DATABASE_URL = process.env.BIGAL_TEST_DATABASE_URL;
 const STORE_TABLE = getJoinedFilterStoreTable();
 const PRODUCT_TABLE = getJoinedFilterProductTable();
+const TIER_TYPE = getJoinedFilterTierType();
 const ACME_OPENED_AT = new Date('2026-01-15T12:00:00Z');
 const GLOBEX_OPENED_AT = new Date('2026-03-01T12:00:00Z');
 
@@ -31,12 +32,16 @@ describe.skipIf(!DATABASE_URL)('nested where clauses for joined relationships ag
       connectionString: DATABASE_URL,
     });
 
+    await pool.query('CREATE EXTENSION IF NOT EXISTS citext');
+    await pool.query(`CREATE TYPE "${TIER_TYPE}" AS ENUM ('bronze', 'gold', 'silver')`);
     await pool.query(`
       CREATE TABLE IF NOT EXISTS "${STORE_TABLE}" (
         "id" SERIAL PRIMARY KEY,
         "name" TEXT NOT NULL,
         "manager" TEXT,
-        "opened_at" TIMESTAMPTZ NOT NULL
+        "opened_at" TIMESTAMPTZ NOT NULL,
+        "code" CITEXT NOT NULL,
+        "tier" "${TIER_TYPE}" NOT NULL
       )
     `);
     await pool.query(`
@@ -52,8 +57,8 @@ describe.skipIf(!DATABASE_URL)('nested where clauses for joined relationships ag
     StoreRepository = repositories.JoinedFilterStore as Repository<JoinedFilterStore>;
     ProductRepository = repositories.JoinedFilterProduct as Repository<JoinedFilterProduct>;
 
-    const managedStore = await StoreRepository.create({ name: 'Acme', manager: 'Ann', openedAt: ACME_OPENED_AT });
-    const unmanagedStore = await StoreRepository.create({ name: 'Globex', manager: null, openedAt: GLOBEX_OPENED_AT });
+    const managedStore = await StoreRepository.create({ name: 'Acme', manager: 'Ann', openedAt: ACME_OPENED_AT, code: 'ACME', tier: 'gold' });
+    const unmanagedStore = await StoreRepository.create({ name: 'Globex', manager: null, openedAt: GLOBEX_OPENED_AT, code: 'GLOBEX', tier: 'silver' });
     await ProductRepository.create([
       { name: 'Acme crew', kind: 'crew', store: managedStore.id },
       { name: 'Acme dm', kind: 'dm', store: managedStore.id },
@@ -65,6 +70,7 @@ describe.skipIf(!DATABASE_URL)('nested where clauses for joined relationships ag
   afterAll(async () => {
     await pool.query(`DROP TABLE IF EXISTS "${PRODUCT_TABLE}"`);
     await pool.query(`DROP TABLE IF EXISTS "${STORE_TABLE}"`);
+    await pool.query(`DROP TYPE IF EXISTS "${TIER_TYPE}"`);
     await pool.end();
   });
 
@@ -115,6 +121,29 @@ describe.skipIf(!DATABASE_URL)('nested where clauses for joined relationships ag
       .sort('name asc');
 
     expect(getNames(products)).toStrictEqual(['Acme crew', 'Acme dm']);
+  });
+
+  it('matches multiple values on a joined citext column without regard to case', async () => {
+    const products = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ store: { code: ['acme', 'initech'] } })
+      .sort('name asc');
+
+    expect(getNames(products)).toStrictEqual(['Acme crew', 'Acme dm']);
+  });
+
+  it('matches and excludes multiple values on a joined enum column', async () => {
+    const included = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ store: { tier: ['gold', 'bronze'] } })
+      .sort('name asc');
+    const excluded = await ProductRepository.find({ select: ['name'] })
+      .join('store')
+      .where({ store: { tier: { '!': ['gold', 'bronze'] } } })
+      .sort('name asc');
+
+    expect(getNames(included)).toStrictEqual(['Acme crew', 'Acme dm']);
+    expect(getNames(excluded)).toStrictEqual(['Globex channel', 'Globex crew']);
   });
 
   it('combines joined filters inside "or"', async () => {

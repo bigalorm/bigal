@@ -15,4 +15,10 @@ export class JoinedFilterStore extends Entity {
 
   @column({ type: 'datetime', name: 'opened_at', required: true })
   public openedAt!: Date;
+
+  @column({ type: 'string', required: true })
+  public code!: string;
+
+  @column({ type: 'string', required: true })
+  public tier!: 'bronze' | 'gold' | 'silver';
 }

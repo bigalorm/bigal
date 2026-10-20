@@ -5,3 +5,7 @@ export function getJoinedFilterStoreTable(): string {
 export function getJoinedFilterProductTable(): string {
   return `bigal_joined_filter_product_${process.pid}`;
 }
+
+export function getJoinedFilterTierType(): string {
+  return `bigal_joined_filter_tier_${process.pid}`;
+}

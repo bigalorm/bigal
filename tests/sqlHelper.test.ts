@@ -534,7 +534,7 @@ describe('sqlHelper', () => {
           joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
         });
 
-        expect(whereStatement).toBe('WHERE "products"."name"=ANY($1::TEXT[])');
+        expect(whereStatement).toBe('WHERE "products"."name"=ANY($1)');
         expect(params).toStrictEqual([['Widget', 'Gadget']]);
       });
 
@@ -3355,7 +3355,7 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      expect(whereStatement).toBe('WHERE "name"=ANY($1::TEXT[])');
+      expect(whereStatement).toBe('WHERE "name"=ANY($1)');
       expect(params).toStrictEqual([name]);
     });
 
@@ -3790,7 +3790,7 @@ describe('sqlHelper', () => {
       });
 
       assert(whereStatement);
-      expect(whereStatement).toBe('WHERE "name"<>ALL($1::TEXT[])');
+      expect(whereStatement).toBe('WHERE "name"<>ALL($1)');
       expect(params).toStrictEqual([name]);
     });
 
@@ -4438,7 +4438,7 @@ describe('sqlHelper', () => {
         joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
       });
 
-      expect(whereStatement).toBe('WHERE "products"."name"=$1 AND "store"."name"=ANY($2::TEXT[])');
+      expect(whereStatement).toBe('WHERE "products"."name"=$1 AND "store"."name"=ANY($2)');
       expect(params).toStrictEqual(['Widget', ['Acme', 'Globex']]);
     });
 
@@ -4450,7 +4450,7 @@ describe('sqlHelper', () => {
         joins: [{ propertyName: 'store', alias: 'store', type: 'inner' }],
       });
 
-      expect(whereStatement).toBe('WHERE "store"."name"<>ALL($1::TEXT[])');
+      expect(whereStatement).toBe('WHERE "store"."name"<>ALL($1)');
       expect(params).toStrictEqual([['Acme', 'Globex']]);
     });
 
@@ -4524,7 +4524,7 @@ describe('sqlHelper', () => {
         joins: storeJoin,
       });
 
-      expect(whereStatement).toBe('WHERE "store"."name"<>ALL($1::TEXT[])');
+      expect(whereStatement).toBe('WHERE "store"."name"<>ALL($1)');
       expect(params).toStrictEqual([['Acme', 'Globex']]);
     });
 
