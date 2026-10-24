@@ -241,8 +241,8 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       postgres-pool:
-        specifier: 12.0.1
-        version: 12.0.1(pg@8.23.1)
+        specifier: 12.0.2
+        version: 12.0.2(pg@8.23.1)
       semantic-release:
         specifier: 25.0.9
         version: 25.0.9(@typescript/typescript6@6.0.2)(supports-color@7.2.0)
@@ -2817,8 +2817,8 @@ packages:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
 
-  postgres-pool@12.0.1:
-    resolution: {integrity: sha512-WoMYJVkKZ3tPOiSKKbAWzHMRTmsTn3Mp89VjcIaDcFSc4rFLEC7elCE0PZoxiotlYGTWAx7q8ivyt1f7j7OTeQ==}
+  postgres-pool@12.0.2:
+    resolution: {integrity: sha512-aPm42RoHgAcfdIsNQpe8XHzFpWozL/qn5nzXoNJHTW46D1+YvVoSl0Pc7CJ6Uz5ChjxXO07aak1JY+uHUOndeg==}
     engines: {node: '>=22.0.0'}
     peerDependencies:
       pg: ^8.0.0
@@ -5785,7 +5785,7 @@ snapshots:
     dependencies:
       xtend: 4.0.2
 
-  postgres-pool@12.0.1(pg@8.23.1):
+  postgres-pool@12.0.2(pg@8.23.1):
     dependencies:
       pg: 8.23.1
 
