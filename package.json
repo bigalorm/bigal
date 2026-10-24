@@ -78,7 +78,7 @@
     "eslint-plugin-security": "4.2.0",
     "eslint-plugin-unicorn": "78.0.0",
     "markdownlint-cli": "0.49.1",
-    "npm-run-all2": "9.0.3",
+    "npm-run-all2": "9.0.4",
     "oxlint-config-decent": "5.0.0",
     "oxlint-plugin-eslint": "1.89.0",
     "pinst": "3.0.0",
