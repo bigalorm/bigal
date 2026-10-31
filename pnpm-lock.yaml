@@ -233,10 +233,10 @@ importers:
         version: 9.0.4
       oxlint-config-decent:
         specifier: 5.0.0
-        version: 5.0.0(719709141a2b6f780074c7b16f5bf01b)
+        version: 5.0.0(fc34dd2e3dd00eca68dc2124e220fa35)
       oxlint-plugin-eslint:
-        specifier: 1.89.0
-        version: 1.89.0
+        specifier: 1.90.0
+        version: 1.90.0
       pinst:
         specifier: 3.0.0
         version: 3.0.0
@@ -2550,8 +2550,8 @@ packages:
       typescript:
         optional: true
 
-  oxlint-plugin-eslint@1.89.0:
-    resolution: {integrity: sha512-UuYpNpDZmm9E/BAgLy/CNvMN/2v+jo4zw0/fNB49krY+4/7UZ66OWYt9BM271CD83g6qSdPF+nHxTd2M0eMvjQ==}
+  oxlint-plugin-eslint@1.90.0:
+    resolution: {integrity: sha512-JjQbCJZ1HuWrOA0qi1r8l6uqEdlP3Htu1XWrMNkTieGRRWLNB2nOFu7iw1MYSWODcuJR8lJn5KfoP6DujhWtiA==}
     engines: {node: ^20.19.0 || >=22.12.0}
 
   oxlint-tsgolint@7.0.2004:
@@ -5425,7 +5425,7 @@ snapshots:
       '@oxfmt/binding-win32-x64-msvc': 0.74.0
       vite-plus: 1.4.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(@vitest/ui@5.0.5)(yaml@2.9.1)
 
-  oxlint-config-decent@5.0.0(719709141a2b6f780074c7b16f5bf01b):
+  oxlint-config-decent@5.0.0(fc34dd2e3dd00eca68dc2124e220fa35):
     dependencies:
       '@stylistic/eslint-plugin': 5.10.0(eslint@10.13.0(supports-color@7.2.0))
       '@typescript-eslint/eslint-plugin': 8.72.0(@typescript-eslint/parser@8.72.0(@typescript/typescript6@6.0.2)(eslint@10.13.0(supports-color@7.2.0))(supports-color@7.2.0))(@typescript/typescript6@6.0.2)(eslint@10.13.0(supports-color@7.2.0))(supports-color@7.2.0)
@@ -5433,14 +5433,14 @@ snapshots:
       eslint-plugin-jsdoc: 65.4.2(@typescript/typescript6@6.0.2)(eslint@10.13.0(supports-color@7.2.0))(supports-color@7.2.0)
       eslint-plugin-security: 4.2.0
       eslint-plugin-unicorn: 79.0.0(@typescript/typescript6@6.0.2)(eslint@10.13.0(supports-color@7.2.0))(supports-color@7.2.0)
-      oxlint-plugin-eslint: 1.89.0
+      oxlint-plugin-eslint: 1.90.0
     optionalDependencies:
       '@vitest/eslint-plugin': 1.6.28(@typescript-eslint/eslint-plugin@8.72.0(@typescript-eslint/parser@8.72.0(@typescript/typescript6@6.0.2)(eslint@10.13.0(supports-color@7.2.0))(supports-color@7.2.0))(@typescript/typescript6@6.0.2)(eslint@10.13.0(supports-color@7.2.0))(supports-color@7.2.0))(@typescript/typescript6@6.0.2)(eslint@10.13.0(supports-color@7.2.0))(supports-color@7.2.0)(vitest@5.0.5)
       oxlint: 1.89.0(oxlint-tsgolint@7.0.2004)(vite-plus@1.4.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(@vitest/ui@5.0.5)(yaml@2.9.1))
       oxlint-tsgolint: 7.0.2004
       typescript: '@typescript/typescript6@6.0.2'
 
-  oxlint-plugin-eslint@1.89.0: {}
+  oxlint-plugin-eslint@1.90.0: {}
 
   oxlint-tsgolint@7.0.2004:
     optionalDependencies:
