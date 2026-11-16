@@ -65,7 +65,7 @@
     "@semantic-release/changelog": "7.0.0",
     "@semantic-release/commit-analyzer": "14.0.0-beta.4",
     "@semantic-release/git": "11.0.1",
-    "@semantic-release/github": "12.0.10",
+    "@semantic-release/github": "12.0.11",
     "@semantic-release/npm": "13.2.0",
     "@semantic-release/release-notes-generator": "15.0.0-beta.3",
     "@stylistic/eslint-plugin": "5.10.0",
@@ -73,14 +73,14 @@
     "@typescript/native": "npm:typescript@7.0.2",
     "@vitest/eslint-plugin": "1.6.28",
     "conventional-changelog-conventionalcommits": "10.4.0",
-    "eslint": "10.13.0",
-    "eslint-plugin-jsdoc": "65.4.2",
-    "eslint-plugin-security": "4.2.0",
+    "eslint": "10.14.0",
+    "eslint-plugin-jsdoc": "65.4.5",
+    "eslint-plugin-security": "4.2.1",
     "eslint-plugin-unicorn": "79.0.0",
     "markdownlint-cli": "0.50.0",
     "npm-run-all2": "9.0.4",
     "oxlint-config-decent": "5.0.0",
-    "oxlint-plugin-eslint": "1.90.0",
+    "oxlint-plugin-eslint": "1.93.0",
     "pinst": "3.0.0",
     "postgres-pool": "12.0.2",
     "semantic-release": "25.0.9",
@@ -88,7 +88,7 @@
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "vite": "catalog:",
     "vite-plus": "catalog:",
-    "vitest": "5.0.5"
+    "vitest": "5.1.0"
   },
   "engines": {
     "node": ">=22.11.0"
