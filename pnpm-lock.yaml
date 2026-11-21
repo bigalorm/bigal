@@ -226,8 +226,8 @@ importers:
         specifier: 10.15.0
         version: 10.15.0(supports-color@7.2.0)
       eslint-plugin-jsdoc:
-        specifier: 65.4.10
-        version: 65.4.10(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
+        specifier: 65.4.11
+        version: 65.4.11(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
       eslint-plugin-security:
         specifier: 4.2.1
         version: 4.2.1
@@ -242,7 +242,7 @@ importers:
         version: 9.0.4
       oxlint-config-decent:
         specifier: 5.0.0
-        version: 5.0.0(255ed29e9a064bb2c78223268f1a8414)
+        version: 5.0.0(01e925ac75878f28e1b03bbcb981f38d)
       oxlint-plugin-eslint:
         specifier: 1.94.0
         version: 1.94.0
@@ -250,8 +250,8 @@ importers:
         specifier: 3.0.0
         version: 3.0.0
       postgres-pool:
-        specifier: 12.0.2
-        version: 12.0.2(pg@8.23.1)
+        specifier: 12.0.3
+        version: 12.0.3(pg@8.23.1)
       semantic-release:
         specifier: 26.0.1
         version: 26.0.1(supports-color@7.2.0)
@@ -1705,8 +1705,8 @@ packages:
     resolution: {integrity: sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw==}
     engines: {node: '>=12'}
 
-  eslint-plugin-jsdoc@65.4.10:
-    resolution: {integrity: sha512-+d+0aEkl8YQLuLxUksewJifoX9R2A/UAVZesFg2awHIs8Og+j4TBusoBfqCy6lbVpGdYAi4PoRVIDeiN1UViUA==}
+  eslint-plugin-jsdoc@65.4.11:
+    resolution: {integrity: sha512-AJKIO+PFh+xriGEeRWJcOubfZgu7R1lOTipQ8358cwYri5B/tvJFQdr8y6V7xAr4T+lPnz7LsQgv7QyA58UY0w==}
     engines: {node: ^22.22.2 || >=24.15.0}
     peerDependencies:
       eslint: ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0
@@ -2863,8 +2863,8 @@ packages:
     resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
     engines: {node: '>=0.10.0'}
 
-  postgres-pool@12.0.2:
-    resolution: {integrity: sha512-aPm42RoHgAcfdIsNQpe8XHzFpWozL/qn5nzXoNJHTW46D1+YvVoSl0Pc7CJ6Uz5ChjxXO07aak1JY+uHUOndeg==}
+  postgres-pool@12.0.3:
+    resolution: {integrity: sha512-hPVAimiKKGNrZMAs3STKSQKjHRJb7Kp8Jh4gXJhV/K7rZ3k9rH+ExwgRQbFZe+x3pk4DFmqL+kaUDyRlwC936g==}
     engines: {node: '>=22.0.0'}
     peerDependencies:
       pg: ^8.0.0
@@ -4684,7 +4684,7 @@ snapshots:
 
   escape-string-regexp@5.0.0: {}
 
-  eslint-plugin-jsdoc@65.4.10(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0):
+  eslint-plugin-jsdoc@65.4.11(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0):
     dependencies:
       '@es-joy/escodegen': 5.0.1
       '@es-joy/jsdoccomment': 1.2.0
@@ -5587,12 +5587,12 @@ snapshots:
       '@oxfmt/binding-win32-x64-msvc': 0.78.0
       vite-plus: 1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(@vitest/ui@5.1.0)(yaml@2.9.1)
 
-  oxlint-config-decent@5.0.0(255ed29e9a064bb2c78223268f1a8414):
+  oxlint-config-decent@5.0.0(01e925ac75878f28e1b03bbcb981f38d):
     dependencies:
       '@stylistic/eslint-plugin': 6.0.1(eslint@10.15.0(supports-color@7.2.0))(oxlint@1.93.0(oxlint-tsgolint@7.0.2006)(vite-plus@1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(@vitest/ui@5.1.0)(yaml@2.9.1)))
       '@typescript-eslint/eslint-plugin': 8.72.0(@typescript-eslint/parser@8.72.0(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0))(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
       eslint: 10.15.0(supports-color@7.2.0)
-      eslint-plugin-jsdoc: 65.4.10(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
+      eslint-plugin-jsdoc: 65.4.11(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
       eslint-plugin-security: 4.2.1
       eslint-plugin-unicorn: 80.0.0(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))
       oxlint-plugin-eslint: 1.94.0
@@ -5796,7 +5796,7 @@ snapshots:
     dependencies:
       xtend: 4.0.2
 
-  postgres-pool@12.0.2(pg@8.23.1):
+  postgres-pool@12.0.3(pg@8.23.1):
     dependencies:
       pg: 8.23.1
 
