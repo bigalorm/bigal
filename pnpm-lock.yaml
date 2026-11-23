@@ -180,7 +180,7 @@ catalogs:
 overrides:
   vite: npm:@voidzero-dev/vite-plus-core@1.6.0
   '@semantic-release/commit-analyzer': 14.0.0-beta.4
-  '@semantic-release/release-notes-generator': 15.0.0-beta.3
+  '@semantic-release/release-notes-generator': 15.0.0-beta.4
 
 importers:
 
@@ -205,8 +205,8 @@ importers:
         specifier: 13.2.0
         version: 13.2.0(semantic-release@26.0.1(supports-color@7.2.0))
       '@semantic-release/release-notes-generator':
-        specifier: 15.0.0-beta.3
-        version: 15.0.0-beta.3(semantic-release@26.0.1(supports-color@7.2.0))(supports-color@7.2.0)
+        specifier: 15.0.0-beta.4
+        version: 15.0.0-beta.4(semantic-release@26.0.1(supports-color@7.2.0))(supports-color@7.2.0)
       '@stylistic/eslint-plugin':
         specifier: 6.0.1
         version: 6.0.1(eslint@10.15.0(supports-color@7.2.0))(oxlint@1.93.0(oxlint-tsgolint@7.0.2006)(vite-plus@1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1)))
@@ -269,7 +269,7 @@ importers:
         version: 1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1)
       vitest:
         specifier: 5.1.1
-        version: 5.1.1(@types/node@26.6.5)(@vitest/browser-preview@5.1.0)(@voidzero-dev/vite-plus-core@1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1))
+        version: 5.1.1(@types/node@26.6.5)(@voidzero-dev/vite-plus-core@1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1))
 
 packages:
 
@@ -816,9 +816,9 @@ packages:
     peerDependencies:
       semantic-release: '>=20.1.0'
 
-  '@semantic-release/release-notes-generator@15.0.0-beta.3':
-    resolution: {integrity: sha512-gqNTU88dMlqwbIoZm/OoUACd304QNFjJGXdF+rKTrIcZ2OOSjmsU3d5eVtzGMk8bbuRJaPgHA/qsbB+OyWEWCg==}
-    engines: {node: ^22.22.2 || >=24.15}
+  '@semantic-release/release-notes-generator@15.0.0-beta.4':
+    resolution: {integrity: sha512-LSyBUHHsrg+1MgzoXD4eBQGNBCBVCJfgFf2oU9L5pZ2B53Xhke6Apwp4IHIKiOONYEFnnzFmBdi5J0vEmipnig==}
+    engines: {node: '>=26.13'}
     peerDependencies:
       semantic-release: '>=20.1.0'
 
@@ -3508,10 +3508,12 @@ packages:
   yuku-core@0.19.0:
     resolution: {integrity: sha512-kYK9e1XdfirNhkipzW0wmMcSWcVF/CWnuugodfVYRCUwvoBefweL9HzB96OiKEhsx78V5WbUxbJqlizMX869Qg==}
     engines: {node: '>=14.18.0'}
+    deprecated: 'Yuku is now one package with one core. Use "yuku" instead: https://yuku.fyi/javascript/. Existing installs keep working but get no more fixes.'
 
   yuku-parser@0.19.0:
     resolution: {integrity: sha512-XrBh9ZiQK5mJVRxZBAvD6LwRyAYrK3MFtH3+onyuxFL5hFD44EC3QOmIC1FjTj6H2MMwq46/NAI+NZxLZPZgxg==}
     engines: {node: '>=14.18.0'}
+    deprecated: 'Yuku is now one package with one core. Use "yuku" instead: https://yuku.fyi/javascript/. Existing installs keep working but get no more fixes.'
 
 snapshots:
 
@@ -4005,7 +4007,7 @@ snapshots:
       semver: 7.8.6
       tempy: 3.2.0
 
-  '@semantic-release/release-notes-generator@15.0.0-beta.3(semantic-release@26.0.1(supports-color@7.2.0))(supports-color@7.2.0)':
+  '@semantic-release/release-notes-generator@15.0.0-beta.4(semantic-release@26.0.1(supports-color@7.2.0))(supports-color@7.2.0)':
     dependencies:
       conventional-changelog-angular: 9.4.0
       conventional-changelog-conventionalcommits: 10.4.0
@@ -4329,7 +4331,7 @@ snapshots:
     optionalDependencies:
       '@typescript-eslint/eslint-plugin': 8.72.0(@typescript-eslint/parser@8.72.0(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0))(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
       typescript: '@typescript/typescript6@6.0.2'
-      vitest: 5.1.1(@types/node@26.6.5)(@vitest/browser-preview@5.1.0)(@voidzero-dev/vite-plus-core@1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1))
+      vitest: 5.1.1(@types/node@26.6.5)(@voidzero-dev/vite-plus-core@1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1))
     transitivePeerDependencies:
       - supports-color
 
@@ -5583,7 +5585,7 @@ snapshots:
   normalize-package-data@6.0.2:
     dependencies:
       hosted-git-info: 7.0.2
-      semver: 7.8.5
+      semver: 7.8.6
       validate-npm-package-license: 3.0.4
 
   normalize-package-data@8.0.0:
@@ -5994,7 +5996,7 @@ snapshots:
       '@semantic-release/core': 1.0.0-beta.13(semantic-release@26.0.1(supports-color@7.2.0))(supports-color@7.2.0)
       '@semantic-release/github': 12.0.11(semantic-release@26.0.1(supports-color@7.2.0))(supports-color@7.2.0)
       '@semantic-release/npm': 14.0.0-beta.2(semantic-release@26.0.1(supports-color@7.2.0))
-      '@semantic-release/release-notes-generator': 15.0.0-beta.3(semantic-release@26.0.1(supports-color@7.2.0))(supports-color@7.2.0)
+      '@semantic-release/release-notes-generator': 15.0.0-beta.4(semantic-release@26.0.1(supports-color@7.2.0))(supports-color@7.2.0)
       debug: 4.4.3(supports-color@7.2.0)
       execa: 10.2.1
       find-versions: 6.0.0
@@ -6371,7 +6373,7 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
-  vitest@5.1.1(@types/node@26.6.5)(@vitest/browser-preview@5.1.0)(@voidzero-dev/vite-plus-core@1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1)):
+  vitest@5.1.1(@types/node@26.6.5)(@voidzero-dev/vite-plus-core@1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1)):
     dependencies:
       '@types/chai': 5.2.3
       '@vitest/mocker': 5.1.1(@voidzero-dev/vite-plus-core@1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1))
@@ -6389,7 +6391,6 @@ snapshots:
       why-is-node-running: 3.2.1
     optionalDependencies:
       '@types/node': 26.6.5
-      '@vitest/browser-preview': 5.1.0(@voidzero-dev/vite-plus-core@1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1))(vitest@5.1.0)
     transitivePeerDependencies:
       - msw
 
