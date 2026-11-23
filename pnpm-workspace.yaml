@@ -12,7 +12,7 @@ overrides:
   # conventional-changelog-writer@9, which conventional-changelog-conventionalcommits@10 requires.
   # Drop once semantic-release itself depends on these majors.
   '@semantic-release/commit-analyzer': 14.0.0-beta.4
-  '@semantic-release/release-notes-generator': 15.0.0-beta.3
+  '@semantic-release/release-notes-generator': 15.0.0-beta.4
 peerDependencyRules:
   allowAny:
     - vite
