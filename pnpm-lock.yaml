@@ -226,8 +226,8 @@ importers:
         specifier: 10.15.0
         version: 10.15.0(supports-color@7.2.0)
       eslint-plugin-jsdoc:
-        specifier: 65.5.0
-        version: 65.5.0(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
+        specifier: 65.5.1
+        version: 65.5.1(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
       eslint-plugin-security:
         specifier: 4.2.1
         version: 4.2.1
@@ -235,14 +235,14 @@ importers:
         specifier: 80.0.0
         version: 80.0.0(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))
       markdownlint-cli:
-        specifier: 0.50.0
-        version: 0.50.0(supports-color@7.2.0)
+        specifier: 0.50.1
+        version: 0.50.1(supports-color@7.2.0)
       npm-run-all2:
         specifier: 9.1.0
         version: 9.1.0
       oxlint-config-decent:
         specifier: 5.0.0
-        version: 5.0.0(642249e6a870877164cc03b17acb17c7)
+        version: 5.0.0(0fa778557422ee5a895b4c5ff5668cc7)
       oxlint-plugin-eslint:
         specifier: 1.94.0
         version: 1.94.0
@@ -1558,8 +1558,8 @@ packages:
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
 
-  commander@15.0.0:
-    resolution: {integrity: sha512-z67u4ZhzCL/Tydu1lJARtEZYWbWaN7oYLHbsuzocr6y4N6WZAagG3RQ4FW61V1/0+jImpj293XfrcYnd1qxtPg==}
+  commander@15.1.0:
+    resolution: {integrity: sha512-cgnQ88TRrWcC7pVq46RzJVRMktu3W2RcbnoidnfBsl1bmDCBwJS/udcIZpKoCrbAYYaCqsz1yZCVIgbIaU3ddQ==}
     engines: {node: '>=22.12.0'}
 
   commander@8.3.0:
@@ -1719,8 +1719,8 @@ packages:
     resolution: {integrity: sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw==}
     engines: {node: '>=12'}
 
-  eslint-plugin-jsdoc@65.5.0:
-    resolution: {integrity: sha512-dVrpBDWYSt1hihtNbbAoCEe4NmXSvm7Ph+BaZ9w58T7omMkHybm6udqWkCQopddTuf8pCVH11A+MnPGlped0Vw==}
+  eslint-plugin-jsdoc@65.5.1:
+    resolution: {integrity: sha512-B7nUzgyazhOtiznF1fOQOmYZpTlLEdgaCsVV67V1WgtXuqWSWm0kPS4auekdHoEQBEKahS11weUC+z5nkhIu9g==}
     engines: {node: ^22.22.2 || >=24.15.0}
     peerDependencies:
       eslint: ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0
@@ -1979,6 +1979,10 @@ packages:
 
   ignore@7.0.14:
     resolution: {integrity: sha512-wCBiZ77u1tuWde6G/nfOtLaCTYcFDU5yCzARzK10y+rLhzYoL7a7yEemcopcc2Mzow7gZOIjnV2ym1NYmdiJOQ==}
+    engines: {node: '>= 4'}
+
+  ignore@7.0.16:
+    resolution: {integrity: sha512-52N+Y4HRMOJmbLmr+DqO4iSRyyB7N52gm7PWCT6h0p978+oKbqHCB7gIJIwZvBUsjlSdWbrBFqUSmIFNZMpn0A==}
     engines: {node: '>= 4'}
 
   import-from-esm@2.0.0:
@@ -2264,13 +2268,13 @@ packages:
     resolution: {integrity: sha512-+Az7Ojz3iRGu8KYMvJ6xVhvrxP3eE+vEtJX75Ow88XBpcQNV/0lGX5ZynIIBftREo4DC2jsveAMDaeltmm8QvQ==}
     hasBin: true
 
-  markdownlint-cli@0.50.0:
-    resolution: {integrity: sha512-4GqP/CqpF74ihrlLTOPc3I5b/tZabiiKnIVQ27xTzsS4hjU3oIHKg1YBzWP7fsa9AH48LPF0KcmCqDccpSeMEg==}
+  markdownlint-cli@0.50.1:
+    resolution: {integrity: sha512-3F9ON1oW8dlY2mkvQGzyDrcrfx6xiWYgS8arlijuw/JH/ZaPHE6nxp9/SP2V8YqbK8GaqZtkLD6hayPa4uj2mw==}
     engines: {node: '>=22'}
     hasBin: true
 
-  markdownlint@0.42.0:
-    resolution: {integrity: sha512-kzsCV/rPWRFn3jUhcB919YF4Qgeh0g9tcogoXFadGSo6Zxj6662YOqWXv0jDn8nv5KCCxDfMKJZv6N4HkNkvTg==}
+  markdownlint@0.42.2:
+    resolution: {integrity: sha512-IhlUBVT+kHBX+u3EjEsQdFB4q0Rl0Hx+JsGsvVkonNut1/n8Kv8yXzwk0pazC9uF35JlwMZ+LxV4CQ9YNAbG8w==}
     engines: {node: '>=22'}
 
   marked-terminal@7.3.0:
@@ -2390,6 +2394,10 @@ packages:
 
   minimatch@11.0.8:
     resolution: {integrity: sha512-nFQuYSTVrGvysVBps5Ih+0BdnYFN/Cj3C816r6+p7yK+FHrVLGE4O4N9AFwykrlNlvM2HYt+Rad1Uiro6h88Ig==}
+    engines: {node: 20 || >=22}
+
+  minimatch@11.0.9:
+    resolution: {integrity: sha512-KCFkfyjqerNlSstjlhIGNXIKZGA/6O4V4RlhZ+Dsr621SPPw0mzlypE9D9ZOoPiVefHID+j7/XuMMlqfD/F60Q==}
     engines: {node: 20 || >=22}
 
   minimist@1.2.8:
@@ -2929,9 +2937,9 @@ packages:
     resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}
     hasBin: true
 
-  re2js@2.8.6:
-    resolution: {integrity: sha512-xLgQil4kIUCrAzVk9fRSkxkFNwmygLFjVxXrLc65aE1F0+Zsb8rxumFBy4XKyvgMCTL6kilDq3EZ0piE2dP/Dg==}
-    engines: {node: '>=18.0.0'}
+  re2js@2.9.1:
+    resolution: {integrity: sha512-JIT3bEEUZTOR2YS1walNEIfH4cF/cQeZcBUFq7ldqO6lR6g0X5CBq/S8rsa9omzZcsNf8qc36jCkWpKKtncrZg==}
+    engines: {node: '>=20.0.0'}
 
   react-is@17.0.2:
     resolution: {integrity: sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==}
@@ -4627,7 +4635,7 @@ snapshots:
 
   color-name@1.1.4: {}
 
-  commander@15.0.0: {}
+  commander@15.1.0: {}
 
   commander@8.3.0: {}
 
@@ -4755,7 +4763,7 @@ snapshots:
 
   escape-string-regexp@5.0.0: {}
 
-  eslint-plugin-jsdoc@65.5.0(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0):
+  eslint-plugin-jsdoc@65.5.1(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0):
     dependencies:
       '@es-joy/escodegen': 5.0.1
       '@es-joy/jsdoccomment': 1.2.0
@@ -5075,6 +5083,8 @@ snapshots:
 
   ignore@7.0.14: {}
 
+  ignore@7.0.16: {}
+
   import-from-esm@2.0.0(supports-color@7.2.0):
     dependencies:
       debug: 4.4.3(supports-color@7.2.0)
@@ -5302,24 +5312,24 @@ snapshots:
       punycode.js: 2.3.1
       uc.micro: 3.0.0
 
-  markdownlint-cli@0.50.0(supports-color@7.2.0):
+  markdownlint-cli@0.50.1(supports-color@7.2.0):
     dependencies:
-      commander: 15.0.0
+      commander: 15.1.0
       deep-extend: 0.6.0
-      ignore: 7.0.14
+      ignore: 7.0.16
       js-yaml: 5.5.0
       jsonc-parser: 3.3.1
       jsonpointer: 5.0.1
       markdown-it: 15.0.3
-      markdownlint: 0.42.0(supports-color@7.2.0)
-      minimatch: 10.2.6
+      markdownlint: 0.42.2(supports-color@7.2.0)
+      minimatch: 11.0.9
       run-con: 1.3.3
       smol-toml: 1.9.1
       tinyglobby: 0.2.17
     transitivePeerDependencies:
       - supports-color
 
-  markdownlint@0.42.0(supports-color@7.2.0):
+  markdownlint@0.42.2(supports-color@7.2.0):
     dependencies:
       micromark: 4.0.3(supports-color@7.2.0)
       micromark-core-commonmark: 2.0.4
@@ -5329,7 +5339,7 @@ snapshots:
       micromark-extension-gfm-table: 2.1.2
       micromark-extension-math: 3.1.0
       micromark-util-types: 2.0.3
-      re2js: 2.8.6
+      re2js: 2.9.1
       string-width: 8.3.0
     transitivePeerDependencies:
       - supports-color
@@ -5549,6 +5559,11 @@ snapshots:
       '@isaacs/nonrecursive-glob-match': 1.1.0
       brace-expansion: 5.0.12
 
+  minimatch@11.0.9:
+    dependencies:
+      '@isaacs/nonrecursive-glob-match': 1.1.0
+      brace-expansion: 5.0.12
+
   minimist@1.2.8: {}
 
   mrmime@2.0.1: {}
@@ -5659,12 +5674,12 @@ snapshots:
       '@oxfmt/binding-win32-x64-msvc': 0.78.0
       vite-plus: 1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1)
 
-  oxlint-config-decent@5.0.0(642249e6a870877164cc03b17acb17c7):
+  oxlint-config-decent@5.0.0(0fa778557422ee5a895b4c5ff5668cc7):
     dependencies:
       '@stylistic/eslint-plugin': 6.0.1(eslint@10.15.0(supports-color@7.2.0))(oxlint@1.93.0(oxlint-tsgolint@7.0.2006)(vite-plus@1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1)))
       '@typescript-eslint/eslint-plugin': 8.72.0(@typescript-eslint/parser@8.72.0(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0))(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
       eslint: 10.15.0(supports-color@7.2.0)
-      eslint-plugin-jsdoc: 65.5.0(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
+      eslint-plugin-jsdoc: 65.5.1(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
       eslint-plugin-security: 4.2.1
       eslint-plugin-unicorn: 80.0.0(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))
       oxlint-plugin-eslint: 1.94.0
@@ -5907,7 +5922,7 @@ snapshots:
       minimist: 1.2.8
       strip-json-comments: 2.0.1
 
-  re2js@2.8.6: {}
+  re2js@2.9.1: {}
 
   react-is@17.0.2: {}
 
