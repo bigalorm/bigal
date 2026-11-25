@@ -775,8 +775,8 @@ packages:
   birpc@2.9.0:
     resolution: {integrity: sha512-KrayHS5pBi69Xi9JmvoqrIgYGDkD6mcSe/i6YKi3w5kekCLzrX4+nawcXqrj2tIp50Kw/mT/s3p+GVK0A0sKxw==}
 
-  brace-expansion@5.0.13:
-    resolution: {integrity: sha512-Vh3dmFbc4wZeox7M9I/0L9GfFd83Su4+yCck/OF9Gi/P/dAHn0RT7X4K9R7gMNMhDck3DvhR6QXsnQdjjgwNvQ==}
+  brace-expansion@5.1.0:
+    resolution: {integrity: sha512-aa11Dv491GKnYqxaul3aRJ0szew7yMJMfZPnqD44NjGrZXoj62l41OEDDpdpC4eE2P88vBFfLuSyRhpG91NUvg==}
     engines: {node: 20 || >=22}
 
   ccount@2.0.1:
@@ -1795,7 +1795,7 @@ snapshots:
 
   birpc@2.9.0: {}
 
-  brace-expansion@5.0.13:
+  brace-expansion@5.1.0:
     dependencies:
       balanced-match: 4.0.4
 
@@ -2175,7 +2175,7 @@ snapshots:
   minimatch@11.0.9:
     dependencies:
       '@isaacs/nonrecursive-glob-match': 1.1.0
-      brace-expansion: 5.0.13
+      brace-expansion: 5.1.0
 
   minisearch@7.2.0: {}
 
