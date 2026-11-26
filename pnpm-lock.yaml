@@ -236,8 +236,8 @@ importers:
         specifier: 10.15.0
         version: 10.15.0(supports-color@7.2.0)
       eslint-plugin-jsdoc:
-        specifier: 65.5.1
-        version: 65.5.1(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
+        specifier: 65.5.2
+        version: 65.5.2(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
       eslint-plugin-security:
         specifier: 4.2.1
         version: 4.2.1
@@ -252,7 +252,7 @@ importers:
         version: 9.1.0
       oxlint-config-decent:
         specifier: 5.0.0
-        version: 5.0.0(0fa778557422ee5a895b4c5ff5668cc7)
+        version: 5.0.0(6dd77a190e087a7c9b47566e8ceba2a0)
       oxlint-plugin-eslint:
         specifier: 1.94.0
         version: 1.94.0
@@ -1729,8 +1729,8 @@ packages:
     resolution: {integrity: sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw==}
     engines: {node: '>=12'}
 
-  eslint-plugin-jsdoc@65.5.1:
-    resolution: {integrity: sha512-B7nUzgyazhOtiznF1fOQOmYZpTlLEdgaCsVV67V1WgtXuqWSWm0kPS4auekdHoEQBEKahS11weUC+z5nkhIu9g==}
+  eslint-plugin-jsdoc@65.5.2:
+    resolution: {integrity: sha512-zndWp29JWTh2q1cWZgwKHiyB454BCwTti0mpk3qC6V0LF3a3YOJJAHDCqI82WmbGMNUqiZUlbZcGy3kkX5tq/w==}
     engines: {node: ^22.22.2 || >=24.15.0}
     peerDependencies:
       eslint: ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0
@@ -1985,10 +1985,6 @@ packages:
 
   ignore@5.3.2:
     resolution: {integrity: sha512-hsBTNUqQTDwkWtcdYI2i06Y/nUBEsNEDJKjWdigLvegy8kDuJAS8uRlpkkcQpyEXL0Z/pjDy5HBmMjRCJ2gq+g==}
-    engines: {node: '>= 4'}
-
-  ignore@7.0.14:
-    resolution: {integrity: sha512-wCBiZ77u1tuWde6G/nfOtLaCTYcFDU5yCzARzK10y+rLhzYoL7a7yEemcopcc2Mzow7gZOIjnV2ym1NYmdiJOQ==}
     engines: {node: '>= 4'}
 
   ignore@7.0.16:
@@ -4110,7 +4106,7 @@ snapshots:
       '@typescript-eslint/utils': 8.72.0(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
       '@typescript-eslint/visitor-keys': 8.72.0
       eslint: 10.15.0(supports-color@7.2.0)
-      ignore: 7.0.14
+      ignore: 7.0.16
       natural-compare: 1.4.0
       ts-api-utils: 2.5.0(@typescript/typescript6@6.0.2)
       typescript: '@typescript/typescript6@6.0.2'
@@ -4773,7 +4769,7 @@ snapshots:
 
   escape-string-regexp@5.0.0: {}
 
-  eslint-plugin-jsdoc@65.5.1(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0):
+  eslint-plugin-jsdoc@65.5.2(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0):
     dependencies:
       '@es-joy/escodegen': 5.0.1
       '@es-joy/jsdoccomment': 1.2.0
@@ -5090,8 +5086,6 @@ snapshots:
       reserved-identifiers: 1.2.0
 
   ignore@5.3.2: {}
-
-  ignore@7.0.14: {}
 
   ignore@7.0.16: {}
 
@@ -5684,12 +5678,12 @@ snapshots:
       '@oxfmt/binding-win32-x64-msvc': 0.78.0
       vite-plus: 1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1)
 
-  oxlint-config-decent@5.0.0(0fa778557422ee5a895b4c5ff5668cc7):
+  oxlint-config-decent@5.0.0(6dd77a190e087a7c9b47566e8ceba2a0):
     dependencies:
       '@stylistic/eslint-plugin': 6.0.1(eslint@10.15.0(supports-color@7.2.0))(oxlint@1.93.0(oxlint-tsgolint@7.0.2006)(vite-plus@1.6.0(@types/node@26.6.5)(@typescript/typescript6@6.0.2)(yaml@2.9.1)))
       '@typescript-eslint/eslint-plugin': 8.72.0(@typescript-eslint/parser@8.72.0(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0))(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
       eslint: 10.15.0(supports-color@7.2.0)
-      eslint-plugin-jsdoc: 65.5.1(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
+      eslint-plugin-jsdoc: 65.5.2(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)
       eslint-plugin-security: 4.2.1
       eslint-plugin-unicorn: 80.0.0(@typescript/typescript6@6.0.2)(eslint@10.15.0(supports-color@7.2.0))
       oxlint-plugin-eslint: 1.94.0
