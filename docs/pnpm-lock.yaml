@@ -1168,9 +1168,8 @@ packages:
   tabbable@6.5.2:
     resolution: {integrity: sha512-XgdnB1nGU6KU4VgMnZPaZCx7M1hBrLyEiZYau2G2gq9UT0d7d4FUBlNX7vvPlm/B1vk1PjrzJBx9Lbv4fsqS9g==}
 
-  tokenx@2.2.1:
-    resolution: {integrity: sha512-SUJNDK3y8yv9R3eHgo1HmtfOq1hUFNac3syYwtJ8xKbzKsc1Mbr54fduWceYWFsBIRwTG26GuL7N1AkyomONwg==}
-    engines: {node: '>=24'}
+  tokenx@2.2.2:
+    resolution: {integrity: sha512-Oq0Vgd88BUj+Mey7YBdpvRx4SmV2Wv0FwWhBQ1X91L8oihNu5XR0xmK9cD4/ryml7ynVm8y9kzUk1DFABc72SQ==}
     hasBin: true
 
   trim-lines@3.0.1:
@@ -2345,7 +2344,7 @@ snapshots:
 
   tabbable@6.5.2: {}
 
-  tokenx@2.2.1: {}
+  tokenx@2.2.2: {}
 
   trim-lines@3.0.1: {}
 
@@ -2423,7 +2422,7 @@ snapshots:
       pretty-bytes: 7.2.0
       remark: 15.0.1
       remark-frontmatter: 5.0.0
-      tokenx: 2.2.1
+      tokenx: 2.2.2
       unist-util-remove: 4.0.0
       unist-util-visit: 5.2.0
     transitivePeerDependencies:
