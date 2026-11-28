@@ -4,7 +4,7 @@ allowBuilds:
 savePrefix: ''
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@1.6.0
-  vite-plus: 1.6.0
+  vite-plus: 1.8.0
 overrides:
   vite: 'catalog:'
   # semantic-release resolves its plugins from its own dependency tree first, so a devDependency
